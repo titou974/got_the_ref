@@ -1,0 +1,29 @@
+/**
+ * Routes de l'application — source unique de vérité pour les chemins.
+ * Aucune URL en dur dans les composants : on importe depuis ici.
+ */
+
+export const ROUTES = {
+  home: "/",
+  agency: "/agence",
+  services: "/services",
+  pricing: "/tarifs",
+  signIn: "/connexion",
+  signUp: "/inscription",
+  account: "/compte",
+  analysis: (id: string) => `/analyse/${id}`,
+  legal: {
+    mentions: "/mentions-legales",
+    terms: "/cgv-cgu",
+    privacy: "/politique-de-confidentialite",
+  },
+} as const;
+
+/** Raisons de redirection véhiculées en query string. */
+export const REDIRECT_REASONS = {
+  quota: "quota",
+} as const;
+
+/** `/tarifs?raison=quota` — redirection après quota dépassé. */
+export const pricingWithReason = (reason: keyof typeof REDIRECT_REASONS) =>
+  `${ROUTES.pricing}?raison=${REDIRECT_REASONS[reason]}`;

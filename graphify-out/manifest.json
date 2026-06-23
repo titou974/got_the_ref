@@ -1,0 +1,282 @@
+{
+  "/home/lebobodigital/code/titou974/boostgeo/eslint.config.mjs": {
+    "mtime": 1781378273.6062071,
+    "ast_hash": "e5b3ad1a8c38b3ab012c40170f37b898",
+    "semantic_hash": "e5b3ad1a8c38b3ab012c40170f37b898"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/next.config.ts": {
+    "mtime": 1781376728.8920588,
+    "ast_hash": "ef6c94584cd300fb94eeae1ac3a04954",
+    "semantic_hash": "ef6c94584cd300fb94eeae1ac3a04954"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/package.json": {
+    "mtime": 1781399943.9714806,
+    "ast_hash": "51a195104bb89ecca75fc2e5ee339a97",
+    "semantic_hash": "51a195104bb89ecca75fc2e5ee339a97"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/postcss.config.mjs": {
+    "mtime": 1781334977.7554595,
+    "ast_hash": "239f3ebf717465dc636818a1a619398d",
+    "semantic_hash": "239f3ebf717465dc636818a1a619398d"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/scripts/gen-lottie.mjs": {
+    "mtime": 1781399840.782742,
+    "ast_hash": "7a78d801d7a311cba2d1a470835f4a86",
+    "semantic_hash": "7a78d801d7a311cba2d1a470835f4a86"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/actions/auth.ts": {
+    "mtime": 1781375518.2921512,
+    "ast_hash": "6d3af5725e6b3214e77ed85c6f9cda75",
+    "semantic_hash": "6d3af5725e6b3214e77ed85c6f9cda75"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/analyse/[id]/page.tsx": {
+    "mtime": 1781375883.7141418,
+    "ast_hash": "14dd0d9a90ee99d7f2b8a1af8c19a53f",
+    "semantic_hash": "14dd0d9a90ee99d7f2b8a1af8c19a53f"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/api/analyze/route.ts": {
+    "mtime": 1781386368.4002805,
+    "ast_hash": "6be07f1427e7857c090c03a60c1439d6",
+    "semantic_hash": "6be07f1427e7857c090c03a60c1439d6"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/api/stripe/checkout/route.ts": {
+    "mtime": 1781375958.9147575,
+    "ast_hash": "dcf583635c81e1a706e3a57a5276b7fe",
+    "semantic_hash": "dcf583635c81e1a706e3a57a5276b7fe"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/api/stripe/portal/route.ts": {
+    "mtime": 1781375965.8098137,
+    "ast_hash": "af0390f0fc4b986466b88e00c544ef0d",
+    "semantic_hash": "af0390f0fc4b986466b88e00c544ef0d"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/api/stripe/webhook/route.ts": {
+    "mtime": 1781375982.933954,
+    "ast_hash": "5cc926d66730539fe9b897e669e628a6",
+    "semantic_hash": "5cc926d66730539fe9b897e669e628a6"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/cgv-cgu/page.tsx": {
+    "mtime": 1781376067.9206495,
+    "ast_hash": "e5617df5b92c15eaee1857373351836d",
+    "semantic_hash": "e5617df5b92c15eaee1857373351836d"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/compte/page.tsx": {
+    "mtime": 1781375942.6976247,
+    "ast_hash": "35fbbf8e2027cf9776a5a34c31204eaa",
+    "semantic_hash": "35fbbf8e2027cf9776a5a34c31204eaa"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/connexion/page.tsx": {
+    "mtime": 1781375914.8373966,
+    "ast_hash": "e7c1ed6202ad4d3ba0bc1e7bd3a940bc",
+    "semantic_hash": "e7c1ed6202ad4d3ba0bc1e7bd3a940bc"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/global-error.tsx": {
+    "mtime": 1781394321.24318,
+    "ast_hash": "03ac9fd563b86d1832777322404557e6",
+    "semantic_hash": "03ac9fd563b86d1832777322404557e6"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/inscription/page.tsx": {
+    "mtime": 1781375921.3074496,
+    "ast_hash": "00347e66fb89ba36ed5412cfe384ecf2",
+    "semantic_hash": "00347e66fb89ba36ed5412cfe384ecf2"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/layout.tsx": {
+    "mtime": 1781375637.2991252,
+    "ast_hash": "7381324a0e697e62a97e2ffc3c5941a4",
+    "semantic_hash": "7381324a0e697e62a97e2ffc3c5941a4"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/mentions-legales/page.tsx": {
+    "mtime": 1781376045.5424664,
+    "ast_hash": "b132b055dbd21e5484cf0c564ec71263",
+    "semantic_hash": "b132b055dbd21e5484cf0c564ec71263"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/not-found.tsx": {
+    "mtime": 1781376682.0236754,
+    "ast_hash": "f5597e3e5580078164752450795fccb9",
+    "semantic_hash": "f5597e3e5580078164752450795fccb9"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/page.tsx": {
+    "mtime": 1781403969.1177409,
+    "ast_hash": "6081116b3e9db57bbabe1c217eea43b7",
+    "semantic_hash": "6081116b3e9db57bbabe1c217eea43b7"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/politique-de-confidentialite/page.tsx": {
+    "mtime": 1781376087.3778088,
+    "ast_hash": "57ba9bc6aa196063aa41b5c9ef9913e8",
+    "semantic_hash": "57ba9bc6aa196063aa41b5c9ef9913e8"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/app/tarifs/page.tsx": {
+    "mtime": 1781385451.8684754,
+    "ast_hash": "99b8776964443d0cda902982a504a24f",
+    "semantic_hash": "99b8776964443d0cda902982a504a24f"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/assets/animation1.json": {
+    "mtime": 1781387105.382097,
+    "ast_hash": "6a878a12598db2ac8f14c473693a5ac2",
+    "semantic_hash": "6a878a12598db2ac8f14c473693a5ac2"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/assets/animation2.json": {
+    "mtime": 1781387009.1312237,
+    "ast_hash": "30ebc6075d35a0cde9171baa644ba905",
+    "semantic_hash": "30ebc6075d35a0cde9171baa644ba905"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/assets/animation3.json": {
+    "mtime": 1781398611.5697014,
+    "ast_hash": "a22c143f0b03e8975a72717748036569",
+    "semantic_hash": "a22c143f0b03e8975a72717748036569"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/assets/animation4.json": {
+    "mtime": 1781387146.9124737,
+    "ast_hash": "225a297da5abf70e8b332d525bf1609a",
+    "semantic_hash": "225a297da5abf70e8b332d525bf1609a"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/assets/animation5.json": {
+    "mtime": 1781399831.1486635,
+    "ast_hash": "981b759569d3a0aa35eee77cad682228",
+    "semantic_hash": "981b759569d3a0aa35eee77cad682228"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/AiSearchSimulation.tsx": {
+    "mtime": 1781385451.900564,
+    "ast_hash": "62af776efd337272c9ead2a8e817ed95",
+    "semantic_hash": "62af776efd337272c9ead2a8e817ed95"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/AnalyzingOverlay.tsx": {
+    "mtime": 1781404161.4124072,
+    "ast_hash": "7d66f37c4caf0c79b27c489a4676a8f0",
+    "semantic_hash": "7d66f37c4caf0c79b27c489a4676a8f0"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/AuthForm.tsx": {
+    "mtime": 1781375905.9753242,
+    "ast_hash": "dbf81c5eb2ea0b46cc7023aeb3e2d0dd",
+    "semantic_hash": "dbf81c5eb2ea0b46cc7023aeb3e2d0dd"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/CheckoutButton.tsx": {
+    "mtime": 1781375993.0170364,
+    "ast_hash": "543eb380aa692f6d1dc656a770a771c7",
+    "semantic_hash": "543eb380aa692f6d1dc656a770a771c7"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/Footer.tsx": {
+    "mtime": 1781375670.4343965,
+    "ast_hash": "dab3375aedd57025a70c4404182e87e0",
+    "semantic_hash": "dab3375aedd57025a70c4404182e87e0"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/LegalLayout.tsx": {
+    "mtime": 1781376030.2703414,
+    "ast_hash": "4bb4630cf39f137c9c66e1f1bdd02a7b",
+    "semantic_hash": "4bb4630cf39f137c9c66e1f1bdd02a7b"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/Logo.tsx": {
+    "mtime": 1781396636.055896,
+    "ast_hash": "2cf84e0b1bcea51142c0d5ba1e04ed4b",
+    "semantic_hash": "2cf84e0b1bcea51142c0d5ba1e04ed4b"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/Nav.tsx": {
+    "mtime": 1781375663.3953388,
+    "ast_hash": "4d18d91de220dae0097365f44cdcaf92",
+    "semantic_hash": "4d18d91de220dae0097365f44cdcaf92"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/SignOutButton.tsx": {
+    "mtime": 1781375656.6372836,
+    "ast_hash": "a54a63a4e64ca0d5e003874631e60d34",
+    "semantic_hash": "a54a63a4e64ca0d5e003874631e60d34"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/UrlAnalyzeForm.tsx": {
+    "mtime": 1781404183.133792,
+    "ast_hash": "d1ecc9829f5fe7da2fdd2a3c75121f90",
+    "semantic_hash": "d1ecc9829f5fe7da2fdd2a3c75121f90"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/dashboard/AnimatedCard.tsx": {
+    "mtime": 1781385512.8711944,
+    "ast_hash": "cda31c1989724d5e968c2939dadb47ea",
+    "semantic_hash": "cda31c1989724d5e968c2939dadb47ea"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/dashboard/AnimatedScoreRing.tsx": {
+    "mtime": 1781385507.1611397,
+    "ast_hash": "d9099277b43023bf17e289bd1aed4428",
+    "semantic_hash": "d9099277b43023bf17e289bd1aed4428"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/dashboard/CategoryRadar.tsx": {
+    "mtime": 1781385451.7761056,
+    "ast_hash": "8e9e403a6b15dbf619b8b926e5c1dae5",
+    "semantic_hash": "8e9e403a6b15dbf619b8b926e5c1dae5"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/dashboard/ChannelTabs.tsx": {
+    "mtime": 1781385590.358935,
+    "ast_hash": "071b3a454537e36305bcc6681d8ab811",
+    "semantic_hash": "071b3a454537e36305bcc6681d8ab811"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/dashboard/Dashboard.tsx": {
+    "mtime": 1781385612.2911448,
+    "ast_hash": "cea20c70a9418fa7fa0b16939d77d354",
+    "semantic_hash": "cea20c70a9418fa7fa0b16939d77d354"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/dashboard/EngineComparison.tsx": {
+    "mtime": 1781375818.0116043,
+    "ast_hash": "ac3eb721f58930bc4b707c8dc0440de4",
+    "semantic_hash": "ac3eb721f58930bc4b707c8dc0440de4"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/components/dashboard/ScoreRing.tsx": {
+    "mtime": 1781375800.6014616,
+    "ast_hash": "ea8aa446ddfad956e82137708e3e1e98",
+    "semantic_hash": "ea8aa446ddfad956e82137708e3e1e98"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/lib/auth.ts": {
+    "mtime": 1781375007.6176472,
+    "ast_hash": "ef86cd8704d35b770fcc24a8ea92d411",
+    "semantic_hash": "ef86cd8704d35b770fcc24a8ea92d411"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/lib/geo/analyzer.ts": {
+    "mtime": 1781376665.2725382,
+    "ast_hash": "82de7682c6f2b2b5d2c446297fd6f4b7",
+    "semantic_hash": "82de7682c6f2b2b5d2c446297fd6f4b7"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/lib/geo/fetcher.ts": {
+    "mtime": 1781386337.8668194,
+    "ast_hash": "fd17d2c919b4798b60ee07d9c62c641e",
+    "semantic_hash": "fd17d2c919b4798b60ee07d9c62c641e"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/lib/geo/types.ts": {
+    "mtime": 1781375181.7282214,
+    "ast_hash": "c5846f88358171e53db3fd3258b82cd5",
+    "semantic_hash": "c5846f88358171e53db3fd3258b82cd5"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/lib/prisma.ts": {
+    "mtime": 1781374998.6045656,
+    "ast_hash": "3c1452682d4fb8b3b81ef6a0e4a50c29",
+    "semantic_hash": "3c1452682d4fb8b3b81ef6a0e4a50c29"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/lib/rate-limit.ts": {
+    "mtime": 1781386353.252366,
+    "ast_hash": "0e4353c8731b2a8c276ebf78a902d6fa",
+    "semantic_hash": "0e4353c8731b2a8c276ebf78a902d6fa"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/lib/score.ts": {
+    "mtime": 1781385433.114432,
+    "ast_hash": "31fb7d5103c29e60bb58e0885d76b06f",
+    "semantic_hash": "31fb7d5103c29e60bb58e0885d76b06f"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/src/lib/stripe.ts": {
+    "mtime": 1781376646.2273824,
+    "ast_hash": "e425bc73158df31a5a0d826ea67e0938",
+    "semantic_hash": "e425bc73158df31a5a0d826ea67e0938"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/tsconfig.json": {
+    "mtime": 1781334977.7559843,
+    "ast_hash": "ee17fd1c97c735e9f3564e3f5251f125",
+    "semantic_hash": "ee17fd1c97c735e9f3564e3f5251f125"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/AGENTS.md": {
+    "mtime": 1781335005.2072616,
+    "ast_hash": "9e09241799026ac05be315a2f0b50055",
+    "semantic_hash": "9e09241799026ac05be315a2f0b50055"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/CLAUDE.md": {
+    "mtime": 1781335005.2072616,
+    "ast_hash": "5c27369b226fcf2be8a6cfe52224e767",
+    "semantic_hash": "5c27369b226fcf2be8a6cfe52224e767"
+  },
+  "/home/lebobodigital/code/titou974/boostgeo/README.md": {
+    "mtime": 1781378231.4048002,
+    "ast_hash": "85a5a84412c044ee2aaf4b8206b8cdbe",
+    "semantic_hash": "85a5a84412c044ee2aaf4b8206b8cdbe"
+  }
+}

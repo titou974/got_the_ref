@@ -1,0 +1,108 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "./generated/prisma"
+}
+
+datasource db {
+  // L'URL n'est plus déclarée ici (Prisma 7) : la CLI lit `DIRECT_URL`
+  // depuis prisma.config.ts, et le runtime se connecte via le driver
+  // adapter (@prisma/adapter-pg) avec le pooler `DATABASE_URL`.
+  provider = "postgresql"
+}
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String?
+  emailVerified    Boolean  @default(false)
+  image            String?
+  plan             String   @default("free") // free | pro | agency
+  stripeCustomerId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  analyses     Analysis[]
+  subscription Subscription?
+  sessions     Session[]
+  accounts     Account[]
+}
+
+model Analysis {
+  id           String   @id @default(cuid())
+  url          String
+  domain       String
+  businessName String?
+  businessType String?
+  mapsUrl      String?  // Lien Google Maps fourni par l'utilisateur (facultatif)
+  overallScore Int
+  data         String   // JSON sérialisé du résultat complet
+  createdAt    DateTime @default(now())
+
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  status               String    @default("inactive") // active | canceled | past_due | inactive
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+// ── Better Auth ───────────────────────────────────────────────────────────────
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+  @@index([userId])
+  @@index([token])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+  @@index([userId])
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+  @@index([identifier])
+}

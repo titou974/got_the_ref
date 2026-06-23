@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BoostGEO
 
-## Getting Started
+Plateforme SaaS d'analyse **GEO** (Generative Engine Optimization) et **SEO**. Mesure la visibilité d'un site dans les moteurs de recherche IA (ChatGPT, Perplexity, Gemini) et sur Google, avec un score global, des scores par moteur, un positionnement estimé et des recommandations générées par l'IA Claude.
 
-First, run the development server:
+## Stack (100 % gratuite en local)
+
+| Brique | Techno |
+|--------|--------|
+| Framework | Next.js 16 (App Router, Server Actions, routes `/api`) |
+| UI | React 19 + Tailwind CSS v4 + Framer Motion + Recharts |
+| Base de données | SQLite via Prisma 6 |
+| Authentification | Maison — JWT (`jose`) en cookie httpOnly + `bcryptjs` |
+| Analyse IA | API Claude (`@anthropic-ai/sdk`, modèle `claude-opus-4-8`) |
+| Paiement | Stripe (Checkout + Billing Portal + Webhooks) |
+
+> Sans clé API Claude, l'analyse bascule automatiquement sur un **moteur heuristique** déterministe : l'application reste pleinement fonctionnelle pour la démo.
+
+## Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install                 # installe + génère le client Prisma
+cp .env.example .env        # puis remplir les variables
+npm run db:push             # crée la base SQLite (prisma/dev.db)
+npm run dev                 # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Variables d'environnement
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Rôle |
+|----------|------|
+| `DATABASE_URL` | Connexion SQLite (`file:./dev.db` par défaut) |
+| `AUTH_SECRET` | Secret de signature des sessions JWT (`openssl rand -base64 32`) |
+| `ANTHROPIC_API_KEY` | Clé API Claude (optionnelle — fallback heuristique sinon) |
+| `STRIPE_SECRET_KEY` | Clé secrète Stripe |
+| `STRIPE_WEBHOOK_SECRET` | Secret du webhook Stripe |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Clé publique Stripe |
+| `STRIPE_PRICE_PRO` / `STRIPE_PRICE_AGENCY` | IDs de prix (abonnements mensuels) |
+| `NEXT_PUBLIC_APP_URL` | URL publique de l'app |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Configuration Stripe
 
-## Learn More
+1. Créez deux produits récurrents (Pro 29 €/mois, Agence 99 €/mois) dans le dashboard Stripe et reportez leurs `price_…` dans `.env`.
+2. Webhook local :
+   ```bash
+   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   ```
+   Copiez le `whsec_…` affiché dans `STRIPE_WEBHOOK_SECRET`.
+3. Événements gérés : `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`.
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├─ app/
+│  ├─ page.tsx                     Landing non-scrollable (input + simulation IA animée)
+│  ├─ analyse/[id]/page.tsx        Dashboard de résultats
+│  ├─ connexion · inscription · compte    Authentification
+│  ├─ tarifs                       Offres + Checkout Stripe
+│  ├─ mentions-legales · cgv-cgu · politique-de-confidentialite
+│  ├─ actions/auth.ts              Server Actions (inscription/connexion/déconnexion)
+│  └─ api/
+│     ├─ analyze/                  Lance une analyse GEO+SEO
+│     └─ stripe/                   checkout · portal · webhook
+├─ lib/
+│  ├─ geo/                         Moteur d'analyse (fetcher + analyzer Claude + types)
+│  ├─ auth.ts · prisma.ts · stripe.ts · score.ts
+└─ components/                     Nav, Footer, formulaires, dashboard (graphiques)
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Modèle de scoring GEO
 
-## Deploy on Vercel
+Pondérations issues de la méthodologie GEO :
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Catégorie | Poids |
+|-----------|-------|
+| Citabilité & Visibilité IA | 25 % |
+| Autorité de marque | 20 % |
+| Qualité du contenu & E-E-A-T | 20 % |
+| Fondations techniques | 15 % |
+| Données structurées | 10 % |
+| Optimisation par plateforme | 10 % |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Le moteur combine des **vérifications déterministes** (HTTP, robots.txt, sitemap, llms.txt, JSON-LD, balises, accès des crawlers IA) et une **évaluation par Claude** restituée en JSON structuré.
+
+## Quotas par formule
+
+- **Gratuit** : 3 analyses au total
+- **Pro** : 50 analyses / mois
+- **Agence** : illimité
