@@ -12,11 +12,16 @@ export const PLAN_KEYS: readonly PlanKey[] = ["free", "pro", "agency"] as const;
 
 export const PAID_PLAN_KEYS: readonly PaidPlanKey[] = ["pro", "agency"] as const;
 
-/** Prix mensuel en euros par plan (donnée chiffrée, hors i18n). */
-export const PLAN_PRICING: Record<PlanKey, { monthly: number }> = {
-  free: { monthly: 0 },
-  pro: { monthly: 29 },
-  agency: { monthly: 99 },
+/**
+ * Tarif affiché par plan (donnée chiffrée, hors i18n).
+ * `recurring: false` = paiement unique (offre transactionnelle), `true` = abonnement mensuel.
+ */
+export const PLAN_PRICING: Record<PlanKey, { amount: number; recurring: boolean }> = {
+  free: { amount: 0, recurring: true },
+  /** Offre transactionnelle : paiement unique. */
+  pro: { amount: 19.99, recurring: false },
+  /** Offre agence : abonnement mensuel. */
+  agency: { amount: 210, recurring: true },
 };
 
 /** Quotas d'analyses par plan. `null` = illimité. */
@@ -31,15 +36,30 @@ export const ANALYSIS_QUOTAS = {
   agency: { monthly: null },
 } as const;
 
-/** Nom des variables d'environnement contenant les Price IDs Stripe. */
-export const STRIPE_PRICE_ENV = {
-  pro: "STRIPE_PRICE_PRO",
-  agency: "STRIPE_PRICE_AGENCY",
+/** Mode de facturation Stripe d'une offre. */
+export type BillingMode = "payment" | "subscription";
+
+/**
+ * Facturation par offre payante : mode Stripe + variable d'environnement.
+ * La variable peut contenir un Price ID (`price_…`) **ou** un Product ID (`prod_…`) —
+ * dans ce dernier cas, on résout le `default_price` du produit (cf. `resolvePriceId`).
+ */
+export const PLAN_BILLING: Record<PaidPlanKey, { mode: BillingMode; env: string }> = {
+  /** Offre transactionnelle : paiement unique (produit/price « UNIT »). */
+  pro: { mode: "payment", env: "STRIPE_PRICE_UNIT" },
+  /** Offre agence : abonnement mensuel récurrent. */
+  agency: { mode: "subscription", env: "STRIPE_PRICE_AGENCY" },
 } as const;
 
-/** Résout le Price ID Stripe d'un plan depuis l'environnement (côté serveur). */
-export function stripePriceId(plan: Exclude<PlanKey, "free">): string | undefined {
-  return process.env[STRIPE_PRICE_ENV[plan]];
+/** Rétro-compat : noms des variables d'environnement Stripe par offre payante. */
+export const STRIPE_PRICE_ENV: Record<PaidPlanKey, string> = {
+  pro: PLAN_BILLING.pro.env,
+  agency: PLAN_BILLING.agency.env,
+} as const;
+
+/** Valeur brute de l'env d'une offre (Price ID ou Product ID), côté serveur. */
+export function stripePriceEnvValue(plan: PaidPlanKey): string | undefined {
+  return process.env[PLAN_BILLING[plan].env];
 }
 
 /** Statuts d'abonnement Stripe considérés comme actifs. */

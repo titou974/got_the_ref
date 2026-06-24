@@ -329,6 +329,7 @@
     "quotaNote": "Vous avez atteint la limite de votre formule. Choisissez une offre pour continuer à analyser.",
     "popularBadge": "Le plus populaire",
     "perMonth": " /mois",
+    "perOnce": " · paiement unique",
     "secureNote": "Paiement sécurisé par Stripe · Résiliable à tout moment · TVA en sus le cas échéant",
     "free": {
       "name": "Gratuit",
@@ -343,7 +344,7 @@
     },
     "pro": {
       "name": "Pro",
-      "description": "50 analyses / mois",
+      "description": "Paiement unique · 50 analyses / mois",
       "features": [
         "50 analyses GEO complètes par mois",
         "Rapports détaillés exportables",

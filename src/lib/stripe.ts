@@ -1,5 +1,10 @@
 import Stripe from "stripe";
-import { stripePriceId, STRIPE_PRICE_ENV, type PaidPlanKey } from "@/constants/plans";
+import {
+  PLAN_BILLING,
+  stripePriceEnvValue,
+  type BillingMode,
+  type PaidPlanKey,
+} from "@/constants/plans";
 
 let stripeClient: Stripe | null = null;
 
@@ -15,10 +20,36 @@ export function getStripe(): Stripe {
 /** Alias rétro-compatible : un plan payant. */
 export type PlanId = PaidPlanKey;
 
-export function getPriceId(plan: PaidPlanKey): string {
-  const id = stripePriceId(plan);
-  if (!id) {
-    throw new Error(`${STRIPE_PRICE_ENV[plan]} manquant dans l'environnement.`);
+/** Mode de facturation Stripe (`payment` = paiement unique, `subscription` = abonnement). */
+export function getCheckoutMode(plan: PaidPlanKey): BillingMode {
+  return PLAN_BILLING[plan].mode;
+}
+
+const priceIdCache = new Map<PaidPlanKey, string>();
+
+/**
+ * Résout le Price ID Stripe d'une offre. L'environnement peut contenir soit un
+ * Price ID (`price_…`) utilisé tel quel, soit un Product ID (`prod_…`) — dans ce
+ * cas on récupère le `default_price` du produit. Résultat mémoïsé par offre.
+ */
+export async function resolvePriceId(plan: PaidPlanKey): Promise<string> {
+  const cached = priceIdCache.get(plan);
+  if (cached) return cached;
+
+  const raw = stripePriceEnvValue(plan);
+  if (!raw) {
+    throw new Error(`${PLAN_BILLING[plan].env} manquant dans l'environnement.`);
   }
-  return id;
+
+  let priceId = raw;
+  if (raw.startsWith("prod_")) {
+    const product = await getStripe().products.retrieve(raw);
+    const def = product.default_price;
+    const id = typeof def === "string" ? def : def?.id;
+    if (!id) throw new Error(`Le produit Stripe ${raw} n'a pas de tarif par défaut.`);
+    priceId = id;
+  }
+
+  priceIdCache.set(plan, priceId);
+  return priceId;
 }

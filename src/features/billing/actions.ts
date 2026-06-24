@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
-import { getStripe, getPriceId } from "@/lib/stripe";
+import { getStripe, getCheckoutMode, resolvePriceId } from "@/lib/stripe";
 import { SITE } from "@/constants/site";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
@@ -39,14 +39,22 @@ export const createCheckoutAction = authActionClient
       });
     }
 
+    const mode = getCheckoutMode(parsedInput.plan);
+    const price = await resolvePriceId(parsedInput.plan);
+    const metadata = { userId: user.id, plan: parsedInput.plan };
+
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode,
       customer: customerId,
-      line_items: [{ price: getPriceId(parsedInput.plan), quantity: 1 }],
+      line_items: [{ price, quantity: 1 }],
       success_url: `${SITE.url}${ROUTES.account}?checkout=success`,
       cancel_url: `${SITE.url}${ROUTES.pricing}?checkout=cancel`,
-      metadata: { userId: user.id, plan: parsedInput.plan },
-      subscription_data: { metadata: { userId: user.id, plan: parsedInput.plan } },
+      metadata,
+      // Propage l'identité de l'utilisateur sur l'objet adéquat selon le mode,
+      // pour que le webhook retrouve le plan aussi bien en abonnement qu'en paiement unique.
+      ...(mode === "subscription"
+        ? { subscription_data: { metadata } }
+        : { payment_intent_data: { metadata } }),
       allow_promotion_codes: true,
     });
 

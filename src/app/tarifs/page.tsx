@@ -64,7 +64,7 @@ export default async function TarifsPage({ searchParams }: Props) {
           <div className="flex flex-col rounded-[28px] border border-fog bg-snow p-6">
             <h2 className="text-lg font-semibold">{t("free.name")}</h2>
             <p className="mt-2">
-              <span className="font-display text-4xl font-bold">{PLAN_PRICING.free.monthly}€</span>
+              <span className="font-display text-4xl font-bold">{PLAN_PRICING.free.amount}€</span>
               <span className="text-muted">{t("perMonth")}</span>
             </p>
             <p className="mt-1 text-sm text-muted">{t("free.description")}</p>
@@ -84,8 +84,8 @@ export default async function TarifsPage({ searchParams }: Props) {
             </span>
             <h2 className="text-lg font-semibold">{t("pro.name")}</h2>
             <p className="mt-2">
-              <span className="font-display text-4xl font-bold">{PLAN_PRICING.pro.monthly}€</span>
-              <span className="text-muted">{t("perMonth")}</span>
+              <span className="font-display text-4xl font-bold">{PLAN_PRICING.pro.amount}€</span>
+              <span className="text-muted">{t("perOnce")}</span>
             </p>
             <p className="mt-1 text-sm text-muted">{t("pro.description")}</p>
             <FeatureList features={features("pro")} />
@@ -98,7 +98,7 @@ export default async function TarifsPage({ searchParams }: Props) {
           <div className="flex flex-col rounded-[28px] border border-fog bg-snow p-6">
             <h2 className="text-lg font-semibold">{t("agency.name")}</h2>
             <p className="mt-2">
-              <span className="font-display text-4xl font-bold">{PLAN_PRICING.agency.monthly}€</span>
+              <span className="font-display text-4xl font-bold">{PLAN_PRICING.agency.amount}€</span>
               <span className="text-muted">{t("perMonth")}</span>
             </p>
             <p className="mt-1 text-sm text-muted">{t("agency.description")}</p>
