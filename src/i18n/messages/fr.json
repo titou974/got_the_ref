@@ -228,6 +228,34 @@
       "noMetrics": "Note et nombre d'avis non récupérables sans connexion à l'API Google. Renseignés manuellement, ils affineront le diagnostic.",
       "matchesTitle": "Points de cohérence",
       "findingsTitle": "Constats"
+    },
+    "paywall": {
+      "cta": "Voir les offres",
+      "hint": "À partir de 29 €/mois, sans engagement",
+      "rankings": {
+        "title": "Classements IA verrouillés",
+        "subtitle": "Votre position réelle sur ChatGPT et Gemini, face à vos concurrents."
+      },
+      "recommendations": {
+        "title": "Recommandations verrouillées",
+        "subtitle": "Le plan d'action priorisé pour gagner en visibilité sur les IA."
+      },
+      "prompt": {
+        "title": "Prompt solution verrouillé",
+        "subtitle": "Le prompt prêt à coller dans Claude pour corriger ces points d'un coup."
+      },
+      "content": {
+        "title": "Analyse de contenu verrouillée",
+        "subtitle": "Qualité E-E-A-T, citabilité et éléments on-page de vos pages."
+      },
+      "presence": {
+        "title": "Présence web verrouillée",
+        "subtitle": "Notoriété, mentions presse et signaux d'autorité de votre marque."
+      },
+      "maps": {
+        "title": "Cohérence Maps verrouillée",
+        "subtitle": "L'alignement de votre fiche Google avec votre site, vu par les IA."
+      }
     }
   },
   "analysisApi": {
@@ -426,7 +454,10 @@
         "value": "-50 %",
         "label": "de trafic de recherche classique attendu d'ici 2028 (Gartner)"
       },
-      { "value": "900 M+", "label": "d'utilisateurs hebdomadaires de ChatGPT" },
+      {
+        "value": "900 M+",
+        "label": "d'utilisateurs hebdomadaires de ChatGPT"
+      },
       {
         "value": "23 %",
         "label": "des marketeurs investissent déjà dans le GEO"

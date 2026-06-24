@@ -10,12 +10,18 @@ import { ReportTabs } from "./ReportTabs";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { ServicesCta } from "@/components/ServicesCta";
 import { ROUTES } from "@/constants/routes";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function Dashboard({ result }: { result: GeoAnalysisResult }) {
   const t = await getTranslations("analysisReport");
   const td = await getTranslations("dashboard");
   const tc = await getTranslations("common");
   const diagnostic = buildDiagnostic(result);
+
+  // Le plan gratuit ne voit que l'architecture : le reste (classements IA,
+  // recommandations, prompts, contenu, présence, maps) est verrouillé.
+  const user = await getCurrentUser();
+  const locked = !user || user.plan === "free";
 
   const date = new Date(result.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -70,7 +76,7 @@ export async function Dashboard({ result }: { result: GeoAnalysisResult }) {
           </p>
           <h2 className="mt-1 text-xl font-bold sm:text-2xl">{t("sectionTitle")}</h2>
         </div>
-        <ReportTabs result={result} diagnostic={diagnostic} />
+        <ReportTabs result={result} diagnostic={diagnostic} locked={locked} />
       </div>
 
       {/* CTA */}
