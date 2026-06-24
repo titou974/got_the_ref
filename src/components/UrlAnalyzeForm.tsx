@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { AnalyzingOverlay } from "./AnalyzingOverlay";
 import { ROUTES, pricingWithReason } from "@/constants/routes";
 
@@ -24,9 +24,10 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
   const [url, setUrl] = useState("");
   const [mode, setMode] = useState<Mode>("physical");
   const [mapsUrl, setMapsUrl] = useState("");
-  const [showMaps, setShowMaps] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [confirmNoMaps, setConfirmNoMaps] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mapsInputRef = useRef<HTMLInputElement>(null);
 
   // Coordination : on ne redirige que lorsque l'API a répondu ET que
   // l'animation a parcouru toutes ses étapes (faux temps).
@@ -42,13 +43,9 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
     }
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  /** Lance réellement l'analyse (après validation et confirmation éventuelle). */
+  async function runAnalysis() {
     const trimmed = url.trim();
-    if (!trimmed) {
-      setError(t("errorEmpty"));
-      return;
-    }
     setError(null);
     resultIdRef.current = null;
     animDoneRef.current = false;
@@ -87,6 +84,21 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
     }
   }
 
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setError(t("errorEmpty"));
+      return;
+    }
+    // Commerce physique sans fiche Maps : on propose d'en ajouter une avant de lancer.
+    if (mode === "physical" && !mapsUrl.trim()) {
+      setConfirmNoMaps(true);
+      return;
+    }
+    runAnalysis();
+  }
+
   const big = size === "lg";
 
   return (
@@ -96,7 +108,7 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
         <div
           role="tablist"
           aria-label={t("modeAriaLabel")}
-          className="mb-3 inline-flex rounded-xl border border-border bg-surface/50 p-1"
+          className="mb-3 inline-flex rounded-full border border-fog bg-snow p-1"
         >
           {(["physical", "online"] as Mode[]).map((m) => {
             const isActive = mode === m;
@@ -107,9 +119,9 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setMode(m)}
-                className={`flex cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${
+                className={`flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${
                   isActive
-                    ? "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40"
+                    ? "bg-obsidian text-white"
                     : "text-muted hover:text-text"
                 }`}
               >
@@ -132,7 +144,7 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
         </div>
 
         <div
-          className={`glass-strong flex items-center gap-2 rounded-2xl p-2 shadow-2xl shadow-black/40 ${
+          className={`flex items-center gap-2 rounded-3xl border border-fog bg-snow p-2 shadow-[var(--shadow-md)] ${
             big ? "sm:gap-3 sm:p-2.5" : ""
           }`}
         >
@@ -161,21 +173,32 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
           <button
             type="submit"
             disabled={analyzing}
-            className={`shrink-0 cursor-pointer rounded-xl bg-cta font-semibold text-white transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-60 ${
-              big ? "px-5 py-3 text-sm sm:px-7 sm:text-base" : "px-4 py-2.5 text-sm"
+            className={`shrink-0 cursor-pointer rounded-full bg-cta text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-60 ${
+              big ? "px-4 py-2.5 sm:px-5 sm:py-3" : "px-4 py-2.5"
             }`}
           >
-            {analyzing ? t("submitting") : t("submit")}
+            {analyzing ? (
+              t("submitting")
+            ) : (
+              <>
+                <span className="sm:hidden">{t("submitShort")}</span>
+                <span className="hidden sm:inline">{t("submit")}</span>
+              </>
+            )}
           </button>
         </div>
 
-        {mode === "physical" &&
-          (showMaps ? (
+        {/* Fiche Google Maps : toujours visible pour un commerce physique,
+            essentielle à l'analyse de la position locale. */}
+        {mode === "physical" && (
           <div className="mt-3">
-            <label htmlFor="maps-url" className="sr-only">
-              {t("mapsLabel")}
+            <label htmlFor="maps-url" className="mb-1.5 flex items-center gap-2 pl-2 text-xs font-medium text-text">
+              {t("mapsFieldLabel")}
+              <span className="rounded-full bg-mist px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-steel">
+                {t("mapsRecommended")}
+              </span>
             </label>
-            <div className="glass-strong flex items-center gap-2 rounded-2xl p-2">
+            <div className="flex items-center gap-2 rounded-3xl border border-fog bg-snow p-2">
               <span className="pl-3 text-muted" aria-hidden>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path
@@ -189,6 +212,7 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
               </span>
               <input
                 id="maps-url"
+                ref={mapsInputRef}
                 type="text"
                 inputMode="url"
                 value={mapsUrl}
@@ -200,15 +224,7 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
             </div>
             <p className="mt-2 pl-2 text-xs text-muted">{t("mapsHint")}</p>
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setShowMaps(true)}
-            className="mt-3 cursor-pointer pl-2 text-sm text-accent transition-colors duration-200 hover:underline"
-          >
-            {t("mapsToggle")}
-          </button>
-          ))}
+        )}
 
         {error && (
           <p className="mt-3 text-center text-sm text-danger" role="alert">
@@ -216,6 +232,30 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
           </p>
         )}
       </form>
+
+      {/* Modale : confirme le lancement sans fiche Google Maps. */}
+      <AnimatePresence>
+        {confirmNoMaps && (
+          <ConfirmNoMapsDialog
+            labels={{
+              title: t("confirmTitle"),
+              body: t("confirmBody"),
+              add: t("confirmAdd"),
+              without: t("confirmWithout"),
+              close: t("confirmClose"),
+            }}
+            onAdd={() => {
+              setConfirmNoMaps(false);
+              mapsInputRef.current?.focus();
+            }}
+            onWithout={() => {
+              setConfirmNoMaps(false);
+              runAnalysis();
+            }}
+            onClose={() => setConfirmNoMaps(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {analyzing && (
@@ -229,5 +269,89 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+/* ----------------------- Modale « pas de fiche Maps » ---------------------- */
+
+function ConfirmNoMapsDialog({
+  labels,
+  onAdd,
+  onWithout,
+  onClose,
+}: {
+  labels: { title: string; body: string; add: string; without: string; close: string };
+  onAdd: () => void;
+  onWithout: () => void;
+  onClose: () => void;
+}) {
+  // Échap ferme la modale ; verrou du scroll tant qu'elle est ouverte.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[110] flex items-center justify-center px-5"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div
+        className="absolute inset-0 bg-obsidian/40 backdrop-blur-[2px]"
+        onClick={onClose}
+        aria-hidden
+      />
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-maps-title"
+        className="relative w-full max-w-md rounded-[28px] border border-fog bg-snow p-6 shadow-[var(--shadow-md)] sm:p-7"
+        initial={{ opacity: 0, y: 16, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.96 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+      >
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-mist text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+          </svg>
+        </span>
+
+        <h2 id="confirm-maps-title" className="mt-4 text-lg font-bold text-text sm:text-xl">
+          {labels.title}
+        </h2>
+        <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">{labels.body}</p>
+
+        <div className="mt-6 flex flex-col gap-2.5">
+          <button
+            type="button"
+            autoFocus
+            onClick={onAdd}
+            className="cursor-pointer rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+          >
+            {labels.add}
+          </button>
+          <button
+            type="button"
+            onClick={onWithout}
+            className="cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+          >
+            {labels.without}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

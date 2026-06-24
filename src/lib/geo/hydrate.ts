@@ -1,16 +1,87 @@
-import type { GeoAnalysisResult, BusinessProfile, WebPresence } from "./types";
+import type {
+  GeoAnalysisResult,
+  BusinessProfile,
+  WebPresence,
+  OnPageContent,
+  OnPageCheck,
+  EngineScore,
+  EngineRanking,
+  Competitor,
+} from "./types";
+
+/** Élément on-page de repli : texte réel si connu, sinon état « non audité ». */
+function legacyCheck(text: string | null): OnPageCheck {
+  return {
+    text: text || null,
+    status: text ? "warn" : "ko",
+    signals: [],
+    note: "Audit on-page indisponible pour cette analyse.",
+  };
+}
+
+/** Ancien format de moteur (avant les classements direct/indirect). */
+type LegacyEngine = {
+  engine: EngineScore["engine"];
+  score?: number;
+  visibility?: EngineScore["visibility"];
+  summary?: string;
+  measured?: boolean;
+  estimatedPosition?: number | null;
+  competitorsAhead?: string[];
+  rankings?: EngineRanking[];
+};
+
+/** Convertit un moteur (ancien ou nouveau format) vers le format à classements. */
+function normalizeEngine(e: LegacyEngine, label: string): EngineScore {
+  if (Array.isArray(e.rankings)) {
+    return {
+      engine: e.engine,
+      score: e.score ?? 0,
+      visibility: e.visibility ?? "absente",
+      summary: e.summary ?? "",
+      measured: !!e.measured,
+      rankings: e.rankings,
+    };
+  }
+  // Ancien format : reconstruit un classement « direct » depuis les champs legacy.
+  const competitors: Competitor[] = (e.competitorsAhead ?? [])
+    .slice(0, 3)
+    .map((name, i) => ({ rank: i + 1, name, isTarget: false, note: null }));
+  if (e.estimatedPosition != null) {
+    competitors.push({ rank: Math.max(1, e.estimatedPosition), name: "Vous", isTarget: true, note: null });
+    competitors.sort((a, b) => a.rank - b.rank);
+  }
+  return {
+    engine: e.engine,
+    score: e.score ?? 0,
+    visibility: e.visibility ?? "absente",
+    summary: e.summary ?? "",
+    measured: !!e.measured,
+    rankings: [
+      {
+        scope: "direct",
+        label,
+        measured: !!e.measured,
+        targetRank: e.estimatedPosition ?? null,
+        competitors,
+      },
+    ],
+  };
+}
 
 /**
- * Rétro-compatibilité : les analyses créées avant la Phase 5 ne contiennent ni
- * profil, ni classements, ni présence web. On comble ces champs avec des
- * valeurs neutres pour que le rendu ne casse jamais sur un ancien enregistrement.
+ * Rétro-compatibilité : les analyses créées avant les Phases 5/6 ne contiennent
+ * ni profil, ni présence web, ni classements moteurs au nouveau format. On comble
+ * ces champs pour que le rendu ne casse jamais sur un ancien enregistrement.
  */
 export function hydrateAnalysisResult(
-  raw: GeoAnalysisResult & Partial<{
-    profile: BusinessProfile;
-    localRankings: GeoAnalysisResult["localRankings"];
-    webPresence: WebPresence;
-  }>,
+  raw: GeoAnalysisResult &
+    Partial<{
+      profile: BusinessProfile;
+      localRankings: GeoAnalysisResult["localRankings"];
+      webPresence: WebPresence;
+      onPageContent: OnPageContent;
+    }>,
 ): GeoAnalysisResult {
   const hasMaps = !!raw.mapsUrl;
 
@@ -30,10 +101,25 @@ export function hydrateAnalysisResult(
     findings: [],
   };
 
+  const engines = Array.isArray(raw.engines)
+    ? (raw.engines as LegacyEngine[]).map((e) => normalizeEngine(e, profile.niche))
+    : [];
+
+  const s = raw.signals;
+  const onPageContent: OnPageContent = raw.onPageContent ?? {
+    title: legacyCheck(s?.title ?? null),
+    metaDescription: legacyCheck(s?.metaDescription ?? null),
+    h1: legacyCheck(s?.h1?.[0] ?? null),
+    firstSentence: legacyCheck(s?.firstParagraph ?? null),
+    openingHours: s?.openingHoursHint ?? null,
+  };
+
   return {
     ...raw,
     profile,
+    engines,
     localRankings: Array.isArray(raw.localRankings) ? raw.localRankings : [],
     webPresence,
+    onPageContent,
   };
 }

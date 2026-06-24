@@ -13,6 +13,9 @@
     "signUp": "Inscription",
     "account": "Mon compte",
     "freeTrial": "Essai gratuit",
+    "analyzeMyBusiness": "Analyser mon commerce",
+    "menu": "Menu",
+    "closeMenu": "Fermer le menu",
     "viewPricing": "voir les tarifs",
     "discoverOffers": "Découvrir nos offres",
     "agency": "Notre agence",
@@ -44,20 +47,22 @@
     "logoOpenaiAlt": "Logo OpenAI",
     "logoGeminiAlt": "Logo Gemini",
     "logoPerplexityAlt": "Logo Perplexity",
-    "headingBefore": "Soyez ",
-    "headingHighlight": "cité en premier",
-    "headingAfter": " par les IA",
-    "subtitle": "ChatGPT, Perplexity, Gemini et Google recommandent déjà des entreprises à vos clients. GEOBoost mesure votre visibilité et vous dit exactement comment y apparaître.",
+    "headingBefore": "Devenez",
+    "headingHighlight": " n°1 ",
+    "headingAfter": "sur les IA",
+    "subtitle": "L'outil marketing pour faire apparaître son commerce en premier sur les IA. GEOBoost mesure votre visibilité et vous dit exactement comment y apparaître. ",
     "freeAnalysisNote": "Analyse gratuite · aucune carte bancaire requise · ",
     "viewPricing": "voir les tarifs",
     "discoverAgency": "En découvrir plus sur GEOBoost",
     "discoverAgencyNote": "GEOBoost, la première agence de GEO française.",
-    "simulationCaption": "Démonstration : comment votre entreprise pourrait apparaître dans les réponses IA."
+    "simulationCaption": "Démonstration : comment votre entreprise pourrait apparaître dans les réponses IA.",
+    "scrollTopCta": "Analyser"
   },
   "analyzeForm": {
     "placeholder": "votre-site.fr",
     "ariaLabel": "Adresse de votre site web",
     "submit": "Analyser gratuitement",
+    "submitShort": "Analyser",
     "submitting": "Analyse…",
     "errorEmpty": "Saisissez l'adresse de votre site.",
     "errorFailed": "L'analyse a échoué. Réessayez.",
@@ -65,10 +70,17 @@
     "errorAnonQuota": "Limite d'analyses gratuites atteinte. Créez un compte pour continuer.",
     "errorMapsInvalid": "Lien Google Maps invalide. Collez l'adresse de votre fiche Google Maps.",
     "mapsToggle": "+ Ajouter votre fiche Google Maps (facultatif)",
-    "mapsLabel": "Lien Google Maps (facultatif)",
+    "mapsFieldLabel": "Votre fiche Google Maps",
+    "mapsRecommended": "recommandé",
+    "mapsLabel": "Lien Google Maps (recommandé)",
     "mapsPlaceholder": "https://maps.app.goo.gl/… ou google.com/maps/place/…",
     "mapsAriaLabel": "Lien de votre fiche Google Maps",
-    "mapsHint": "Business local ? Renseigner votre fiche Google Maps nous aide à analyser votre position locale et la cohérence avec votre site.",
+    "mapsHint": "Pour un commerce physique, votre fiche Google Maps nous permet d'analyser votre position locale, vos avis et la cohérence avec votre site.",
+    "confirmTitle": "Vous avez une fiche Google Maps ?",
+    "confirmBody": "Pour un commerce physique, votre fiche Google Maps rend l'analyse bien plus précise : position locale, avis et cohérence avec votre site. Ajoutez son lien pour un diagnostic complet.",
+    "confirmAdd": "Ajouter ma fiche Google Maps",
+    "confirmWithout": "Lancer l'analyse sans Google Maps",
+    "confirmClose": "Fermer",
     "modePhysical": "Commerce physique",
     "modeOnline": "Commerce en ligne",
     "modeAriaLabel": "Type de commerce à analyser"
@@ -100,7 +112,8 @@
     },
     "profile": {
       "eyebrow": "Niche & marché détectés",
-      "online": "Commerce en ligne"
+      "online": "Commerce en ligne",
+      "physical": "Commerce physique"
     },
     "results": {
       "scoreLabel": "Score global",
@@ -110,8 +123,12 @@
       "testedOn": "Position mesurée sur la requête « {query} »",
       "measured": "Mesuré",
       "estimated": "Estimé",
-      "measuredHint": "Position issue d'un appel réel à l'API de ce moteur (recherche web).",
-      "estimatedHint": "Position estimée par l'IA (clé API de ce moteur non configurée).",
+      "measuredHint": "Classement issu d'un appel réel à l'API de ce moteur (recherche web).",
+      "estimatedHint": "Classement estimé par l'IA (clé API de ce moteur non configurée).",
+      "directScope": "Concurrents directs",
+      "indirectScope": "Concurrents indirects",
+      "notRanked": "Hors classement",
+      "noRankingData": "Aucun établissement détecté dans la réponse.",
       "competitorsAheadLabel": "Cités avant vous",
       "rankingsTitle": "Votre position sur le marché local",
       "rankingsSubtitle": "Où votre commerce se situe face à ses concurrents, dans votre ville.",
@@ -139,7 +156,8 @@
         "https": "Connexion sécurisée (HTTPS)"
       },
       "blockedCrawlers": "{value} robot(s) IA bloqué(s)",
-      "h1Count": "{value} H1 détecté(s)"
+      "h1Count": "{value} H1 détecté(s)",
+      "llmsTxtMisconfigured": "Présent mais renvoyé en 404 — à servir en HTTP 200 pour être pris en compte"
     },
     "content": {
       "title": "Contenu éditorial",
@@ -151,12 +169,26 @@
         "reviews": "{value} avis"
       },
       "checks": {
-        "faq": "Section FAQ structurée",
+        "faq": "Section FAQ sur la page d'accueil",
+        "reviews": "Section avis sur la page d'accueil",
         "editorialQuality": "Qualité éditoriale (E-E-A-T)",
         "citability": "Formulation citable par les IA",
         "wordCount": "Volume de contenu",
         "mapsReviews": "Avis Google Maps",
         "mapsCoherence": "Cohérence fiche ↔ site"
+      },
+      "onPage": {
+        "title": "Éléments on-page",
+        "subtitle": "Ce que les IA lisent en premier : on vérifie que chaque élément porte les bonnes informations.",
+        "empty": "Élément absent de la page.",
+        "elements": {
+          "title": "Balise title",
+          "metaDescription": "Méta description",
+          "h1": "Titre H1",
+          "firstSentence": "Première phrase d'introduction"
+        },
+        "openingHoursTitle": "Horaires d'ouverture",
+        "openingHoursEmpty": "Aucun horaire détecté sur le site."
       }
     },
     "presence": {
@@ -207,7 +239,8 @@
     "failed": "L'analyse a échoué. Vérifiez l'URL et réessayez."
   },
   "geoQuote": {
-    "text": "Le <geo>GEO</geo> <muted>(Generative Engine Optimization)</muted> est l'art d'optimiser un site pour être <highlight>cité par les intelligences artificielles</highlight> comme ChatGPT, Perplexity ou Gemini. <brand>GEOBoost</brand> mesure cette visibilité et vous indique précisément comment apparaître dans leurs réponses."
+    "text": "Le <geo>GEO</geo> <muted>(Generative Engine Optimization)</muted> est l'art d'optimiser un site pour être <highlight>cité par les intelligences artificielles</highlight> comme ChatGPT, Perplexity ou Gemini. <brand>GEOBoost</brand> mesure cette visibilité et vous indique précisément comment apparaître dans leurs réponses.",
+    "authorRole": "Fondateur de GEOBoost"
   },
   "signOut": {
     "label": "Déconnexion"
@@ -320,10 +353,22 @@
     "whatTitle": "Le GEO, c'est quoi ?",
     "whatBody": "Le GEO (Generative Engine Optimization) est le référencement de l'ère de l'IA : l'art d'optimiser un site pour être cité et recommandé par les moteurs de réponse IA comme ChatGPT, Gemini ou Perplexity. Là où le SEO visait la première page de Google, le GEO — ou référencement génératif, le SEO 2.0 — vise la première phrase de la réponse de l'IA.",
     "whatCards": [
-      { "term": "Generative Engine Optimization", "definition": "Optimiser son site pour les moteurs génératifs (ChatGPT, Gemini, Perplexity) plutôt que pour les seuls moteurs de recherche classiques." },
-      { "term": "Référencement IA / génératif", "definition": "L'équivalent du SEO, mais pour les intelligences artificielles : devenir la source que l'IA cite en priorité dans sa réponse." },
-      { "term": "Moteurs de réponse IA", "definition": "Les IA ne renvoient plus 10 liens bleus : elles donnent une réponse directe. Le GEO place votre marque dans cette réponse." },
-      { "term": "SEO 2.0 / SEO pour l'IA", "definition": "Contenu structuré pour les LLM, langage naturel et données lisibles : les nouveaux fondamentaux pour être visible à l'ère de l'IA." }
+      {
+        "term": "Generative Engine Optimization",
+        "definition": "Optimiser son site pour les moteurs génératifs (ChatGPT, Gemini, Perplexity) plutôt que pour les seuls moteurs de recherche classiques."
+      },
+      {
+        "term": "Référencement IA / génératif",
+        "definition": "L'équivalent du SEO, mais pour les intelligences artificielles : devenir la source que l'IA cite en priorité dans sa réponse."
+      },
+      {
+        "term": "Moteurs de réponse IA",
+        "definition": "Les IA ne renvoient plus 10 liens bleus : elles donnent une réponse directe. Le GEO place votre marque dans cette réponse."
+      },
+      {
+        "term": "SEO 2.0 / SEO pour l'IA",
+        "definition": "Contenu structuré pour les LLM, langage naturel et données lisibles : les nouveaux fondamentaux pour être visible à l'ère de l'IA."
+      }
     ],
     "storyEyebrow": "Notre histoire",
     "storyTitle": "Tout a commencé avec un restaurateur",
@@ -345,29 +390,71 @@
     "methodTitle": "Ce que nous optimisons pour les IA",
     "methodSubtitle": "Une checklist GEO complète, du contenu à la structure technique, pour maximiser vos citations dans les réponses IA.",
     "methodCards": [
-      { "title": "Fiche Google Maps & ancrage local", "body": "Cohérence NAP, mots-clés de niche, avis 5 étoiles et alignement fiche ↔ site : le nerf de la guerre pour un business local sur GPT et Gemini." },
-      { "title": "Fichier llms.txt", "body": "L'équivalent du robots.txt, mais pour les IA. Il guide les crawlers IA vers vos contenus et les rend immédiatement exploitables." },
-      { "title": "Données structurées (Schema.org / JSON-LD)", "body": "Des schémas JSON dans des balises script avec toutes les infos de votre business — lus instantanément par les IA quand elles recherchent." },
-      { "title": "Contenu citable & E-E-A-T", "body": "Langage naturel, contenu structuré pour les LLM et signaux d'expertise alignés sur les critères E-E-A-T Google 2026." },
-      { "title": "Optimisation sémantique & RAG", "body": "Ciblage par thématique plutôt que par mot-clé, fraîcheur des données (sitemap lastmod) : le graal pour être retrouvé par le RAG des IA." },
-      { "title": "Suivi des mentions de marque IA", "body": "Audit de visibilité IA, suivi de vos citations sur ChatGPT et gestion de votre réputation sur les LLM." }
+      {
+        "title": "Fiche Google Maps & ancrage local",
+        "body": "Cohérence NAP, mots-clés de niche, avis 5 étoiles et alignement fiche ↔ site : le nerf de la guerre pour un business local sur GPT et Gemini."
+      },
+      {
+        "title": "Fichier llms.txt",
+        "body": "L'équivalent du robots.txt, mais pour les IA. Il guide les crawlers IA vers vos contenus et les rend immédiatement exploitables."
+      },
+      {
+        "title": "Données structurées (Schema.org / JSON-LD)",
+        "body": "Des schémas JSON dans des balises script avec toutes les infos de votre business — lus instantanément par les IA quand elles recherchent."
+      },
+      {
+        "title": "Contenu citable & E-E-A-T",
+        "body": "Langage naturel, contenu structuré pour les LLM et signaux d'expertise alignés sur les critères E-E-A-T Google 2026."
+      },
+      {
+        "title": "Optimisation sémantique & RAG",
+        "body": "Ciblage par thématique plutôt que par mot-clé, fraîcheur des données (sitemap lastmod) : le graal pour être retrouvé par le RAG des IA."
+      },
+      {
+        "title": "Suivi des mentions de marque IA",
+        "body": "Audit de visibilité IA, suivi de vos citations sur ChatGPT et gestion de votre réputation sur les LLM."
+      }
     ],
     "statsEyebrow": "Pourquoi maintenant",
     "statsTitle": "Le GEO n'est plus une option",
     "statsItems": [
-      { "value": "+527 %", "label": "de sessions issues des IA (janv.–mai 2025)" },
-      { "value": "-50 %", "label": "de trafic de recherche classique attendu d'ici 2028 (Gartner)" },
+      {
+        "value": "+527 %",
+        "label": "de sessions issues des IA (janv.–mai 2025)"
+      },
+      {
+        "value": "-50 %",
+        "label": "de trafic de recherche classique attendu d'ici 2028 (Gartner)"
+      },
       { "value": "900 M+", "label": "d'utilisateurs hebdomadaires de ChatGPT" },
-      { "value": "23 %", "label": "des marketeurs investissent déjà dans le GEO" }
+      {
+        "value": "23 %",
+        "label": "des marketeurs investissent déjà dans le GEO"
+      }
     ],
     "faqEyebrow": "Questions fréquentes",
     "faqTitle": "Le GEO en clair",
     "faqItems": [
-      { "q": "C'est quoi le GEO (Generative Engine Optimization) ?", "a": "Le GEO est l'optimisation d'un site pour être cité et recommandé par les IA génératives comme ChatGPT, Gemini et Perplexity, plutôt que pour le seul classement Google. On parle aussi de référencement IA ou de SEO 2.0." },
-      { "q": "Quelle différence entre SEO et GEO ?", "a": "Le SEO vise des positions dans une liste de liens. Le GEO vise la réponse elle-même : devenir la source que l'IA cite. Cela passe par des données structurées, un fichier llms.txt et un contenu pensé pour les LLM." },
-      { "q": "Comment être cité par ChatGPT ?", "a": "En rendant votre contenu lisible et fiable pour l'IA : schémas JSON-LD, formulation citable, signaux d'autorité (E-E-A-T), fiche Google Maps cohérente et présence sur les plateformes que les IA consultent." },
-      { "q": "Le GEO fonctionne-t-il pour un commerce local ?", "a": "Oui, c'est même là qu'il est le plus rentable. Restaurants, boutiques, artisans : la plupart des commerces locaux ne sont pas encore optimisés pour les IA, l'opportunité est immense." },
-      { "q": "Combien de temps pour voir des résultats ?", "a": "Cela dépend de votre point de départ et de votre niche. Certains business apparaissent dans les réponses IA en quelques semaines après l'optimisation de leur fiche, de leurs schémas et de leurs contenus." }
+      {
+        "q": "C'est quoi le GEO (Generative Engine Optimization) ?",
+        "a": "Le GEO est l'optimisation d'un site pour être cité et recommandé par les IA génératives comme ChatGPT, Gemini et Perplexity, plutôt que pour le seul classement Google. On parle aussi de référencement IA ou de SEO 2.0."
+      },
+      {
+        "q": "Quelle différence entre SEO et GEO ?",
+        "a": "Le SEO vise des positions dans une liste de liens. Le GEO vise la réponse elle-même : devenir la source que l'IA cite. Cela passe par des données structurées, un fichier llms.txt et un contenu pensé pour les LLM."
+      },
+      {
+        "q": "Comment être cité par ChatGPT ?",
+        "a": "En rendant votre contenu lisible et fiable pour l'IA : schémas JSON-LD, formulation citable, signaux d'autorité (E-E-A-T), fiche Google Maps cohérente et présence sur les plateformes que les IA consultent."
+      },
+      {
+        "q": "Le GEO fonctionne-t-il pour un commerce local ?",
+        "a": "Oui, c'est même là qu'il est le plus rentable. Restaurants, boutiques, artisans : la plupart des commerces locaux ne sont pas encore optimisés pour les IA, l'opportunité est immense."
+      },
+      {
+        "q": "Combien de temps pour voir des résultats ?",
+        "a": "Cela dépend de votre point de départ et de votre niche. Certains business apparaissent dans les réponses IA en quelques semaines après l'optimisation de leur fiche, de leurs schémas et de leurs contenus."
+      }
     ]
   },
   "services": {
@@ -396,9 +483,21 @@
     "processEyebrow": "Comment ça se passe",
     "processTitle": "De l'appel à la première position",
     "processSteps": [
-      { "step": "01", "title": "Appel découverte", "body": "On échange sur votre business, votre zone et vos objectifs sur les IA. Gratuit et sans engagement." },
-      { "step": "02", "title": "Audit & devis sur estimation", "body": "On mesure votre visibilité actuelle sur les IA et on établit un plan d'action chiffré sur estimation." },
-      { "step": "03", "title": "Optimisation & suivi", "body": "On déploie le GEO sur votre site et votre fiche, puis on suit votre montée dans les réponses IA." }
+      {
+        "step": "01",
+        "title": "Appel découverte",
+        "body": "On échange sur votre business, votre zone et vos objectifs sur les IA. Gratuit et sans engagement."
+      },
+      {
+        "step": "02",
+        "title": "Audit & devis sur estimation",
+        "body": "On mesure votre visibilité actuelle sur les IA et on établit un plan d'action chiffré sur estimation."
+      },
+      {
+        "step": "03",
+        "title": "Optimisation & suivi",
+        "body": "On déploie le GEO sur votre site et votre fiche, puis on suit votre montée dans les réponses IA."
+      }
     ],
     "forEyebrow": "Pour qui ?",
     "forTitle": "Vous voulez être recommandé par les IA ?",

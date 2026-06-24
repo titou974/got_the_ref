@@ -77,13 +77,13 @@ function LogosShowcase({ activeLogo }: { activeLogo: number }) {
               style={{ willChange: "transform" }}
             >
               <div
-                className="flex h-20 w-20 items-center justify-center rounded-3xl border bg-white/5 p-3.5 backdrop-blur-sm sm:h-24 sm:w-24"
+                className="flex h-20 w-20 items-center justify-center rounded-[28px] border bg-snow p-3.5 sm:h-24 sm:w-24"
                 style={{
                   borderColor: isActive
-                    ? "color-mix(in oklch, var(--color-accent) 70%, transparent)"
-                    : "rgba(255,255,255,0.1)",
+                    ? "var(--color-obsidian)"
+                    : "var(--color-fog)",
                   boxShadow: isActive
-                    ? "0 0 34px 2px color-mix(in oklch, var(--color-accent) 55%, transparent)"
+                    ? "rgba(0,0,0,0.10) 0px 8px 24px 0px"
                     : "0 0 0 0 transparent",
                   transition: "box-shadow 0.55s ease, border-color 0.55s ease",
                 }}
@@ -216,7 +216,7 @@ export function AnalyzingOverlay({
         transition={{ delay: 0.15, duration: 0.5 }}
         className="relative z-10 w-full px-5 pt-10 text-center sm:pt-14"
       >
-        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-accent">
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-steel">
           {t("eyebrow")}
         </p>
         <h1 className="mt-2 text-xl font-semibold sm:text-2xl">{domain}</h1>
@@ -257,15 +257,15 @@ export function AnalyzingOverlay({
               {t(phase.labelKey)}
             </motion.p>
           </AnimatePresence>
-          <span className="rounded-full bg-white/8 px-2 py-0.5 font-mono text-[0.7rem] tabular-nums text-accent/90">
+          <span className="rounded-full bg-fog px-2 py-0.5 font-mono text-[0.7rem] tabular-nums text-steel">
             {stepSeconds}s
           </span>
         </div>
 
         {/* Barre de progression continue */}
-        <div className="mt-6 h-1 w-full max-w-xs overflow-hidden rounded-full bg-white/8">
+        <div className="mt-6 h-1 w-full max-w-xs overflow-hidden rounded-full bg-fog">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+            className="h-full rounded-full bg-obsidian"
             animate={{ width: `${overall}%` }}
             transition={{ ease: "linear", duration: 0.12 }}
           />

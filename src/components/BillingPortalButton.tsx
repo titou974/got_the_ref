@@ -11,7 +11,7 @@ export function BillingPortalButton({ label }: { label: string }) {
       type="button"
       onClick={() => execute()}
       disabled={isPending}
-      className="cursor-pointer rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold transition-colors duration-200 hover:bg-white/5 disabled:opacity-60"
+      className="cursor-pointer rounded-full border border-graphite px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist disabled:opacity-60"
     >
       {label}
     </button>

@@ -131,20 +131,56 @@ async function safeFetch(url: string): Promise<Response> {
   throw new BlockedUrlError("Trop de redirections.");
 }
 
-/** Extrait les types JSON-LD d'une page chargée par cheerio. */
+/**
+ * Collecte récursivement TOUS les @type d'un arbre JSON-LD, y compris ceux
+ * IMBRIQUÉS dans des propriétés (aggregateRating, review, address, geo,
+ * openingHoursSpecification…). Sans ça, un nœud « Restaurant » contenant un
+ * AggregateRating/Review masque ces schémas (faux « schéma absent »).
+ */
+function collectJsonLdTypes(node: unknown, acc: Set<string>): void {
+  if (Array.isArray(node)) {
+    for (const n of node) collectJsonLdTypes(n, acc);
+    return;
+  }
+  if (node && typeof node === "object") {
+    const obj = node as Record<string, unknown>;
+    const t = obj["@type"];
+    if (typeof t === "string") acc.add(t);
+    else if (Array.isArray(t)) for (const x of t) if (typeof x === "string") acc.add(x);
+    for (const [k, v] of Object.entries(obj)) {
+      if (k !== "@type") collectJsonLdTypes(v, acc);
+    }
+  }
+}
+
+/** Extrait les types JSON-LD d'une page chargée par cheerio (imbriqués inclus). */
 function jsonLdTypesOf($: cheerio.CheerioAPI): string[] {
-  const types: string[] = [];
+  const acc = new Set<string>();
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
-      const parsed = JSON.parse($(el).text());
-      const arr = Array.isArray(parsed) ? parsed : [parsed];
-      for (const node of arr) {
-        const t = node["@type"];
-        if (typeof t === "string") types.push(t);
-        else if (Array.isArray(t)) types.push(...t.filter((x) => typeof x === "string"));
-        if (Array.isArray(node["@graph"])) {
-          for (const g of node["@graph"]) {
-            if (typeof g["@type"] === "string") types.push(g["@type"]);
+      collectJsonLdTypes(JSON.parse($(el).text()), acc);
+    } catch {
+      /* JSON-LD invalide ignoré */
+    }
+  });
+  return [...acc];
+}
+
+/** Extrait la note moyenne déclarée (AggregateRating) dans le JSON-LD. */
+function aggregateRatingFromJsonLd($: cheerio.CheerioAPI): string | null {
+  let hint: string | null = null;
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (hint) return false;
+    try {
+      for (const node of flattenJsonLd(JSON.parse($(el).text()))) {
+        const ar = node.aggregateRating;
+        if (ar && typeof ar === "object") {
+          const r = ar as Record<string, unknown>;
+          const value = r.ratingValue != null ? String(r.ratingValue) : null;
+          const count = r.reviewCount ?? r.ratingCount;
+          if (value) {
+            hint = count != null ? `${value}/5 · ${count} avis` : `${value}/5`;
+            return false;
           }
         }
       }
@@ -152,7 +188,160 @@ function jsonLdTypesOf($: cheerio.CheerioAPI): string[] {
       /* JSON-LD invalide ignoré */
     }
   });
-  return [...new Set(types)];
+  return hint;
+}
+
+/**
+ * Détecte une vraie SECTION FAQ sur la page (éditoriale, pas seulement un
+ * schéma FAQPage) : accordéons <details>/<summary>, conteneurs « faq »/
+ * « accordion », un intitulé « foire aux questions / questions fréquentes »,
+ * ou un bloc avec plusieurs questions (lignes terminées par « ? »).
+ */
+function detectFaqSection($: cheerio.CheerioAPI): boolean {
+  // 1. Marqueurs structurels explicites (classe/id/aria) ou accordéon natif.
+  if ($("details summary").length >= 1) return true;
+  if (
+    $(
+      '[class*="faq" i],[id*="faq" i],[class*="accordion" i],[class*="accordeon" i],[class*="accordéon" i]',
+    ).length > 0
+  ) {
+    return true;
+  }
+
+  // 2. Intitulé de section FAQ dans un titre.
+  const headings = $("h1,h2,h3,h4,summary,button,[role='heading']")
+    .map((_, el) => $(el).text().trim().toLowerCase())
+    .get();
+  const faqHeading = headings.some(
+    (h) =>
+      h === "faq" ||
+      /foire aux questions|questions fréquentes|questions frequentes|questions\s*\/\s*réponses|questions courantes|vos questions/.test(
+        h,
+      ),
+  );
+  if (faqHeading) return true;
+
+  // 3. Heuristique de repli : plusieurs intitulés formulés en question.
+  const questionHeadings = headings.filter((h) => h.length > 8 && h.endsWith("?"));
+  return questionHeadings.length >= 3;
+}
+
+/**
+ * Détecte une SECTION AVIS / TÉMOIGNAGES sur la page d'accueil : conteneurs
+ * « avis »/« review »/« testimonial », schéma Review/Rating, un intitulé dédié,
+ * ou des marqueurs de notation (étoiles, « note 4,8/5 », « X avis »).
+ */
+function detectReviewsSection($: cheerio.CheerioAPI): boolean {
+  // 1. Marqueurs structurels (classe/id).
+  if (
+    $(
+      '[class*="avis" i],[id*="avis" i],[class*="review" i],[id*="review" i],[class*="testimonial" i],[class*="temoignage" i],[class*="témoignage" i],[class*="rating" i],[class*="stars" i]',
+    ).length > 0
+  ) {
+    return true;
+  }
+
+  // 2. Schéma structuré Review / AggregateRating.
+  if (jsonLdTypesOf($).some((t) => /review|rating/i.test(t))) return true;
+
+  // 3. Intitulé de section dédié.
+  const headings = $("h1,h2,h3,h4")
+    .map((_, el) => $(el).text().trim().toLowerCase())
+    .get();
+  const reviewHeading = headings.some((h) =>
+    /avis|témoignages|temoignages|ils nous font confiance|ce qu'ils (en )?disent|ce qu'ils pensent|nos clients|notes? clients?|reviews|testimonials/.test(
+      h,
+    ),
+  );
+  if (reviewHeading) return true;
+
+  // 4. Marqueurs de notation dans le texte (étoiles, « 4,8/5 », « 120 avis »).
+  const text = $("body").text().replace(/\s+/g, " ").toLowerCase();
+  if (/[★⭐]/.test(text)) return true;
+  if (/\b\d(?:[.,]\d)?\s*\/\s*5\b/.test(text)) return true;
+  if (/\b\d{1,5}\s*avis\b/.test(text)) return true;
+  return false;
+}
+
+/**
+ * Première phrase du premier paragraphe substantiel de la ZONE PRINCIPALE.
+ * On cherche dans <main>/[role=main]/<article>/<section> en priorité (puis
+ * <body> en dernier recours), en excluant toujours header/nav/footer/aside :
+ * la phrase d'intro qui compte est celle du contenu, pas du chrome.
+ */
+function firstParagraphSentence($: cheerio.CheerioAPI): string | null {
+  const EXCLUDE = "header, nav, footer, aside";
+  const roots = ["main", '[role="main"]', "article", "section", "body"];
+  let best: string | null = null;
+
+  for (const root of roots) {
+    $(root)
+      .find("p")
+      .each((_, el) => {
+        if (best) return false;
+        const $el = $(el);
+        if ($el.closest(EXCLUDE).length) return; // ignore header/nav/footer/aside
+        const txt = $el.text().replace(/\s+/g, " ").trim();
+        if (txt.length >= 40) {
+          best = txt;
+          return false; // 1ᵉʳ paragraphe substantiel trouvé → on s'arrête
+        }
+      });
+    if (best) break;
+  }
+  if (!best) return null;
+
+  // On garde la 1ʳᵉ phrase (jusqu'au point), bornée pour rester lisible.
+  const sentence = (best as string).split(/(?<=[.!?])\s+/)[0] ?? best;
+  return sentence.length > 300 ? sentence.slice(0, 300).trim() + "…" : sentence;
+}
+
+/** Aplatit un arbre JSON-LD (tableaux + @graph) en une liste de nœuds objets. */
+function flattenJsonLd(parsed: unknown): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = [];
+  const visit = (node: unknown) => {
+    if (Array.isArray(node)) return node.forEach(visit);
+    if (node && typeof node === "object") {
+      const obj = node as Record<string, unknown>;
+      out.push(obj);
+      if (Array.isArray(obj["@graph"])) obj["@graph"].forEach(visit);
+    }
+  };
+  visit(parsed);
+  return out;
+}
+
+/** Extrait les horaires d'ouverture déclarés dans le JSON-LD (indice). */
+function openingHoursFromJsonLd($: cheerio.CheerioAPI): string | null {
+  const out: string[] = [];
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      for (const node of flattenJsonLd(JSON.parse($(el).text()))) {
+        const oh = node.openingHours;
+        if (typeof oh === "string") out.push(oh);
+        else if (Array.isArray(oh)) out.push(...oh.filter((x): x is string => typeof x === "string"));
+
+        const spec = node.openingHoursSpecification;
+        const specs = Array.isArray(spec) ? spec : spec ? [spec] : [];
+        for (const sp of specs as Record<string, unknown>[]) {
+          const day = sp.dayOfWeek;
+          const days = Array.isArray(day)
+            ? day.map((d) => String(d).replace(/^https?:\/\/schema\.org\//, "")).join(", ")
+            : day
+              ? String(day).replace(/^https?:\/\/schema\.org\//, "")
+              : "";
+          const fmt = (v: unknown) => String(v ?? "").replace(/^T/, "").replace(/:00$/, "h").replace(":", "h");
+          const opens = sp.opens ? fmt(sp.opens) : "";
+          const closes = sp.closes ? fmt(sp.closes) : "";
+          if (days && (opens || closes)) out.push(`${days} ${opens}–${closes}`.trim());
+        }
+      }
+    } catch {
+      /* JSON-LD invalide ignoré */
+    }
+  });
+  const uniq = [...new Set(out.map((s) => s.trim()).filter(Boolean))];
+  return uniq.length ? uniq.join(" · ") : null;
 }
 
 /** Nombre de mots du contenu principal d'une page. */
@@ -195,26 +384,34 @@ function pickInternalLinks($: cheerio.CheerioAPI, origin: string, homeUrl: strin
 }
 
 /**
+ * safeFetch avec quelques tentatives : sur une connexion lente, un timeout
+ * transitoire ne doit pas faire passer une ressource pour absente (faux négatif
+ * sur robots.txt / sitemap / llms.txt). Renvoie null après échec définitif.
+ */
+async function safeFetchRetry(url: string, attempts = 2): Promise<Response | null> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await safeFetch(url);
+    } catch {
+      /* nouvelle tentative, ou null si c'était la dernière */
+    }
+  }
+  return null;
+}
+
+/**
  * Récupère une ressource racine (robots/sitemap/llms) en tolérant le cas où le
  * fichier n'est servi qu'en HTTP alors que le site est en HTTPS : on tente
- * d'abord l'origine telle quelle, puis on retombe sur http en dernier recours.
+ * d'abord l'origine telle quelle (avec retries), puis on retombe sur http.
  */
 async function fetchWithHttpFallback(
   url: string,
 ): Promise<{ res: Response | null; viaHttpFallback: boolean }> {
-  try {
-    const res = await safeFetch(url);
-    if (res.ok) return { res, viaHttpFallback: false };
-  } catch {
-    /* on tente le repli http */
-  }
+  const res = await safeFetchRetry(url);
+  if (res?.ok) return { res, viaHttpFallback: false };
   if (url.startsWith("https://")) {
-    try {
-      const res = await safeFetch("http://" + url.slice("https://".length));
-      if (res.ok) return { res, viaHttpFallback: true };
-    } catch {
-      /* échec définitif */
-    }
+    const httpRes = await safeFetchRetry("http://" + url.slice("https://".length));
+    if (httpRes?.ok) return { res: httpRes, viaHttpFallback: true };
   }
   return { res: null, viaHttpFallback: false };
 }
@@ -231,28 +428,30 @@ function looksLikeLlmsTxt(body: string): boolean {
  *  - servi correctement (statut 200 + contenu) → `served`
  *  - contenu présent mais statut ≠ 200 (ex. 404) → `misconfigured` (les IA l'ignorent)
  *  - absent.
- * Teste https puis http (au cas où seul http réponde).
+ * Teste TOUJOURS l'adresse HTTPS en premier (même si le site a été saisi en
+ * http), puis http en repli : le llms.txt est quasi systématiquement servi en
+ * https et c'est cette URL que consultent les IA.
  */
 async function detectLlmsTxt(
   origin: string,
 ): Promise<{ served: boolean; misconfigured: boolean }> {
+  const host = new URL(origin).host;
   const candidates = [
-    origin + "/llms.txt",
-    origin.startsWith("https://") ? "http://" + origin.slice("https://".length) + "/llms.txt" : null,
-  ].filter((u): u is string => !!u);
+    `https://${host}/llms.txt`,
+    `http://${host}/llms.txt`,
+  ];
 
   let misconfigured = false;
   for (const url of candidates) {
-    try {
-      const res = await safeFetch(url);
-      const body = await res.text().catch(() => "");
-      if (res.ok && body.trim().length > 0 && !body.trim().startsWith("<")) {
-        return { served: true, misconfigured: false };
-      }
-      if (!res.ok && looksLikeLlmsTxt(body)) misconfigured = true;
-    } catch {
-      /* candidat suivant */
+    const res = await safeFetchRetry(url);
+    if (!res) continue;
+    const body = await res.text().catch(() => "");
+    if (res.ok && body.trim().length > 0 && !body.trim().startsWith("<")) {
+      return { served: true, misconfigured: false };
     }
+    // Contenu llms.txt valide mais statut ≠ 200 (ex. 404 servi par WordPress) :
+    // les crawlers IA s'arrêtent au code de statut et l'ignorent.
+    if (!res.ok && looksLikeLlmsTxt(body)) misconfigured = true;
   }
   return { served: false, misconfigured };
 }
@@ -313,6 +512,11 @@ export async function collectSignals(inputUrl: string): Promise<SiteSignals> {
     hasSitemap: false,
     hasLlmsTxt: false,
     llmsTxtMisconfigured: false,
+    hasFaqSection: false,
+    hasReviewsSection: false,
+    firstParagraph: null,
+    openingHoursHint: null,
+    ratingHint: null,
     jsonLdTypes: [],
     jsonLdCount: 0,
     hasOpenGraph: false,
@@ -331,15 +535,13 @@ export async function collectSignals(inputUrl: string): Promise<SiteSignals> {
 
   let crawlCandidates: string[] = [];
 
-  // 1. Page principale
+  // 1. Page principale (avec retries : la connexion peut être lente)
   let html = "";
-  try {
-    const res = await safeFetch(url);
-    base.statusCode = res.status;
-    base.fetchedOk = res.ok;
-    if (res.ok) html = await res.text();
-  } catch {
-    base.fetchedOk = false;
+  const homeRes = await safeFetchRetry(url, 3);
+  if (homeRes) {
+    base.statusCode = homeRes.status;
+    base.fetchedOk = homeRes.ok;
+    if (homeRes.ok) html = await homeRes.text().catch(() => "");
   }
 
   if (html) {
@@ -361,28 +563,19 @@ export async function collectSignals(inputUrl: string): Promise<SiteSignals> {
       if (!alt || alt.trim() === "") base.imagesWithoutAlt += 1;
     });
 
-    // JSON-LD
-    const types: string[] = [];
-    $('script[type="application/ld+json"]').each((_, el) => {
-      try {
-        const parsed = JSON.parse($(el).text());
-        const arr = Array.isArray(parsed) ? parsed : [parsed];
-        for (const node of arr) {
-          const t = node["@type"];
-          if (typeof t === "string") types.push(t);
-          else if (Array.isArray(t)) types.push(...t.filter((x) => typeof x === "string"));
-          if (Array.isArray(node["@graph"])) {
-            for (const g of node["@graph"]) {
-              if (typeof g["@type"] === "string") types.push(g["@type"]);
-            }
-          }
-        }
-      } catch {
-        /* JSON-LD invalide ignoré */
-      }
-    });
-    base.jsonLdTypes = [...new Set(types)];
+    // JSON-LD : types collectés récursivement (schémas imbriqués inclus, ex.
+    // AggregateRating/Review d'un nœud Restaurant) + note moyenne déclarée.
+    base.jsonLdTypes = jsonLdTypesOf($);
     base.jsonLdCount = base.jsonLdTypes.length;
+    base.ratingHint = aggregateRatingFromJsonLd($);
+
+    // Sections éditoriales clés de la page d'accueil (avant de retirer le DOM) :
+    // une FAQ visible (accordéons / Q-R) et une section avis comptent davantage
+    // pour les IA qu'un simple schéma.
+    base.hasFaqSection = detectFaqSection($);
+    base.hasReviewsSection = detectReviewsSection($);
+    base.firstParagraph = firstParagraphSentence($);
+    base.openingHoursHint = openingHoursFromJsonLd($);
 
     // Liens internes pour le crawl multi-pages (avant de retirer le contenu).
     crawlCandidates = pickInternalLinks($, origin, url);

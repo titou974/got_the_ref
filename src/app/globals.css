@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
 @theme {
-  /* Palette alignée sur le portfolio (accent émeraude/teal, hue 169.52) */
-  --color-bg: oklch(12% 0.0015 169.52);
-  --color-surface: oklch(16.5% 0.004 169.52);
-  --color-surface-2: oklch(21.03% 0.004 169.52);
-  --color-border: oklch(28% 0.0015 169.52);
-  --color-text: oklch(98% 0 0);
-  --color-muted: oklch(70.5% 0.006 169.52);
-  --color-primary: oklch(64% 0.16 169.52);
-  --color-accent: oklch(64% 0.16 169.52);
-  --color-cta: oklch(64% 0.16 169.52);
-  --color-cta-hover: oklch(57% 0.16 169.52);
-  --color-danger: oklch(62% 0.197 14.5);
-  --color-warning: oklch(80% 0.14 66);
+  /* ============================================================
+     Awesomic — Rounded midnight marketplace (thème CLAIR)
+     Canvas blanc / quasi-noir, rondeur maximale, typo unique.
+     ============================================================ */
 
-  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Palette Awesomic */
+  --color-obsidian: #09090b;
+  --color-ink: #18181b;
+  --color-graphite: #3f3f46;
+  --color-slate: #52525b;
+  --color-steel: #71717a;
+  --color-ash: #a1a1aa;
+  --color-pebble: #d4d4d8;
+  --color-fog: #ececee;
+  --color-mist: #f4f4f5;
+  --color-snow: #ffffff;
+  --color-ember: #ff5a00;
+  --color-orchid: #fe45e2;
+
+  /* Aliases sémantiques (conservés pour ne pas casser le markup existant) */
+  --color-bg: #f4f4f5;          /* canvas (mist) */
+  --color-surface: #ffffff;      /* carte blanche (snow) */
+  --color-surface-2: #ececee;    /* carte sourde (fog) */
+  --color-border: #e4e4e7;       /* hairline */
+  --color-text: #18181b;         /* texte de lecture (ink) */
+  --color-muted: #71717a;        /* texte sourd (steel) */
+  --color-primary: #09090b;      /* ancre sombre (obsidian) */
+  --color-accent: #09090b;       /* emphase = sombre (pas d'accent chromatique UI) */
+  --color-cta: #09090b;          /* action principale : pilule noire */
+  --color-cta-hover: #18181b;
+  --color-danger: #dc2626;
+  --color-warning: #d97706;
+
+  /* Typographie — Cosmica (substitut : Plus Jakarta Sans) sur tout le système */
+  --font-cosmica: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  /* Échelle typographique */
+  --text-caption: 10px;
+  --text-body: 14px;
+  --text-body-lg: 16px;
+  --text-subheading: 18px;
+  --text-heading-sm: 20px;
+  --text-heading: 32px;
+  --text-heading-lg: 40px;
+  --text-display-sm: 56px;
+  --text-display: 64px;
+
+  /* Border radius Awesomic */
+  --radius-md: 6px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-card-compact: 28px;
+  --radius-card: 36px;
+  --radius-icon: 40px;
+  --radius-hero: 48px;
+  --radius-pill: 10000px;
+
+  /* Ombres */
+  --shadow-md: rgba(0, 0, 0, 0.04) 0px 4px 12px 0px;
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+
+  /* Ombre multi-couches du bouton pilule primaire (#09090b) */
+  --shadow-pill:
+    rgba(255, 255, 255, 0.5) 0px 0.5px 0px 0px inset,
+    rgba(117, 123, 133, 0.4) 0px 9px 14px -5px inset,
+    rgb(44, 46, 52) 0px 0px 0px 1.5px,
+    rgba(0, 0, 0, 0.14) 0px 4px 6px 0px;
 }
 
 html {
@@ -34,73 +87,75 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Typo pilotée par la graisse, tracking normal (pas de letter-spacing serré) */
 h1, h2, h3, h4, h5 {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  letter-spacing: normal;
 }
 
-/* Fond ambiant tech : halos émeraude */
+/* Canvas Awesomic : aucun halo, simple toile mist (neutralise l'ancien fond émeraude) */
 .bg-ambient {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(60rem 60rem at 15% -10%, color-mix(in oklch, var(--color-accent) 16%, transparent), transparent 60%),
-    radial-gradient(50rem 50rem at 100% 0%, color-mix(in oklch, var(--color-accent) 10%, transparent), transparent 55%),
-    radial-gradient(40rem 40rem at 50% 120%, color-mix(in oklch, var(--color-accent) 9%, transparent), transparent 60%);
+  background: var(--color-bg);
 }
 
-/* Carte verre dépoli */
+/* Carte « verre » version claire : blanc frosté, hairline */
 .glass {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-fog);
 }
 
 .glass-strong {
-  background: rgba(15, 23, 42, 0.72);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-fog);
 }
 
-/* Dégradé de texte */
+/* Mot accentué dans les titres : ash (#a1a1aa) à graisse/ taille identiques */
 .text-gradient {
-  background: linear-gradient(120deg, #ffffff 0%, #7fe9cf 55%, var(--color-accent) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--color-ash);
+  -webkit-text-fill-color: var(--color-ash);
 }
 
-/* Carte animée façon cal.com : coins généreux, bordure douce, hover lift */
+/* Carte Awesomic : rondeur extrême 36px, hairline, profondeur par la couleur (pas d'ombre dure) */
 .card-cal {
-  border-radius: 1.5rem;
-  border: 1px solid var(--color-border);
-  background: color-mix(in oklch, var(--color-surface) 70%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-fog);
+  background: var(--color-snow);
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 .card-cal:hover {
   transform: translateY(-4px);
-  border-color: color-mix(in oklch, var(--color-accent) 45%, var(--color-border));
-  box-shadow: 0 16px 40px -16px color-mix(in oklch, var(--color-accent) 35%, transparent);
+  border-color: var(--color-pebble);
+  box-shadow: var(--shadow-md);
 }
 
-/* Curseur clignotant de saisie */
+/* Bouton pilule primaire — qualité « verre pressé » réservée au CTA noir */
+.btn-pill-primary {
+  background: var(--color-obsidian);
+  color: #ffffff;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-pill);
+}
+
+/* Curseur clignotant de saisie (neutralisé en sombre) */
 .caret::after {
   content: "";
   display: inline-block;
   width: 2px;
   height: 1.1em;
   margin-left: 2px;
-  background: var(--color-accent);
+  background: var(--color-obsidian);
   vertical-align: text-bottom;
   animation: blink 1s steps(2, start) infinite;
 }
 
-/* Lueur émeraude qui balaie une carte (effet "live" cal.com) */
+/* Balayage « live » sur une carte (neutre, très discret) */
 @keyframes sweep {
   0% { transform: translateX(-120%); }
   100% { transform: translateX(120%); }
@@ -109,7 +164,7 @@ h1, h2, h3, h4, h5 {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, transparent 30%, color-mix(in oklch, var(--color-accent) 14%, transparent) 50%, transparent 70%);
+  background: linear-gradient(100deg, transparent 30%, rgba(9, 9, 11, 0.05) 50%, transparent 70%);
   animation: sweep 3.5s ease-in-out infinite;
   pointer-events: none;
 }
@@ -127,7 +182,7 @@ h1, h2, h3, h4, h5 {
   animation: thinking-bounce 1.4s infinite ease-in-out both;
 }
 
-/* Shimmer de chargement */
+/* Shimmer de chargement (clair) */
 @keyframes shimmer {
   0% { background-position: -800px 0; }
   100% { background-position: 800px 0; }
@@ -135,9 +190,9 @@ h1, h2, h3, h4, h5 {
 .shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 25%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.04) 75%
+    rgba(9, 9, 11, 0.04) 25%,
+    rgba(9, 9, 11, 0.08) 50%,
+    rgba(9, 9, 11, 0.04) 75%
   );
   background-size: 800px 100%;
   animation: shimmer 1.6s infinite linear;

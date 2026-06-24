@@ -29,7 +29,7 @@ export function EngineComparison({
             type="category"
             dataKey="engine"
             width={80}
-            tick={{ fill: "#cbd5e1", fontSize: 13 }}
+            tick={{ fill: "#3f3f46", fontSize: 13 }}
             axisLine={false}
             tickLine={false}
           />
@@ -40,7 +40,7 @@ export function EngineComparison({
             <LabelList
               dataKey="score"
               position="right"
-              fill="#f8fafc"
+              fill="#18181b"
               fontSize={13}
               fontWeight={600}
             />

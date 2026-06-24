@@ -18,10 +18,10 @@ export function CategoryRadar({
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data} outerRadius="72%">
-          <PolarGrid stroke="rgba(255,255,255,0.12)" />
+          <PolarGrid stroke="rgba(9,9,11,0.12)" />
           <PolarAngleAxis
             dataKey="label"
-            tick={{ fill: "#94a3b8", fontSize: 11 }}
+            tick={{ fill: "#71717a", fontSize: 11 }}
           />
           <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
           <Radar

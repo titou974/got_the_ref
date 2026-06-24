@@ -10,11 +10,17 @@ export function AnimatedScoreRing({
   size = 180,
   stroke = 14,
   label,
+  trackColor = "rgba(9,9,11,0.08)",
+  labelClassName = "text-muted",
 }: {
   score: number;
   size?: number;
   stroke?: number;
   label?: string;
+  /** Couleur de l'anneau de fond (à éclaircir sur fond sombre). */
+  trackColor?: string;
+  /** Classe du libellé sous le score (à éclaircir sur fond sombre). */
+  labelClassName?: string;
 }) {
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -40,7 +46,7 @@ export function AnimatedScoreRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.08)"
+          stroke={trackColor}
           strokeWidth={stroke}
         />
         <motion.circle
@@ -59,7 +65,7 @@ export function AnimatedScoreRing({
         <motion.span className="font-display text-4xl font-bold" style={{ color }}>
           {rounded}
         </motion.span>
-        {label && <span className="mt-0.5 text-xs text-muted">{label}</span>}
+        {label && <span className={`mt-0.5 text-xs ${labelClassName}`}>{label}</span>}
       </div>
     </div>
   );

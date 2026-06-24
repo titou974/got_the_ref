@@ -6,7 +6,7 @@ export async function Footer() {
   const t = await getTranslations("footer");
 
   return (
-    <footer className="relative z-10 border-t border-white/5 px-5 py-8">
+    <footer className="relative z-10 border-t border-fog px-5 py-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 text-sm text-muted sm:flex-row">
         <p>{t("rights", { year: new Date().getFullYear() })}</p>
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">

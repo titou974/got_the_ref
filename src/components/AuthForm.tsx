@@ -85,7 +85,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       <button
         type="submit"
         disabled={active.isPending}
-        className="w-full cursor-pointer rounded-xl bg-cta py-3 font-semibold text-white transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full cursor-pointer rounded-full bg-cta py-3 font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-60"
       >
         {active.isPending
           ? t("submitting")
@@ -98,14 +98,14 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         {isSignup ? (
           <>
             {t("haveAccount")}{" "}
-            <Link href={ROUTES.signIn} className="cursor-pointer text-accent hover:underline">
+            <Link href={ROUTES.signIn} className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-4 hover:decoration-obsidian">
               {t("goSignin")}
             </Link>
           </>
         ) : (
           <>
             {t("noAccount")}{" "}
-            <Link href={ROUTES.signUp} className="cursor-pointer text-accent hover:underline">
+            <Link href={ROUTES.signUp} className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-4 hover:decoration-obsidian">
               {t("goSignup")}
             </Link>
           </>
@@ -115,15 +115,15 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       <style>{`
         .input {
           width: 100%;
-          border-radius: 0.75rem;
+          border-radius: 14px;
           border: 1px solid var(--color-border);
-          background: rgba(255,255,255,0.03);
+          background: var(--color-snow);
           padding: 0.7rem 0.9rem;
           color: var(--color-text);
           font-size: 0.95rem;
         }
-        .input::placeholder { color: rgba(148,163,184,0.6); }
-        .input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(34,211,238,0.15); }
+        .input::placeholder { color: var(--color-ash); }
+        .input:focus { outline: none; border-color: var(--color-obsidian); box-shadow: 0 0 0 3px rgba(9,9,11,0.12); }
       `}</style>
     </form>
   );

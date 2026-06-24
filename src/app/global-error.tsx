@@ -27,7 +27,7 @@ export default function GlobalError({
           <button
             type="button"
             onClick={() => unstable_retry()}
-            className="mt-6 cursor-pointer rounded-xl bg-cta px-5 py-2.5 font-semibold text-white transition-colors duration-200 hover:bg-cta-hover"
+            className="mt-6 cursor-pointer rounded-full bg-cta px-5 py-2.5 font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
           >
             Réessayer
           </button>

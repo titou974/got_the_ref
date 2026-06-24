@@ -75,6 +75,11 @@ export type SiteSignals = {
   hasSitemap: boolean;
   hasLlmsTxt: boolean; // llms.txt correctement servi (statut 200)
   llmsTxtMisconfigured: boolean; // contenu llms présent mais statut ≠ 200 (ex. 404) → ignoré par les IA
+  hasFaqSection: boolean; // section FAQ éditoriale sur la page d'accueil (accordéons / blocs Q-R)
+  hasReviewsSection: boolean; // section avis / témoignages sur la page d'accueil
+  firstParagraph: string | null; // 1ʳᵉ phrase du 1ᵉʳ paragraphe substantiel de la page d'accueil
+  openingHoursHint: string | null; // horaires lus dans le JSON-LD (indice pour l'extraction)
+  ratingHint: string | null; // note moyenne déclarée en JSON-LD (AggregateRating), ex. « 4.7/5 · 2500 avis »
   jsonLdTypes: string[];
   jsonLdCount: number;
   hasOpenGraph: boolean;
@@ -103,15 +108,27 @@ export type Backlinks = {
 
 export type AiEngine = "ChatGPT" | "Gemini";
 
-/** Score GEO et positionnement estimé pour un moteur IA donné. */
+/**
+ * Classement d'un commerce pour UN moteur sur UNE requête.
+ * `scope` : « direct » (niche précise, concurrents directs) ou « indirect »
+ * (catégorie générale, concurrents indirects — uniquement commerces physiques).
+ */
+export type EngineRanking = {
+  scope: "direct" | "indirect";
+  label: string; // ex. « Restaurants de fruits de mer à La Rochelle »
+  measured: boolean; // true = classement réel (API moteur), false = estimation
+  targetRank: number | null; // rang du commerce (null = hors classement)
+  competitors: Competitor[]; // établissements classés (top ~10)
+};
+
+/** Score GEO et classements (direct + indirect) pour un moteur IA donné. */
 export type EngineScore = {
   engine: AiEngine;
-  score: number; // 0-100 : préparation GEO pour ce moteur
-  estimatedPosition: number | null; // position estimée dans les citations (1 = top), null = non cité
+  score: number; // 0-100 : préparation GEO pour ce moteur (dérivée du classement direct)
   visibility: "forte" | "moyenne" | "faible" | "absente";
   summary: string;
-  competitorsAhead?: string[]; // concurrents que ce moteur cite avant le site
-  measured?: boolean; // true = position issue d'un appel réel à l'API du moteur
+  measured: boolean; // true = au moins un classement réel (appel API moteur)
+  rankings: EngineRanking[]; // [direct] (en ligne) ou [direct, indirect] (physique localisé)
 };
 
 /**
@@ -161,6 +178,29 @@ export type WebPresence = {
   findings: string[];
 };
 
+/**
+ * Évaluation d'UN élément on-page (title, meta description, H1, 1ʳᵉ phrase).
+ * `text` reprend le contenu réel extrait du site ; `signals` liste les critères
+ * vérifiés (ex. présence de l'adresse, de la niche, de la note).
+ */
+export type OnPageSignal = { label: string; present: boolean };
+
+export type OnPageCheck = {
+  text: string | null; // contenu réel extrait (null si l'élément est absent)
+  status: "ok" | "warn" | "ko";
+  signals: OnPageSignal[]; // critères attendus et leur présence
+  note: string; // diagnostic court + conseil
+};
+
+/** Audit des éléments on-page clés + horaires d'ouverture extraits du site. */
+export type OnPageContent = {
+  title: OnPageCheck;
+  metaDescription: OnPageCheck; // attendus : adresse, niche, note
+  h1: OnPageCheck; // attendus : mots-clés de la niche
+  firstSentence: OnPageCheck; // attendu : résume l'activité + l'adresse
+  openingHours: string | null; // horaires d'ouverture lisibles, extraits du site
+};
+
 /** Analyse SEO Google classique (positionnement organique). */
 export type GoogleSeo = {
   score: number; // 0-100
@@ -198,10 +238,10 @@ export type GeoAnalysisResult = {
   engines: EngineScore[]; // score GEO par moteur IA
   localRankings: LocalRanking[]; // classements concurrents (niche + général) — vide si non physique
   webPresence: WebPresence; // qualifications & apparitions presse
+  onPageContent: OnPageContent; // audit des éléments on-page (title, meta, H1, 1ʳᵉ phrase) + horaires
   googleSeo: GoogleSeo; // volet SEO Google (conservé en données, masqué de l'UI)
   recommendations: Recommendation[];
   aiSimulation: AiSimulation;
-  aiVisibility: AiVisibility; // comparatif des vues IA estimées par moteur
   signals: SiteSignals;
   createdAt: string;
   mapsUrl?: string | null; // fiche Google Maps fournie par l'utilisateur (facultatif)
@@ -220,26 +260,3 @@ export type AiSimulation = {
   explanation: string;
 };
 
-/** Une requête témoin et si le site y est cité par le moteur. */
-export type SampleQuery = {
-  query: string;
-  cited: boolean;
-  position: number | null;
-};
-
-/** Visibilité de citation + vues IA estimées (modélisées) pour un moteur. */
-export type AiVisibilityEngine = {
-  engine: AiEngine;
-  citationRate: number; // 0-100 : citabilité estimée (présence dans les réponses)
-  shareOfVoice: number; // 0-100 : part de voix relative
-  estimatedMonthlyVisits: number; // visites IA estimées / mois (modèle)
-  sampleQueries: SampleQuery[];
-};
-
-/** Comparatif global des vues IA estimées par moteur. */
-export type AiVisibility = {
-  totalEstimatedMonthlyVisits: number;
-  topEngine: AiEngine | null;
-  engines: AiVisibilityEngine[]; // triées par visites estimées (desc)
-  methodologyNote: string;
-};

@@ -16,11 +16,11 @@ export function BookCallButton({
   className?: string;
 }) {
   const base =
-    "inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60";
+    "inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40";
   const styles =
     variant === "primary"
-      ? "bg-cta text-white hover:bg-cta-hover"
-      : "border border-border bg-surface/60 text-text hover:bg-surface";
+      ? "bg-cta text-white shadow-[var(--shadow-pill)] hover:bg-cta-hover"
+      : "border border-graphite bg-snow text-graphite hover:bg-mist";
 
   return (
     <a

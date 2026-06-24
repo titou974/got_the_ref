@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -99,13 +100,13 @@ export default async function AgencyPage() {
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href={ROUTES.home}
-              className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-cta px-6 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+              className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-6 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
             >
               {t("heroCtaPrimary")}
             </Link>
             <Link
               href={ROUTES.services}
-              className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-6 py-3 text-sm font-semibold text-text transition-colors duration-200 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+              className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border border-graphite bg-snow px-6 py-3 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
             >
               {t("heroCtaSecondary")}
             </Link>
@@ -114,7 +115,7 @@ export default async function AgencyPage() {
 
         {/* Définition du GEO */}
         <section className="mx-auto w-full max-w-6xl px-5 py-12">
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+          <p className="text-xs font-semibold uppercase tracking-wider text-steel">
             {t("whatEyebrow")}
           </p>
           <h2 className="mt-1 text-2xl font-bold sm:text-3xl">{t("whatTitle")}</h2>
@@ -124,7 +125,7 @@ export default async function AgencyPage() {
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
             {whatCards.map((c) => (
               <div key={c.term} className="card-cal p-6">
-                <h3 className="font-display text-lg font-semibold text-accent">{c.term}</h3>
+                <h3 className="font-display text-lg font-semibold text-text">{c.term}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{c.definition}</p>
               </div>
             ))}
@@ -135,7 +136,7 @@ export default async function AgencyPage() {
         <section className="mx-auto w-full max-w-6xl px-5 py-12">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+              <p className="text-xs font-semibold uppercase tracking-wider text-steel">
                 {t("storyEyebrow")}
               </p>
               <h2 className="mt-1 text-2xl font-bold sm:text-3xl">{t("storyTitle")}</h2>
@@ -145,8 +146,8 @@ export default async function AgencyPage() {
                 ))}
               </div>
             </div>
-            <div className="glass-strong sweep relative overflow-hidden rounded-2xl p-7">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+            <div className="sweep relative overflow-hidden rounded-[28px] border border-fog bg-snow p-7 shadow-[var(--shadow-md)]">
+              <p className="text-xs font-semibold uppercase tracking-wider text-steel">
                 {t("storyResultLabel")}
               </p>
               <p className="mt-3 font-display text-2xl font-bold leading-tight text-gradient">
@@ -160,11 +161,15 @@ export default async function AgencyPage() {
         {/* Le fondateur */}
         <section className="mx-auto w-full max-w-6xl px-5 py-12">
           <div className="card-cal flex flex-col gap-6 p-7 sm:flex-row sm:items-center sm:p-9">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-accent/15 font-display text-2xl font-bold text-accent">
-              TH
-            </div>
+            <Image
+              src="/titou.jpeg"
+              alt={t("founderName")}
+              width={96}
+              height={96}
+              className="h-24 w-24 shrink-0 rounded-[28px] object-cover shadow-[var(--shadow-md)]"
+            />
             <div className="flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+              <p className="text-xs font-semibold uppercase tracking-wider text-steel">
                 {t("founderEyebrow")}
               </p>
               <h2 className="mt-1 text-xl font-bold sm:text-2xl">{t("founderName")}</h2>
@@ -174,7 +179,7 @@ export default async function AgencyPage() {
                 href={SITE.founder.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-accent hover:underline"
+                className="mt-4 inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-text underline decoration-pebble underline-offset-4 hover:decoration-obsidian"
               >
                 {t("founderLink")}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -187,7 +192,7 @@ export default async function AgencyPage() {
 
         {/* Notre méthode */}
         <section className="mx-auto w-full max-w-6xl px-5 py-12">
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+          <p className="text-xs font-semibold uppercase tracking-wider text-steel">
             {t("methodEyebrow")}
           </p>
           <h2 className="mt-1 text-2xl font-bold sm:text-3xl">{t("methodTitle")}</h2>
@@ -195,7 +200,7 @@ export default async function AgencyPage() {
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {methodCards.map((m, i) => (
               <div key={m.title} className="card-cal p-6">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 font-display text-sm font-bold text-accent">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-obsidian font-display text-sm font-bold text-white">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <h3 className="mt-4 font-display text-base font-semibold">{m.title}</h3>
@@ -207,14 +212,14 @@ export default async function AgencyPage() {
 
         {/* Stats marché */}
         <section className="mx-auto w-full max-w-6xl px-5 py-12">
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+          <p className="text-xs font-semibold uppercase tracking-wider text-steel">
             {t("statsEyebrow")}
           </p>
           <h2 className="mt-1 text-2xl font-bold sm:text-3xl">{t("statsTitle")}</h2>
           <div className="mt-8 grid grid-cols-2 gap-5 lg:grid-cols-4">
             {statsItems.map((s) => (
-              <div key={s.label} className="glass rounded-2xl p-6 text-center">
-                <p className="font-display text-3xl font-bold text-gradient sm:text-4xl">{s.value}</p>
+              <div key={s.label} className="rounded-[28px] border border-fog bg-snow p-6 text-center">
+                <p className="font-display text-3xl font-bold text-obsidian sm:text-4xl">{s.value}</p>
                 <p className="mt-2 text-xs leading-relaxed text-muted">{s.label}</p>
               </div>
             ))}
@@ -223,7 +228,7 @@ export default async function AgencyPage() {
 
         {/* FAQ */}
         <section className="mx-auto w-full max-w-3xl px-5 py-12">
-          <p className="text-center text-xs font-semibold uppercase tracking-wider text-accent">
+          <p className="text-center text-xs font-semibold uppercase tracking-wider text-steel">
             {t("faqEyebrow")}
           </p>
           <h2 className="mt-1 text-center text-2xl font-bold sm:text-3xl">{t("faqTitle")}</h2>

@@ -44,7 +44,7 @@ export function SolutionBlock({ prompt }: { prompt: string }) {
     <AnimatedCard className="mt-4" delay={0.05}>
       <div className="flex items-start gap-3">
         <span
-          className="mt-0.5 shrink-0 rounded-lg bg-accent/15 p-2 text-accent"
+          className="mt-0.5 shrink-0 rounded-xl bg-obsidian p-2 text-white"
           aria-hidden
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -64,7 +64,7 @@ export function SolutionBlock({ prompt }: { prompt: string }) {
       </div>
 
       <pre
-        className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-4 font-mono text-xs leading-relaxed text-text/90"
+        className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap rounded-3xl border border-graphite bg-obsidian p-4 font-mono text-xs leading-relaxed text-fog"
         aria-label={t("promptAriaLabel")}
       >
         {prompt}
@@ -75,7 +75,7 @@ export function SolutionBlock({ prompt }: { prompt: string }) {
           type="button"
           onClick={copyPrompt}
           aria-live="polite"
-          className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-cta px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+          className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
           {copied ? (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -92,7 +92,7 @@ export function SolutionBlock({ prompt }: { prompt: string }) {
         <button
           type="button"
           onClick={shareDev}
-          className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-4 py-2.5 text-sm font-semibold text-text transition-colors duration-200 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+          className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border border-graphite bg-snow px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
             <circle cx="18" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.6" />
@@ -105,11 +105,11 @@ export function SolutionBlock({ prompt }: { prompt: string }) {
       </div>
 
       {/* CTA agence : redirige vers les services depuis chaque prompt-solution */}
-      <p className="mt-4 border-t border-white/5 pt-4 text-sm text-muted">
+      <p className="mt-4 border-t border-fog pt-4 text-sm text-muted">
         {t("agencyCtaText")}{" "}
         <Link
           href={ROUTES.services}
-          className="cursor-pointer font-semibold text-accent hover:underline"
+          className="cursor-pointer font-semibold text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian"
         >
           {t("agencyCtaLink")}
         </Link>

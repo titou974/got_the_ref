@@ -29,10 +29,10 @@ export function CheckoutButton({
         type="button"
         onClick={() => execute({ plan })}
         disabled={isPending}
-        className={`w-full cursor-pointer rounded-xl py-3 font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
+        className={`w-full cursor-pointer rounded-full py-3 font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
           highlighted
-            ? "bg-cta text-white hover:bg-cta-hover"
-            : "border border-white/15 text-text hover:bg-white/5"
+            ? "bg-cta text-white shadow-[var(--shadow-pill)] hover:bg-cta-hover"
+            : "border border-graphite text-graphite hover:bg-mist"
         }`}
       >
         {isPending ? t("redirecting") : label}

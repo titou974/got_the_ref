@@ -3,7 +3,7 @@ import "server-only";
 import type { AiEngine } from "./types";
 import { geoLog } from "./log";
 
-const FETCH_TIMEOUT_MS = 22000;
+const FETCH_TIMEOUT_MS = 45000;
 
 export type EngineCitation = {
   rank: number;
@@ -30,16 +30,50 @@ function domainOf(url: string): string {
   }
 }
 
-async function postJson(url: string, init: RequestInit): Promise<unknown> {
+/** Détecte une erreur d'abandon (timeout AbortController ou coupure réseau). */
+function isAbortError(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    (err.name === "AbortError" || /aborted|abort/i.test(err.message))
+  );
+}
+
+async function postJson(
+  url: string,
+  init: RequestInit,
+  label = "fetch",
+): Promise<unknown> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const startedAt = Date.now();
+  const timer = setTimeout(() => {
+    geoLog(
+      `${label} — ⏱️ TIMEOUT atteint (${FETCH_TIMEOUT_MS} ms) → abandon de la requête HTTP`,
+    );
+    controller.abort();
+  }, FETCH_TIMEOUT_MS);
   try {
+    geoLog(
+      `${label} — → requête HTTP envoyée vers ${new URL(url).host} (budget ${FETCH_TIMEOUT_MS} ms)`,
+    );
     const res = await fetch(url, { ...init, signal: controller.signal });
+    geoLog(
+      `${label} — ← réponse reçue en ${Date.now() - startedAt} ms (HTTP ${res.status})`,
+    );
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       throw new Error(`HTTP ${res.status} ${body.slice(0, 200)}`);
     }
     return await res.json();
+  } catch (err) {
+    const ms = Date.now() - startedAt;
+    if (isAbortError(err)) {
+      geoLog(
+        `${label} — ❌ AbortError après ${ms} ms : la requête a dépassé le budget de ${FETCH_TIMEOUT_MS} ms (connexion lente ou moteur qui tarde).`,
+      );
+    } else {
+      geoLog(`${label} — ❌ échec réseau après ${ms} ms`, String(err));
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }
@@ -145,23 +179,31 @@ async function queryOpenAI(query: string): Promise<LiveEngineResult> {
   }
 
   const model = process.env.OPENAI_MODEL || "gpt-5.5";
-  geoLog(`OpenAI — appel (${model}, web_search)…`);
+  const startedAt = Date.now();
+  geoLog(`OpenAI — appel (${model}, web_search)…`, {
+    requête: query.slice(0, 200),
+    budgetTimeoutMs: FETCH_TIMEOUT_MS,
+  });
   try {
-    const data = (await postJson("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
+    const data = (await postJson(
+      "https://api.openai.com/v1/responses",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          tools: [{ type: "web_search", search_context_size: "high" }],
+          tool_choice: "auto",
+          reasoning: { effort: "medium" },
+          max_output_tokens: 2000,
+          input: query,
+        }),
       },
-      body: JSON.stringify({
-        model,
-        tools: [{ type: "web_search", search_context_size: "high" }],
-        tool_choice: "auto",
-        reasoning: { effort: "medium" },
-        max_output_tokens: 2000,
-        input: query,
-      }),
-    })) as Record<string, unknown>;
+      "OpenAI/ChatGPT",
+    )) as Record<string, unknown>;
 
     let answerText = (data.output_text as string) ?? "";
     const citations: EngineCitation[] = [];
@@ -190,7 +232,8 @@ async function queryOpenAI(query: string): Promise<LiveEngineResult> {
     }
 
     const rankedItems = parseRankedItems(answerText);
-    geoLog("OpenAI — résultat", {
+    geoLog("OpenAI — ✅ résultat", {
+      tempsTotalMs: Date.now() - startedAt,
       classement: rankedItems,
       sourcesCitées: citations.length,
       aperçuRéponse: answerText.slice(0, 400),
@@ -204,7 +247,16 @@ async function queryOpenAI(query: string): Promise<LiveEngineResult> {
       citations: dedupeCitations(citations),
     };
   } catch (err) {
-    geoLog("OpenAI — échec", String(err));
+    const ms = Date.now() - startedAt;
+    if (isAbortError(err)) {
+      geoLog(
+        `OpenAI — ❌ ABANDON (AbortError) après ${ms} ms : timeout de ${FETCH_TIMEOUT_MS} ms dépassé. ` +
+          `GPT (web_search + reasoning) est lent ; sur une connexion faible il dépasse souvent ce budget. ` +
+          `Piste : augmenter FETCH_TIMEOUT_MS ou réduire reasoning.effort/search_context_size.`,
+      );
+    } else {
+      geoLog(`OpenAI — ❌ échec après ${ms} ms`, String(err));
+    }
     return {
       engine,
       available: true,
@@ -251,6 +303,7 @@ async function queryGemini(query: string): Promise<LiveEngineResult> {
           tools: [{ google_search: {} }],
         }),
       },
+      "Gemini",
     )) as Record<string, unknown>;
 
     const candidates = data.candidates as

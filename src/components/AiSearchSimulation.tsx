@@ -12,19 +12,6 @@ type Engine = {
 };
 
 const ENGINES: Record<string, Engine> = {
-  perplexity: {
-    name: "Perplexity",
-    color: "#3fd6ad",
-    icon: (
-      <Image
-        src="/perplexity.png"
-        alt="Perplexity"
-        width={32}
-        height={32}
-        className="bg-white rounded w-4 h-4"
-      />
-    ),
-  },
   chatgpt: {
     name: "ChatGPT",
     color: "#11b48c",
@@ -61,11 +48,6 @@ type Scenario = {
 };
 
 const SCENARIOS: Scenario[] = [
-  {
-    engine: "perplexity",
-    query: "meilleur restaurant italien à Lyon",
-    competitors: ["Trattoria del Centro", "La Tavola Lyonnaise"],
-  },
   {
     engine: "chatgpt",
     query: "quelle agence web choisir à Bordeaux ?",
@@ -126,16 +108,16 @@ export function AiSearchSimulation() {
   const tabs = useMemo(() => Object.entries(ENGINES), []);
 
   return (
-    <div className="glass-strong w-full overflow-hidden rounded-2xl">
+    <div className="w-full overflow-hidden rounded-[28px] border border-fog bg-snow shadow-[var(--shadow-md)]">
       {/* Onglets moteurs */}
-      <div className="flex items-center gap-1 border-b border-white/8 px-3 py-2">
+      <div className="flex items-center gap-1 border-b border-fog px-3 py-2">
         {tabs.map(([key, e]) => {
           const active = key === scenario.engine;
           return (
             <div
               key={key}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-300 ${
-                active ? "bg-white/8 text-text" : "text-muted/60"
+              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors duration-300 ${
+                active ? "bg-fog text-text" : "text-muted"
               }`}
               style={active ? { color: e.color } : undefined}
             >
@@ -154,7 +136,7 @@ export function AiSearchSimulation() {
       <div className="min-h-[200px] space-y-3 p-4">
         {/* Requête utilisateur */}
         <div className="flex justify-end">
-          <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-primary/20 px-3.5 py-2 text-sm">
+          <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-fog px-3.5 py-2 text-sm text-text">
             <span className={phase === "typing" ? "caret" : ""}>{typed}</span>
           </div>
         </div>
@@ -212,17 +194,17 @@ export function AiSearchSimulation() {
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.25 + i * 0.35 }}
-                        className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-sm ${
+                        className={`flex items-center gap-2.5 rounded-2xl border px-3 py-2 text-sm ${
                           highlight
-                            ? "border-cta/40 bg-cta/10"
-                            : "border-white/8 bg-white/[0.03]"
+                            ? "border-obsidian/30 bg-obsidian/[0.06]"
+                            : "border-fog bg-mist"
                         }`}
                       >
                         <span
                           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                             highlight
                               ? "bg-cta text-white"
-                              : "bg-white/10 text-muted"
+                              : "bg-fog text-muted"
                           }`}
                         >
                           {i + 1}

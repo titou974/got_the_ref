@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import type {
   GeoAnalysisResult,
   EngineScore,
-  LocalRanking,
+  EngineRanking,
+  OnPageCheck,
 } from "@/lib/geo/types";
 import { CATEGORY_META } from "@/lib/geo/types";
 import type {
@@ -21,8 +23,15 @@ import { AnimatedScoreRing } from "./AnimatedScoreRing";
 import { AnimatedCard } from "./AnimatedCard";
 import { CategoryRadar } from "./CategoryRadar";
 import { SolutionBlock } from "./SolutionBlock";
+import { SiteScreenshot } from "./SiteScreenshot";
 
 type TabKey = "results" | "architecture" | "content" | "presence" | "maps";
+
+/** Logos des moteurs IA (chemins dans /public), indexés par nom de moteur. */
+const ENGINE_LOGOS: Record<string, string> = {
+  ChatGPT: "/chatgpt.png",
+  Gemini: "/gemini.webp",
+};
 
 const STATUS_COLOR: Record<DiagnosticStatus, string> = {
   ok: "#11b48c",
@@ -93,12 +102,13 @@ function CheckRow({
     else if (check.key === "mapsReviews") detail = t("content.units.reviews", { value: check.value });
     else if (SCORE_KEYS.has(check.key)) detail = t("content.units.score", { value: check.value });
     else if (check.key === "h1") detail = t("architecture.h1Count", { value: check.value });
+    else if (check.key === "llmsTxt") detail = t("architecture.llmsTxtMisconfigured");
     else if (check.key === "aiCrawlers" && check.status !== "ok")
       detail = t("architecture.blockedCrawlers", { value: check.value });
   }
 
   return (
-    <li className="flex items-center justify-between gap-3 border-b border-white/5 py-2.5 last:border-0">
+    <li className="flex items-center justify-between gap-3 border-b border-fog py-2.5 last:border-0">
       <div className="min-w-0">
         <p className="truncate text-sm text-text">{label}</p>
         {detail && <p className="truncate text-xs text-muted">{detail}</p>}
@@ -142,7 +152,7 @@ export function ReportTabs({
   return (
     <section>
       {/* Barre d'onglets */}
-      <div className="mb-5 flex flex-wrap gap-2 rounded-2xl border border-border bg-surface/50 p-1.5">
+      <div className="mb-5 flex flex-wrap gap-2 rounded-3xl border border-fog bg-snow p-1.5">
         {tabs.map((key) => {
           const isActive = active === key;
           return (
@@ -151,19 +161,18 @@ export function ReportTabs({
               type="button"
               onClick={() => setActive(key)}
               aria-pressed={isActive}
-              className={`relative flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${
-                isActive ? "text-text" : "text-muted hover:text-text"
+              className={`relative flex cursor-pointer items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${
+                isActive ? "text-white" : "text-muted hover:text-text"
               }`}
             >
               {isActive && (
                 <motion.span
                   layoutId="report-tab-pill"
-                  className="absolute inset-0 rounded-xl bg-accent/15"
-                  style={{ border: "1px solid rgba(34,211,238,0.35)" }}
+                  className="absolute inset-0 rounded-full bg-obsidian"
                   transition={{ type: "spring", stiffness: 400, damping: 32 }}
                 />
               )}
-              <span className="relative" style={{ color: isActive ? "var(--color-accent)" : undefined }}>
+              <span className="relative" style={{ color: isActive ? "#ffffff" : undefined }}>
                 {TAB_ICONS[key]}
               </span>
               <span className="relative">{t(`tabs.${key}`)}</span>
@@ -199,23 +208,23 @@ function ProfileHeader({ result }: { result: GeoAnalysisResult }) {
 
   return (
     <AnimatedCard className="overflow-hidden">
-      <p className="text-xs font-semibold uppercase tracking-wider text-accent">{t("eyebrow")}</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("eyebrow")}</p>
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
         <h3 className="text-xl font-bold sm:text-2xl">{niche}</h3>
         {generalCategory && generalCategory.toLowerCase() !== niche.toLowerCase() && (
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-xs text-muted">
+          <span className="rounded-full border border-fog bg-mist px-2.5 py-0.5 text-xs text-muted">
             {generalCategory}
           </span>
         )}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
-        {isPhysical && location ? (
+        {isPhysical ? (
           <span className="inline-flex items-center gap-1.5 text-text">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-accent" aria-hidden>
               <path d="M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
               <circle cx="12" cy="10" r="2.3" stroke="currentColor" strokeWidth="1.6" />
             </svg>
-            {location}
+            {location ?? t("physical")}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5">
@@ -233,16 +242,92 @@ function ProfileHeader({ result }: { result: GeoAnalysisResult }) {
 
 /* ----------------------------- Carte moteur IA ---------------------------- */
 
-function EngineCard({ engine }: { engine: EngineScore }) {
+/** Un classement (direct ou indirect) d'un moteur, avec le commerce surligné. */
+function RankingList({ ranking }: { ranking: EngineRanking }) {
   const t = useTranslations("analysisReport.results");
-  const vis = visibilityColor(engine.visibility);
-  const ahead = engine.competitorsAhead ?? [];
+  const scopeLabel = ranking.scope === "direct" ? t("directScope") : t("indirectScope");
+  const isDirect = ranking.scope === "direct";
 
   return (
-    <div className="flex flex-col rounded-xl border border-white/8 bg-white/[0.03] p-4">
+    <div className="rounded-2xl border border-fog bg-mist p-3.5">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+            style={
+              isDirect
+                ? { background: "rgba(9,9,11,0.08)", color: "var(--color-obsidian)" }
+                : { background: "rgba(113,113,122,0.12)", color: "#52525b" }
+            }
+          >
+            {scopeLabel}
+          </span>
+          <p className="mt-1 truncate text-xs text-muted">{ranking.label}</p>
+        </div>
+        {ranking.targetRank != null ? (
+          <span className="shrink-0 rounded-lg bg-obsidian/10 px-2 py-0.5 text-sm font-bold text-obsidian">
+            #{ranking.targetRank}
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-lg bg-fog px-2 py-0.5 text-[11px] font-medium text-muted">
+            {t("notRanked")}
+          </span>
+        )}
+      </div>
+      {ranking.competitors.length > 0 ? (
+        <ol className="space-y-0.5">
+          {ranking.competitors.map((c) => (
+            <li
+              key={`${c.rank}-${c.name}`}
+              className={`flex items-center gap-2 rounded-md px-2 py-1 ${
+                c.isTarget ? "bg-obsidian/[0.06] ring-1 ring-inset ring-obsidian/20" : ""
+              }`}
+            >
+              <span
+                className={`w-5 shrink-0 text-center text-xs font-bold tabular-nums ${
+                  c.isTarget ? "text-obsidian" : "text-muted"
+                }`}
+              >
+                {c.rank}
+              </span>
+              <span
+                className={`min-w-0 flex-1 truncate text-xs ${
+                  c.isTarget ? "font-semibold text-text" : "text-text"
+                }`}
+              >
+                {c.name}
+                {c.isTarget && (
+                  <span className="ml-1.5 text-[10px] font-semibold text-obsidian">{t("you")}</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-xs text-muted">{t("noRankingData")}</p>
+      )}
+    </div>
+  );
+}
+
+function EngineCard({ engine, delay }: { engine: EngineScore; delay: number }) {
+  const t = useTranslations("analysisReport.results");
+  const vis = visibilityColor(engine.visibility);
+
+  return (
+    <AnimatedCard delay={delay} className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate font-semibold">{engine.engine}</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {ENGINE_LOGOS[engine.engine] && (
+            <Image
+              src={ENGINE_LOGOS[engine.engine]}
+              alt={engine.engine}
+              width={24}
+              height={24}
+              className="h-5 w-5 shrink-0 rounded"
+            />
+          )}
+          <span className="text-base font-semibold">{engine.engine}</span>
           <span
             className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
             style={
@@ -254,111 +339,26 @@ function EngineCard({ engine }: { engine: EngineScore }) {
           >
             {engine.measured ? t("measured") : t("estimated")}
           </span>
+          <span
+            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize"
+            style={{ background: `${vis}22`, color: vis }}
+          >
+            {engine.visibility}
+          </span>
         </div>
         <span className="shrink-0 text-lg font-bold" style={{ color: scoreColor(engine.score) }}>
           {engine.score}
         </span>
       </div>
-      <span
-        className="mt-2 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium capitalize"
-        style={{ background: `${vis}22`, color: vis }}
-      >
-        {engine.visibility}
-        {engine.estimatedPosition ? ` · #${engine.estimatedPosition}` : ""}
-      </span>
-      <p className="mt-2 text-xs text-muted">{engine.summary}</p>
-      {ahead.length > 0 && (
-        <div className="mt-3 border-t border-white/8 pt-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted/80">
-            {t("competitorsAheadLabel")}
-          </p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {ahead.map((name, i) => (
-              <span key={i} className="rounded-md bg-white/[0.05] px-2 py-0.5 text-xs text-text/80">
-                {name}
-              </span>
-            ))}
-          </div>
+      <p className="text-xs text-muted">{engine.summary}</p>
+      {engine.rankings.length > 0 && (
+        <div className={`grid grid-cols-1 gap-3 ${engine.rankings.length > 1 ? "lg:grid-cols-2" : ""}`}>
+          {engine.rankings.map((r) => (
+            <RankingList key={r.scope} ranking={r} />
+          ))}
         </div>
       )}
-    </div>
-  );
-}
-
-/* --------------------------- Classement local ----------------------------- */
-
-function RankingCard({ ranking, delay }: { ranking: LocalRanking; delay: number }) {
-  const t = useTranslations("analysisReport.results");
-  const typeLabel = ranking.type === "niche" ? t("rankNiche") : t("rankGeneral");
-
-  return (
-    <AnimatedCard delay={delay}>
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <span
-            className="rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
-            style={
-              ranking.type === "niche"
-                ? { background: "rgba(34,211,238,0.15)", color: "var(--color-accent)" }
-                : { background: "rgba(148,163,184,0.15)", color: "#94a3b8" }
-            }
-          >
-            {typeLabel}
-          </span>
-          <p className="mt-1.5 text-pretty text-sm font-semibold text-text">{ranking.label}</p>
-        </div>
-        {ranking.targetRank != null && (
-          <span className="shrink-0 rounded-lg bg-accent/15 px-2.5 py-1 text-sm font-bold text-accent">
-            #{ranking.targetRank}
-          </span>
-        )}
-      </div>
-      <ol className="space-y-1">
-        {ranking.competitors.map((c) => (
-          <li
-            key={`${c.rank}-${c.name}`}
-            className={`flex items-center gap-3 rounded-lg px-2.5 py-2 ${
-              c.isTarget ? "bg-accent/10 ring-1 ring-inset ring-accent/30" : ""
-            }`}
-          >
-            <span
-              className={`w-6 shrink-0 text-center text-sm font-bold tabular-nums ${
-                c.isTarget ? "text-accent" : "text-muted"
-              }`}
-            >
-              {c.rank}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className={`truncate text-sm ${c.isTarget ? "font-semibold text-text" : "text-text/90"}`}>
-                {c.name}
-                {c.isTarget && <span className="ml-2 text-xs font-semibold text-accent">{t("you")}</span>}
-              </p>
-              {c.note && <p className="truncate text-xs text-muted">{c.note}</p>}
-            </div>
-          </li>
-        ))}
-      </ol>
     </AnimatedCard>
-  );
-}
-
-function LocalRankings({ result }: { result: GeoAnalysisResult }) {
-  const t = useTranslations("analysisReport.results");
-  if (!result.localRankings.length) return null;
-
-  return (
-    <div>
-      <div className="mb-3 mt-2">
-        <h3 className="text-lg font-bold">{t("rankingsTitle")}</h3>
-        <p className="text-sm text-muted">{t("rankingsSubtitle")}</p>
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {result.localRankings.map((r, i) => (
-          <RankingCard key={r.type} ranking={r} delay={i * 0.05} />
-        ))}
-      </div>
-      <p className="mt-2 text-xs text-muted/80">{t("rankingDisclaimer")}</p>
-    </div>
   );
 }
 
@@ -378,29 +378,26 @@ function ResultsPanel({
       {/* 1. Profil : niche + localisation (en tout premier) */}
       <ProfileHeader result={result} />
 
-      {/* 2. Score par moteur IA (avec classement) */}
-      <AnimatedCard delay={0.05}>
-        <div className="mb-4">
-          <h3 className="font-semibold">{t("results.engineScoresTitle")}</h3>
+      {/* 2. Classement par moteur IA (direct + indirect), ChatGPT en premier */}
+      <div>
+        <div className="mb-3 mt-2">
+          <h3 className="text-lg font-bold">{t("results.engineScoresTitle")}</h3>
           {result.liveQuery && (
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="mt-0.5 text-sm text-muted">
               {t("results.testedOn", { query: result.liveQuery })}
             </p>
           )}
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {result.engines.map((e) => (
-            <EngineCard key={e.engine} engine={e} />
+        <div className="space-y-4">
+          {result.engines.map((e, i) => (
+            <EngineCard key={e.engine} engine={e} delay={i * 0.05} />
           ))}
         </div>
-      </AnimatedCard>
+      </div>
 
-      {/* 3. Classements concurrents (commerce physique uniquement) */}
-      <LocalRankings result={result} />
-
-      {/* 4. Diagnostic d'architecture (synthèse) */}
+      {/* 3. Diagnostic d'architecture (synthèse) */}
       <AnimatedCard delay={0.05} className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="flex flex-col items-center justify-center gap-3 text-center lg:border-r lg:border-white/8">
+        <div className="flex flex-col items-center justify-center gap-3 text-center lg:border-r lg:border-fog">
           <AnimatedScoreRing score={diagnostic.architecture.score} size={120} stroke={10} label={t("results.scoreLabel")} />
           <div>
             <h3 className="font-semibold">{t("results.diagnosisTitle")}</h3>
@@ -434,7 +431,7 @@ function ResultsPanel({
                     <span className="shrink-0 text-xs text-muted">{t("results.impact", { value: r.impact })}</span>
                   </div>
                   <p className="mt-1 text-sm text-muted">{r.description}</p>
-                  <span className="mt-2 inline-block text-xs text-accent">{CATEGORY_META[r.category].label}</span>
+                  <span className="mt-2 inline-block text-xs text-steel">{CATEGORY_META[r.category].label}</span>
                 </div>
               </AnimatedCard>
             ))}
@@ -487,7 +484,7 @@ function ArchitecturePanel({
           <h4 className="mb-3 font-semibold">{t("architecture.checks.aiCrawlers")}</h4>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             {result.signals.crawlers.map((c) => (
-              <div key={c.name} className="flex items-center justify-between rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2 text-sm">
+              <div key={c.name} className="flex items-center justify-between rounded-lg border border-fog bg-mist px-3 py-2 text-sm">
                 <span className="truncate text-muted">{c.name}</span>
                 <span
                   className="ml-2 h-2 w-2 shrink-0 rounded-full"
@@ -501,6 +498,85 @@ function ArchitecturePanel({
       </div>
 
       <SolutionBlock prompt={buildSolutionPrompt("architecture", result, diagnostic)} />
+    </div>
+  );
+}
+
+/* --------------------------- Éléments on-page ----------------------------- */
+
+const ON_PAGE_STATUS_COLOR: Record<OnPageCheck["status"], string> = {
+  ok: "#11b48c",
+  warn: "#f59e0b",
+  ko: "#e5484d",
+};
+
+/** Une carte par élément on-page : texte réel + critères vérifiés + conseil. */
+function OnPageElement({ label, check }: { label: string; check: OnPageCheck }) {
+  const t = useTranslations("analysisReport.content.onPage");
+  const color = ON_PAGE_STATUS_COLOR[check.status];
+
+  return (
+    <div className="flex flex-col rounded-2xl border border-fog bg-mist p-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-steel">{label}</span>
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
+      </div>
+
+      {check.text ? (
+        <p className="mt-2 text-sm leading-relaxed text-text">{check.text}</p>
+      ) : (
+        <p className="mt-2 text-sm italic text-muted">{t("empty")}</p>
+      )}
+
+      {check.signals.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {check.signals.map((s) => (
+            <span
+              key={s.label}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+              style={
+                s.present
+                  ? { background: "rgba(17,180,140,0.15)", color: "#0a8f6e" }
+                  : { background: "rgba(229,72,77,0.12)", color: "#c2363b" }
+              }
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden>
+                {s.present ? (
+                  <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                ) : (
+                  <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                )}
+              </svg>
+              {s.label}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {check.note && <p className="mt-2 text-xs leading-relaxed text-muted">{check.note}</p>}
+    </div>
+  );
+}
+
+/** Horaires d'ouverture extraits du site (ou état vide explicite). */
+function OpeningHoursBlock({ value }: { value: string | null }) {
+  const t = useTranslations("analysisReport.content.onPage");
+  return (
+    <div className="mt-3 flex items-start gap-3 rounded-2xl border border-fog bg-snow p-4">
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-mist text-accent">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M12 7.5V12l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("openingHoursTitle")}</p>
+        {value ? (
+          <p className="mt-1 text-sm text-text">{value}</p>
+        ) : (
+          <p className="mt-1 text-sm italic text-muted">{t("openingHoursEmpty")}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -538,7 +614,7 @@ function ContentPanel({
                     {c.score}
                   </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-white/8">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-fog">
                   <motion.div
                     className="h-full rounded-full"
                     style={{ background: scoreColor(c.score) }}
@@ -555,6 +631,18 @@ function ContentPanel({
 
         <AnimatedCard delay={0.1} className="lg:col-span-3">
           <DiagnosticGrid section={diagnostic.content} labelNs="content" />
+        </AnimatedCard>
+
+        <AnimatedCard delay={0.15} className="lg:col-span-3">
+          <h3 className="text-lg font-bold">{t("content.onPage.title")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("content.onPage.subtitle")}</p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <OnPageElement label={t("content.onPage.elements.title")} check={result.onPageContent.title} />
+            <OnPageElement label={t("content.onPage.elements.metaDescription")} check={result.onPageContent.metaDescription} />
+            <OnPageElement label={t("content.onPage.elements.h1")} check={result.onPageContent.h1} />
+            <OnPageElement label={t("content.onPage.elements.firstSentence")} check={result.onPageContent.firstSentence} />
+          </div>
+          <OpeningHoursBlock value={result.onPageContent.openingHours} />
         </AnimatedCard>
       </div>
 
@@ -595,10 +683,10 @@ function PresencePanel({
           {wp.qualifications.length ? (
             <ul className="space-y-2.5">
               {wp.qualifications.map((q, i) => (
-                <li key={i} className="rounded-lg border border-white/8 bg-white/[0.02] p-3">
+                <li key={i} className="rounded-lg border border-fog bg-mist p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold text-text">{q.label}</span>
-                    {q.source && <span className="shrink-0 text-xs text-accent">{q.source}</span>}
+                    {q.source && <span className="shrink-0 text-xs text-steel">{q.source}</span>}
                   </div>
                   {q.detail && <p className="mt-1 text-sm text-muted">{q.detail}</p>}
                 </li>
@@ -621,9 +709,9 @@ function PresencePanel({
           {wp.articles.length ? (
             <ul className="space-y-2.5">
               {wp.articles.map((a, i) => (
-                <li key={i} className="rounded-lg border border-white/8 bg-white/[0.02] p-3">
+                <li key={i} className="rounded-lg border border-fog bg-mist p-3">
                   <p className="text-sm font-medium text-text">{a.title}</p>
-                  {a.source && <p className="mt-0.5 text-xs text-accent">{a.source}</p>}
+                  {a.source && <p className="mt-0.5 text-xs text-steel">{a.source}</p>}
                 </li>
               ))}
             </ul>
@@ -639,7 +727,7 @@ function PresencePanel({
           <ul className="space-y-2">
             {wp.findings.map((f, i) => (
               <li key={i} className="flex gap-2 text-sm text-muted">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-obsidian" aria-hidden />
                 <span>{f}</span>
               </li>
             ))}
@@ -685,14 +773,15 @@ function MapsPanel({
   if (!coherence) {
     return (
       <div className="space-y-4">
-        <AnimatedCard className="flex flex-col items-center gap-3 py-10 text-center">
+        {/* Capture Maps assombrie, message « analyse à venir » centré dessus */}
+        <SiteScreenshot url={mapsUrl} variant="maps">
           <MapPin />
-          <h3 className="text-lg font-bold">{t("pendingTitle")}</h3>
-          <p className="max-w-md text-sm text-muted">{t("pendingBody")}</p>
-          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-2 cursor-pointer text-sm text-accent hover:underline">
+          <h3 className="text-lg font-bold text-white">{t("pendingTitle")}</h3>
+          <p className="mx-auto max-w-md text-sm text-white/90">{t("pendingBody")}</p>
+          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-2 cursor-pointer text-sm font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
             {t("viewListing")}
           </a>
-        </AnimatedCard>
+        </SiteScreenshot>
         {solution}
       </div>
     );
@@ -701,19 +790,26 @@ function MapsPanel({
   // Analyse de cohérence disponible
   return (
     <div className="space-y-4">
+      {/* Fiche renseignée : capture Maps assombrie, score de cohérence centré dessus */}
+      <SiteScreenshot url={mapsUrl} variant="maps" label={coherence.listingName ?? undefined}>
+        <AnimatedScoreRing
+          score={coherence.score}
+          size={140}
+          stroke={12}
+          label={t("scoreLabel")}
+          trackColor="rgba(255,255,255,0.18)"
+          labelClassName="text-white/80"
+        />
+        <div>
+          <h3 className="text-lg font-bold text-white">{coherence.listingName ?? t("title")}</h3>
+          <p className="mx-auto mt-2 max-w-xl text-pretty text-sm text-white/90">{coherence.summary}</p>
+          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block cursor-pointer text-sm font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+            {t("viewListing")}
+          </a>
+        </div>
+      </SiteScreenshot>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <AnimatedCard className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left lg:col-span-2">
-          <AnimatedScoreRing score={coherence.score} size={140} stroke={12} label={t("scoreLabel")} />
-          <div className="flex-1">
-            <h3 className="text-lg font-bold">{coherence.listingName ?? t("title")}</h3>
-            <p className="mt-2 text-pretty text-sm text-muted">{coherence.summary}</p>
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block cursor-pointer text-sm text-accent hover:underline">
-              {t("viewListing")}
-            </a>
-          </div>
-        </AnimatedCard>
-
-        <AnimatedCard delay={0.05} className="flex flex-col justify-center gap-4">
+        <AnimatedCard delay={0.05} className="flex flex-col justify-center gap-4 lg:col-span-3 sm:flex-row sm:justify-center sm:gap-16">
           {coherence.rating != null && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted">{t("ratingLabel")}</span>
@@ -736,7 +832,7 @@ function MapsPanel({
             <h4 className="mb-3 font-semibold">{t("matchesTitle")}</h4>
             <ul className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
               {coherence.matches.map((m, i) => (
-                <li key={i} className="flex items-center justify-between gap-3 border-b border-white/5 py-2.5 last:border-0">
+                <li key={i} className="flex items-center justify-between gap-3 border-b border-fog py-2.5 last:border-0">
                   <div className="min-w-0">
                     <p className="truncate text-sm text-text">{m.label}</p>
                     <p className="truncate text-xs text-muted">{m.detail}</p>

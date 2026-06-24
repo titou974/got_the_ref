@@ -61,7 +61,7 @@ export default async function TarifsPage({ searchParams }: Props) {
 
         <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Gratuit */}
-          <div className="glass flex flex-col rounded-2xl p-6">
+          <div className="flex flex-col rounded-[28px] border border-fog bg-snow p-6">
             <h2 className="text-lg font-semibold">{t("free.name")}</h2>
             <p className="mt-2">
               <span className="font-display text-4xl font-bold">{PLAN_PRICING.free.monthly}€</span>
@@ -71,14 +71,14 @@ export default async function TarifsPage({ searchParams }: Props) {
             <FeatureList features={features("free")} />
             <Link
               href={ROUTES.signUp}
-              className="mt-6 cursor-pointer rounded-xl border border-white/15 py-3 text-center font-semibold transition-colors duration-200 hover:bg-white/5"
+              className="mt-6 cursor-pointer rounded-full border border-graphite py-3 text-center font-medium text-graphite transition-colors duration-200 hover:bg-mist"
             >
               {t("free.cta")}
             </Link>
           </div>
 
           {/* Pro */}
-          <div className="glass-strong relative flex flex-col rounded-2xl p-6 ring-2 ring-cta/50">
+          <div className="relative flex flex-col rounded-[28px] border-2 border-obsidian bg-snow p-6 shadow-[var(--shadow-md)]">
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-cta px-3 py-1 text-xs font-semibold text-white">
               {t("popularBadge")}
             </span>
@@ -95,7 +95,7 @@ export default async function TarifsPage({ searchParams }: Props) {
           </div>
 
           {/* Agence */}
-          <div className="glass flex flex-col rounded-2xl p-6">
+          <div className="flex flex-col rounded-[28px] border border-fog bg-snow p-6">
             <h2 className="text-lg font-semibold">{t("agency.name")}</h2>
             <p className="mt-2">
               <span className="font-display text-4xl font-bold">{PLAN_PRICING.agency.monthly}€</span>

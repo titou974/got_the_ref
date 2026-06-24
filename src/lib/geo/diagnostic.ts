@@ -38,12 +38,22 @@ function categoryScore(result: GeoAnalysisResult, keys: string[]): number {
   return clamp(found.reduce((sum, c) => sum + c.score, 0) / found.length);
 }
 
-/** Détecte une FAQ structurée ou éditoriale dans les signaux. */
+/** Détecte une FAQ sur la page d'accueil (section éditoriale d'abord, schéma ensuite). */
 function detectFaq(result: GeoAnalysisResult): DiagnosticStatus {
+  // Une vraie section FAQ visible (accordéons / blocs Q-R) prime sur le schéma.
+  if (result.signals.hasFaqSection) return "ok";
   const types = result.signals.jsonLdTypes.map((t) => t.toLowerCase());
   if (types.some((t) => t.includes("faq"))) return "ok";
   const sample = (result.signals.textSample ?? "").toLowerCase();
   if (sample.includes("foire aux questions") || /\bfaq\b/.test(sample)) return "warn";
+  return "ko";
+}
+
+/** Détecte une section avis / témoignages sur la page d'accueil. */
+function detectReviews(result: GeoAnalysisResult): DiagnosticStatus {
+  if (result.signals.hasReviewsSection) return "ok";
+  const types = result.signals.jsonLdTypes.map((t) => t.toLowerCase());
+  if (types.some((t) => /review|rating/.test(t))) return "ok";
   return "ko";
 }
 
@@ -63,7 +73,12 @@ export function buildDiagnostic(result: GeoAnalysisResult): AnalysisDiagnostic {
   const hasIntro = (s.textSample ?? "").trim().length >= 120;
 
   const architectureChecks: DiagnosticCheck[] = [
-    { key: "llmsTxt", status: s.hasLlmsTxt ? "ok" : "ko" },
+    {
+      key: "llmsTxt",
+      // Présent mais servi en 404 → « warn » (à corriger) plutôt que « absent ».
+      status: s.hasLlmsTxt ? "ok" : s.llmsTxtMisconfigured ? "warn" : "ko",
+      value: s.llmsTxtMisconfigured ? "404" : undefined,
+    },
     {
       key: "schema",
       status: s.jsonLdCount > 0 ? "ok" : "ko",
@@ -92,6 +107,7 @@ export function buildDiagnostic(result: GeoAnalysisResult): AnalysisDiagnostic {
 
   const contentChecks: DiagnosticCheck[] = [
     { key: "faq", status: detectFaq(result) },
+    { key: "reviews", status: detectReviews(result) },
     { key: "editorialQuality", status: fromScore(eeat), value: String(eeat) },
     { key: "citability", status: fromScore(citability), value: String(citability) },
     {

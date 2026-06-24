@@ -19,7 +19,7 @@ export default async function InscriptionPage() {
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-10">
       <Logo className="mb-8" />
-      <div className="glass-strong w-full max-w-sm rounded-2xl p-6 sm:p-8">
+      <div className="w-full max-w-sm rounded-[28px] border border-fog bg-snow p-6 shadow-[var(--shadow-md)] sm:p-8">
         <h1 className="text-center text-2xl font-bold">{t("signupTitle")}</h1>
         <p className="mt-1 mb-6 text-center text-sm text-muted">{t("signupSubtitle")}</p>
         <AuthForm mode="signup" />

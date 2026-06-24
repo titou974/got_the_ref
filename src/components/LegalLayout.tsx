@@ -29,7 +29,7 @@ export async function LegalLayout({
         .legal p { margin-bottom: 0.5rem; }
         .legal ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
         .legal li { margin-bottom: 0.25rem; }
-        .legal a { color: var(--color-accent); }
+        .legal a { color: var(--color-text); text-decoration: underline; text-underline-offset: 3px; }
         .legal strong { color: var(--color-text); }
       `}</style>
     </main>

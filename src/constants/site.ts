@@ -26,7 +26,6 @@ export const SITE = {
 
 /** Logos des moteurs IA affichés sur la home (chemins dans /public). */
 export const AI_ENGINE_LOGOS = [
-  { src: "/logoopenai1.png", key: "openai" },
-  { src: "/logogemini1.webp", key: "gemini" },
-  { src: "/logoperplexity1.png", key: "perplexity" },
+  { src: "/chatgpt.png", key: "openai" },
+  { src: "/gemini.webp", key: "gemini" },
 ] as const;

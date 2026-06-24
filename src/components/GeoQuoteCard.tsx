@@ -1,9 +1,12 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import { SITE } from "@/constants/site";
 
 /**
  * Card citation présentée en haut de la page d'accueil.
  * Définit le GEO (Generative Engine Optimization) et le rôle de GEOBoost.
+ * Signée par le fondateur (photo + pseudo) pour incarner la définition.
  * Style glassmorphism aligné sur le thème (accent émeraude, .card-cal).
  */
 export async function GeoQuoteCard() {
@@ -41,6 +44,22 @@ export async function GeoQuoteCard() {
           </p>
         </blockquote>
       </div>
+
+      <figcaption className="mt-4 flex items-center gap-3 pl-11">
+        <Image
+          src="/titou.jpeg"
+          alt={SITE.founder.name}
+          width={40}
+          height={40}
+          className="h-10 w-10 shrink-0 rounded-full border border-fog object-cover"
+        />
+        <div className="text-sm leading-tight">
+          <span className="font-semibold text-text">{SITE.founder.name}</span>
+          <span className="block text-muted">
+            @{SITE.founder.alias} · {t("authorRole")}
+          </span>
+        </div>
+      </figcaption>
     </figure>
   );
 }

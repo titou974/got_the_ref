@@ -5,8 +5,8 @@ import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import { AnimatedScoreRing } from "./AnimatedScoreRing";
 import { AnimatedCard } from "./AnimatedCard";
+import { SiteScreenshot } from "./SiteScreenshot";
 import { ReportTabs } from "./ReportTabs";
-import { AiVisibilityComparison } from "./AiVisibilityComparison";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { ServicesCta } from "@/components/ServicesCta";
 import { ROUTES } from "@/constants/routes";
@@ -25,55 +25,53 @@ export async function Dashboard({ result }: { result: GeoAnalysisResult }) {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-5 py-8">
-      {/* Note principale + bilan général court */}
-      <AnimatedCard className="flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
-        <AnimatedScoreRing score={result.overallScore} label={scoreLabel(result.overallScore)} />
-        <div className="flex-1 text-center sm:text-left">
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+      {/* Hero : capture du site assombrie, avec la note globale centrée par-dessus */}
+      <div className="mx-auto w-full max-w-3xl">
+        <SiteScreenshot url={result.url} domain={result.domain} variant="site">
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
             {t("heroEyebrow")}
           </p>
-          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{result.businessName}</h1>
-          <div className="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted sm:justify-start">
-            <a
-              href={result.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="cursor-pointer text-accent hover:underline"
-            >
-              {result.domain}
-            </a>
-            <span aria-hidden>·</span>
-            <span>{result.businessType}</span>
-            <span aria-hidden>·</span>
-            <span>{date}</span>
+          <AnimatedScoreRing
+            score={result.overallScore}
+            label={scoreLabel(result.overallScore)}
+            trackColor="rgba(255,255,255,0.18)"
+            labelClassName="text-white/80"
+          />
+          <div>
+            <h1 className="text-2xl font-bold text-white sm:text-3xl">
+              {result.businessName}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-white/80">
+              <a
+                href={result.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white"
+              >
+                {result.domain}
+              </a>
+              <span aria-hidden>·</span>
+              <span>{result.businessType}</span>
+              <span aria-hidden>·</span>
+              <span>{date}</span>
+            </div>
+            <p className="mx-auto mt-3 max-w-xl text-pretty text-base text-white/90">
+              {result.verdict}
+            </p>
           </div>
-          <p className="mt-3 text-pretty text-base text-text">{result.verdict}</p>
-        </div>
-      </AnimatedCard>
+        </SiteScreenshot>
+      </div>
 
       {/* Diagnostic complet (onglets) */}
       <div>
         <div className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+          <p className="text-xs font-semibold uppercase tracking-wider text-steel">
             {t("sectionEyebrow")}
           </p>
           <h2 className="mt-1 text-xl font-bold sm:text-2xl">{t("sectionTitle")}</h2>
         </div>
         <ReportTabs result={result} diagnostic={diagnostic} />
       </div>
-
-      {/* Comparatif des vues IA estimées par moteur */}
-      {result.aiVisibility && (
-        <div>
-          <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-accent">
-              {t("visibilityEyebrow")}
-            </p>
-            <h2 className="mt-1 text-xl font-bold sm:text-2xl">{t("visibilityTitle")}</h2>
-          </div>
-          <AiVisibilityComparison data={result.aiVisibility} />
-        </div>
-      )}
 
       {/* CTA */}
       <AnimatedCard className="text-center">
@@ -84,7 +82,7 @@ export async function Dashboard({ result }: { result: GeoAnalysisResult }) {
         </div>
         <p className="mt-4 text-sm text-muted">
           {td("ctaUnlimited")}{" "}
-          <Link href={ROUTES.pricing} className="cursor-pointer text-accent hover:underline">
+          <Link href={ROUTES.pricing} className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian">
             {tc("discoverOffers")}
           </Link>
         </p>

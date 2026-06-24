@@ -45,7 +45,7 @@ export default async function ServicesPage() {
       <div className="flex-1">
         {/* Hero */}
         <section className="mx-auto w-full max-w-6xl px-5 pb-10 pt-10 text-center sm:pt-16">
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+          <p className="text-xs font-semibold uppercase tracking-wider text-steel">
             {t("heroEyebrow")}
           </p>
           <h1 className="mx-auto mt-3 max-w-3xl text-balance text-4xl font-bold leading-[1.05] sm:text-5xl">
@@ -59,7 +59,7 @@ export default async function ServicesPage() {
 
         {/* Offre principale (sans prix : sur estimation) */}
         <section className="mx-auto w-full max-w-3xl px-5 py-8">
-          <div className="glass-strong sweep relative overflow-hidden rounded-3xl p-7 sm:p-10">
+          <div className="sweep relative overflow-hidden rounded-[36px] border border-fog bg-snow p-7 shadow-[var(--shadow-md)] sm:p-10">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="font-display text-2xl font-bold sm:text-3xl">{t("offerTitle")}</h2>
@@ -70,8 +70,8 @@ export default async function ServicesPage() {
               </span>
             </div>
 
-            <div className="mt-7 border-t border-white/5 pt-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+            <div className="mt-7 border-t border-fog pt-6">
+              <p className="text-xs font-semibold uppercase tracking-wider text-steel">
                 {t("offerIncludesTitle")}
               </p>
               <ul className="mt-4 space-y-3 text-sm">
@@ -96,14 +96,14 @@ export default async function ServicesPage() {
 
         {/* Comment ça se passe */}
         <section className="mx-auto w-full max-w-6xl px-5 py-12">
-          <p className="text-center text-xs font-semibold uppercase tracking-wider text-accent">
+          <p className="text-center text-xs font-semibold uppercase tracking-wider text-steel">
             {t("processEyebrow")}
           </p>
           <h2 className="mt-1 text-center text-2xl font-bold sm:text-3xl">{t("processTitle")}</h2>
           <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
             {steps.map((s) => (
               <div key={s.step} className="card-cal p-6">
-                <span className="font-display text-3xl font-bold text-gradient">{s.step}</span>
+                <span className="font-display text-3xl font-bold text-obsidian">{s.step}</span>
                 <h3 className="mt-3 font-display text-base font-semibold">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
               </div>
@@ -113,7 +113,7 @@ export default async function ServicesPage() {
 
         {/* Pour qui */}
         <section className="mx-auto w-full max-w-3xl px-5 py-12 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+          <p className="text-xs font-semibold uppercase tracking-wider text-steel">
             {t("forEyebrow")}
           </p>
           <h2 className="mt-1 text-2xl font-bold sm:text-3xl">{t("forTitle")}</h2>
