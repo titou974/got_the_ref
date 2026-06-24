@@ -325,34 +325,22 @@
     "metaTitle": "Tarifs",
     "headingBefore": "Des tarifs ",
     "headingHighlight": "simples et transparents",
-    "subtitle": "Commencez gratuitement, passez à la vitesse supérieure quand vous êtes prêt.",
+    "subtitle": "Payez à l'analyse, ou optez pour l'agence pour un accompagnement complet.",
     "quotaNote": "Vous avez atteint la limite de votre formule. Choisissez une offre pour continuer à analyser.",
-    "popularBadge": "Le plus populaire",
     "perMonth": " /mois",
     "perOnce": " · paiement unique",
     "secureNote": "Paiement sécurisé par Stripe · Résiliable à tout moment · TVA en sus le cas échéant",
-    "free": {
-      "name": "Gratuit",
-      "description": "Pour découvrir l'outil.",
-      "features": [
-        "3 analyses GEO complètes",
-        "Score IA général + par moteur",
-        "Recommandations essentielles",
-        "Analyse SEO Google"
-      ],
-      "cta": "Commencer gratuitement"
-    },
     "pro": {
-      "name": "Pro",
-      "description": "Paiement unique · 50 analyses / mois",
+      "name": "Une analyse",
+      "description": "Paiement unique pour une analyse complète",
       "features": [
-        "50 analyses GEO complètes par mois",
-        "Rapports détaillés exportables",
-        "Suivi de l'évolution des scores",
+        "Une analyse GEO complète débloquée",
+        "Tous les scores et positions par moteur IA",
         "Recommandations priorisées par l'IA",
-        "Support par e-mail"
+        "Prompt solution prêt à coller",
+        "Rapport détaillé exportable"
       ],
-      "cta": "Choisir Pro"
+      "cta": "Débloquer une analyse"
     },
     "agency": {
       "name": "Agence",

@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { CheckoutButton } from "@/components/CheckoutButton";
-import { ROUTES, REDIRECT_REASONS } from "@/constants/routes";
+import { REDIRECT_REASONS } from "@/constants/routes";
 import { PLAN_PRICING } from "@/constants/plans";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,13 +38,13 @@ function FeatureList({ features }: { features: string[] }) {
 export default async function TarifsPage({ searchParams }: Props) {
   const { raison } = await searchParams;
   const t = await getTranslations("pricing");
-  const features = (plan: "free" | "pro" | "agency") =>
+  const features = (plan: "pro" | "agency") =>
     t.raw(`${plan}.features`) as string[];
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
       <Nav />
-      <div className="mx-auto w-full max-w-6xl flex-1 px-5 py-10">
+      <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-10">
         <div className="text-center">
           <h1 className="text-3xl font-bold sm:text-4xl">
             {t("headingBefore")}
@@ -59,29 +58,9 @@ export default async function TarifsPage({ searchParams }: Props) {
           )}
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-          {/* Gratuit */}
-          <div className="flex flex-col rounded-[28px] border border-fog bg-snow p-6">
-            <h2 className="text-lg font-semibold">{t("free.name")}</h2>
-            <p className="mt-2">
-              <span className="font-display text-4xl font-bold">{PLAN_PRICING.free.amount}€</span>
-              <span className="text-muted">{t("perMonth")}</span>
-            </p>
-            <p className="mt-1 text-sm text-muted">{t("free.description")}</p>
-            <FeatureList features={features("free")} />
-            <Link
-              href={ROUTES.signUp}
-              className="mt-6 cursor-pointer rounded-full border border-graphite py-3 text-center font-medium text-graphite transition-colors duration-200 hover:bg-mist"
-            >
-              {t("free.cta")}
-            </Link>
-          </div>
-
-          {/* Pro */}
+        <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
+          {/* Une analyse (offre transactionnelle, paiement unique) */}
           <div className="relative flex flex-col rounded-[28px] border-2 border-obsidian bg-snow p-6 shadow-[var(--shadow-md)]">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-cta px-3 py-1 text-xs font-semibold text-white">
-              {t("popularBadge")}
-            </span>
             <h2 className="text-lg font-semibold">{t("pro.name")}</h2>
             <p className="mt-2">
               <span className="font-display text-4xl font-bold">{PLAN_PRICING.pro.amount}€</span>
