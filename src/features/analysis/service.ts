@@ -8,7 +8,8 @@ import {
 } from "@/lib/geo/fetcher";
 import { analyzeSite } from "@/lib/geo/analyzer";
 import { normalizeMapsUrl, InvalidMapsUrlError } from "@/lib/geo/maps";
-import type { BusinessMode } from "@/lib/geo/types";
+import type { AnalysisContext } from "@/lib/geo/analyzer";
+import type { BusinessMode, GeoAnalysisResult } from "@/lib/geo/types";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { ANALYSIS_QUOTAS, type PlanKey } from "@/constants/plans";
@@ -99,7 +100,9 @@ export async function runAnalysis(params: {
 
   try {
     const signals = await collectSignals(url);
-    const result = await analyzeSite(signals, { mode, mapsUrl });
+    // Toujours "free" à la création : aucun appel payant (Claude, moteurs live)
+    // tant que l'analyse n'est pas débloquée — voir `ensurePaidAnalysis`.
+    const result = await analyzeSite(signals, { mode, mapsUrl }, "free");
 
     const record = await prisma.analysis.create({
       data: {
@@ -109,7 +112,7 @@ export async function runAnalysis(params: {
         businessType: result.businessType,
         mapsUrl,
         overallScore: result.overallScore,
-        data: JSON.stringify({ ...result, mapsUrl }),
+        data: JSON.stringify({ ...result, mapsUrl, tier: "free" }),
         userId: params.actor?.id ?? null,
       },
     });
@@ -118,5 +121,40 @@ export async function runAnalysis(params: {
   } catch (err) {
     console.error("Erreur d'analyse :", err);
     return { ok: false, reason: "failed", status: 500 };
+  }
+}
+
+/**
+ * Déclenche l'audit complet (Claude + moteurs live) pour une analyse déjà
+ * débloquée, si ce n'est pas déjà fait. Idempotent — best-effort : en cas
+ * d'échec, l'analyse gratuite déjà en base reste affichée.
+ */
+export async function ensurePaidAnalysis(analysisId: string): Promise<void> {
+  const existing = await prisma.analysis.findUnique({ where: { id: analysisId } });
+  if (!existing) return;
+
+  let stored: GeoAnalysisResult & { mapsUrl?: string | null; tier?: "free" | "paid" };
+  try {
+    stored = JSON.parse(existing.data);
+  } catch {
+    return;
+  }
+  if (stored.tier === "paid") return;
+
+  const ctx: AnalysisContext = { mode: stored.profile.mode, mapsUrl: stored.mapsUrl ?? null };
+
+  try {
+    const result = await analyzeSite(stored.signals, ctx, "paid");
+    await prisma.analysis.update({
+      where: { id: analysisId },
+      data: {
+        businessName: result.businessName,
+        businessType: result.businessType,
+        overallScore: result.overallScore,
+        data: JSON.stringify({ ...result, mapsUrl: stored.mapsUrl ?? null, tier: "paid" }),
+      },
+    });
+  } catch (err) {
+    console.error("Audit payant échoué :", err);
   }
 }

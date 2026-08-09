@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BookCallButton } from "@/components/BookCallButton";
+import { AnalysisCheckoutButton } from "@/components/AnalysisCheckoutButton";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
 import { ANALYSIS_PRICE } from "@/constants/plans";
 
@@ -12,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metaTitle") };
 }
 
-type Props = { searchParams: Promise<{ raison?: string }> };
+type Props = { searchParams: Promise<{ raison?: string; analyse?: string }> };
 
 function Check() {
   return (
@@ -37,7 +38,7 @@ function FeatureList({ features }: { features: string[] }) {
 }
 
 export default async function TarifsPage({ searchParams }: Props) {
-  const { raison } = await searchParams;
+  const { raison, analyse } = await searchParams;
   const t = await getTranslations("pricing");
   const tc = await getTranslations("common");
   const features = (plan: "pro" | "agency") => t.raw(`${plan}.features`) as string[];
@@ -70,14 +71,18 @@ export default async function TarifsPage({ searchParams }: Props) {
             <p className="mt-1 text-sm text-muted">{t("pro.description")}</p>
             <FeatureList features={features("pro")} />
             <div className="mt-6">
-              {/* Le paiement se déclenche depuis le rapport : on commence toujours
-                  par l'analyse gratuite, puis on débloque ce qu'on a entrevu. */}
-              <Link
-                href={ROUTES.home}
-                className="block w-full cursor-pointer rounded-full bg-cta py-3 text-center font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
-              >
-                {t("pro.cta")}
-              </Link>
+              {analyse ? (
+                // Venu d'un rapport précis : ce bouton ouvre directement le paiement de CETTE analyse.
+                <AnalysisCheckoutButton analysisId={analyse} />
+              ) : (
+                // Pas d'analyse en cours : on commence toujours par l'aperçu gratuit.
+                <Link
+                  href={ROUTES.home}
+                  className="block w-full cursor-pointer rounded-full bg-cta py-3 text-center font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
+                >
+                  {t("pro.cta")}
+                </Link>
+              )}
               <p className="mt-2 text-center text-xs text-muted">{t("pro.ctaNote")}</p>
             </div>
           </div>

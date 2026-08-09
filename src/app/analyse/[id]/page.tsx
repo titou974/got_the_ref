@@ -8,6 +8,7 @@ import { Footer } from "@/components/Footer";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { getCurrentUser } from "@/lib/auth";
 import { isReportUnlocked } from "@/features/analysis/access";
+import { ensurePaidAnalysis } from "@/features/analysis/service";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -44,13 +45,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AnalysePage({ params }: Props) {
   const { id } = await params;
-  const analysis = await loadAnalysis(id);
+  let analysis = await loadAnalysis(id);
   if (!analysis) notFound();
 
   // L'aperçu est gratuit ; le rapport complet s'ouvre après paiement de cette
   // analyse, ou pour un compte dont l'offre le couvre.
   const user = await getCurrentUser();
   const locked = !isReportUnlocked(analysis, user);
+
+  // Débloqué mais l'audit complet (Claude + moteurs live) n'a encore jamais
+  // tourné pour cette analyse (paiement reçu sans passer par /paiement/succes) :
+  // on le lance maintenant, une seule fois.
+  if (!locked) {
+    await ensurePaidAnalysis(id);
+    analysis = await loadAnalysis(id);
+    if (!analysis) notFound();
+  }
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
