@@ -91,13 +91,18 @@ export async function POST(request: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode === "subscription" && session.subscription) {
-          // Offre agence : on synchronise l'abonnement créé.
           const subId =
             typeof session.subscription === "string"
               ? session.subscription
               : session.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
           await syncSubscription(sub, session.metadata?.userId);
+
+          // Abonnement souscrit depuis un rapport : on le rattache et on l'ouvre,
+          // même si le compte n'existe pas encore (il se crée juste après).
+          if (session.metadata?.analysisId) {
+            await unlockAnalysisFromSession(session);
+          }
         } else if (session.mode === "payment" && session.payment_status === "paid") {
           // Déblocage d'une analyse (tunnel principal) : le paiement porte sur
           // l'analyse, le compte peut être créé après.

@@ -31,6 +31,7 @@ import {
   type LiveEngineResult,
 } from "./providers";
 import { scrapeMapsListing } from "./maps";
+import { FREE_SCORE_CAP } from "@/constants/plans";
 import { GEO_AUDIT_METHODOLOGY, DASHBOARD_MAPPING } from "./methodology";
 import { geoLog } from "./log";
 
@@ -1010,7 +1011,9 @@ function heuristicAnalysis(
     impact: 7,
   });
 
-  const overall = computeOverall(categories);
+  // Même plafond que la note finale de l'aperçu : le verdict ne doit jamais
+  // annoncer « bonne base » sur une analyse dont il manque la moitié des mesures.
+  const overall = Math.min(computeOverall(categories), FREE_SCORE_CAP);
 
   // Scores par moteur dérivés des catégories (pondérations différenciées)
   const allCrawlersOk = s.crawlers.every((c) => c.allowed);
@@ -1407,7 +1410,11 @@ export async function analyzeSite(
 
   geoLog("Backlinks — estimation", backlinks ?? "(non estimé)");
 
-  const overallScore = computeOverall(core.categories);
+  // L'aperçu gratuit ne mesure que l'architecture : sans classements moteurs ni
+  // audit éditorial, la note reste un plancher de constat, jamais une bonne note.
+  const overallScore = useApis
+    ? computeOverall(core.categories)
+    : Math.min(computeOverall(core.categories), FREE_SCORE_CAP);
   return {
     ...core,
     overallScore,

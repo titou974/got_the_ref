@@ -69,9 +69,10 @@ export const createCheckoutAction = authActionClient
   });
 
 /**
- * Déblocage d'une analyse : paiement unique, **sans compte requis**.
- * C'est le cœur du tunnel — le visiteur lance une analyse gratuite, découvre
- * l'aperçu, paie, puis crée son compte au retour de Stripe.
+ * Souscription à l'abonnement Visia depuis un rapport précis, **sans compte
+ * requis**. C'est le cœur du tunnel : le visiteur lance une analyse gratuite,
+ * lit le constat, s'abonne, puis crée son compte au retour de Stripe — le
+ * rapport qui l'a amené là lui est rattaché au passage.
  */
 export const createAnalysisCheckoutAction = actionClient
   .inputSchema(analysisCheckoutSchema)
@@ -82,7 +83,7 @@ export const createAnalysisCheckoutAction = actionClient
     });
     if (!analysis) throw new AppError("Analyse introuvable.", "ANALYSIS_NOT_FOUND", 404);
     if (analysis.unlocked) {
-      // Déjà payée : rien à facturer, on renvoie vers le rapport.
+      // Déjà ouverte : rien à facturer, on renvoie vers le rapport.
       return { url: `${SITE.url}${ROUTES.analysis(analysis.id)}` };
     }
 
@@ -104,17 +105,17 @@ export const createAnalysisCheckoutAction = actionClient
     };
 
     const session = await stripe.checkout.sessions.create({
-      mode: "payment",
+      mode: "subscription",
       line_items: [{ price, quantity: 1 }],
       // Connecté : on réutilise son client Stripe. Anonyme : Stripe crée le
       // client à la volée, ce qui nous donne l'e-mail pour la création de compte.
       ...(user?.stripeCustomerId
         ? { customer: user.stripeCustomerId }
-        : { customer_creation: "always" as const, customer_email: user?.email }),
+        : { customer_email: user?.email }),
       success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE.url}${ROUTES.analysis(analysis.id)}?paiement=annule`,
       metadata,
-      payment_intent_data: { metadata },
+      subscription_data: { metadata },
       allow_promotion_codes: true,
     });
 
