@@ -108,7 +108,7 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
         <div
           role="tablist"
           aria-label={t("modeAriaLabel")}
-          className="mb-3 inline-flex rounded-full border border-fog bg-snow p-1"
+          className="mb-3 inline-flex rounded-full border border-fog bg-snow p-0.5"
         >
           {(["physical", "online"] as Mode[]).map((m) => {
             const isActive = mode === m;
@@ -119,7 +119,7 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setMode(m)}
-                className={`flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${
+                className={`flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${
                   isActive
                     ? "bg-obsidian text-white"
                     : "text-muted hover:text-text"
@@ -127,11 +127,11 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
               >
                 <span aria-hidden>
                   {m === "physical" ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                       <path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9M4 9.5a2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0M9.5 19.5v-5h5v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
                     </svg>
                   ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
                       <path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18" stroke="currentColor" strokeWidth="1.5" />
                     </svg>
@@ -144,12 +144,12 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
         </div>
 
         <div
-          className={`flex items-center gap-2 rounded-3xl border border-fog bg-snow p-2 shadow-[var(--shadow-md)] ${
-            big ? "sm:gap-3 sm:p-2.5" : ""
+          className={`flex items-center gap-2 rounded-full border border-fog bg-snow p-1.5 transition-[border-color,box-shadow] duration-200 focus-within:border-pebble focus-within:shadow-[var(--shadow-md)] ${
+            big ? "sm:gap-2.5" : ""
           }`}
         >
-          <span className="pl-3 text-muted" aria-hidden>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <span className="pl-2.5 text-muted" aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path
                 d="M10 21a11 11 0 1 1 0-18m0 18a11 11 0 0 0 0-18m0 18c2.5 0 4-4 4-9s-1.5-9-4-9m-9 9h18"
                 stroke="currentColor"
@@ -167,14 +167,14 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
             aria-label={t("ariaLabel")}
             autoComplete="url"
             className={`min-w-0 flex-1 bg-transparent text-text placeholder:text-muted/70 focus:outline-none ${
-              big ? "py-3 text-base sm:text-lg" : "py-2.5 text-base"
+              big ? "py-2 text-[15px] sm:text-base" : "py-2 text-sm"
             }`}
           />
           <button
             type="submit"
             disabled={analyzing}
             className={`shrink-0 cursor-pointer rounded-full bg-cta text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-60 ${
-              big ? "px-4 py-2.5 sm:px-5 sm:py-3" : "px-4 py-2.5"
+              big ? "px-4 py-2 sm:px-5 sm:py-2.5" : "px-3.5 py-2"
             }`}
           >
             {analyzing ? (
@@ -198,9 +198,9 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
                 {t("mapsRecommended")}
               </span>
             </label>
-            <div className="flex items-center gap-2 rounded-3xl border border-fog bg-snow p-2">
-              <span className="pl-3 text-muted" aria-hidden>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <div className="flex items-center gap-2 rounded-full border border-fog bg-snow p-1 transition-[border-color] duration-200 focus-within:border-pebble">
+              <span className="pl-2.5 text-muted" aria-hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path
                     d="M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11Z"
                     stroke="currentColor"
@@ -219,7 +219,7 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
                 onChange={(e) => setMapsUrl(e.target.value)}
                 placeholder={t("mapsPlaceholder")}
                 aria-label={t("mapsAriaLabel")}
-                className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-text placeholder:text-muted/70 focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent py-2 text-[13px] text-text placeholder:text-muted/70 focus:outline-none"
               />
             </div>
             <p className="mt-2 pl-2 text-xs text-muted">{t("mapsHint")}</p>

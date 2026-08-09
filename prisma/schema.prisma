@@ -38,6 +38,14 @@ model Analysis {
   data         String   // JSON sérialisé du résultat complet
   createdAt    DateTime @default(now())
 
+  // Déverrouillage : une analyse est gratuite (aperçu partiel) tant qu'elle n'a
+  // pas été payée. Le paiement porte sur l'analyse elle-même, pas sur un compte,
+  // pour qu'un visiteur anonyme puisse payer puis créer son compte ensuite.
+  unlocked        Boolean   @default(false)
+  paidAt          DateTime?
+  stripeSessionId String?   @unique
+  guestEmail      String? // E-mail saisi au paiement Stripe, avant création du compte
+
   userId       String?
   user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 

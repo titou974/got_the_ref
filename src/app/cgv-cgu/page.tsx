@@ -8,14 +8,14 @@ export default function CgvCguPage() {
     <LegalLayout title="Conditions Générales de Vente et d'Utilisation" updated="13 juin 2026">
       <p>
         Les présentes Conditions Générales de Vente et d'Utilisation (ci-après « CGV/CGU »)
-        régissent l'accès et l'utilisation du service GEOBoost (ci-après le « Service »), édité par
+        régissent l'accès et l'utilisation du service Visia (ci-après le « Service »), édité par
         <strong> [Raison sociale]</strong>. Toute souscription ou utilisation du Service implique
         l'acceptation pleine et entière des présentes.
       </p>
 
       <h2>1. Objet</h2>
       <p>
-        GEOBoost est un outil en ligne (SaaS) permettant d'analyser la visibilité d'un site web dans
+        Visia est un outil en ligne (SaaS) permettant d'analyser la visibilité d'un site web dans
         les moteurs de recherche fondés sur l'intelligence artificielle (ChatGPT, Perplexity,
         Gemini, Google AI Overviews) ainsi que son référencement naturel, et de fournir des
         recommandations d'optimisation.

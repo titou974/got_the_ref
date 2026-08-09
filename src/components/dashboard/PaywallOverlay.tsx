@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { UnlockAnalysisButton } from "@/components/UnlockAnalysisButton";
 import { ROUTES } from "@/constants/routes";
+import { ANALYSIS_PRICE } from "@/constants/plans";
 
 /**
- * Sections réservées aux plans payants : on rend le vrai contenu derrière, flouté
+ * Sections réservées à l'analyse payée : on rend le vrai contenu derrière, flouté
  * et inerte (un aperçu « juste hors de portée »), avec un panneau central qui dit
- * ce qu'on débloque et renvoie vers les offres.
+ * ce qu'on débloque et ouvre directement le paiement de CETTE analyse.
  *
  * Le `variant` choisit le titre / sous-titre (namespace i18n `analysisReport.paywall`),
  * pour que les points d'appel restent propres.
@@ -22,9 +24,11 @@ export type PaywallVariant =
 
 export function PaywallOverlay({
   variant,
+  analysisId,
   children,
 }: {
   variant: PaywallVariant;
+  analysisId: string;
   children: React.ReactNode;
 }) {
   const t = useTranslations("analysisReport.paywall");
@@ -56,16 +60,19 @@ export function PaywallOverlay({
           </span>
           <h4 className="text-base font-bold">{t(`${variant}.title`)}</h4>
           <p className="mx-auto mt-1 max-w-xs text-sm text-muted">{t(`${variant}.subtitle`)}</p>
-          <Link
-            href={ROUTES.pricing}
-            className="mt-4 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-          >
-            {t("cta")}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-          <p className="mt-2 text-xs text-muted">{t("hint")}</p>
+
+          <UnlockAnalysisButton analysisId={analysisId} className="mt-4" />
+
+          <p className="mt-2 text-xs text-muted">{t("hint", { price: ANALYSIS_PRICE })}</p>
+          <p className="mt-1 text-xs text-muted">
+            {t("alreadyPaid")}{" "}
+            <Link
+              href={ROUTES.signIn}
+              className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian"
+            >
+              {t("signIn")}
+            </Link>
+          </p>
         </div>
       </div>
     </div>

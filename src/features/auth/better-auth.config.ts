@@ -34,7 +34,7 @@ export const auth = betterAuth({
     storage: "memory",
   },
   advanced: {
-    cookiePrefix: "boostgeo",
+    cookiePrefix: "visia",
     defaultCookieAttributes: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

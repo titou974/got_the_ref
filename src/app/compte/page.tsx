@@ -67,7 +67,7 @@ export default async function ComptePage() {
                 <BillingPortalButton label={t("manageSubscription")} />
               ) : (
                 <Link
-                  href={ROUTES.pricing}
+                  href={ROUTES.home}
                   className="cursor-pointer rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
                 >
                   {t("upgrade")}

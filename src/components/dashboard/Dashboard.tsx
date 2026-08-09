@@ -9,19 +9,26 @@ import { SiteScreenshot } from "./SiteScreenshot";
 import { ReportTabs } from "./ReportTabs";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { ServicesCta } from "@/components/ServicesCta";
+import { UnlockAnalysisButton } from "@/components/UnlockAnalysisButton";
 import { ROUTES } from "@/constants/routes";
-import { getCurrentUser } from "@/lib/auth";
+import { ANALYSIS_PRICE } from "@/constants/plans";
 
-export async function Dashboard({ result }: { result: GeoAnalysisResult }) {
+export async function Dashboard({
+  result,
+  analysisId,
+  locked,
+}: {
+  result: GeoAnalysisResult;
+  analysisId: string;
+  /** Analyse non payée : classements IA, recommandations, prompts, contenu,
+   * présence et Maps passent derrière l'overlay. L'architecture reste ouverte. */
+  locked: boolean;
+}) {
   const t = await getTranslations("analysisReport");
   const td = await getTranslations("dashboard");
   const tc = await getTranslations("common");
+  const tu = await getTranslations("unlock");
   const diagnostic = buildDiagnostic(result);
-
-  // Le plan gratuit ne voit que l'architecture : le reste (classements IA,
-  // recommandations, prompts, contenu, présence, maps) est verrouillé.
-  const user = await getCurrentUser();
-  const locked = !user || user.plan === "free";
 
   const date = new Date(result.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -68,6 +75,24 @@ export async function Dashboard({ result }: { result: GeoAnalysisResult }) {
         </SiteScreenshot>
       </div>
 
+      {/* Bandeau de conversion : l'aperçu est gratuit, le rapport complet est payant */}
+      {locked && (
+        <AnimatedCard className="flex flex-col gap-4 border-obsidian sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-steel">
+              {tu("bannerEyebrow")}
+            </p>
+            <h3 className="mt-1 text-lg font-bold sm:text-xl">
+              {tu("bannerTitle", { domain: result.domain })}
+            </h3>
+            <p className="mt-1 max-w-xl text-sm text-muted">
+              {tu("bannerSubtitle", { price: ANALYSIS_PRICE })}
+            </p>
+          </div>
+          <UnlockAnalysisButton analysisId={analysisId} className="shrink-0 sm:w-64" />
+        </AnimatedCard>
+      )}
+
       {/* Diagnostic complet (onglets) */}
       <div>
         <div className="mb-4">
@@ -76,7 +101,12 @@ export async function Dashboard({ result }: { result: GeoAnalysisResult }) {
           </p>
           <h2 className="mt-1 text-xl font-bold sm:text-2xl">{t("sectionTitle")}</h2>
         </div>
-        <ReportTabs result={result} diagnostic={diagnostic} locked={locked} />
+        <ReportTabs
+          result={result}
+          diagnostic={diagnostic}
+          locked={locked}
+          analysisId={analysisId}
+        />
       </div>
 
       {/* CTA */}

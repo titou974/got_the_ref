@@ -5,7 +5,7 @@ import { SITE } from "@/constants/site";
 
 /**
  * Card citation présentée en haut de la page d'accueil.
- * Définit le GEO (Generative Engine Optimization) et le rôle de GEOBoost.
+ * Définit le GEO (Generative Engine Optimization) et le rôle de Visia.
  * Signée par le fondateur (photo + pseudo) pour incarner la définition.
  * Style glassmorphism aligné sur le thème (accent émeraude, .card-cal).
  */

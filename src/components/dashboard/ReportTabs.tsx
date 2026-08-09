@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -28,6 +28,13 @@ import { PaywallOverlay, type PaywallVariant } from "./PaywallOverlay";
 
 type TabKey = "results" | "architecture" | "content" | "presence" | "maps";
 
+/**
+ * Identifiant du rapport affiché : le paiement porte sur CETTE analyse, chaque
+ * overlay doit donc pouvoir ouvrir le checkout sans qu'on le passe de proche en
+ * proche à travers tous les panneaux.
+ */
+const AnalysisIdContext = createContext<string>("");
+
 /** Verrouille `children` derrière l'overlay paywall quand `locked` est vrai. */
 function Gated({
   locked,
@@ -38,8 +45,13 @@ function Gated({
   variant: PaywallVariant;
   children: React.ReactNode;
 }) {
+  const analysisId = useContext(AnalysisIdContext);
   if (!locked) return <>{children}</>;
-  return <PaywallOverlay variant={variant}>{children}</PaywallOverlay>;
+  return (
+    <PaywallOverlay variant={variant} analysisId={analysisId}>
+      {children}
+    </PaywallOverlay>
+  );
 }
 
 /** Logos des moteurs IA (chemins dans /public), indexés par nom de moteur. */
@@ -153,11 +165,14 @@ export function ReportTabs({
   result,
   diagnostic,
   locked,
+  analysisId,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
-  /** Plan gratuit : tout sauf l'architecture est verrouillé derrière le paywall. */
+  /** Analyse gratuite : tout sauf l'architecture est verrouillé derrière le paywall. */
   locked: boolean;
+  /** Analyse à débloquer si l'utilisateur paie depuis un overlay. */
+  analysisId: string;
 }) {
   const t = useTranslations("analysisReport");
   const [active, setActive] = useState<TabKey>("results");
@@ -168,6 +183,7 @@ export function ReportTabs({
     : ["results", "architecture", "content", "presence"];
 
   return (
+    <AnalysisIdContext.Provider value={analysisId}>
     <section>
       {/* Barre d'onglets */}
       <div className="mb-5 flex flex-wrap gap-2 rounded-3xl border border-fog bg-snow p-1.5">
@@ -227,6 +243,7 @@ export function ReportTabs({
         </motion.div>
       </AnimatePresence>
     </section>
+    </AnalysisIdContext.Provider>
   );
 }
 

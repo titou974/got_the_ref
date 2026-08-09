@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe, resolvePriceId } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { unlockAnalysisFromSession } from "@/features/billing/unlock";
 import { PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
 
 export const runtime = "nodejs";
@@ -98,7 +99,14 @@ export async function POST(request: Request) {
           const sub = await stripe.subscriptions.retrieve(subId);
           await syncSubscription(sub, session.metadata?.userId);
         } else if (session.mode === "payment" && session.payment_status === "paid") {
-          // Offre transactionnelle : pas d'abonnement, on accorde l'offre directement.
+          // Déblocage d'une analyse (tunnel principal) : le paiement porte sur
+          // l'analyse, le compte peut être créé après.
+          if (session.metadata?.analysisId) {
+            await unlockAnalysisFromSession(session);
+            break;
+          }
+
+          // Ancien flux transactionnel lié à un compte : on accorde l'offre.
           const plan = asPaidPlan(session.metadata?.plan);
           const customerId =
             typeof session.customer === "string" ? session.customer : session.customer?.id;

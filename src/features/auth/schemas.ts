@@ -12,6 +12,22 @@ export const signInSchema = z.object({
 });
 export type SignInInput = z.infer<typeof signInSchema>;
 
+/**
+ * Création de compte au retour de Stripe : l'e-mail vient de la session de
+ * paiement (il n'est donc pas saisi par l'utilisateur), seul le mot de passe l'est.
+ */
+export const postCheckoutSignUpSchema = z.object({
+  sessionId: z.string().min(1),
+  name: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
+  password,
+});
+export type PostCheckoutSignUpInput = z.infer<typeof postCheckoutSignUpSchema>;
+
 export const signUpSchema = z.object({
   name: z
     .string()

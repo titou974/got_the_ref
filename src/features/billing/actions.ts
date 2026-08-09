@@ -1,13 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { authActionClient } from "@/lib/safe-action";
+import { actionClient, authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
 import { getStripe, getCheckoutMode, resolvePriceId } from "@/lib/stripe";
+import { getCurrentUser } from "@/lib/auth";
 import { SITE } from "@/constants/site";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
-import { checkoutSchema } from "./schemas";
+import { analysisCheckoutSchema, checkoutSchema } from "./schemas";
+import { ANALYSIS_CHECKOUT_KIND } from "./unlock";
 
 /**
  * Crée (ou réutilise) le client Stripe puis ouvre une session de paiement.
@@ -55,6 +57,56 @@ export const createCheckoutAction = authActionClient
       ...(mode === "subscription"
         ? { subscription_data: { metadata } }
         : { payment_intent_data: { metadata } }),
+      allow_promotion_codes: true,
+    });
+
+    if (!session.url) {
+      throw new AppError("Le paiement est momentanément indisponible.", "STRIPE_NO_URL", 502);
+    }
+
+    return { url: session.url };
+  });
+
+/**
+ * Déblocage d'une analyse : paiement unique, **sans compte requis**.
+ * C'est le cœur du tunnel — le visiteur lance une analyse gratuite, découvre
+ * l'aperçu, paie, puis crée son compte au retour de Stripe.
+ */
+export const createAnalysisCheckoutAction = actionClient
+  .inputSchema(analysisCheckoutSchema)
+  .action(async ({ parsedInput }) => {
+    const analysis = await prisma.analysis.findUnique({
+      where: { id: parsedInput.analysisId },
+      select: { id: true, domain: true, unlocked: true },
+    });
+    if (!analysis) throw new AppError("Analyse introuvable.", "ANALYSIS_NOT_FOUND", 404);
+    if (analysis.unlocked) {
+      // Déjà payée : rien à facturer, on renvoie vers le rapport.
+      return { url: `${SITE.url}${ROUTES.analysis(analysis.id)}` };
+    }
+
+    const user = await getCurrentUser();
+    const stripe = getStripe();
+    const price = await resolvePriceId("pro");
+    const metadata = {
+      kind: ANALYSIS_CHECKOUT_KIND,
+      analysisId: analysis.id,
+      domain: analysis.domain,
+      ...(user ? { userId: user.id } : {}),
+    };
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{ price, quantity: 1 }],
+      // Connecté : on réutilise son client Stripe. Anonyme : Stripe crée le
+      // client à la volée, ce qui nous donne l'e-mail pour la création de compte.
+      ...(user?.stripeCustomerId
+        ? { customer: user.stripeCustomerId }
+        : { customer_creation: "always" as const, customer_email: user?.email }),
+      success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${SITE.url}${ROUTES.analysis(analysis.id)}?paiement=annule`,
+      metadata,
+      payment_intent_data: { metadata },
       allow_promotion_codes: true,
     });
 
