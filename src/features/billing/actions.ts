@@ -3,8 +3,9 @@
 import { redirect } from "next/navigation";
 import { actionClient, authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
-import { getStripe, getCheckoutMode, resolvePriceId } from "@/lib/stripe";
+import { getStripe, getCheckoutMode, resolvePriceId, resolveCyclePriceId } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
+import { TRIAL } from "@/constants/plans";
 import { SITE } from "@/constants/site";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
@@ -89,7 +90,8 @@ export const createAnalysisCheckoutAction = actionClient
 
     const user = await getCurrentUser();
     const stripe = getStripe();
-    const price = await resolvePriceId("pro");
+    const cycle = parsedInput.cycle;
+    const price = await resolveCyclePriceId(cycle);
 
     // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
     // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
@@ -100,13 +102,29 @@ export const createAnalysisCheckoutAction = actionClient
       kind: ANALYSIS_CHECKOUT_KIND,
       analysisId: analysis.id,
       domain: analysis.domain,
+      cycle,
       [CLAIM_METADATA_KEY]: claimToken,
       ...(user ? { userId: user.id } : {}),
     };
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price, quantity: 1 }],
+      line_items: [
+        { price, quantity: 1 },
+        // Frais d'activation de l'essai. Joint au checkout en prix ponctuel :
+        // Stripe le facture immédiatement, alors que l'abonnement lui-même ne
+        // commence à courir qu'à la fin de la période d'essai.
+        {
+          quantity: 1,
+          price_data: {
+            currency: "eur",
+            unit_amount: TRIAL.activationPrice * 100,
+            product_data: {
+              name: `Activation de l'essai Visia (${TRIAL.days} jours)`,
+            },
+          },
+        },
+      ],
       // Connecté : on réutilise son client Stripe. Anonyme : Stripe crée le
       // client à la volée, ce qui nous donne l'e-mail pour la création de compte.
       ...(user?.stripeCustomerId
@@ -115,7 +133,7 @@ export const createAnalysisCheckoutAction = actionClient
       success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE.url}${ROUTES.analysis(analysis.id)}?paiement=annule`,
       metadata,
-      subscription_data: { metadata },
+      subscription_data: { metadata, trial_period_days: TRIAL.days },
       allow_promotion_codes: true,
     });
 

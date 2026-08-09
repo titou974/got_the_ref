@@ -64,7 +64,9 @@ export const createAccountAfterCheckoutAction = actionClient
   .action(async ({ parsedInput }) => {
     const session = await getStripe().checkout.sessions.retrieve(parsedInput.sessionId);
 
-    if (session.payment_status !== "paid") {
+    // Un essai peut ne rien encaisser au-delà des frais d'activation : la session
+    // vaut engagement dès lors qu'elle n'est pas restée impayée.
+    if (session.payment_status === "unpaid") {
       returnValidationErrors(postCheckoutSignUpSchema, {
         _errors: ["Ce paiement n'a pas été confirmé."],
       });

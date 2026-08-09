@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe, resolvePriceId } from "@/lib/stripe";
+import { getStripe, resolvePriceId, resolveCyclePriceId } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { unlockAnalysisFromSession } from "@/features/billing/unlock";
-import { PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
+import { BILLING_CYCLES, PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
 
 export const runtime = "nodejs";
 
@@ -13,6 +13,17 @@ export const runtime = "nodejs";
  */
 async function planFromPriceId(priceId: string | undefined): Promise<PaidPlanKey | null> {
   if (!priceId) return null;
+
+  // Mensuel et annuel sont deux tarifs du même abonnement : l'un comme l'autre
+  // donne le plan « pro ». On les teste avant les offres historiques.
+  for (const cycle of BILLING_CYCLES) {
+    try {
+      if ((await resolveCyclePriceId(cycle)) === priceId) return "pro";
+    } catch {
+      // env de cette formule absente : on ignore et on continue.
+    }
+  }
+
   for (const plan of PAID_PLAN_KEYS) {
     try {
       if ((await resolvePriceId(plan)) === priceId) return plan;

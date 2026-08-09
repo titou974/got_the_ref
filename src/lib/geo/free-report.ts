@@ -15,7 +15,13 @@ import type { AnalysisDiagnostic } from "./diagnostic";
  */
 
 /** Pans de l'analyse non mesurés en gratuit, qui portent le potentiel de gain. */
-export type UnmeasuredAngle = "rankings" | "recommendations" | "content" | "presence" | "maps";
+export type UnmeasuredAngle =
+  | "keywords"
+  | "rankings"
+  | "recommendations"
+  | "content"
+  | "presence"
+  | "maps";
 
 export type FreeReportFacts = {
   /** Graine déterministe : même analyse, même formulation. */
@@ -66,9 +72,15 @@ export function buildFreeReport(
   // « warn » compte comme un manque : c'est un point à corriger, pas un acquis.
   const gaps = checks.filter((c) => c.status === "ko" || c.status === "warn").map((c) => c.key);
 
-  // Ordre d'impact : le classement moteurs d'abord, c'est la mesure qui manque
-  // le plus cruellement quand on veut savoir où l'on se situe réellement.
-  const unmeasured: UnmeasuredAngle[] = ["rankings", "recommendations", "content", "presence"];
+  // Ordre d'impact. Les mots-clés viennent en tête : c'est le levier le plus
+  // universel et le plus immédiatement actionnable, quel que soit le site.
+  const unmeasured: UnmeasuredAngle[] = [
+    "keywords",
+    "rankings",
+    "recommendations",
+    "content",
+    "presence",
+  ];
   if (result.profile.isPhysical) unmeasured.push("maps");
 
   return {

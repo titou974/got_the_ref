@@ -192,6 +192,8 @@
     "content": {
       "title": "Contenu éditorial",
       "subtitle": "La matière que les IA citent : clarté, FAQ, avis et cohérence locale.",
+      "eeatTitle": "Notation éditoriale",
+      "eeatSubtitle": "Expertise démontrée, citabilité des passages et profondeur du contenu.",
       "scoreLabel": "Score contenu",
       "units": {
         "score": "{value}/100",
@@ -225,6 +227,7 @@
       "title": "Présence web & notoriété",
       "subtitle": "Les signaux d'autorité hors-site qui poussent les IA à vous citer.",
       "scoreLabel": "Notoriété",
+      "summaryTitle": "Synthèse de notoriété",
       "qualificationsTitle": "Qualifications & distinctions",
       "articlesTitle": "Apparitions presse & articles",
       "noQualifications": "Aucune qualification ou distinction (guide, label, certification) détectée pour le moment.",
@@ -238,6 +241,7 @@
       "promptAriaLabel": "Prompt de solution à copier",
       "copyPrompt": "Copier le prompt",
       "copied": "Copié !",
+      "lockedCopyHint": "Le prompt s'ouvre avec l'abonnement.",
       "shareDev": "Partager les résultats à mon dev",
       "shareSubject": "Résultats de l'analyse GEO Visia",
       "shareBody": "Voici les résultats de l'analyse de visibilité IA de notre site : {url}",
@@ -260,7 +264,7 @@
       "findingsTitle": "Constats"
     },
     "paywall": {
-      "cta": "Résoudre ces problèmes",
+      "cta": "Résoudre avec les agents IA",
       "lockedLabel": "Verrouillé",
       "alreadyPaid": "Déjà abonné ?",
       "signIn": "Se connecter",
@@ -389,6 +393,11 @@
       "{score}/100 : c'est ce que vaut le site vu de l'extérieur, avant analyse du contenu, de la notoriété et des classements moteurs."
     ],
     "unmeasured": {
+      "keywords": [
+        "Les mots-clés réellement présents sur le site : lesquels vous portent, lesquels manquent, et lesquels vous devriez viser. C'est le premier levier d'amélioration, et il est presque toujours sous-exploité.",
+        "Le travail des mots-clés du site. Ceux que vous employez aujourd'hui ne recouvrent qu'une partie des formulations que vos clients tapent — l'écart se comble et se mesure.",
+        "L'analyse des mots-clés page par page : leur pertinence, ceux qui manquent, et la formulation à reprendre pour être trouvé sur les requêtes qui comptent."
+      ],
       "rankings": [
         "Votre position réelle dans ChatGPT et Gemini sur les requêtes de votre activité, et le nom des concurrents cités avant vous.",
         "Ce que répondent réellement ChatGPT et Gemini quand un client cherche ce que vous vendez — et à quel rang vous apparaissez, si vous apparaissez.",
@@ -424,10 +433,10 @@
       "Le constat est loin d'être plafonné. Ces mesures manquantes portent l'essentiel du gain possible sur votre classement dans les IA et sur Google."
     ],
     "ctas": [
-      "Résoudre ces problèmes",
-      "Corriger ces points",
-      "Voir comment on les corrige",
-      "Passer au rapport complet"
+      "Résoudre avec les agents IA",
+      "Corriger avec les agents IA",
+      "Confier ces points aux agents IA",
+      "Lancer les agents IA sur ces points"
     ]
   },
   "postCheckout": {
@@ -451,11 +460,17 @@
     "subtitle": "L'analyse est gratuite. L'abonnement ouvre tout Visia et met des agents spécialisés sur votre site : ils mesurent, corrigent et remesurent votre position sur ChatGPT, Gemini et Google, sans que vous ayez à toucher une ligne de code.",
     "quotaNote": "Vous avez atteint la limite d'analyses gratuites. Réessayez plus tard ou parlons-en directement.",
     "perMonth": "/mois",
-    "secureNote": "Paiement sécurisé par Stripe · Résiliable à tout moment · TVA en sus le cas échéant",
+    "perYear": " par an",
+    "vat": "TVA en sus",
+    "trialPrefix": "1 €",
+    "trialCta": "Démarrer l'essai pour {price}",
+    "redirecting": "Redirection…",
+    "secureNote": "Paiement sécurisé par Stripe · Essai de {days} jours, résiliable avant la fin sans être débité de l'abonnement · TVA en sus le cas échéant",
     "plan": {
-      "eyebrow": "Accès complet",
-      "name": "Visia",
-      "description": "Tout Visia, sans limite : les analyses, les rapports complets et les agents qui les tiennent à jour.",
+      "monthlyEyebrow": "Accès complet",
+      "monthlyName": "Mensuel",
+      "monthlyTerms": "{days} jours d'accès complet, puis {price}/mois.",
+      "featuresTitle": "Ce que l'abonnement ouvre",
       "features": [
         "Analyses illimitées, e-commerce, SaaS ou commerce physique",
         "Vos positions réelles sur ChatGPT et Gemini, remesurées en continu",
@@ -463,11 +478,20 @@
         "Plan d'action priorisé et prompts solution prêts à coller",
         "Contenu, notoriété et cohérence Google Maps suivis dans le temps",
         "Aucune compétence technique requise"
-      ],
-      "cta": "Analyser mon site gratuitement",
-      "ctaUnlock": "M'abonner et tout débloquer",
-      "ctaRedirecting": "Redirection…",
-      "ctaNote": "Vous ne vous abonnez qu'après avoir vu votre score."
+      ]
+    },
+    "annual": {
+      "eyebrow": "Accès complet",
+      "name": "Annuel",
+      "badge": "{percent} % d'économie",
+      "terms": "{days} jours d'accès complet, puis {price}/an.",
+      "saving": "Soit {amount} économisés sur l'année, {percent} % de moins qu'au mois.",
+      "featuresTitle": "Tout le mensuel, plus",
+      "extras": [
+        "L'équivalent de quatre mois offerts sur l'année",
+        "Tarif verrouillé : aucune hausse en cours d'engagement",
+        "Priorité sur les nouvelles capacités des agents"
+      ]
     },
     "agents": {
       "title": "Agents en service",
@@ -491,8 +515,7 @@
     "agency": {
       "eyebrow": "Le repère",
       "name": "Agence SEO / référencement IA",
-      "from": "à partir de",
-      "description": "Le budget d'entrée d'un accompagnement classique, pour le même objectif : sortir dans les réponses des IA et sur Google.",
+      "description": "Le budget d'un accompagnement classique, pour le même objectif : sortir dans les réponses des IA et sur Google.",
       "notForSale": "Pour comparaison — Visia ne vend pas cette prestation.",
       "limits": [
         "Audit initial de quatre à six semaines avant le premier livrable",
@@ -505,8 +528,14 @@
     "compare": {
       "title": "Ce que change la différence de modèle",
       "criterion": "Critère",
+      "visiaColumn": "Visia",
       "agencyColumn": "Agence classique",
       "rows": [
+        {
+          "label": "Pour démarrer",
+          "visia": "1 €",
+          "agency": "Devis, puis frais de setup"
+        },
         {
           "label": "Premier résultat",
           "visia": "Immédiat",
@@ -528,9 +557,9 @@
           "agency": "6 à 12 mois"
         },
         {
-          "label": "Budget sur un an",
-          "visia": "948 €",
-          "agency": "24 000 € minimum"
+          "label": "Tarif",
+          "visia": "79 €/mois",
+          "agency": "20 000 – 24 000 €/an"
         }
       ]
     }
