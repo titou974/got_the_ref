@@ -10,6 +10,7 @@ import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
 import { analysisCheckoutSchema, checkoutSchema } from "./schemas";
 import { ANALYSIS_CHECKOUT_KIND } from "./unlock";
+import { CLAIM_METADATA_KEY, newClaimToken, rememberClaim } from "./claim";
 
 /**
  * Crée (ou réutilise) le client Stripe puis ouvre une session de paiement.
@@ -88,10 +89,17 @@ export const createAnalysisCheckoutAction = actionClient
     const user = await getCurrentUser();
     const stripe = getStripe();
     const price = await resolvePriceId("pro");
+
+    // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
+    // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
+    const claimToken = newClaimToken();
+    await rememberClaim(claimToken);
+
     const metadata = {
       kind: ANALYSIS_CHECKOUT_KIND,
       analysisId: analysis.id,
       domain: analysis.domain,
+      [CLAIM_METADATA_KEY]: claimToken,
       ...(user ? { userId: user.id } : {}),
     };
 

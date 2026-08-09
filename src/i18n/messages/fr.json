@@ -363,6 +363,7 @@
     "title": "Paiement confirmé 🎉",
     "subtitle": "Créez votre mot de passe pour retrouver ce rapport et vos prochaines analyses.",
     "existingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous pour retrouver ce rapport.",
+    "otherDeviceSubtitle": "Votre rapport est débloqué. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous.",
     "createAccount": "Créer mon compte",
     "signIn": "Se connecter",
     "skip": "Voir mon rapport tout de suite",

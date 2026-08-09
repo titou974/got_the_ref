@@ -8,6 +8,7 @@ import { getStripe } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { unlockAnalysisFromSession } from "@/features/billing/unlock";
+import { CLAIM_METADATA_KEY, claimMatches } from "@/features/billing/claim";
 import { ROUTES } from "@/constants/routes";
 
 type Props = { searchParams: Promise<{ session_id?: string }> };
@@ -59,6 +60,10 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
       })
     : null;
 
+  // Le rapport reste accessible par son lien, mais ouvrir un compte à l'adresse
+  // du payeur n'est proposé qu'au navigateur qui a réellement payé.
+  const canClaim = await claimMatches(session?.metadata?.[CLAIM_METADATA_KEY]);
+
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-10">
       <Logo className="mb-8" />
@@ -81,10 +86,10 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
 
         <h1 className="text-center text-2xl font-bold">{t("title")}</h1>
         <p className="mt-1 mb-6 text-center text-sm text-muted">
-          {existing ? t("existingSubtitle") : t("subtitle")}
+          {existing ? t("existingSubtitle") : canClaim ? t("subtitle") : t("otherDeviceSubtitle")}
         </p>
 
-        {existing ? (
+        {existing || !canClaim ? (
           <Link
             href={ROUTES.signIn}
             className="block w-full cursor-pointer rounded-full bg-cta py-3 text-center font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
