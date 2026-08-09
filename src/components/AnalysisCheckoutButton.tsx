@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { createAnalysisCheckoutAction } from "@/features/billing/actions";
 
 /**
- * Ouvre l'essai Visia pour un rapport précis : le rapport qui a amené le
+ * Ouvre l'essai got_the_ref pour un rapport précis : le rapport qui a amené le
  * visiteur ici lui est rattaché au moment de la souscription. Vit uniquement sur
  * la page tarifs — c'est le seul endroit où les montants sont annoncés.
  */

@@ -50,7 +50,7 @@ export default async function TarifsPage({ searchParams }: Props) {
 
         {/* Les deux voies : ce qui tourne en continu, face à ce qui attend. */}
         <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-[1.1fr_1fr] lg:items-start">
-          {/* Visia — seule surface sombre du site : la chose qui ne s'arrête jamais. */}
+          {/* got_the_ref — seule surface sombre du site : la chose qui ne s'arrête jamais. */}
           <section className="rounded-[36px] bg-obsidian p-6 text-white shadow-[var(--shadow-md)] sm:p-8">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
               {t("plan.eyebrow")}

@@ -2,7 +2,7 @@
 
 Ce dossier **vendorise** la méthodologie des skills Claude Code `geo-audit` et `geo`
 (`~/.claude/skills/geo-audit/SKILL.md` et `~/.claude/skills/geo/SKILL.md`), adaptée à
-la structure du dashboard Visia.
+la structure du dashboard got_the_ref.
 
 > **Pourquoi vendoriser ?** Les *skills* Claude Code s'exécutent dans l'environnement
 > de l'agent, pas dans les fonctions serverless Next.js déployées. Pour que l'audit
@@ -17,7 +17,7 @@ la structure du dashboard Visia.
 | `geo.md` | Copie (analyse uniquement) du skill `geo` (logique d'orchestration, détection de type, scoring). |
 | `../methodology.ts` | Version **prête pour le prompt** (FR, condensée) injectée dans l'appel Opus 4.8, + mapping vers chaque partie du dashboard. |
 
-## Architecture d'analyse (Visia)
+## Architecture d'analyse (got_the_ref)
 
 1. **Étape 1 — Détection de la niche (Claude Sonnet 4.6)** : déterminée *en tout premier*
    car elle est le pivot des recherches de concurrents (top 10 OpenAI/Gemini).

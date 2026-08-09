@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 /**
  * Bandeau « fonctionne avec » : lève l'objection technique juste sous le champ
- * d'analyse. Visia lit un site depuis l'extérieur — la plateforme n'a donc aucune
+ * d'analyse. got_the_ref lit un site depuis l'extérieur — la plateforme n'a donc aucune
  * importance, et c'est précisément ce que ce rappel doit faire comprendre d'un
  * coup d'œil, sans que personne ait à lire une ligne.
  *

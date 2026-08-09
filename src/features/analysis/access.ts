@@ -16,7 +16,7 @@ export type AnalysisViewer = {
  * — l'analyse a été ouverte lors d'une souscription (rattachement définitif à
  *   l'analyse elle-même, pour qu'un visiteur anonyme puisse s'abonner puis créer
  *   son compte après) ;
- * — ou le visiteur a un abonnement actif : l'abonnement donne accès à tout Visia.
+ * — ou le visiteur a un abonnement actif : l'abonnement donne accès à tout got_the_ref.
  *
  * Sinon : aperçu gratuit, les sections mesurées restent floutées.
  */

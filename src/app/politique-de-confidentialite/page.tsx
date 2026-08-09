@@ -8,7 +8,7 @@ export default function ConfidentialitePage() {
     <LegalLayout title="Politique de confidentialité" updated="13 juin 2026">
       <p>
         La présente politique décrit la manière dont <strong>[Raison sociale]</strong> (ci-après
-        « nous ») collecte et traite vos données personnelles dans le cadre du service Visia,
+        « nous ») collecte et traite vos données personnelles dans le cadre du service got_the_ref,
         conformément au Règlement Général sur la Protection des Données (RGPD - UE 2016/679) et à la
         loi « Informatique et Libertés ».
       </p>
@@ -66,7 +66,7 @@ export default function ConfidentialitePage() {
 
       <h2>7. Cookies</h2>
       <p>
-        Visia utilise uniquement des cookies strictement nécessaires à l'authentification et au
+        got_the_ref utilise uniquement des cookies strictement nécessaires à l'authentification et au
         fonctionnement du Service. Ces cookies ne nécessitent pas de consentement préalable. Aucun
         cookie publicitaire ou de traçage tiers n'est déposé sans votre accord.
       </p>

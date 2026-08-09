@@ -70,7 +70,7 @@ export const createCheckoutAction = authActionClient
   });
 
 /**
- * Souscription à l'abonnement Visia depuis un rapport précis, **sans compte
+ * Souscription à l'abonnement got_the_ref depuis un rapport précis, **sans compte
  * requis**. C'est le cœur du tunnel : le visiteur lance une analyse gratuite,
  * lit le constat, s'abonne, puis crée son compte au retour de Stripe — le
  * rapport qui l'a amené là lui est rattaché au passage.
@@ -118,7 +118,7 @@ export const createAnalysisCheckoutAction = actionClient
             currency: "eur",
             unit_amount: TRIAL.activationPrice * 100,
             product_data: {
-              name: `Activation de l'essai Visia (${TRIAL.days} jours)`,
+              name: `Activation de l'essai got_the_ref (${TRIAL.days} jours)`,
             },
           },
         },

@@ -19,13 +19,13 @@ export const PAID_PLAN_KEYS: readonly PaidPlanKey[] = ["pro", "agency"] as const
  */
 export const PLAN_PRICING: Record<PlanKey, { amount: number | null; recurring: boolean }> = {
   free: { amount: 0, recurring: true },
-  /** Offre unique : abonnement mensuel, accès total à Visia. */
+  /** Offre unique : abonnement mensuel, accès total à got_the_ref. */
   pro: { amount: 79, recurring: true },
   /** Ancien plan agence : conservé pour les comptes existants, plus commercialisé. */
   agency: { amount: null, recurring: true },
 };
 
-/** Prix public de l'abonnement Visia, en euros par mois. */
+/** Prix public de l'abonnement got_the_ref, en euros par mois. */
 export const SUBSCRIPTION_PRICE = PLAN_PRICING.pro.amount as number;
 
 /**
@@ -73,7 +73,7 @@ export type BillingMode = "payment" | "subscription";
  * dans ce dernier cas, on résout le `default_price` du produit (cf. `resolvePriceId`).
  */
 export const PLAN_BILLING: Record<PaidPlanKey, { mode: BillingMode; env: string }> = {
-  /** Abonnement Visia : accès total, mensuel (produit/price « UNIT »). */
+  /** Abonnement got_the_ref : accès total, mensuel (produit/price « UNIT »). */
   pro: { mode: "subscription", env: "STRIPE_PRICE_UNIT" },
   /** Ancien plan agence : conservé pour les abonnements déjà en cours. */
   agency: { mode: "subscription", env: "STRIPE_PRICE_AGENCY" },

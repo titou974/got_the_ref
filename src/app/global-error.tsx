@@ -12,7 +12,7 @@ export default function GlobalError({
   return (
     // global-error doit définir ses propres balises <html> et <body>.
     <html lang="fr">
-      <title>Une erreur est survenue · Visia</title>
+      <title>Une erreur est survenue · got_the_ref</title>
       <body className="min-h-full">
         <div className="bg-ambient" aria-hidden />
         <main className="flex min-h-[100dvh] flex-col items-center justify-center px-5 text-center">

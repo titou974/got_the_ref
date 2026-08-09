@@ -13,7 +13,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
  * moment d'ouvrir le paiement, on le recopie dans les métadonnées de la session,
  * et la création de compte n'est offerte qu'au navigateur qui présente les deux.
  */
-export const CHECKOUT_CLAIM_COOKIE = "visia_checkout_claim";
+export const CHECKOUT_CLAIM_COOKIE = "gottheref_checkout_claim";
 
 /** Clé des métadonnées Stripe portant le jeton. */
 export const CLAIM_METADATA_KEY = "claimToken";

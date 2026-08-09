@@ -1,38 +1,38 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import {
-  RESULT_SHOTS,
+  PROOF_IS_ILLUSTRATIVE,
   TESTIMONIALS,
-  TESTIMONIALS_ARE_PLACEHOLDERS,
-  type ResultShot,
   type Testimonial,
 } from "@/constants/testimonials";
 
 /**
- * Bandeau de preuves qui défile sans fin : captures de progression et paroles de
- * clients alternées, pour que le chiffre et la voix se répondent au lieu de
- * s'empiler. Le ruban déborde volontairement de la grille — il donne à voir une
- * file qui continue hors écran, plutôt qu'une liste qu'on aurait finie de lire.
+ * Bandeau de preuves qui défile sans fin. Chaque carte porte une parole ; les
+ * activités en ligne y ajoutent leur courbe Search Console, parce que c'est là
+ * que leur progression se mesure — un restaurant, lui, se juge à sa salle.
  *
+ * Le ruban déborde volontairement de la grille : il donne à voir une file qui
+ * continue hors écran, plutôt qu'une liste qu'on aurait finie de lire.
  * Animation en CSS pur (aucun JavaScript), suspendue au survol et désactivée
  * sous `prefers-reduced-motion`.
  */
 export async function ResultsCarousel({ className = "" }: { className?: string }) {
   const t = await getTranslations("results");
 
-  // Alternance capture / témoignage : la preuve chiffrée puis la preuve humaine.
-  const items: ({ type: "shot" } & ResultShot | { type: "quote" } & Testimonial)[] = [];
-  const longest = Math.max(RESULT_SHOTS.length, TESTIMONIALS.length);
-  for (let i = 0; i < longest; i++) {
-    if (RESULT_SHOTS[i]) items.push({ type: "shot", ...RESULT_SHOTS[i] });
-    if (TESTIMONIALS[i]) items.push({ type: "quote", ...TESTIMONIALS[i] });
+  // Alternance physique / en ligne : la salle et la courbe se répondent au lieu
+  // de s'empiler par familles.
+  const locals = TESTIMONIALS.filter((x) => x.kind === "local");
+  const onlines = TESTIMONIALS.filter((x) => x.kind === "online");
+  const items: Testimonial[] = [];
+  for (let i = 0; i < Math.max(locals.length, onlines.length); i++) {
+    if (locals[i]) items.push(locals[i]);
+    if (onlines[i]) items.push(onlines[i]);
   }
 
   const labels = {
     clicks: t("clicks"),
     impressions: t("impressions"),
     position: t("position"),
-    placeholder: t("placeholder"),
   };
 
   return (
@@ -49,43 +49,61 @@ export async function ResultsCarousel({ className = "" }: { className?: string }
           {/* Deux passes identiques : la seconde prend le relais sans rupture. */}
           {[0, 1].map((pass) => (
             <ul key={pass} className="marquee-row" aria-hidden={pass === 1 || undefined}>
-              {items.map((item, i) =>
-                item.type === "shot" ? (
-                  <ShotCard key={`${pass}-s-${i}`} shot={item} labels={labels} />
-                ) : (
-                  <QuoteCard key={`${pass}-q-${i}`} quote={item} placeholder={labels.placeholder} />
-                ),
-              )}
+              {items.map((item, i) => (
+                <TestimonialCard key={`${pass}-${i}`} item={item} labels={labels} />
+              ))}
             </ul>
           ))}
         </div>
       </div>
+
+      {PROOF_IS_ILLUSTRATIVE && (
+        <p className="mx-auto mt-6 max-w-2xl px-5 text-center text-xs text-ash">
+          {t("illustrativeNote")}
+        </p>
+      )}
     </section>
   );
 }
 
-function ShotCard({
-  shot,
+function TestimonialCard({
+  item,
   labels,
 }: {
-  shot: ResultShot;
+  item: Testimonial;
   labels: { clicks: string; impressions: string; position: string };
 }) {
   return (
-    <li className="w-[19rem] shrink-0 overflow-hidden rounded-[28px] border border-fog bg-snow shadow-[var(--shadow-md)] sm:w-[22rem]">
-      <Image
-        src={shot.src}
-        alt=""
-        width={720}
-        height={496}
-        className="h-auto w-full"
-        sizes="(max-width: 640px) 19rem, 22rem"
-      />
-      <dl className="grid grid-cols-3 gap-2 border-t border-fog px-4 py-3 text-center">
-        <Stat label={labels.clicks} value={shot.clicks} />
-        <Stat label={labels.impressions} value={shot.impressions} />
-        <Stat label={labels.position} value={shot.position} />
-      </dl>
+    <li className="flex w-[19rem] shrink-0 flex-col overflow-hidden rounded-[28px] border border-fog bg-snow shadow-[var(--shadow-md)] sm:w-[23rem]">
+      <figure className="flex flex-1 flex-col p-6">
+        <Stars />
+        <blockquote className="mt-4 flex-1 text-pretty text-sm leading-relaxed text-text">
+          « {item.quote} »
+        </blockquote>
+        <figcaption className="mt-5 border-t border-fog pt-4">
+          <p className="text-sm font-semibold">{item.author}</p>
+          <p className="mt-0.5 text-xs text-muted">{item.role}</p>
+        </figcaption>
+      </figure>
+
+      {/* Activité en ligne : la courbe et ses chiffres closent la carte. */}
+      {item.stats && (
+        <div className="border-t border-fog">
+          <Image
+            src={item.stats.shot}
+            alt=""
+            width={720}
+            height={496}
+            className="h-auto w-full"
+            sizes="(max-width: 640px) 19rem, 23rem"
+          />
+          <dl className="grid grid-cols-3 gap-2 border-t border-fog px-4 py-3 text-center">
+            <Stat label={labels.clicks} value={item.stats.clicks} />
+            <Stat label={labels.impressions} value={item.stats.impressions} />
+            <Stat label={labels.position} value={item.stats.position} />
+          </dl>
+        </div>
+      )}
     </li>
   );
 }
@@ -96,30 +114,6 @@ function Stat({ label, value }: { label: string; value: string }) {
       <dt className="text-[10px] font-semibold uppercase tracking-wider text-steel">{label}</dt>
       <dd className="mt-0.5 text-sm font-bold tabular-nums">{value}</dd>
     </div>
-  );
-}
-
-function QuoteCard({ quote, placeholder }: { quote: Testimonial; placeholder: string }) {
-  return (
-    <li className="flex w-[19rem] shrink-0 flex-col justify-between rounded-[28px] border border-fog bg-snow p-6 shadow-[var(--shadow-md)] sm:w-[22rem]">
-      <div>
-        <div className="flex items-center gap-2">
-          <Stars />
-          {TESTIMONIALS_ARE_PLACEHOLDERS && (
-            <span className="rounded-full bg-mist px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-steel">
-              {placeholder}
-            </span>
-          )}
-        </div>
-        <blockquote className="mt-4 text-pretty text-sm leading-relaxed text-text">
-          « {quote.quote} »
-        </blockquote>
-      </div>
-      <figcaption className="mt-5 border-t border-fog pt-4">
-        <p className="text-sm font-semibold">{quote.author}</p>
-        <p className="mt-0.5 text-xs text-muted">{quote.role}</p>
-      </figcaption>
-    </li>
   );
 }
 

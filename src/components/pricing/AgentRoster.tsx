@@ -5,7 +5,7 @@ import { useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
 /**
- * Les agents Visia au travail.
+ * Les agents got_the_ref au travail.
  *
  * C'est l'argument de la page, montré plutôt qu'écrit : là où une agence rend un
  * rapport par mois, ces agents ne s'arrêtent jamais. Chaque ligne avance à son

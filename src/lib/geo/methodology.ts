@@ -1,7 +1,7 @@
 /**
  * Méthodologie GEO prête pour le prompt — vendorisée depuis les skills Claude
  * Code `geo-audit` et `geo` (voir ./methodology/*.md), adaptée à la structure du
- * dashboard Visia. Injectée dans l'appel Claude Opus 4.8 pour que l'audit en
+ * dashboard got_the_ref. Injectée dans l'appel Claude Opus 4.8 pour que l'audit en
  * production suive exactement la même grille que le skill.
  *
  * NE PAS reformuler à la légère : c'est la source de vérité de la notation.
@@ -39,7 +39,7 @@ AJUSTEMENTS SELON LE TYPE DE COMMERCE :
 - Agence / services : études de cas, démonstration d'expertise, leadership d'opinion ; schema Organization, Service, Person, Review.`;
 
 /**
- * Mapping méthodologie → parties du dashboard Visia, avec garde-fous.
+ * Mapping méthodologie → parties du dashboard got_the_ref, avec garde-fous.
  * Indique à Opus QUELLE note/conclusion produire pour CHAQUE bloc d'UI, et ce
  * qu'il ne doit PAS faire (honnêteté, pas d'invention, fallback null).
  */

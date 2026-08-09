@@ -8,14 +8,14 @@ export function Logo({ className = "" }: { className?: string }) {
       className={`inline-flex cursor-pointer items-center gap-2 font-display text-lg font-bold tracking-tight ${className}`}
     >
       <Image
-        src="/visialogo.svg"
+        src="/logo.svg"
         alt=""
         width={28}
         height={28}
         className="h-7 w-7 shrink-0 rounded-[9px]"
         priority
       />
-      <span>Visia</span>
+      <span>got_the_ref</span>
     </Link>
   );
 }
