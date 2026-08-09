@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "title": "GEOBoost — Boostez votre visibilité dans les IA",
-    "titleTemplate": "%s · GEOBoost",
+    "title": "Visia — Boostez votre visibilité dans les IA",
+    "titleTemplate": "%s · Visia",
     "description": "Analysez et optimisez la visibilité de votre site dans ChatGPT, Perplexity, Gemini et Google. Score GEO par moteur IA, positionnement estimé et recommandations générées par l'IA.",
-    "ogTitle": "GEOBoost — Boostez votre visibilité dans les IA",
+    "ogTitle": "Visia — Boostez votre visibilité dans les IA",
     "ogDescription": "L'outil tout-en-un pour mesurer et booster votre présence dans les moteurs de recherche IA.",
     "keywords": "GEO, SEO, ChatGPT, Perplexity, Gemini, visibilité IA, référencement IA"
   },
@@ -27,7 +27,7 @@
     "myAccount": "Mon compte"
   },
   "footer": {
-    "rights": "© {year} GEOBoost. Tous droits réservés.",
+    "rights": "© {year} Visia. Tous droits réservés.",
     "tagline": "La première agence de GEO française.",
     "agency": "Notre agence",
     "services": "Nos services",
@@ -37,7 +37,7 @@
     "privacy": "Confidentialité"
   },
   "ctaServices": {
-    "eyebrow": "GEOBoost · Agence GEO",
+    "eyebrow": "Visia · Agence GEO",
     "title": "Envie d'apparaître en premier dans les IA ?",
     "subtitle": "Notre agence optimise votre commerce pour ChatGPT, Gemini et Perplexity. Discutons de votre projet et faisons monter votre business tout en haut des réponses IA.",
     "button": "Découvrir nos services",
@@ -50,13 +50,40 @@
     "headingBefore": "Devenez",
     "headingHighlight": " n°1 ",
     "headingAfter": "sur les IA",
-    "subtitle": "L'outil marketing pour faire apparaître son commerce en premier sur les IA. GEOBoost mesure votre visibilité et vous dit exactement comment y apparaître. ",
-    "freeAnalysisNote": "Analyse gratuite · aucune carte bancaire requise · ",
+    "subtitle": "L'outil marketing pour faire apparaître son commerce en premier sur les IA. Visia mesure votre visibilité et vous dit exactement comment y apparaître. ",
+    "freeAnalysisNote": "Analyse et score gratuits · sans carte bancaire · rapport complet à 79 € · ",
     "viewPricing": "voir les tarifs",
-    "discoverAgency": "En découvrir plus sur GEOBoost",
-    "discoverAgencyNote": "GEOBoost, la première agence de GEO française.",
+    "discoverAgency": "En découvrir plus sur Visia",
+    "discoverAgencyNote": "Visia, la première agence de GEO française.",
     "simulationCaption": "Démonstration : comment votre entreprise pourrait apparaître dans les réponses IA.",
     "scrollTopCta": "Analyser"
+  },
+  "proof": {
+    "eyebrow": "Cas réel · La Cotriade, Les Sables-d'Olonne",
+    "title": "Voilà à quoi ressemble un client qui vous trouve grâce à l'IA",
+    "subtitle": "Un internaute cherche où manger, il pose la question à une IA. Le commerce cité récupère le client — et le client le raconte dans son avis Google.",
+    "steps": [
+      {
+        "title": "La question posée à l'IA",
+        "caption": "« Donne-moi un classement des meilleurs restaurants de fruits de mer aux Sables-d'Olonne »"
+      },
+      {
+        "title": "La réponse de ChatGPT",
+        "caption": "La Cotriade citée en n°1, avec ses arguments, sa note et un lien direct vers le site."
+      },
+      {
+        "title": "La réponse de Gemini",
+        "caption": "Même question, même verdict : La Cotriade en tête, fiche Google à l'appui."
+      }
+    ],
+    "mapsAlt": "Fiche Google Maps de La Cotriade, 4,7 étoiles sur 2 682 avis",
+    "reviewAlt": "Avis Google d'une cliente venue au restaurant après une recommandation de ChatGPT",
+    "resultEyebrow": "Le résultat, dans les avis",
+    "resultTitle": "Une cliente le dit noir sur blanc",
+    "quote": "« Nous étions de passage aux Sables d'Olonne et n'avions aucune référence de bon restaurant de poisson. Après une demande ChatGPT, nous nous sommes retrouvés là :-) »",
+    "quoteAuthor": "Valérie H. · avis Google Maps · ★★★★★",
+    "resultBody": "Site clair, fiche Google cohérente, avis nombreux : c'est exactement ce que les IA lisent avant de citer un commerce. Visia mesure ces signaux sur votre site et vous dit lesquels vous manquent.",
+    "cta": "Analyser mon commerce gratuitement"
   },
   "analyzeForm": {
     "placeholder": "votre-site.fr",
@@ -209,7 +236,7 @@
       "copyPrompt": "Copier le prompt",
       "copied": "Copié !",
       "shareDev": "Partager les résultats à mon dev",
-      "shareSubject": "Résultats de l'analyse GEO GEOBoost",
+      "shareSubject": "Résultats de l'analyse GEO Visia",
       "shareBody": "Voici les résultats de l'analyse de visibilité IA de notre site : {url}",
       "agencyCtaText": "Vous préférez qu'on s'en occupe pour vous ?",
       "agencyCtaLink": "Découvrir les services de l'agence"
@@ -228,19 +255,49 @@
       "noMetrics": "Note et nombre d'avis non récupérables sans connexion à l'API Google. Renseignés manuellement, ils affineront le diagnostic.",
       "matchesTitle": "Points de cohérence",
       "findingsTitle": "Constats"
+    },
+    "paywall": {
+      "cta": "Débloquer mon rapport",
+      "hint": "Paiement unique de {price} € · accès à vie à ce rapport",
+      "alreadyPaid": "Déjà payé ?",
+      "signIn": "Se connecter",
+      "rankings": {
+        "title": "Classements IA verrouillés",
+        "subtitle": "Votre position réelle sur ChatGPT et Gemini, face à vos concurrents."
+      },
+      "recommendations": {
+        "title": "Recommandations verrouillées",
+        "subtitle": "Le plan d'action priorisé pour gagner en visibilité sur les IA."
+      },
+      "prompt": {
+        "title": "Prompt solution verrouillé",
+        "subtitle": "Le prompt prêt à coller dans Claude pour corriger ces points d'un coup."
+      },
+      "content": {
+        "title": "Analyse de contenu verrouillée",
+        "subtitle": "Qualité E-E-A-T, citabilité et éléments on-page de vos pages."
+      },
+      "presence": {
+        "title": "Présence web verrouillée",
+        "subtitle": "Notoriété, mentions presse et signaux d'autorité de votre marque."
+      },
+      "maps": {
+        "title": "Cohérence Maps verrouillée",
+        "subtitle": "L'alignement de votre fiche Google avec votre site, vu par les IA."
+      }
     }
   },
   "analysisApi": {
     "invalidUrl": "URL invalide. Saisissez une adresse comme exemple.fr.",
     "invalidMapsUrl": "Lien Google Maps invalide. Collez l'adresse de votre fiche Google Maps.",
     "anonQuota": "Limite d'analyses gratuites atteinte. Créez un compte pour continuer.",
-    "quotaFree": "Limite du plan gratuit atteinte.",
-    "quotaPro": "Limite mensuelle du plan Pro atteinte.",
+    "quotaFree": "Limite d'analyses gratuites atteinte pour ce mois-ci.",
+    "quotaPro": "Limite mensuelle d'analyses atteinte.",
     "failed": "L'analyse a échoué. Vérifiez l'URL et réessayez."
   },
   "geoQuote": {
-    "text": "Le <geo>GEO</geo> <muted>(Generative Engine Optimization)</muted> est l'art d'optimiser un site pour être <highlight>cité par les intelligences artificielles</highlight> comme ChatGPT, Perplexity ou Gemini. <brand>GEOBoost</brand> mesure cette visibilité et vous indique précisément comment apparaître dans leurs réponses.",
-    "authorRole": "Fondateur de GEOBoost"
+    "text": "Le <geo>GEO</geo> <muted>(Generative Engine Optimization)</muted> est l'art d'optimiser un site pour être <highlight>cité par les intelligences artificielles</highlight> comme ChatGPT, Perplexity ou Gemini. <brand>Visia</brand> mesure cette visibilité et vous indique précisément comment apparaître dans leurs réponses.",
+    "authorRole": "Fondateur de Visia"
   },
   "signOut": {
     "label": "Déconnexion"
@@ -251,7 +308,7 @@
     "signinTitle": "Bon retour 👋",
     "signinSubtitle": "Connectez-vous pour retrouver vos analyses.",
     "signupTitle": "Créez votre compte",
-    "signupSubtitle": "3 analyses GEO gratuites, sans carte bancaire.",
+    "signupSubtitle": "Analyses GEO gratuites, sans carte bancaire.",
     "backHome": "← Retour à l'accueil",
     "nameLabel": "Nom (facultatif)",
     "namePlaceholder": "Jean Dupont",
@@ -282,71 +339,85 @@
     "lastUpdated": "Dernière mise à jour : {date}"
   },
   "aiSimulation": {
-    "live": "en direct",
-    "searching": "{engine} recherche les meilleures sources…",
     "recommendIntro": "Voici les meilleures options que je recommande :",
     "yourBusiness": "Votre entreprise",
-    "citedFirst": "cité en 1ᵉʳ"
+    "citedFirst": "cité en 1ᵉʳ",
+    "chatgptPlaceholder": "Demandez ce que vous voulez",
+    "geminiPlaceholder": "Demander à Gemini"
   },
   "checkout": {
     "redirecting": "Redirection…",
     "errorGeneric": "Une erreur est survenue.",
     "errorNetwork": "Erreur réseau. Réessayez."
   },
+  "unlock": {
+    "cta": "Débloquer mon rapport · {price} €",
+    "redirecting": "Redirection vers le paiement…",
+    "bannerEyebrow": "Aperçu gratuit",
+    "bannerTitle": "Débloquez le rapport complet de {domain}",
+    "bannerSubtitle": "Positions réelles sur ChatGPT et Gemini, plan d'action priorisé, prompt solution, analyse de contenu et cohérence Google Maps. Paiement unique de {price} €, sans abonnement.",
+    "included": "Tout le rapport, débloqué à vie"
+  },
+  "postCheckout": {
+    "metaTitle": "Paiement confirmé",
+    "title": "Paiement confirmé 🎉",
+    "subtitle": "Créez votre mot de passe pour retrouver ce rapport et vos prochaines analyses.",
+    "existingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous pour retrouver ce rapport.",
+    "otherDeviceSubtitle": "Votre rapport est débloqué. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous.",
+    "createAccount": "Créer mon compte",
+    "signIn": "Se connecter",
+    "skip": "Voir mon rapport tout de suite",
+    "pendingTitle": "Paiement en cours de confirmation",
+    "pendingBody": "Votre paiement n'est pas encore confirmé par Stripe. Patientez quelques secondes puis rechargez cette page — si le problème persiste, contactez-nous.",
+    "backHome": "← Retour à l'accueil"
+  },
   "pricing": {
     "metaTitle": "Tarifs",
     "headingBefore": "Des tarifs ",
     "headingHighlight": "simples et transparents",
-    "subtitle": "Commencez gratuitement, passez à la vitesse supérieure quand vous êtes prêt.",
-    "quotaNote": "Vous avez atteint la limite de votre formule. Choisissez une offre pour continuer à analyser.",
-    "popularBadge": "Le plus populaire",
+    "subtitle": "L'analyse de votre visibilité IA est gratuite. Vous ne payez que pour débloquer le rapport complet, une fois que vous avez vu votre score.",
+    "quotaNote": "Vous avez atteint la limite d'analyses gratuites. Réessayez plus tard ou parlons-en directement.",
     "perMonth": " /mois",
-    "secureNote": "Paiement sécurisé par Stripe · Résiliable à tout moment · TVA en sus le cas échéant",
-    "free": {
-      "name": "Gratuit",
-      "description": "Pour découvrir l'outil.",
-      "features": [
-        "3 analyses GEO complètes",
-        "Score IA général + par moteur",
-        "Recommandations essentielles",
-        "Analyse SEO Google"
-      ],
-      "cta": "Commencer gratuitement"
-    },
+    "perOnce": " · paiement unique",
+    "secureNote": "Paiement sécurisé par Stripe · Aucun abonnement · TVA en sus le cas échéant",
     "pro": {
-      "name": "Pro",
-      "description": "50 analyses / mois",
+      "name": "Une analyse",
+      "description": "Paiement unique, pour un rapport complet et définitif",
       "features": [
-        "50 analyses GEO complètes par mois",
-        "Rapports détaillés exportables",
-        "Suivi de l'évolution des scores",
+        "Analyse et score de visibilité IA gratuits",
+        "Vos positions réelles sur ChatGPT et Gemini",
         "Recommandations priorisées par l'IA",
-        "Support par e-mail"
+        "Prompt solution prêt à coller",
+        "Analyse de contenu, notoriété et cohérence Google Maps",
+        "Accès à vie au rapport débloqué"
       ],
-      "cta": "Choisir Pro"
+      "cta": "Analyser mon site gratuitement",
+      "ctaNote": "Vous ne payez qu'après avoir vu votre score."
     },
     "agency": {
       "name": "Agence",
-      "description": "Analyses illimitées",
+      "price": "Sur mesure",
+      "description": "Accompagnement complet par notre agence GEO",
       "features": [
         "Analyses GEO illimitées",
         "Multi-sites & multi-clients",
+        "Optimisations mises en œuvre par notre équipe",
         "Rapports en marque blanche",
         "Historique complet & comparaisons mensuelles",
-        "Accès API",
         "Support prioritaire"
       ],
-      "cta": "Choisir Agence"
+      "cta": "Prendre rendez-vous",
+      "ctaNote": "30 minutes, sans engagement."
     }
   },
   "agency": {
     "metaTitle": "Notre agence GEO",
-    "metaDescription": "GEOBoost est la première agence de Generative Engine Optimization (GEO) en France. Nous optimisons votre visibilité sur ChatGPT, Gemini et Perplexity — référencement IA pour commerces locaux, e-commerce et SaaS.",
+    "metaDescription": "Visia est la première agence de Generative Engine Optimization (GEO) en France. Nous optimisons votre visibilité sur ChatGPT, Gemini et Perplexity — référencement IA pour commerces locaux, e-commerce et SaaS.",
     "keywords": "agence GEO, agence SEO IA, generative engine optimization, référencement IA, référencement génératif, consultant GEO, optimiser son site pour ChatGPT, visibilité IA, agence GEO française, moteurs de réponse IA",
     "heroEyebrow": "La première agence de GEO française",
     "heroTitleBefore": "L'agence qui propulse votre business ",
     "heroTitleHighlight": "tout en haut des IA",
-    "heroSubtitle": "GEOBoost est la première agence française de Generative Engine Optimization. Nous rendons votre site lisible, citable et recommandé par ChatGPT, Gemini et Perplexity — là où vos clients cherchent désormais.",
+    "heroSubtitle": "Visia est la première agence française de Generative Engine Optimization. Nous rendons votre site lisible, citable et recommandé par ChatGPT, Gemini et Perplexity — là où vos clients cherchent désormais.",
     "heroCtaPrimary": "Analyser mon site gratuitement",
     "heroCtaSecondary": "Découvrir nos services",
     "whatEyebrow": "Définition",
@@ -375,8 +446,8 @@
     "storyParagraphs": [
       "Un restaurateur des Sables d'Olonne nous contacte. Son problème : quand les gens cherchent « restaurant fruits de mer aux Sables d'Olonne » sur ChatGPT, il n'apparaît pas. Son établissement est excellent, sa fiche Google Maps existe, son site aussi. Mais les IA ne le voient pas.",
       "On a tout repris : optimisation de la fiche Google Maps sur les mots-clés de sa niche (horaires, adresse, spécialités, avis 5 étoiles), création d'un fichier llms.txt — l'équivalent du robots.txt, mais pour les IA — intégration de schémas JSON dans le code avec toutes les infos du restaurant, et alignement du H1 et de la meta description sur les termes exacts que les IA utilisent pour recommander.",
-      "Résultat : il apparaît aujourd'hui en première position sur ChatGPT et Gemini pour sa niche locale. Après l'avoir fait monter tout en haut, nous avons codé GEOBoost pour automatiser ce workflow entier — puis nous en avons fait une agence.",
-      "GEOBoost optimise désormais commerces locaux, e-commerce et SaaS pour les moteurs de réponse IA. La méthode est la même, éprouvée terrain : rendre votre business impossible à ignorer pour les IA."
+      "Résultat : il apparaît aujourd'hui en première position sur ChatGPT et Gemini pour sa niche locale. Après l'avoir fait monter tout en haut, nous avons codé Visia pour automatiser ce workflow entier — puis nous en avons fait une agence.",
+      "Visia optimise désormais commerces locaux, e-commerce et SaaS pour les moteurs de réponse IA. La méthode est la même, éprouvée terrain : rendre votre business impossible à ignorer pour les IA."
     ],
     "storyResultLabel": "Résultat client",
     "storyResultValue": "1ʳᵉ position sur ChatGPT & Gemini",
@@ -384,7 +455,7 @@
     "founderEyebrow": "Le fondateur",
     "founderName": "Titouan Hirsch — bobodigital",
     "founderRole": "Développeur web freelance & créateur de contenu",
-    "founderBody": "Titouan conçoit des applications web (Next.js, agents IA) et accompagne leur croissance. C'est en propulsant un restaurant tout en haut de ChatGPT qu'il a mis au point la méthode GEO de l'agence, puis développé GEOBoost pour l'automatiser. Il partage tout son travail en build in public.",
+    "founderBody": "Titouan conçoit des applications web (Next.js, agents IA) et accompagne leur croissance. C'est en propulsant un restaurant tout en haut de ChatGPT qu'il a mis au point la méthode GEO de l'agence, puis développé Visia pour l'automatiser. Il partage tout son travail en build in public.",
     "founderLink": "Voir le profil du fondateur",
     "methodEyebrow": "Notre méthode",
     "methodTitle": "Ce que nous optimisons pour les IA",
@@ -426,7 +497,10 @@
         "value": "-50 %",
         "label": "de trafic de recherche classique attendu d'ici 2028 (Gartner)"
       },
-      { "value": "900 M+", "label": "d'utilisateurs hebdomadaires de ChatGPT" },
+      {
+        "value": "900 M+",
+        "label": "d'utilisateurs hebdomadaires de ChatGPT"
+      },
       {
         "value": "23 %",
         "label": "des marketeurs investissent déjà dans le GEO"
@@ -459,7 +533,7 @@
   },
   "services": {
     "metaTitle": "Nos services",
-    "metaDescription": "Accompagnement GEO sur-mesure : audit de visibilité IA, optimisation et suivi pour apparaître en premier sur ChatGPT, Gemini et Perplexity. Réservez un appel découverte avec GEOBoost.",
+    "metaDescription": "Accompagnement GEO sur-mesure : audit de visibilité IA, optimisation et suivi pour apparaître en premier sur ChatGPT, Gemini et Perplexity. Réservez un appel découverte avec Visia.",
     "keywords": "audit de visibilité IA, agence GEO, optimisation GEO, consultant generative engine optimization, apparaître sur ChatGPT, référencement IA, suivi des mentions de marque ChatGPT",
     "heroEyebrow": "Nos services",
     "heroTitleBefore": "Faites monter votre commerce ",
@@ -510,13 +584,13 @@
     "metaTitle": "Mon compte",
     "greeting": "Bonjour {name}",
     "planLabelFree": "Gratuit",
-    "planLabelPro": "Pro",
+    "planLabelPro": "À l'analyse",
     "planLabelAgency": "Agence",
     "yourPlan": "Votre formule",
     "active": "actif",
-    "manageSubscription": "Gérer l'abonnement",
-    "upgrade": "Passer à une offre supérieure",
-    "freeHint": "Formule gratuite : 3 analyses au total. Passez Pro pour 50 analyses/mois ou Agence pour des analyses illimitées.",
+    "manageSubscription": "Gérer la facturation",
+    "upgrade": "Analyser mon site",
+    "freeHint": "Vos analyses sont gratuites : vous ne payez que les rapports que vous choisissez de débloquer.",
     "myAnalyses": "Mes analyses",
     "newAnalysis": "+ Nouvelle analyse",
     "emptyState": "Vous n'avez pas encore lancé d'analyse.",

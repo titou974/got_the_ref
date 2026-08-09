@@ -14,7 +14,7 @@ export function Logo({ className = "" }: { className?: string }) {
         />
         <circle cx="22.5" cy="12" r="2.5" fill="#ff5a00" />
       </svg> */}
-      <span>GEOBoost</span>
+      <span>Visia</span>
     </Link>
   );
 }

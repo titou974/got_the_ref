@@ -3,9 +3,9 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { CheckoutButton } from "@/components/CheckoutButton";
-import { ROUTES, REDIRECT_REASONS } from "@/constants/routes";
-import { PLAN_PRICING } from "@/constants/plans";
+import { BookCallButton } from "@/components/BookCallButton";
+import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
+import { ANALYSIS_PRICE } from "@/constants/plans";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("pricing");
@@ -39,13 +39,13 @@ function FeatureList({ features }: { features: string[] }) {
 export default async function TarifsPage({ searchParams }: Props) {
   const { raison } = await searchParams;
   const t = await getTranslations("pricing");
-  const features = (plan: "free" | "pro" | "agency") =>
-    t.raw(`${plan}.features`) as string[];
+  const tc = await getTranslations("common");
+  const features = (plan: "pro" | "agency") => t.raw(`${plan}.features`) as string[];
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
       <Nav />
-      <div className="mx-auto w-full max-w-6xl flex-1 px-5 py-10">
+      <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-10">
         <div className="text-center">
           <h1 className="text-3xl font-bold sm:text-4xl">
             {t("headingBefore")}
@@ -59,52 +59,40 @@ export default async function TarifsPage({ searchParams }: Props) {
           )}
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-          {/* Gratuit */}
-          <div className="flex flex-col rounded-[28px] border border-fog bg-snow p-6">
-            <h2 className="text-lg font-semibold">{t("free.name")}</h2>
-            <p className="mt-2">
-              <span className="font-display text-4xl font-bold">{PLAN_PRICING.free.monthly}€</span>
-              <span className="text-muted">{t("perMonth")}</span>
-            </p>
-            <p className="mt-1 text-sm text-muted">{t("free.description")}</p>
-            <FeatureList features={features("free")} />
-            <Link
-              href={ROUTES.signUp}
-              className="mt-6 cursor-pointer rounded-full border border-graphite py-3 text-center font-medium text-graphite transition-colors duration-200 hover:bg-mist"
-            >
-              {t("free.cta")}
-            </Link>
-          </div>
-
-          {/* Pro */}
+        <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
+          {/* Une analyse : paiement unique, après l'aperçu gratuit */}
           <div className="relative flex flex-col rounded-[28px] border-2 border-obsidian bg-snow p-6 shadow-[var(--shadow-md)]">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-cta px-3 py-1 text-xs font-semibold text-white">
-              {t("popularBadge")}
-            </span>
             <h2 className="text-lg font-semibold">{t("pro.name")}</h2>
             <p className="mt-2">
-              <span className="font-display text-4xl font-bold">{PLAN_PRICING.pro.monthly}€</span>
-              <span className="text-muted">{t("perMonth")}</span>
+              <span className="font-display text-4xl font-bold">{ANALYSIS_PRICE}€</span>
+              <span className="text-muted">{t("perOnce")}</span>
             </p>
             <p className="mt-1 text-sm text-muted">{t("pro.description")}</p>
             <FeatureList features={features("pro")} />
             <div className="mt-6">
-              <CheckoutButton plan="pro" label={t("pro.cta")} highlighted />
+              {/* Le paiement se déclenche depuis le rapport : on commence toujours
+                  par l'analyse gratuite, puis on débloque ce qu'on a entrevu. */}
+              <Link
+                href={ROUTES.home}
+                className="block w-full cursor-pointer rounded-full bg-cta py-3 text-center font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
+              >
+                {t("pro.cta")}
+              </Link>
+              <p className="mt-2 text-center text-xs text-muted">{t("pro.ctaNote")}</p>
             </div>
           </div>
 
-          {/* Agence */}
+          {/* Agence : aucun prix public, uniquement sur rendez-vous */}
           <div className="flex flex-col rounded-[28px] border border-fog bg-snow p-6">
             <h2 className="text-lg font-semibold">{t("agency.name")}</h2>
             <p className="mt-2">
-              <span className="font-display text-4xl font-bold">{PLAN_PRICING.agency.monthly}€</span>
-              <span className="text-muted">{t("perMonth")}</span>
+              <span className="font-display text-4xl font-bold">{t("agency.price")}</span>
             </p>
             <p className="mt-1 text-sm text-muted">{t("agency.description")}</p>
             <FeatureList features={features("agency")} />
             <div className="mt-6">
-              <CheckoutButton plan="agency" label={t("agency.cta")} />
+              <BookCallButton label={tc("bookCall")} variant="secondary" className="w-full" />
+              <p className="mt-2 text-center text-xs text-muted">{t("agency.ctaNote")}</p>
             </div>
           </div>
         </div>

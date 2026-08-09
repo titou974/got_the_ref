@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -24,8 +24,35 @@ import { AnimatedCard } from "./AnimatedCard";
 import { CategoryRadar } from "./CategoryRadar";
 import { SolutionBlock } from "./SolutionBlock";
 import { SiteScreenshot } from "./SiteScreenshot";
+import { PaywallOverlay, type PaywallVariant } from "./PaywallOverlay";
 
 type TabKey = "results" | "architecture" | "content" | "presence" | "maps";
+
+/**
+ * Identifiant du rapport affiché : le paiement porte sur CETTE analyse, chaque
+ * overlay doit donc pouvoir ouvrir le checkout sans qu'on le passe de proche en
+ * proche à travers tous les panneaux.
+ */
+const AnalysisIdContext = createContext<string>("");
+
+/** Verrouille `children` derrière l'overlay paywall quand `locked` est vrai. */
+function Gated({
+  locked,
+  variant,
+  children,
+}: {
+  locked: boolean;
+  variant: PaywallVariant;
+  children: React.ReactNode;
+}) {
+  const analysisId = useContext(AnalysisIdContext);
+  if (!locked) return <>{children}</>;
+  return (
+    <PaywallOverlay variant={variant} analysisId={analysisId}>
+      {children}
+    </PaywallOverlay>
+  );
+}
 
 /** Logos des moteurs IA (chemins dans /public), indexés par nom de moteur. */
 const ENGINE_LOGOS: Record<string, string> = {
@@ -137,9 +164,15 @@ function DiagnosticGrid({
 export function ReportTabs({
   result,
   diagnostic,
+  locked,
+  analysisId,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
+  /** Analyse gratuite : tout sauf l'architecture est verrouillé derrière le paywall. */
+  locked: boolean;
+  /** Analyse à débloquer si l'utilisateur paie depuis un overlay. */
+  analysisId: string;
 }) {
   const t = useTranslations("analysisReport");
   const [active, setActive] = useState<TabKey>("results");
@@ -150,6 +183,7 @@ export function ReportTabs({
     : ["results", "architecture", "content", "presence"];
 
   return (
+    <AnalysisIdContext.Provider value={analysisId}>
     <section>
       {/* Barre d'onglets */}
       <div className="mb-5 flex flex-wrap gap-2 rounded-3xl border border-fog bg-snow p-1.5">
@@ -189,14 +223,27 @@ export function ReportTabs({
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.3 }}
         >
-          {active === "results" && <ResultsPanel result={result} diagnostic={diagnostic} />}
-          {active === "architecture" && <ArchitecturePanel result={result} diagnostic={diagnostic} />}
-          {active === "content" && <ContentPanel result={result} diagnostic={diagnostic} />}
-          {active === "presence" && <PresencePanel result={result} diagnostic={diagnostic} />}
-          {active === "maps" && <MapsPanel result={result} diagnostic={diagnostic} />}
+          {active === "results" && <ResultsPanel result={result} diagnostic={diagnostic} locked={locked} />}
+          {active === "architecture" && <ArchitecturePanel result={result} diagnostic={diagnostic} locked={locked} />}
+          {active === "content" && (
+            <Gated locked={locked} variant="content">
+              <ContentPanel result={result} diagnostic={diagnostic} />
+            </Gated>
+          )}
+          {active === "presence" && (
+            <Gated locked={locked} variant="presence">
+              <PresencePanel result={result} diagnostic={diagnostic} />
+            </Gated>
+          )}
+          {active === "maps" && (
+            <Gated locked={locked} variant="maps">
+              <MapsPanel result={result} diagnostic={diagnostic} />
+            </Gated>
+          )}
         </motion.div>
       </AnimatePresence>
     </section>
+    </AnalysisIdContext.Provider>
   );
 }
 
@@ -367,9 +414,11 @@ function EngineCard({ engine, delay }: { engine: EngineScore; delay: number }) {
 function ResultsPanel({
   result,
   diagnostic,
+  locked,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
+  locked: boolean;
 }) {
   const t = useTranslations("analysisReport");
 
@@ -378,24 +427,26 @@ function ResultsPanel({
       {/* 1. Profil : niche + localisation (en tout premier) */}
       <ProfileHeader result={result} />
 
-      {/* 2. Classement par moteur IA (direct + indirect), ChatGPT en premier */}
-      <div>
-        <div className="mb-3 mt-2">
-          <h3 className="text-lg font-bold">{t("results.engineScoresTitle")}</h3>
-          {result.liveQuery && (
-            <p className="mt-0.5 text-sm text-muted">
-              {t("results.testedOn", { query: result.liveQuery })}
-            </p>
-          )}
+      {/* 2. Classement par moteur IA (API payante) → verrouillé en gratuit */}
+      <Gated locked={locked} variant="rankings">
+        <div>
+          <div className="mb-3 mt-2">
+            <h3 className="text-lg font-bold">{t("results.engineScoresTitle")}</h3>
+            {result.liveQuery && (
+              <p className="mt-0.5 text-sm text-muted">
+                {t("results.testedOn", { query: result.liveQuery })}
+              </p>
+            )}
+          </div>
+          <div className="space-y-4">
+            {result.engines.map((e, i) => (
+              <EngineCard key={e.engine} engine={e} delay={i * 0.05} />
+            ))}
+          </div>
         </div>
-        <div className="space-y-4">
-          {result.engines.map((e, i) => (
-            <EngineCard key={e.engine} engine={e} delay={i * 0.05} />
-          ))}
-        </div>
-      </div>
+      </Gated>
 
-      {/* 3. Diagnostic d'architecture (synthèse) */}
+      {/* 3. Diagnostic d'architecture (synthèse) — gratuit, toujours visible */}
       <AnimatedCard delay={0.05} className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="flex flex-col items-center justify-center gap-3 text-center lg:border-r lg:border-fog">
           <AnimatedScoreRing score={diagnostic.architecture.score} size={120} stroke={10} label={t("results.scoreLabel")} />
@@ -409,41 +460,45 @@ function ResultsPanel({
         </div>
       </AnimatedCard>
 
-      {/* 5. Recommandations */}
-      <div>
-        <div className="mb-3 mt-2">
-          <h3 className="text-lg font-bold">{t("results.recommendationsTitle")}</h3>
-          <p className="text-sm text-muted">{t("results.recommendationsSubtitle")}</p>
-        </div>
-        {result.recommendations.length ? (
-          <div className="space-y-3">
-            {result.recommendations.map((r, i) => (
-              <AnimatedCard key={i} delay={i * 0.03} className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                <span
-                  className="inline-flex h-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
-                  style={{ background: `${priorityColor(r.priority)}22`, color: priorityColor(r.priority) }}
-                >
-                  {r.priority}
-                </span>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <h4 className="font-semibold">{r.title}</h4>
-                    <span className="shrink-0 text-xs text-muted">{t("results.impact", { value: r.impact })}</span>
-                  </div>
-                  <p className="mt-1 text-sm text-muted">{r.description}</p>
-                  <span className="mt-2 inline-block text-xs text-steel">{CATEGORY_META[r.category].label}</span>
-                </div>
-              </AnimatedCard>
-            ))}
+      {/* 5. Recommandations (issues des sections payantes) → verrouillé en gratuit */}
+      <Gated locked={locked} variant="recommendations">
+        <div>
+          <div className="mb-3 mt-2">
+            <h3 className="text-lg font-bold">{t("results.recommendationsTitle")}</h3>
+            <p className="text-sm text-muted">{t("results.recommendationsSubtitle")}</p>
           </div>
-        ) : (
-          <AnimatedCard>
-            <p className="text-sm text-muted">{t("results.noRecommendations")}</p>
-          </AnimatedCard>
-        )}
-      </div>
+          {result.recommendations.length ? (
+            <div className="space-y-3">
+              {result.recommendations.map((r, i) => (
+                <AnimatedCard key={i} delay={i * 0.03} className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                  <span
+                    className="inline-flex h-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
+                    style={{ background: `${priorityColor(r.priority)}22`, color: priorityColor(r.priority) }}
+                  >
+                    {r.priority}
+                  </span>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <h4 className="font-semibold">{r.title}</h4>
+                      <span className="shrink-0 text-xs text-muted">{t("results.impact", { value: r.impact })}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-muted">{r.description}</p>
+                    <span className="mt-2 inline-block text-xs text-steel">{CATEGORY_META[r.category].label}</span>
+                  </div>
+                </AnimatedCard>
+              ))}
+            </div>
+          ) : (
+            <AnimatedCard>
+              <p className="text-sm text-muted">{t("results.noRecommendations")}</p>
+            </AnimatedCard>
+          )}
+        </div>
+      </Gated>
 
-      <SolutionBlock prompt={buildSolutionPrompt("results", result, diagnostic)} />
+      <Gated locked={locked} variant="prompt">
+        <SolutionBlock prompt={buildSolutionPrompt("results", result, diagnostic)} />
+      </Gated>
     </div>
   );
 }
@@ -451,9 +506,11 @@ function ResultsPanel({
 function ArchitecturePanel({
   result,
   diagnostic,
+  locked,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
+  locked: boolean;
 }) {
   const t = useTranslations("analysisReport");
   const radarData = result.categories
@@ -497,7 +554,9 @@ function ArchitecturePanel({
         </AnimatedCard>
       </div>
 
-      <SolutionBlock prompt={buildSolutionPrompt("architecture", result, diagnostic)} />
+      <Gated locked={locked} variant="prompt">
+        <SolutionBlock prompt={buildSolutionPrompt("architecture", result, diagnostic)} />
+      </Gated>
     </div>
   );
 }

@@ -141,7 +141,11 @@ export function AnalyzingOverlay({
   const stepRef = useRef(0);
   const doneRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
+  // Le callback est stocké dans un ref hors rendu, pour que l'horloge n'ait pas
+  // à redémarrer quand le parent en recrée une nouvelle référence.
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
   useEffect(() => {
     let startedAt = performance.now();
     const id = setInterval(() => {

@@ -2,6 +2,7 @@ import { Nav } from "@/components/Nav";
 import { GeoQuoteCard } from "@/components/GeoQuoteCard";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { AiSearchSimulation } from "@/components/AiSearchSimulation";
+import { ProofSection } from "@/components/ProofSection";
 import { ScrollTopCta } from "@/components/ScrollTopCta";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,14 +19,17 @@ export default async function Home() {
   const t = await getTranslations("home");
 
   return (
-    <main className="flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
+    <main className="flex min-h-dvh flex-col">
       <Nav />
-      <section className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-center gap-10 px-5 py-2 lg:grid-cols-2 lg:gap-14">
+      <section
+        id="analyser"
+        className="mx-auto grid w-full max-w-6xl flex-1 scroll-mt-4 grid-cols-1 items-center gap-10 px-5 py-2 lg:grid-cols-2 lg:gap-14 lg:py-6"
+      >
         {/* Colonne gauche : message + input central */}
         <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
           <div className="flex gap-3">
             {AI_ENGINE_LOGOS.map((logo) => (
-              <div key={logo.key} className="flex h-12 w-12 items-center justify-center rounded-2xl border border-fog bg-snow p-2 sm:h-14 sm:w-14 sm:rounded-3xl sm:p-2.5">
+              <div key={logo.key} className="flex h-10 w-10 items-center justify-center rounded-xl border border-fog bg-snow p-2 sm:h-11 sm:w-11 sm:rounded-2xl">
                 <Image
                   src={logo.src}
                   alt={t(LOGO_ALT_KEYS[logo.key])}
@@ -58,11 +62,11 @@ export default async function Home() {
               </Link>
             </p>
 
-            {/* Lien vers la page agence (GEOBoost, 1ère agence de GEO française) */}
+            {/* Lien vers la page agence (Visia, 1ère agence de GEO française) */}
             <div className="mt-4 flex flex-col items-center gap-1 lg:items-start">
               <Link
                 href={ROUTES.agency}
-                className="group inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-fog bg-snow px-4 py-2.5 text-sm font-medium text-text transition-colors duration-200 hover:border-pebble focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+                className="group inline-flex cursor-pointer items-center gap-2 rounded-full border border-fog bg-snow px-3.5 py-2 text-[13px] font-medium text-text transition-colors duration-200 hover:border-pebble focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
               >
                 {t("discoverAgency")}
                 <svg
@@ -89,6 +93,9 @@ export default async function Home() {
           </p>
         </div>
       </section>
+      {/* Preuve : un commerce réel cité par les IA, et le client qui en est venu */}
+      <ProofSection />
+
       <div className="px-5 py-12">
         <GeoQuoteCard />
       </div>

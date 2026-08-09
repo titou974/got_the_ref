@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe } from "@/lib/stripe";
+import { getStripe, resolvePriceId } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { unlockAnalysisFromSession } from "@/features/billing/unlock";
+import { PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
 
 export const runtime = "nodejs";
 
-function planFromPriceId(priceId: string | undefined): "pro" | "agency" | null {
+/**
+ * Retrouve l'offre payante correspondant à un Price ID en résolvant le tarif de
+ * chaque offre (l'env peut contenir un Product ID, d'où la résolution).
+ */
+async function planFromPriceId(priceId: string | undefined): Promise<PaidPlanKey | null> {
   if (!priceId) return null;
-  if (priceId === process.env.STRIPE_PRICE_PRO) return "pro";
-  if (priceId === process.env.STRIPE_PRICE_AGENCY) return "agency";
+  for (const plan of PAID_PLAN_KEYS) {
+    try {
+      if ((await resolvePriceId(plan)) === priceId) return plan;
+    } catch {
+      // env d'une offre absente : on ignore et on continue.
+    }
+  }
   return null;
+}
+
+/** Valide qu'une valeur de metadata est bien une offre payante connue. */
+function asPaidPlan(value: string | undefined): PaidPlanKey | null {
+  return value && (PAID_PLAN_KEYS as readonly string[]).includes(value)
+    ? (value as PaidPlanKey)
+    : null;
 }
 
 async function syncSubscription(sub: Stripe.Subscription, userId?: string) {
@@ -22,7 +40,7 @@ async function syncSubscription(sub: Stripe.Subscription, userId?: string) {
   if (!resolvedUserId) return;
 
   const priceId = sub.items.data[0]?.price.id;
-  const plan = planFromPriceId(priceId);
+  const plan = await planFromPriceId(priceId);
   const active = sub.status === "active" || sub.status === "trialing";
   const periodEnd = sub.items.data[0]?.current_period_end;
 
@@ -72,13 +90,34 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.subscription) {
+        if (session.mode === "subscription" && session.subscription) {
+          // Offre agence : on synchronise l'abonnement créé.
           const subId =
             typeof session.subscription === "string"
               ? session.subscription
               : session.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
           await syncSubscription(sub, session.metadata?.userId);
+        } else if (session.mode === "payment" && session.payment_status === "paid") {
+          // Déblocage d'une analyse (tunnel principal) : le paiement porte sur
+          // l'analyse, le compte peut être créé après.
+          if (session.metadata?.analysisId) {
+            await unlockAnalysisFromSession(session);
+            break;
+          }
+
+          // Ancien flux transactionnel lié à un compte : on accorde l'offre.
+          const plan = asPaidPlan(session.metadata?.plan);
+          const customerId =
+            typeof session.customer === "string" ? session.customer : session.customer?.id;
+          const resolvedUserId =
+            session.metadata?.userId ??
+            (customerId
+              ? (await prisma.user.findFirst({ where: { stripeCustomerId: customerId } }))?.id
+              : undefined);
+          if (resolvedUserId && plan) {
+            await prisma.user.update({ where: { id: resolvedUserId }, data: { plan } });
+          }
         }
         break;
       }

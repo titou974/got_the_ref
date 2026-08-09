@@ -4,7 +4,7 @@ import net from "node:net";
 import type { CrawlerAccess, SiteSignals } from "./types";
 
 const UA =
-  "Mozilla/5.0 (compatible; GEOBoost-Analyzer/1.0; +https://boostgeo.fr)";
+  "Mozilla/5.0 (compatible; Visia-Analyzer/1.0; +https://visia.fr)";
 const TIMEOUT_MS = 15000;
 const MAX_REDIRECTS = 4;
 

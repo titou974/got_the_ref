@@ -12,6 +12,8 @@ export const ROUTES = {
   signUp: "/inscription",
   account: "/compte",
   analysis: (id: string) => `/analyse/${id}`,
+  /** Retour de Stripe après paiement d'une analyse (création de compte). */
+  checkoutSuccess: "/paiement/succes",
   legal: {
     mentions: "/mentions-legales",
     terms: "/cgv-cgu",
