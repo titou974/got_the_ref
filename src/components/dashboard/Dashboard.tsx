@@ -11,7 +11,6 @@ import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { ServicesCta } from "@/components/ServicesCta";
 import { UnlockAnalysisButton } from "@/components/UnlockAnalysisButton";
 import { ROUTES } from "@/constants/routes";
-import { ANALYSIS_PRICE } from "@/constants/plans";
 
 export async function Dashboard({
   result,
@@ -86,7 +85,7 @@ export async function Dashboard({
               {tu("bannerTitle", { domain: result.domain })}
             </h3>
             <p className="mt-1 max-w-xl text-sm text-muted">
-              {tu("bannerSubtitle", { price: ANALYSIS_PRICE })}
+              {tu("bannerSubtitle")}
             </p>
           </div>
           <UnlockAnalysisButton analysisId={analysisId} className="shrink-0 sm:w-64" />

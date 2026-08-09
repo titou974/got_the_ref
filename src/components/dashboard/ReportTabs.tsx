@@ -175,7 +175,9 @@ export function ReportTabs({
   analysisId: string;
 }) {
   const t = useTranslations("analysisReport");
-  const [active, setActive] = useState<TabKey>("results");
+  // Analyse verrouillée : on ouvre sur l'architecture (gratuite, jamais
+  // floutée) plutôt que sur les classements, verrouillés dès le premier bloc.
+  const [active, setActive] = useState<TabKey>(locked ? "architecture" : "results");
 
   // L'onglet Maps n'a de sens que pour un commerce physique.
   const tabs: TabKey[] = result.profile.isPhysical
@@ -226,9 +228,7 @@ export function ReportTabs({
           {active === "results" && <ResultsPanel result={result} diagnostic={diagnostic} locked={locked} />}
           {active === "architecture" && <ArchitecturePanel result={result} diagnostic={diagnostic} locked={locked} />}
           {active === "content" && (
-            <Gated locked={locked} variant="content">
-              <ContentPanel result={result} diagnostic={diagnostic} />
-            </Gated>
+            <ContentPanel result={result} diagnostic={diagnostic} locked={locked} />
           )}
           {active === "presence" && (
             <Gated locked={locked} variant="presence">
@@ -427,7 +427,21 @@ function ResultsPanel({
       {/* 1. Profil : niche + localisation (en tout premier) */}
       <ProfileHeader result={result} />
 
-      {/* 2. Classement par moteur IA (API payante) → verrouillé en gratuit */}
+      {/* 2. Diagnostic d'architecture (synthèse) — gratuit, toujours visible en premier */}
+      <AnimatedCard delay={0.05} className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="flex flex-col items-center justify-center gap-3 text-center lg:border-r lg:border-fog">
+          <AnimatedScoreRing score={diagnostic.architecture.score} size={120} stroke={10} label={t("results.scoreLabel")} />
+          <div>
+            <h3 className="font-semibold">{t("results.diagnosisTitle")}</h3>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-muted">{t("results.diagnosisSubtitle")}</p>
+          </div>
+        </div>
+        <div className="lg:col-span-2">
+          <DiagnosticGrid section={diagnostic.architecture} labelNs="architecture" />
+        </div>
+      </AnimatedCard>
+
+      {/* 3. Classement par moteur IA (API payante) → verrouillé en gratuit */}
       <Gated locked={locked} variant="rankings">
         <div>
           <div className="mb-3 mt-2">
@@ -445,20 +459,6 @@ function ResultsPanel({
           </div>
         </div>
       </Gated>
-
-      {/* 3. Diagnostic d'architecture (synthèse) — gratuit, toujours visible */}
-      <AnimatedCard delay={0.05} className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="flex flex-col items-center justify-center gap-3 text-center lg:border-r lg:border-fog">
-          <AnimatedScoreRing score={diagnostic.architecture.score} size={120} stroke={10} label={t("results.scoreLabel")} />
-          <div>
-            <h3 className="font-semibold">{t("results.diagnosisTitle")}</h3>
-            <p className="mx-auto mt-1 max-w-xs text-sm text-muted">{t("results.diagnosisSubtitle")}</p>
-          </div>
-        </div>
-        <div className="lg:col-span-2">
-          <DiagnosticGrid section={diagnostic.architecture} labelNs="architecture" />
-        </div>
-      </AnimatedCard>
 
       {/* 5. Recommandations (issues des sections payantes) → verrouillé en gratuit */}
       <Gated locked={locked} variant="recommendations">
@@ -643,9 +643,11 @@ function OpeningHoursBlock({ value }: { value: string | null }) {
 function ContentPanel({
   result,
   diagnostic,
+  locked,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
+  locked: boolean;
 }) {
   const t = useTranslations("analysisReport");
   const contentCats = result.categories.filter((c) =>
@@ -654,58 +656,65 @@ function ContentPanel({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <AnimatedCard className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left lg:col-span-2">
-          <AnimatedScoreRing score={diagnostic.content.score} size={140} stroke={12} label={t("content.scoreLabel")} />
-          <div className="flex-1">
-            <h3 className="text-lg font-bold">{t("content.title")}</h3>
-            <p className="mt-2 text-pretty text-sm text-muted">{t("content.subtitle")}</p>
-          </div>
-        </AnimatedCard>
+      {/* Éléments on-page réels (titre, meta, H1, horaires) — signaux du crawl,
+          gratuits, jamais floutés. */}
+      <AnimatedCard>
+        <h3 className="text-lg font-bold">{t("content.onPage.title")}</h3>
+        <p className="mt-1 text-sm text-muted">{t("content.onPage.subtitle")}</p>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <OnPageElement label={t("content.onPage.elements.title")} check={result.onPageContent.title} />
+          <OnPageElement label={t("content.onPage.elements.metaDescription")} check={result.onPageContent.metaDescription} />
+          <OnPageElement label={t("content.onPage.elements.h1")} check={result.onPageContent.h1} />
+          <OnPageElement label={t("content.onPage.elements.firstSentence")} check={result.onPageContent.firstSentence} />
+        </div>
+        <OpeningHoursBlock value={result.onPageContent.openingHours} />
+      </AnimatedCard>
 
-        <AnimatedCard delay={0.05}>
-          <ul className="flex flex-col justify-center gap-3">
-            {contentCats.map((c) => (
-              <div key={c.key}>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="text-muted">{CATEGORY_META[c.key].short}</span>
-                  <span className="font-semibold" style={{ color: scoreColor(c.score) }}>
-                    {c.score}
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-fog">
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{ background: scoreColor(c.score) }}
-                    initial={{ width: 0 }}
-                    whileInView={{ width: `${c.score}%` }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                  />
-                </div>
+      {/* Notation E-E-A-T / citabilité et prompt solution : issus de l'audit IA → verrouillés en gratuit */}
+      <Gated locked={locked} variant="content">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <AnimatedCard className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left lg:col-span-2">
+              <AnimatedScoreRing score={diagnostic.content.score} size={140} stroke={12} label={t("content.scoreLabel")} />
+              <div className="flex-1">
+                <h3 className="text-lg font-bold">{t("content.title")}</h3>
+                <p className="mt-2 text-pretty text-sm text-muted">{t("content.subtitle")}</p>
               </div>
-            ))}
-          </ul>
-        </AnimatedCard>
+            </AnimatedCard>
 
-        <AnimatedCard delay={0.1} className="lg:col-span-3">
-          <DiagnosticGrid section={diagnostic.content} labelNs="content" />
-        </AnimatedCard>
+            <AnimatedCard delay={0.05}>
+              <ul className="flex flex-col justify-center gap-3">
+                {contentCats.map((c) => (
+                  <div key={c.key}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="text-muted">{CATEGORY_META[c.key].short}</span>
+                      <span className="font-semibold" style={{ color: scoreColor(c.score) }}>
+                        {c.score}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-fog">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ background: scoreColor(c.score) }}
+                        initial={{ width: 0 }}
+                        whileInView={{ width: `${c.score}%` }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </ul>
+            </AnimatedCard>
 
-        <AnimatedCard delay={0.15} className="lg:col-span-3">
-          <h3 className="text-lg font-bold">{t("content.onPage.title")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("content.onPage.subtitle")}</p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <OnPageElement label={t("content.onPage.elements.title")} check={result.onPageContent.title} />
-            <OnPageElement label={t("content.onPage.elements.metaDescription")} check={result.onPageContent.metaDescription} />
-            <OnPageElement label={t("content.onPage.elements.h1")} check={result.onPageContent.h1} />
-            <OnPageElement label={t("content.onPage.elements.firstSentence")} check={result.onPageContent.firstSentence} />
+            <AnimatedCard delay={0.1} className="lg:col-span-3">
+              <DiagnosticGrid section={diagnostic.content} labelNs="content" />
+            </AnimatedCard>
           </div>
-          <OpeningHoursBlock value={result.onPageContent.openingHours} />
-        </AnimatedCard>
-      </div>
 
-      <SolutionBlock prompt={buildSolutionPrompt("content", result, diagnostic)} />
+          <SolutionBlock prompt={buildSolutionPrompt("content", result, diagnostic)} />
+        </div>
+      </Gated>
     </div>
   );
 }

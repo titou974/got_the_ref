@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { UnlockAnalysisButton } from "@/components/UnlockAnalysisButton";
 import { ROUTES } from "@/constants/routes";
-import { ANALYSIS_PRICE } from "@/constants/plans";
 
 /**
  * Sections réservées à l'analyse payée : on rend le vrai contenu derrière, flouté
@@ -63,7 +62,7 @@ export function PaywallOverlay({
 
           <UnlockAnalysisButton analysisId={analysisId} className="mt-4" />
 
-          <p className="mt-2 text-xs text-muted">{t("hint", { price: ANALYSIS_PRICE })}</p>
+          <p className="mt-2 text-xs text-muted">{t("hint")}</p>
           <p className="mt-1 text-xs text-muted">
             {t("alreadyPaid")}{" "}
             <Link

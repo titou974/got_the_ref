@@ -1253,14 +1253,23 @@ function combineEngines(
 export async function analyzeSite(
   signals: SiteSignals,
   ctx: AnalysisContext,
+  /**
+   * "free" : aucun appel payant (ni Claude, ni moteurs live) — uniquement le
+   * crawl déterministe + l'estimation heuristique. C'est l'analyse lancée à la
+   * création, gratuite par défaut, pour ne JAMAIS facturer un visiteur qui ne
+   * paie pas. "paid" : audit complet, déclenché une seule fois au déblocage.
+   */
+  tier: "free" | "paid",
 ): Promise<GeoAnalysisResult> {
-  const hasKey = !!process.env.ANTHROPIC_API_KEY;
+  const useApis = tier === "paid";
+  const hasKey = useApis && !!process.env.ANTHROPIC_API_KEY;
   geoLog("Analyse démarrée", {
     url: signals.url,
     mode: ctx.mode,
     mapsUrl: ctx.mapsUrl,
+    tier,
     claudeKey: hasKey,
-    moteursKey: hasAnyEngineKey(),
+    moteursKey: useApis && hasAnyEngineKey(),
   });
 
   // ÉTAPE 1 — Détecter la niche EN TOUT PREMIER (Sonnet 4.6) : pivot des
@@ -1307,7 +1316,7 @@ export async function analyzeSite(
   const measuredDirect: Record<AiEngine, MeasuredEngine | null> = { ChatGPT: null, Gemini: null };
   const measuredRankings: Record<AiEngine, EngineRanking[]> = { ChatGPT: [], Gemini: [] };
 
-  if (hasAnyEngineKey()) {
+  if (useApis && hasAnyEngineKey()) {
     geoLog("Étape 2a — Classements réels moteurs (avant audit)", {
       direct: directQuery,
       indirect: indirectQuery ?? "(non — commerce non physique ou sans niche distincte)",

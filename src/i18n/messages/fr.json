@@ -258,7 +258,7 @@
     },
     "paywall": {
       "cta": "Débloquer mon rapport",
-      "hint": "Paiement unique de {price} € · accès à vie à ce rapport",
+      "hint": "Paiement unique · accès à vie à ce rapport",
       "alreadyPaid": "Déjà payé ?",
       "signIn": "Se connecter",
       "rankings": {
@@ -351,11 +351,11 @@
     "errorNetwork": "Erreur réseau. Réessayez."
   },
   "unlock": {
-    "cta": "Débloquer mon rapport · {price} €",
-    "redirecting": "Redirection vers le paiement…",
+    "cta": "Débloquer mon rapport",
+    "redirecting": "Redirection…",
     "bannerEyebrow": "Aperçu gratuit",
     "bannerTitle": "Débloquez le rapport complet de {domain}",
-    "bannerSubtitle": "Positions réelles sur ChatGPT et Gemini, plan d'action priorisé, prompt solution, analyse de contenu et cohérence Google Maps. Paiement unique de {price} €, sans abonnement.",
+    "bannerSubtitle": "Positions réelles sur ChatGPT et Gemini, plan d'action priorisé, prompt solution, analyse de contenu et cohérence Google Maps. Paiement unique, sans abonnement — tarif sur la page suivante.",
     "included": "Tout le rapport, débloqué à vie"
   },
   "postCheckout": {
@@ -392,6 +392,7 @@
         "Accès à vie au rapport débloqué"
       ],
       "cta": "Analyser mon site gratuitement",
+      "ctaUnlock": "Débloquer mon rapport",
       "ctaNote": "Vous ne payez qu'après avoir vu votre score."
     },
     "agency": {
