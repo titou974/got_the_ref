@@ -16,7 +16,7 @@ export function CategoryRadar({
 }) {
   return (
     <div className="h-72 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <RadarChart data={data} outerRadius="72%">
           <PolarGrid stroke="rgba(9,9,11,0.12)" />
           <PolarAngleAxis

@@ -38,7 +38,7 @@ export function PaywallOverlay({
       <div
         aria-hidden
         // `inert` retire tout le sous-arbre du focus clavier et de l'accessibilité.
-        {...({ inert: "" } as Record<string, string>)}
+        inert
         className="pointer-events-none select-none blur-[7px] saturate-[0.8]"
       >
         {children}
