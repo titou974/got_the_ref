@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { actionClient, authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
-import { getStripe, getCheckoutMode, resolvePriceId, resolveCyclePriceId } from "@/lib/stripe";
+import { getStripe, getCheckoutMode, resolvePriceId } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
 import { TRIAL } from "@/constants/plans";
 import { SITE } from "@/constants/site";
@@ -90,8 +90,7 @@ export const createAnalysisCheckoutAction = actionClient
 
     const user = await getCurrentUser();
     const stripe = getStripe();
-    const cycle = parsedInput.cycle;
-    const price = await resolveCyclePriceId(cycle);
+    const price = await resolvePriceId("pro");
 
     // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
     // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
@@ -102,7 +101,6 @@ export const createAnalysisCheckoutAction = actionClient
       kind: ANALYSIS_CHECKOUT_KIND,
       analysisId: analysis.id,
       domain: analysis.domain,
-      cycle,
       [CLAIM_METADATA_KEY]: claimToken,
       ...(user ? { userId: user.id } : {}),
     };

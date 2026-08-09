@@ -3,7 +3,6 @@
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
 import { createAnalysisCheckoutAction } from "@/features/billing/actions";
-import type { BillingCycle } from "@/constants/plans";
 
 /**
  * Ouvre l'essai Visia pour un rapport précis : le rapport qui a amené le
@@ -12,13 +11,11 @@ import type { BillingCycle } from "@/constants/plans";
  */
 export function AnalysisCheckoutButton({
   analysisId,
-  cycle,
   label,
   tone = "light",
   className = "",
 }: {
   analysisId: string;
-  cycle: BillingCycle;
   label: string;
   /** `light` = pilule blanche sur carte sombre, `dark` = pilule noire sur fond clair. */
   tone?: "light" | "dark";
@@ -35,7 +32,7 @@ export function AnalysisCheckoutButton({
     <div className={className}>
       <button
         type="button"
-        onClick={() => execute({ analysisId, cycle })}
+        onClick={() => execute({ analysisId })}
         disabled={isPending}
         className={`block w-full cursor-pointer rounded-full py-3 text-center font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
           tone === "light"

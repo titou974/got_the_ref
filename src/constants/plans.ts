@@ -28,36 +28,6 @@ export const PLAN_PRICING: Record<PlanKey, { amount: number | null; recurring: b
 /** Prix public de l'abonnement Visia, en euros par mois. */
 export const SUBSCRIPTION_PRICE = PLAN_PRICING.pro.amount as number;
 
-/** Périodicité de facturation choisie à la souscription. */
-export type BillingCycle = "monthly" | "annual";
-
-export const BILLING_CYCLES: readonly BillingCycle[] = ["monthly", "annual"] as const;
-
-/**
- * Les deux formules d'abonnement. Même accès, même produit : seule la
- * périodicité change. `perMonth` est le montant ramené au mois — c'est lui qu'on
- * affiche, la comparaison entre formules devant se faire à unité égale.
- */
-export const SUBSCRIPTION_PRICING: Record<
-  BillingCycle,
-  { charged: number; perMonth: number; env: string }
-> = {
-  monthly: { charged: 79, perMonth: 79, env: "STRIPE_PRICE_UNIT" },
-  annual: { charged: 619, perMonth: 51, env: "STRIPE_PRICE_ANNUAL" },
-};
-
-/**
- * Économie de la formule annuelle face au mensuel, en pourcentage entier.
- * Arrondi vers le bas : une remise annoncée doit toujours être au moins tenue.
- */
-export const ANNUAL_SAVING_PERCENT = Math.floor(
-  (1 - SUBSCRIPTION_PRICING.annual.charged / (SUBSCRIPTION_PRICING.monthly.charged * 12)) * 100,
-);
-
-/** Économie de la formule annuelle face au mensuel, en euros sur l'année. */
-export const ANNUAL_SAVING_AMOUNT =
-  SUBSCRIPTION_PRICING.monthly.charged * 12 - SUBSCRIPTION_PRICING.annual.charged;
-
 /**
  * Essai : accès complet quelques jours contre des frais d'activation.
  * Le montant est facturé immédiatement (prix ponctuel joint au checkout), la

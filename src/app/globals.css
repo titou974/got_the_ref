@@ -206,9 +206,43 @@ h1, h2, h3, h4, h5 {
   animation: spin-slow 8s linear infinite;
 }
 
+/* ── Ruban de preuves ────────────────────────────────────────────────────────
+   Défilement continu : la piste porte deux copies de la liste et se translate
+   d'exactement la moitié de sa largeur, si bien que la seconde copie occupe la
+   position de départ de la première au moment où l'animation reboucle. Le
+   raccord est donc invisible, sans mesure JavaScript ni recalage au montage. */
+.marquee {
+  overflow: hidden;
+  /* Les extrémités s'effacent : le ruban continue hors champ au lieu d'être coupé. */
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-slide 64s linear infinite;
+}
+.marquee-row {
+  display: flex;
+  align-items: stretch;
+  gap: 1.25rem;
+  padding: 0 0.625rem;
+  margin: 0;
+  list-style: none;
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee-slide {
+  to { transform: translateX(-50%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .thinking-dot, .shimmer, .caret::after, .animate-spin-slow, .sweep::before {
     animation: none !important;
   }
   .card-cal { transition: none !important; }
+  /* Sans mouvement, le ruban devient une bande qu'on fait défiler à la main. */
+  .marquee-track { animation: none !important; }
+  .marquee { overflow-x: auto; }
 }

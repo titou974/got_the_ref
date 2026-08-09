@@ -64,7 +64,7 @@ export default async function AnalysePage({ params }: Props) {
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
-      <Nav />
+      <Nav minimal />
       <div className="flex-1">
         <Dashboard result={analysis.result} analysisId={id} locked={locked} />
       </div>

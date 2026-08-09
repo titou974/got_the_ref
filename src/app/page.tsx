@@ -1,13 +1,12 @@
 import { Nav } from "@/components/Nav";
-import { GeoQuoteCard } from "@/components/GeoQuoteCard";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { AiSearchSimulation } from "@/components/AiSearchSimulation";
 import { ProofSection } from "@/components/ProofSection";
+import { ResultsCarousel } from "@/components/ResultsCarousel";
+import { WorksWith } from "@/components/WorksWith";
 import { ScrollTopCta } from "@/components/ScrollTopCta";
-import Link from "next/link";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { ROUTES } from "@/constants/routes";
 import { AI_ENGINE_LOGOS } from "@/constants/site";
 
 const LOGO_ALT_KEYS = {
@@ -52,36 +51,9 @@ export default async function Home() {
 
           <div className="mt-7 w-full max-w-lg">
             <UrlAnalyzeForm size="lg" />
-            <p className="mt-3 text-center text-xs text-muted lg:text-left">
-              {t("freeAnalysisNote")}
-              <Link
-                href={ROUTES.pricing}
-                className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian"
-              >
-                {t("viewPricing")}
-              </Link>
-            </p>
 
-            {/* Lien vers la page agence (Visia, 1ère agence de GEO française) */}
-            <div className="mt-4 flex flex-col items-center gap-1 lg:items-start">
-              <Link
-                href={ROUTES.agency}
-                className="group inline-flex cursor-pointer items-center gap-2 rounded-full border border-fog bg-snow px-3.5 py-2 text-[13px] font-medium text-text transition-colors duration-200 hover:border-pebble focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-              >
-                {t("discoverAgency")}
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden
-                  className="text-accent transition-transform duration-200 group-hover:translate-x-0.5"
-                >
-                  <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </Link>
-              <span className="text-xs text-muted">{t("discoverAgencyNote")}</span>
-            </div>
+            {/* Lève l'objection « ça marche avec mon site ? » là où elle se pose. */}
+            <WorksWith className="mt-7" />
           </div>
         </div>
 
@@ -96,9 +68,7 @@ export default async function Home() {
       {/* Preuve : un commerce réel cité par les IA, et le client qui en est venu */}
       <ProofSection />
 
-      <div className="px-5 py-12">
-        <GeoQuoteCard />
-      </div>
+      <ResultsCarousel className="py-14" />
       <ScrollTopCta label={t("scrollTopCta")} />
     </main>
   );

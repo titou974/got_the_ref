@@ -1,9 +1,7 @@
 import Stripe from "stripe";
 import {
   PLAN_BILLING,
-  SUBSCRIPTION_PRICING,
   stripePriceEnvValue,
-  type BillingCycle,
   type BillingMode,
   type PaidPlanKey,
 } from "@/constants/plans";
@@ -29,32 +27,6 @@ export function getCheckoutMode(plan: PaidPlanKey): BillingMode {
 
 const priceIdCache = new Map<string, string>();
 
-/**
- * Résout le Price ID d'une formule d'abonnement (mensuelle ou annuelle).
- * Même tolérance que `resolvePriceId` : l'environnement accepte un `price_…`
- * comme un `prod_…`, dont on prend alors le tarif par défaut.
- */
-export async function resolveCyclePriceId(cycle: BillingCycle): Promise<string> {
-  const cacheKey = `cycle:${cycle}`;
-  const cached = priceIdCache.get(cacheKey);
-  if (cached) return cached;
-
-  const { env } = SUBSCRIPTION_PRICING[cycle];
-  const raw = process.env[env];
-  if (!raw) throw new Error(`${env} manquant dans l'environnement.`);
-
-  let priceId = raw;
-  if (raw.startsWith("prod_")) {
-    const product = await getStripe().products.retrieve(raw);
-    const def = product.default_price;
-    const id = typeof def === "string" ? def : def?.id;
-    if (!id) throw new Error(`Le produit Stripe ${raw} n'a pas de tarif par défaut.`);
-    priceId = id;
-  }
-
-  priceIdCache.set(cacheKey, priceId);
-  return priceId;
-}
 
 /**
  * Résout le Price ID Stripe d'une offre. L'environnement peut contenir soit un

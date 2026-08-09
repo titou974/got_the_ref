@@ -51,10 +51,7 @@
     "headingHighlight": " n°1 ",
     "headingAfter": "sur les IA",
     "subtitle": "L'outil marketing pour faire apparaître son commerce en premier sur les IA. Visia mesure votre visibilité et vous dit exactement comment y apparaître. ",
-    "freeAnalysisNote": "Analyse et score gratuits · sans carte bancaire · rapport complet à 79 € · ",
     "viewPricing": "voir les tarifs",
-    "discoverAgency": "En découvrir plus sur Visia",
-    "discoverAgencyNote": "Visia, la première agence de GEO française.",
     "simulationCaption": "Démonstration : comment votre entreprise pourrait apparaître dans les réponses IA.",
     "scrollTopCta": "Analyser"
   },
@@ -371,6 +368,20 @@
     "bannerSubtitle": "Positions réelles sur ChatGPT et Gemini, plan d'action priorisé, prompt solution, analyse de contenu et cohérence Google Maps.",
     "included": "Tout le rapport, débloqué à vie"
   },
+  "worksWith": {
+    "eyebrow": "Fonctionne avec",
+    "otherTitle": "Votre site n'est sur aucune de ces plateformes ?",
+    "otherBody": "Visia analyse votre site depuis l'extérieur, comme le ferait une IA : aucune installation, aucun plugin, aucun accès à votre code."
+  },
+  "results": {
+    "eyebrow": "Résultats clients",
+    "title": "Ce que ça change, chiffres à l'appui",
+    "subtitle": "Commerces de quartier comme activités en ligne : la visibilité se mesure, et elle se travaille.",
+    "clicks": "Clics",
+    "impressions": "Impressions",
+    "position": "Position moy.",
+    "placeholder": "Exemple"
+  },
   "freeReport": {
     "eyebrow": "Constat",
     "strengthsTitle": "Ce qui tient déjà",
@@ -467,10 +478,11 @@
     "redirecting": "Redirection…",
     "secureNote": "Paiement sécurisé par Stripe · Essai de {days} jours, résiliable avant la fin sans être débité de l'abonnement · TVA en sus le cas échéant",
     "plan": {
-      "monthlyEyebrow": "Accès complet",
-      "monthlyName": "Mensuel",
-      "monthlyTerms": "{days} jours d'accès complet, puis {price}/mois.",
-      "featuresTitle": "Ce que l'abonnement ouvre",
+      "eyebrow": "Accès complet",
+      "name": "Visia",
+      "terms": "{days} jours d'accès complet, puis {price}/mois. Résiliable à tout moment.",
+      "cta": "Analyser mon site gratuitement",
+      "ctaNote": "Vous ne démarrez l'essai qu'après avoir vu votre score.",
       "features": [
         "Analyses illimitées, e-commerce, SaaS ou commerce physique",
         "Vos positions réelles sur ChatGPT et Gemini, remesurées en continu",
@@ -478,19 +490,6 @@
         "Plan d'action priorisé et prompts solution prêts à coller",
         "Contenu, notoriété et cohérence Google Maps suivis dans le temps",
         "Aucune compétence technique requise"
-      ]
-    },
-    "annual": {
-      "eyebrow": "Accès complet",
-      "name": "Annuel",
-      "badge": "{percent} % d'économie",
-      "terms": "{days} jours d'accès complet, puis {price}/an.",
-      "saving": "Soit {amount} économisés sur l'année, {percent} % de moins qu'au mois.",
-      "featuresTitle": "Tout le mensuel, plus",
-      "extras": [
-        "L'équivalent de quatre mois offerts sur l'année",
-        "Tarif verrouillé : aucune hausse en cours d'engagement",
-        "Priorité sur les nouvelles capacités des agents"
       ]
     },
     "agents": {
