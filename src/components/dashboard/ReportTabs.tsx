@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -24,33 +24,40 @@ import { AnimatedCard } from "./AnimatedCard";
 import { CategoryRadar } from "./CategoryRadar";
 import { SolutionBlock } from "./SolutionBlock";
 import { SiteScreenshot } from "./SiteScreenshot";
-import { PaywallOverlay, type PaywallVariant } from "./PaywallOverlay";
+import {
+  AnalysisIdProvider,
+  LockedBlock,
+  LockedPill,
+  Obscured,
+  UnlockBar,
+  type PaywallVariant,
+} from "./LockedContent";
 
 type TabKey = "results" | "architecture" | "content" | "presence" | "maps";
 
 /**
- * Identifiant du rapport affiché : le paiement porte sur CETTE analyse, chaque
- * overlay doit donc pouvoir ouvrir le checkout sans qu'on le passe de proche en
- * proche à travers tous les panneaux.
+ * Verrouille `children` quand `locked` est vrai : le titre et le sous-titre du
+ * bloc restent nets, seul le contenu chiffré est flouté.
  */
-const AnalysisIdContext = createContext<string>("");
-
-/** Verrouille `children` derrière l'overlay paywall quand `locked` est vrai. */
 function Gated({
   locked,
   variant,
+  title,
+  subtitle,
   children,
 }: {
   locked: boolean;
   variant: PaywallVariant;
+  /** Titre réel de la section, conservé net une fois verrouillée. */
+  title?: string;
+  subtitle?: string;
   children: React.ReactNode;
 }) {
-  const analysisId = useContext(AnalysisIdContext);
   if (!locked) return <>{children}</>;
   return (
-    <PaywallOverlay variant={variant} analysisId={analysisId}>
+    <LockedBlock variant={variant} title={title} subtitle={subtitle}>
       {children}
-    </PaywallOverlay>
+    </LockedBlock>
   );
 }
 
@@ -185,7 +192,7 @@ export function ReportTabs({
     : ["results", "architecture", "content", "presence"];
 
   return (
-    <AnalysisIdContext.Provider value={analysisId}>
+    <AnalysisIdProvider value={analysisId}>
     <section>
       {/* Barre d'onglets */}
       <div className="mb-5 flex flex-wrap gap-2 rounded-3xl border border-fog bg-snow p-1.5">
@@ -243,7 +250,7 @@ export function ReportTabs({
         </motion.div>
       </AnimatePresence>
     </section>
-    </AnalysisIdContext.Provider>
+    </AnalysisIdProvider>
   );
 }
 
@@ -357,12 +364,36 @@ function RankingList({ ranking }: { ranking: EngineRanking }) {
   );
 }
 
-function EngineCard({ engine, delay }: { engine: EngineScore; delay: number }) {
+function EngineCard({
+  engine,
+  delay,
+  locked = false,
+}: {
+  engine: EngineScore;
+  delay: number;
+  /** Verrouillé : le moteur et son nom restent lisibles, la mesure est floutée. */
+  locked?: boolean;
+}) {
   const t = useTranslations("analysisReport.results");
   const vis = visibilityColor(engine.visibility);
 
+  // Tout ce qui constitue la mesure elle-même : c'est cette part qui se floute.
+  const body = (
+    <div className="space-y-3">
+      <p className="text-xs text-muted">{engine.summary}</p>
+      {engine.rankings.length > 0 && (
+        <div className={`grid grid-cols-1 gap-3 ${engine.rankings.length > 1 ? "lg:grid-cols-2" : ""}`}>
+          {engine.rankings.map((r) => (
+            <RankingList key={r.scope} ranking={r} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <AnimatedCard delay={delay} className="space-y-3">
+      {/* En-tête : toujours net — on doit voir QUEL moteur a été interrogé. */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {ENGINE_LOGOS[engine.engine] && (
@@ -375,36 +406,42 @@ function EngineCard({ engine, delay }: { engine: EngineScore; delay: number }) {
             />
           )}
           <span className="text-base font-semibold">{engine.engine}</span>
-          <span
-            className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-            style={
-              engine.measured
-                ? { background: "rgba(17,180,140,0.18)", color: "#11b48c" }
-                : { background: "rgba(148,163,184,0.15)", color: "#94a3b8" }
-            }
-            title={engine.measured ? t("measuredHint") : t("estimatedHint")}
-          >
-            {engine.measured ? t("measured") : t("estimated")}
-          </span>
-          <span
-            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize"
-            style={{ background: `${vis}22`, color: vis }}
-          >
-            {engine.visibility}
-          </span>
+          {locked ? (
+            <LockedPill />
+          ) : (
+            <>
+              <span
+                className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                style={
+                  engine.measured
+                    ? { background: "rgba(17,180,140,0.18)", color: "#11b48c" }
+                    : { background: "rgba(148,163,184,0.15)", color: "#94a3b8" }
+                }
+                title={engine.measured ? t("measuredHint") : t("estimatedHint")}
+              >
+                {engine.measured ? t("measured") : t("estimated")}
+              </span>
+              <span
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize"
+                style={{ background: `${vis}22`, color: vis }}
+              >
+                {engine.visibility}
+              </span>
+            </>
+          )}
         </div>
-        <span className="shrink-0 text-lg font-bold" style={{ color: scoreColor(engine.score) }}>
-          {engine.score}
-        </span>
+        {locked ? (
+          <span className="shrink-0 text-lg font-bold text-pebble" aria-hidden>
+            ••
+          </span>
+        ) : (
+          <span className="shrink-0 text-lg font-bold" style={{ color: scoreColor(engine.score) }}>
+            {engine.score}
+          </span>
+        )}
       </div>
-      <p className="text-xs text-muted">{engine.summary}</p>
-      {engine.rankings.length > 0 && (
-        <div className={`grid grid-cols-1 gap-3 ${engine.rankings.length > 1 ? "lg:grid-cols-2" : ""}`}>
-          {engine.rankings.map((r) => (
-            <RankingList key={r.scope} ranking={r} />
-          ))}
-        </div>
-      )}
+
+      {locked ? <Obscured strength="sm">{body}</Obscured> : body}
     </AnimatedCard>
   );
 }
@@ -441,32 +478,42 @@ function ResultsPanel({
         </div>
       </AnimatedCard>
 
-      {/* 3. Classement par moteur IA (API payante) → verrouillé en gratuit */}
-      <Gated locked={locked} variant="rankings">
-        <div>
-          <div className="mb-3 mt-2">
-            <h3 className="text-lg font-bold">{t("results.engineScoresTitle")}</h3>
-            {result.liveQuery && (
-              <p className="mt-0.5 text-sm text-muted">
-                {t("results.testedOn", { query: result.liveQuery })}
-              </p>
-            )}
-          </div>
-          <div className="space-y-4">
-            {result.engines.map((e, i) => (
-              <EngineCard key={e.engine} engine={e} delay={i * 0.05} />
-            ))}
-          </div>
+      {/* 3. Classement par moteur IA (API payante). Verrouillé : on garde le titre
+             de section et la carte de chaque moteur nets, seule la mesure se floute. */}
+      <section>
+        <div className="mb-3 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <h3 className="text-lg font-bold">{t("results.engineScoresTitle")}</h3>
+          {locked && <LockedPill />}
         </div>
-      </Gated>
+        <p className="mb-4 max-w-2xl text-sm text-muted">
+          {locked
+            ? t("paywallRankingsSubtitle")
+            : result.liveQuery
+              ? t("results.testedOn", { query: result.liveQuery })
+              : t("results.engineScoresSubtitle")}
+        </p>
+        <div className="space-y-4">
+          {result.engines.map((e, i) => (
+            <EngineCard key={e.engine} engine={e} delay={i * 0.05} locked={locked} />
+          ))}
+        </div>
+        {locked && <UnlockBar variant="rankings" />}
+      </section>
 
       {/* 5. Recommandations (issues des sections payantes) → verrouillé en gratuit */}
-      <Gated locked={locked} variant="recommendations">
+      <Gated
+        locked={locked}
+        variant="recommendations"
+        title={t("results.recommendationsTitle")}
+        subtitle={t("paywallRecommendationsSubtitle")}
+      >
         <div>
-          <div className="mb-3 mt-2">
-            <h3 className="text-lg font-bold">{t("results.recommendationsTitle")}</h3>
-            <p className="text-sm text-muted">{t("results.recommendationsSubtitle")}</p>
-          </div>
+          {!locked && (
+            <div className="mb-3 mt-2">
+              <h3 className="text-lg font-bold">{t("results.recommendationsTitle")}</h3>
+              <p className="text-sm text-muted">{t("results.recommendationsSubtitle")}</p>
+            </div>
+          )}
           {result.recommendations.length ? (
             <div className="space-y-3">
               {result.recommendations.map((r, i) => (

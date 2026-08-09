@@ -14,19 +14,32 @@ export const PAID_PLAN_KEYS: readonly PaidPlanKey[] = ["pro", "agency"] as const
 
 /**
  * Tarif affiché par plan (donnée chiffrée, hors i18n).
- * `recurring: false` = paiement unique (offre transactionnelle), `true` = abonnement.
- * `amount: null` = pas de prix public (offre agence, uniquement sur contact).
+ * `recurring: true` = abonnement mensuel.
+ * `amount: null` = pas de prix public.
  */
 export const PLAN_PRICING: Record<PlanKey, { amount: number | null; recurring: boolean }> = {
   free: { amount: 0, recurring: true },
-  /** Offre transactionnelle : paiement unique pour débloquer une analyse. */
-  pro: { amount: 79, recurring: false },
-  /** Offre agence : sur devis, aucun prix affiché — prise de rendez-vous uniquement. */
+  /** Offre unique : abonnement mensuel, accès total à Visia. */
+  pro: { amount: 79, recurring: true },
+  /** Ancien plan agence : conservé pour les comptes existants, plus commercialisé. */
   agency: { amount: null, recurring: true },
 };
 
-/** Prix public d'une analyse complète, en euros. */
-export const ANALYSIS_PRICE = PLAN_PRICING.pro.amount as number;
+/** Prix public de l'abonnement Visia, en euros par mois. */
+export const SUBSCRIPTION_PRICE = PLAN_PRICING.pro.amount as number;
+
+/**
+ * Budget mensuel plancher d'une agence SEO / référencement IA classique.
+ * Sert uniquement de repère comparatif sur la page tarifs.
+ */
+export const AGENCY_BENCHMARK_PRICE = 2000;
+
+/**
+ * Note maximale affichée sur une analyse gratuite. L'aperçu ne mesure que
+ * l'architecture : sans les classements moteurs ni l'audit éditorial, on ne peut
+ * pas prétendre à une note haute — et le constat reste un point de départ.
+ */
+export const FREE_SCORE_CAP = 50;
 
 /** Quotas d'analyses **gratuites** (l'aperçu partiel). `null` = illimité. */
 export const ANALYSIS_QUOTAS = {
@@ -34,9 +47,9 @@ export const ANALYSIS_QUOTAS = {
   anon: { limit: 3, windowMs: 24 * 60 * 60 * 1000 },
   /** Compte gratuit : quota glissant sur 30 jours. */
   free: { monthly: 10 },
-  /** Compte ayant déjà payé : mêmes aperçus, quota plus large. */
-  pro: { monthly: 50 },
-  /** Plan agence : illimité. */
+  /** Abonné : illimité. */
+  pro: { monthly: null },
+  /** Ancien plan agence : illimité. */
   agency: { monthly: null },
 } as const;
 
@@ -49,9 +62,9 @@ export type BillingMode = "payment" | "subscription";
  * dans ce dernier cas, on résout le `default_price` du produit (cf. `resolvePriceId`).
  */
 export const PLAN_BILLING: Record<PaidPlanKey, { mode: BillingMode; env: string }> = {
-  /** Déblocage d'une analyse : paiement unique (produit/price « UNIT »). */
-  pro: { mode: "payment", env: "STRIPE_PRICE_UNIT" },
-  /** Offre agence : abonnement mensuel, activé manuellement (hors self-service). */
+  /** Abonnement Visia : accès total, mensuel (produit/price « UNIT »). */
+  pro: { mode: "subscription", env: "STRIPE_PRICE_UNIT" },
+  /** Ancien plan agence : conservé pour les abonnements déjà en cours. */
   agency: { mode: "subscription", env: "STRIPE_PRICE_AGENCY" },
 } as const;
 

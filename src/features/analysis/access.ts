@@ -13,12 +13,12 @@ export type AnalysisViewer = {
 
 /**
  * Le rapport complet est visible si :
- * — l'analyse a été payée (déblocage définitif, attaché à l'analyse elle-même,
- *   pour qu'un visiteur anonyme puisse payer puis créer son compte après) ;
- * — ou le visiteur est un compte agence (accompagnement, tout est ouvert) ;
- * — ou le visiteur possède l'analyse et dispose d'une offre payante.
+ * — l'analyse a été ouverte lors d'une souscription (rattachement définitif à
+ *   l'analyse elle-même, pour qu'un visiteur anonyme puisse s'abonner puis créer
+ *   son compte après) ;
+ * — ou le visiteur a un abonnement actif : l'abonnement donne accès à tout Visia.
  *
- * Sinon : aperçu gratuit, les sections premium passent derrière l'overlay.
+ * Sinon : aperçu gratuit, les sections mesurées restent floutées.
  */
 export function isReportUnlocked(
   analysis: AnalysisAccessRecord,
@@ -28,6 +28,5 @@ export function isReportUnlocked(
   if (!viewer) return false;
 
   const plan = viewer.plan as PlanKey;
-  if (plan === "agency") return true;
-  return plan === "pro" && analysis.userId === viewer.id;
+  return plan === "pro" || plan === "agency";
 }

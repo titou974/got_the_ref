@@ -39,20 +39,18 @@ async function checkQuota(
   }
 
   // Les analyses restent gratuites (aperçu partiel) : le quota ne sert qu'à
-  // contenir les abus. Le paiement, lui, débloque une analyse déjà lancée.
-  if (actor.plan === "free" || actor.plan === "pro") {
-    const monthly =
-      actor.plan === "free" ? ANALYSIS_QUOTAS.free.monthly : ANALYSIS_QUOTAS.pro.monthly;
+  // contenir les abus. L'abonnement, lui, ouvre le rapport complet et l'illimité.
+  if (actor.plan === "free") {
     const since = new Date();
     since.setMonth(since.getMonth() - 1);
     const count = await prisma.analysis.count({
       where: { userId: actor.id, createdAt: { gte: since } },
     });
-    if (count >= monthly) {
+    if (count >= ANALYSIS_QUOTAS.free.monthly) {
       return { ok: false, reason: "quota_exceeded", status: 402, plan: actor.plan };
     }
   }
-  // agency : illimité
+  // pro (abonné) et agency : illimité
   return null;
 }
 

@@ -7,9 +7,9 @@ import { AnimatedScoreRing } from "./AnimatedScoreRing";
 import { AnimatedCard } from "./AnimatedCard";
 import { SiteScreenshot } from "./SiteScreenshot";
 import { ReportTabs } from "./ReportTabs";
+import { FreeReportCard } from "./FreeReportCard";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { ServicesCta } from "@/components/ServicesCta";
-import { UnlockAnalysisButton } from "@/components/UnlockAnalysisButton";
 import { ROUTES } from "@/constants/routes";
 
 export async function Dashboard({
@@ -26,7 +26,6 @@ export async function Dashboard({
   const t = await getTranslations("analysisReport");
   const td = await getTranslations("dashboard");
   const tc = await getTranslations("common");
-  const tu = await getTranslations("unlock");
   const diagnostic = buildDiagnostic(result);
 
   const date = new Date(result.createdAt).toLocaleDateString("fr-FR", {
@@ -74,23 +73,8 @@ export async function Dashboard({
         </SiteScreenshot>
       </div>
 
-      {/* Bandeau de conversion : l'aperçu est gratuit, le rapport complet est payant */}
-      {locked && (
-        <AnimatedCard className="flex flex-col gap-4 border-obsidian sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-steel">
-              {tu("bannerEyebrow")}
-            </p>
-            <h3 className="mt-1 text-lg font-bold sm:text-xl">
-              {tu("bannerTitle", { domain: result.domain })}
-            </h3>
-            <p className="mt-1 max-w-xl text-sm text-muted">
-              {tu("bannerSubtitle")}
-            </p>
-          </div>
-          <UnlockAnalysisButton analysisId={analysisId} className="shrink-0 sm:w-64" />
-        </AnimatedCard>
-      )}
+      {/* Constat livré d'office : ce qui tient, ce qui manque, ce qui reste à mesurer. */}
+      {locked && <FreeReportCard result={result} diagnostic={diagnostic} />}
 
       {/* Diagnostic complet (onglets) */}
       <div>
