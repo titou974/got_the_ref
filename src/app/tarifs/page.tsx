@@ -5,8 +5,9 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { AnalysisCheckoutButton } from "@/components/AnalysisCheckoutButton";
 import { AgentRoster } from "@/components/pricing/AgentRoster";
+import { ResultsCarousel } from "@/components/ResultsCarousel";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
-import { AGENCY_BENCHMARK_PRICE, SUBSCRIPTION_PRICE } from "@/constants/plans";
+import { AGENCY_BENCHMARK_YEARLY, SUBSCRIPTION_PRICE, TRIAL } from "@/constants/plans";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("pricing");
@@ -15,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 type Props = { searchParams: Promise<{ raison?: string; analyse?: string }> };
 
-/** Montant formaté à la française, sans décimales (2 000 €). */
+/** Montant formaté à la française, sans décimales (20 000 €). */
 const euros = (amount: number) => `${amount.toLocaleString("fr-FR")} €`;
 
 export default async function TarifsPage({ searchParams }: Props) {
@@ -28,7 +29,7 @@ export default async function TarifsPage({ searchParams }: Props) {
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
-      <Nav />
+      <Nav minimal />
 
       <div className="mx-auto w-full max-w-5xl flex-1 px-5 py-12 sm:py-16">
         <header className="max-w-2xl">
@@ -49,25 +50,35 @@ export default async function TarifsPage({ searchParams }: Props) {
 
         {/* Les deux voies : ce qui tourne en continu, face à ce qui attend. */}
         <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-[1.1fr_1fr] lg:items-start">
-          {/* Visia — seule surface sombre du site : la chose qui ne s'arrête jamais. */}
+          {/* got_the_ref — seule surface sombre du site : la chose qui ne s'arrête jamais. */}
           <section className="rounded-[36px] bg-obsidian p-6 text-white shadow-[var(--shadow-md)] sm:p-8">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
               {t("plan.eyebrow")}
             </p>
             <h2 className="mt-2 text-2xl font-bold">{t("plan.name")}</h2>
 
-            <p className="mt-5 flex items-baseline gap-1.5">
+            {/* Ce qu'on paie maintenant, en grand ; le tarif à venir, barré. */}
+            <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="font-display text-5xl font-bold tabular-nums tracking-tight">
-                {euros(SUBSCRIPTION_PRICE)}
+                {euros(TRIAL.activationPrice)}
               </span>
-              <span className="text-base text-white/55">{t("perMonth")}</span>
+              <span className="text-lg tabular-nums text-white/40 line-through">
+                {euros(SUBSCRIPTION_PRICE)}
+                {t("perMonth")}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-white/40">{t("vat")}</p>
+            <p className="mt-3 text-sm leading-relaxed text-white/70">
+              {t("plan.terms", { days: TRIAL.days, price: euros(SUBSCRIPTION_PRICE) })}
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-white/70">{t("plan.description")}</p>
 
             <div className="mt-6">
               {analyse ? (
                 // Venu d'un rapport précis : on le rattache à l'abonnement souscrit.
-                <AnalysisCheckoutButton analysisId={analyse} />
+                <AnalysisCheckoutButton
+                  analysisId={analyse}
+                  label={t("trialCta", { price: euros(TRIAL.activationPrice) })}
+                />
               ) : (
                 <Link
                   href={ROUTES.home}
@@ -122,12 +133,13 @@ export default async function TarifsPage({ searchParams }: Props) {
             </p>
             <h2 className="mt-2 text-2xl font-bold text-steel">{t("agency.name")}</h2>
 
-            <p className="mt-5 flex flex-wrap items-baseline gap-x-1.5">
-              <span className="text-sm text-ash">{t("agency.from")}</span>
-              <span className="font-display text-5xl font-bold tabular-nums tracking-tight text-ash">
-                {euros(AGENCY_BENCHMARK_PRICE)}
+            <p className="mt-5 flex flex-wrap items-baseline gap-x-2">
+              <span className="font-display text-4xl font-bold tabular-nums tracking-tight text-ash">
+                {euros(AGENCY_BENCHMARK_YEARLY.min)}
+                <span className="text-ash"> – </span>
+                {euros(AGENCY_BENCHMARK_YEARLY.max)}
               </span>
-              <span className="text-base text-ash">{t("perMonth")}</span>
+              <span className="text-base text-ash">{t("perYear")}</span>
             </p>
             <p className="mt-2 text-sm leading-relaxed text-steel">{t("agency.description")}</p>
 
@@ -138,10 +150,7 @@ export default async function TarifsPage({ searchParams }: Props) {
             <ul className="mt-7 space-y-2.5">
               {agencyLimits.map((l) => (
                 <li key={l} className="flex items-start gap-2.5 text-sm text-steel">
-                  <span
-                    aria-hidden
-                    className="mt-2.5 h-px w-3 shrink-0 bg-pebble"
-                  />
+                  <span aria-hidden className="mt-2.5 h-px w-3 shrink-0 bg-pebble" />
                   <span>{l}</span>
                 </li>
               ))}
@@ -160,7 +169,7 @@ export default async function TarifsPage({ searchParams }: Props) {
               <thead>
                 <tr className="border-b border-fog">
                   <th className="py-3 pr-4 font-medium text-muted">{t("compare.criterion")}</th>
-                  <th className="py-3 pr-4 font-semibold text-text">{t("plan.name")}</th>
+                  <th className="py-3 pr-4 font-semibold text-text">{t("compare.visiaColumn")}</th>
                   <th className="py-3 font-medium text-ash">{t("compare.agencyColumn")}</th>
                 </tr>
               </thead>
@@ -168,8 +177,8 @@ export default async function TarifsPage({ searchParams }: Props) {
                 {rows.map((row) => (
                   <tr key={row.label} className="border-b border-fog last:border-0">
                     <td className="py-3.5 pr-4 text-muted">{row.label}</td>
-                    <td className="py-3.5 pr-4 font-semibold text-text tabular-nums">{row.visia}</td>
-                    <td className="py-3.5 text-ash tabular-nums">{row.agency}</td>
+                    <td className="py-3.5 pr-4 font-semibold tabular-nums text-text">{row.visia}</td>
+                    <td className="py-3.5 tabular-nums text-ash">{row.agency}</td>
                   </tr>
                 ))}
               </tbody>
@@ -177,8 +186,10 @@ export default async function TarifsPage({ searchParams }: Props) {
           </div>
         </section>
 
-        <p className="mt-10 text-sm text-muted">{t("secureNote")}</p>
+        <p className="mt-10 text-sm text-muted">{t("secureNote", { days: TRIAL.days })}</p>
       </div>
+
+      <ResultsCarousel className="pb-16" />
 
       <Footer />
     </main>

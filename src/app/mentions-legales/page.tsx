@@ -9,12 +9,12 @@ export default function MentionsLegalesPage() {
       <p>
         Conformément aux dispositions des articles 6-III et 19 de la loi n° 2004-575 du 21 juin 2004
         pour la confiance dans l'économie numérique (LCEN), il est porté à la connaissance des
-        utilisateurs du site Visia les présentes mentions légales.
+        utilisateurs du site got_the_ref les présentes mentions légales.
       </p>
 
       <h2>1. Éditeur du site</h2>
       <p>
-        Le site Visia est édité par <strong>[Raison sociale]</strong>, [forme juridique : SAS /
+        Le site got_the_ref est édité par <strong>[Raison sociale]</strong>, [forme juridique : SAS /
         SARL / EI] au capital de [montant] €.
       </p>
       <ul>
@@ -42,7 +42,7 @@ export default function MentionsLegalesPage() {
 
       <h2>4. Responsabilité</h2>
       <p>
-        Les analyses fournies par Visia reposent sur des données collectées automatiquement et
+        Les analyses fournies par got_the_ref reposent sur des données collectées automatiquement et
         sur des estimations générées par intelligence artificielle. Elles sont communiquées à titre
         indicatif et ne sauraient constituer une garantie de résultat en matière de référencement
         ou de visibilité. L'éditeur ne saurait être tenu responsable des décisions prises sur la

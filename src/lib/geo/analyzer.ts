@@ -1410,11 +1410,34 @@ export async function analyzeSite(
 
   geoLog("Backlinks — estimation", backlinks ?? "(non estimé)");
 
-  // L'aperçu gratuit ne mesure que l'architecture : sans classements moteurs ni
-  // audit éditorial, la note reste un plancher de constat, jamais une bonne note.
-  const overallScore = useApis
-    ? computeOverall(core.categories)
-    : Math.min(computeOverall(core.categories), FREE_SCORE_CAP);
+  // L'aperçu gratuit ne mesure que l'architecture : sans classements moteurs, ni
+  // audit éditorial, ni analyse de mots-clés, la notation reste sévère. On
+  // plafonne les catégories elles-mêmes, pas seulement la note globale : tout ce
+  // qui en dérive (anneaux de diagnostic, scores moteurs, note finale) reste donc
+  // sous le seuil du vert, et le chiffre affiché s'accorde à sa couleur.
+  if (!useApis) {
+    core.categories = core.categories.map((c) => ({
+      ...c,
+      score: Math.min(c.score, FREE_SCORE_CAP),
+    }));
+    core.webPresence = {
+      ...core.webPresence,
+      score: Math.min(core.webPresence.score, FREE_SCORE_CAP),
+    };
+    core.googleSeo = {
+      ...core.googleSeo,
+      score: Math.min(core.googleSeo.score, FREE_SCORE_CAP),
+    };
+    core.engines = core.engines.map((e) => ({
+      ...e,
+      score: Math.min(e.score, FREE_SCORE_CAP),
+    }));
+  }
+
+  const overallScore = Math.min(
+    computeOverall(core.categories),
+    useApis ? 100 : FREE_SCORE_CAP,
+  );
   return {
     ...core,
     overallScore,

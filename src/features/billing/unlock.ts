@@ -40,7 +40,10 @@ function readIdentity(session: Stripe.Checkout.Session): SessionIdentity | null 
 export async function unlockAnalysisFromSession(
   session: Stripe.Checkout.Session,
 ): Promise<{ analysisId: string; email: string | null; userId: string | null } | null> {
-  if (session.payment_status !== "paid") return null;
+  // Une souscription ouverte sur un essai peut n'exiger aucun encaissement
+  // immédiat : la session est alors « no_payment_required » et vaut bien
+  // engagement. On refuse seulement ce qui reste réellement impayé.
+  if (session.payment_status === "unpaid") return null;
 
   const identity = readIdentity(session);
   if (!identity) return null;

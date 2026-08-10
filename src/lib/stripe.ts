@@ -25,7 +25,8 @@ export function getCheckoutMode(plan: PaidPlanKey): BillingMode {
   return PLAN_BILLING[plan].mode;
 }
 
-const priceIdCache = new Map<PaidPlanKey, string>();
+const priceIdCache = new Map<string, string>();
+
 
 /**
  * Résout le Price ID Stripe d'une offre. L'environnement peut contenir soit un
@@ -33,7 +34,7 @@ const priceIdCache = new Map<PaidPlanKey, string>();
  * cas on récupère le `default_price` du produit. Résultat mémoïsé par offre.
  */
 export async function resolvePriceId(plan: PaidPlanKey): Promise<string> {
-  const cached = priceIdCache.get(plan);
+  const cached = priceIdCache.get(`plan:${plan}`);
   if (cached) return cached;
 
   const raw = stripePriceEnvValue(plan);
@@ -50,6 +51,6 @@ export async function resolvePriceId(plan: PaidPlanKey): Promise<string> {
     priceId = id;
   }
 
-  priceIdCache.set(plan, priceId);
+  priceIdCache.set(`plan:${plan}`, priceId);
   return priceId;
 }

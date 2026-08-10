@@ -19,27 +19,38 @@ export const PAID_PLAN_KEYS: readonly PaidPlanKey[] = ["pro", "agency"] as const
  */
 export const PLAN_PRICING: Record<PlanKey, { amount: number | null; recurring: boolean }> = {
   free: { amount: 0, recurring: true },
-  /** Offre unique : abonnement mensuel, accès total à Visia. */
+  /** Offre unique : abonnement mensuel, accès total à got_the_ref. */
   pro: { amount: 79, recurring: true },
   /** Ancien plan agence : conservé pour les comptes existants, plus commercialisé. */
   agency: { amount: null, recurring: true },
 };
 
-/** Prix public de l'abonnement Visia, en euros par mois. */
+/** Prix public de l'abonnement got_the_ref, en euros par mois. */
 export const SUBSCRIPTION_PRICE = PLAN_PRICING.pro.amount as number;
 
 /**
- * Budget mensuel plancher d'une agence SEO / référencement IA classique.
- * Sert uniquement de repère comparatif sur la page tarifs.
+ * Essai : accès complet quelques jours contre des frais d'activation.
+ * Le montant est facturé immédiatement (prix ponctuel joint au checkout), la
+ * facturation récurrente ne démarre qu'à la fin de l'essai.
  */
-export const AGENCY_BENCHMARK_PRICE = 2000;
+export const TRIAL = { days: 3, activationPrice: 1 } as const;
 
 /**
- * Note maximale affichée sur une analyse gratuite. L'aperçu ne mesure que
- * l'architecture : sans les classements moteurs ni l'audit éditorial, on ne peut
- * pas prétendre à une note haute — et le constat reste un point de départ.
+ * Budget annuel d'une agence SEO / référencement IA classique.
+ * Sert uniquement de repère comparatif sur la page tarifs.
  */
-export const FREE_SCORE_CAP = 50;
+export const AGENCY_BENCHMARK_YEARLY = { min: 20000, max: 24000 } as const;
+
+/**
+ * Note maximale d'une analyse gratuite. L'aperçu ne mesure que l'architecture :
+ * sans classements moteurs, sans audit éditorial et sans analyse de mots-clés, la
+ * notation reste volontairement sévère — et le constat, un point de départ.
+ *
+ * La valeur est calée sous le seuil « correct » de l'échelle de couleurs
+ * (`scoreColor`, vert à partir de 55) : aucun score de l'aperçu ne peut donc
+ * s'afficher en vert.
+ */
+export const FREE_SCORE_CAP = 49;
 
 /** Quotas d'analyses **gratuites** (l'aperçu partiel). `null` = illimité. */
 export const ANALYSIS_QUOTAS = {
@@ -62,7 +73,7 @@ export type BillingMode = "payment" | "subscription";
  * dans ce dernier cas, on résout le `default_price` du produit (cf. `resolvePriceId`).
  */
 export const PLAN_BILLING: Record<PaidPlanKey, { mode: BillingMode; env: string }> = {
-  /** Abonnement Visia : accès total, mensuel (produit/price « UNIT »). */
+  /** Abonnement got_the_ref : accès total, mensuel (produit/price « UNIT »). */
   pro: { mode: "subscription", env: "STRIPE_PRICE_UNIT" },
   /** Ancien plan agence : conservé pour les abonnements déjà en cours. */
   agency: { mode: "subscription", env: "STRIPE_PRICE_AGENCY" },

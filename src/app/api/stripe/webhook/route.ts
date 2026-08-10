@@ -13,6 +13,7 @@ export const runtime = "nodejs";
  */
 async function planFromPriceId(priceId: string | undefined): Promise<PaidPlanKey | null> {
   if (!priceId) return null;
+
   for (const plan of PAID_PLAN_KEYS) {
     try {
       if ((await resolvePriceId(plan)) === priceId) return plan;

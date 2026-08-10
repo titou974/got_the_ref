@@ -7,15 +7,19 @@ import { MobileMenu } from "./MobileMenu";
 import { getCurrentUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 
-export async function Nav() {
+export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
   const user = await getCurrentUser();
   const t = await getTranslations("common");
 
-  const links = [
-    { href: ROUTES.agency, label: t("agency") },
-    { href: ROUTES.services, label: t("services") },
-    { href: ROUTES.pricing, label: t("pricing") },
-  ];
+  // Rapport d'analyse et tarifs : aucune sortie latérale. À ces deux endroits, le
+  // visiteur est dans un parcours de décision — seul le compte reste accessible.
+  const links = minimal
+    ? []
+    : [
+        { href: ROUTES.agency, label: t("agency") },
+        { href: ROUTES.services, label: t("services") },
+        { href: ROUTES.pricing, label: t("pricing") },
+      ];
 
   return (
     <header className="relative z-20 w-full">
@@ -51,21 +55,35 @@ export async function Nav() {
               {t("signIn")}
             </Link>
           )}
-          <NavCta label={t("analyzeMyBusiness")} />
+          {!minimal && <NavCta label={t("analyzeMyBusiness")} />}
         </div>
 
-        {/* Menu mobile (sidebar) */}
-        <MobileMenu
-          links={links}
-          isAuthenticated={!!user}
-          labels={{
-            menu: t("menu"),
-            closeMenu: t("closeMenu"),
-            account: t("account"),
-            signIn: t("signIn"),
-            analyzeMyBusiness: t("analyzeMyBusiness"),
-          }}
-        />
+        {/* Mobile : réduit, le lien compte suffit ; complet, la sidebar habituelle. */}
+        {minimal ? (
+          <div className="flex items-center gap-4 sm:hidden">
+            {user ? (
+              <Link href={ROUTES.account} className="cursor-pointer text-sm text-muted hover:text-text">
+                {t("account")}
+              </Link>
+            ) : (
+              <Link href={ROUTES.signIn} className="cursor-pointer text-sm text-muted hover:text-text">
+                {t("signIn")}
+              </Link>
+            )}
+          </div>
+        ) : (
+          <MobileMenu
+            links={links}
+            isAuthenticated={!!user}
+            labels={{
+              menu: t("menu"),
+              closeMenu: t("closeMenu"),
+              account: t("account"),
+              signIn: t("signIn"),
+              analyzeMyBusiness: t("analyzeMyBusiness"),
+            }}
+          />
+        )}
       </nav>
     </header>
   );

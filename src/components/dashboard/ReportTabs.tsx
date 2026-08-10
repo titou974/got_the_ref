@@ -28,8 +28,12 @@ import {
   AnalysisIdProvider,
   LockedBlock,
   LockedPill,
+  LockedProvider,
   Obscured,
+  SectionHeader,
   UnlockBar,
+  Veil,
+  useLocked,
   type PaywallVariant,
 } from "./LockedContent";
 
@@ -108,7 +112,11 @@ const TAB_ICONS: Record<TabKey, React.ReactNode> = {
 
 function StatusPill({ status }: { status: DiagnosticStatus }) {
   const t = useTranslations("analysisReport.status");
-  const color = STATUS_COLOR[status];
+  const locked = useLocked();
+  // Sur l'aperçu gratuit, aucun contrôle ne s'affiche en vert : le statut reste
+  // exact, mais rien n'y est présenté comme acquis tant que l'audit complet n'a
+  // pas tourné. Le « ok » passe donc en neutre, pas en validation.
+  const color = locked && status === "ok" ? "#71717a" : STATUS_COLOR[status];
   return (
     <span
       className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
@@ -122,9 +130,12 @@ function StatusPill({ status }: { status: DiagnosticStatus }) {
 function CheckRow({
   check,
   labelNs,
+  veiled = false,
 }: {
   check: DiagnosticCheck;
   labelNs: "architecture" | "content";
+  /** Contrôle issu de l'audit payant : on montre ce qui est examiné, pas le résultat. */
+  veiled?: boolean;
 }) {
   const t = useTranslations("analysisReport");
   const label = t(`${labelNs}.checks.${check.key}`);
@@ -144,10 +155,24 @@ function CheckRow({
   return (
     <li className="flex items-center justify-between gap-3 border-b border-fog py-2.5 last:border-0">
       <div className="min-w-0">
+        {/* Le libellé du contrôle est constant : il ne révèle aucun résultat. */}
         <p className="truncate text-sm text-text">{label}</p>
-        {detail && <p className="truncate text-xs text-muted">{detail}</p>}
+        {detail &&
+          (veiled ? (
+            <Veil>
+              <span className="text-xs text-muted">{detail}</span>
+            </Veil>
+          ) : (
+            <p className="truncate text-xs text-muted">{detail}</p>
+          ))}
       </div>
-      <StatusPill status={check.status} />
+      {veiled ? (
+        <Veil>
+          <StatusPill status={check.status} />
+        </Veil>
+      ) : (
+        <StatusPill status={check.status} />
+      )}
     </li>
   );
 }
@@ -155,14 +180,16 @@ function CheckRow({
 function DiagnosticGrid({
   section,
   labelNs,
+  veiled = false,
 }: {
   section: DiagnosticSection;
   labelNs: "architecture" | "content";
+  veiled?: boolean;
 }) {
   return (
     <ul className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
       {section.checks.map((c) => (
-        <CheckRow key={c.key} check={c} labelNs={labelNs} />
+        <CheckRow key={c.key} check={c} labelNs={labelNs} veiled={veiled} />
       ))}
     </ul>
   );
@@ -193,6 +220,7 @@ export function ReportTabs({
 
   return (
     <AnalysisIdProvider value={analysisId}>
+    <LockedProvider value={locked}>
     <section>
       {/* Barre d'onglets */}
       <div className="mb-5 flex flex-wrap gap-2 rounded-3xl border border-fog bg-snow p-1.5">
@@ -238,18 +266,15 @@ export function ReportTabs({
             <ContentPanel result={result} diagnostic={diagnostic} locked={locked} />
           )}
           {active === "presence" && (
-            <Gated locked={locked} variant="presence">
-              <PresencePanel result={result} diagnostic={diagnostic} />
-            </Gated>
+            <PresencePanel result={result} diagnostic={diagnostic} locked={locked} />
           )}
           {active === "maps" && (
-            <Gated locked={locked} variant="maps">
-              <MapsPanel result={result} diagnostic={diagnostic} />
-            </Gated>
+            <MapsPanel result={result} diagnostic={diagnostic} locked={locked} />
           )}
         </motion.div>
       </AnimatePresence>
     </section>
+    </LockedProvider>
     </AnalysisIdProvider>
   );
 }
@@ -543,9 +568,8 @@ function ResultsPanel({
         </div>
       </Gated>
 
-      <Gated locked={locked} variant="prompt">
-        <SolutionBlock prompt={buildSolutionPrompt("results", result, diagnostic)} />
-      </Gated>
+      <SolutionBlock prompt={buildSolutionPrompt("results", result, diagnostic)} locked={locked} />
+      {locked && <UnlockBar variant="prompt" />}
     </div>
   );
 }
@@ -601,9 +625,11 @@ function ArchitecturePanel({
         </AnimatedCard>
       </div>
 
-      <Gated locked={locked} variant="prompt">
-        <SolutionBlock prompt={buildSolutionPrompt("architecture", result, diagnostic)} />
-      </Gated>
+      <SolutionBlock
+        prompt={buildSolutionPrompt("architecture", result, diagnostic)}
+        locked={locked}
+      />
+      {locked && <UnlockBar variant="prompt" />}
     </div>
   );
 }
@@ -717,15 +743,17 @@ function ContentPanel({
         <OpeningHoursBlock value={result.onPageContent.openingHours} />
       </AnimatedCard>
 
-      {/* Notation E-E-A-T / citabilité et prompt solution : issus de l'audit IA → verrouillés en gratuit */}
-      <Gated locked={locked} variant="content">
+      {/* Notation E-E-A-T / citabilité : les intitulés disent ce qui est examiné,
+          seuls la note et les conclusions restent fermées en gratuit. */}
+      <section>
+        <SectionHeader title={t("content.title")} subtitle={t("content.subtitle")} locked={locked} />
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <AnimatedCard className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left lg:col-span-2">
-              <AnimatedScoreRing score={diagnostic.content.score} size={140} stroke={12} label={t("content.scoreLabel")} />
+              <ScoreOrVeil score={diagnostic.content.score} label={t("content.scoreLabel")} locked={locked} />
               <div className="flex-1">
-                <h3 className="text-lg font-bold">{t("content.title")}</h3>
-                <p className="mt-2 text-pretty text-sm text-muted">{t("content.subtitle")}</p>
+                <h3 className="text-lg font-bold">{t("content.eeatTitle")}</h3>
+                <p className="mt-2 text-pretty text-sm text-muted">{t("content.eeatSubtitle")}</p>
               </div>
             </AnimatedCard>
 
@@ -734,14 +762,23 @@ function ContentPanel({
                 {contentCats.map((c) => (
                   <div key={c.key}>
                     <div className="mb-1 flex items-center justify-between text-sm">
+                      {/* Le nom de la catégorie est constant : il reste net. */}
                       <span className="text-muted">{CATEGORY_META[c.key].short}</span>
-                      <span className="font-semibold" style={{ color: scoreColor(c.score) }}>
-                        {c.score}
-                      </span>
+                      {locked ? (
+                        <Veil>
+                          <span className="font-semibold" style={{ color: scoreColor(c.score) }}>
+                            {c.score}
+                          </span>
+                        </Veil>
+                      ) : (
+                        <span className="font-semibold" style={{ color: scoreColor(c.score) }}>
+                          {c.score}
+                        </span>
+                      )}
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-fog">
                       <motion.div
-                        className="h-full rounded-full"
+                        className={`h-full rounded-full ${locked ? "blur-[3px]" : ""}`}
                         style={{ background: scoreColor(c.score) }}
                         initial={{ width: 0 }}
                         whileInView={{ width: `${c.score}%` }}
@@ -755,34 +792,64 @@ function ContentPanel({
             </AnimatedCard>
 
             <AnimatedCard delay={0.1} className="lg:col-span-3">
-              <DiagnosticGrid section={diagnostic.content} labelNs="content" />
+              <DiagnosticGrid section={diagnostic.content} labelNs="content" veiled={locked} />
             </AnimatedCard>
           </div>
 
-          <SolutionBlock prompt={buildSolutionPrompt("content", result, diagnostic)} />
+          <SolutionBlock prompt={buildSolutionPrompt("content", result, diagnostic)} locked={locked} />
+          {locked && <UnlockBar variant="content" />}
         </div>
-      </Gated>
+      </section>
     </div>
   );
+}
+
+/** Anneau de score : voilé quand le rapport est verrouillé, net sinon. */
+function ScoreOrVeil({
+  score,
+  label,
+  locked,
+  size = 140,
+  stroke = 12,
+}: {
+  score: number;
+  label: string;
+  locked: boolean;
+  size?: number;
+  stroke?: number;
+}) {
+  const ring = <AnimatedScoreRing score={score} size={size} stroke={stroke} label={label} />;
+  return locked ? <Veil>{ring}</Veil> : ring;
 }
 
 function PresencePanel({
   result,
   diagnostic,
+  locked,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
+  locked: boolean;
 }) {
   const t = useTranslations("analysisReport.presence");
   const wp = result.webPresence;
 
   return (
     <div className="space-y-4">
+      <SectionHeader title={t("title")} subtitle={t("subtitle")} locked={locked} />
+
       <AnimatedCard className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
-        <AnimatedScoreRing score={wp.score} size={140} stroke={12} label={t("scoreLabel")} />
+        <ScoreOrVeil score={wp.score} label={t("scoreLabel")} locked={locked} />
         <div className="flex-1">
-          <h3 className="text-lg font-bold">{t("title")}</h3>
-          <p className="mt-2 text-pretty text-sm text-muted">{wp.summary || t("subtitle")}</p>
+          <h3 className="text-lg font-bold">{t("summaryTitle")}</h3>
+          {/* Le résumé est une conclusion de l'audit : c'est ce qu'on ferme. */}
+          {locked ? (
+            <Veil>
+              <p className="mt-2 text-pretty text-sm text-muted">{wp.summary || t("subtitle")}</p>
+            </Veil>
+          ) : (
+            <p className="mt-2 text-pretty text-sm text-muted">{wp.summary || t("subtitle")}</p>
+          )}
         </div>
       </AnimatedCard>
 
@@ -795,21 +862,23 @@ function PresencePanel({
             </svg>
             {t("qualificationsTitle")}
           </h4>
-          {wp.qualifications.length ? (
-            <ul className="space-y-2.5">
-              {wp.qualifications.map((q, i) => (
-                <li key={i} className="rounded-lg border border-fog bg-mist p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-text">{q.label}</span>
-                    {q.source && <span className="shrink-0 text-xs text-steel">{q.source}</span>}
-                  </div>
-                  {q.detail && <p className="mt-1 text-sm text-muted">{q.detail}</p>}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted">{t("noQualifications")}</p>
-          )}
+          <Maybe veiled={locked}>
+            {wp.qualifications.length ? (
+              <ul className="space-y-2.5">
+                {wp.qualifications.map((q, i) => (
+                  <li key={i} className="rounded-lg border border-fog bg-mist p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-text">{q.label}</span>
+                      {q.source && <span className="shrink-0 text-xs text-steel">{q.source}</span>}
+                    </div>
+                    {q.detail && <p className="mt-1 text-sm text-muted">{q.detail}</p>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">{t("noQualifications")}</p>
+            )}
+          </Maybe>
         </AnimatedCard>
 
         {/* Apparitions presse / articles */}
@@ -821,54 +890,71 @@ function PresencePanel({
             </svg>
             {t("articlesTitle")}
           </h4>
-          {wp.articles.length ? (
-            <ul className="space-y-2.5">
-              {wp.articles.map((a, i) => (
-                <li key={i} className="rounded-lg border border-fog bg-mist p-3">
-                  <p className="text-sm font-medium text-text">{a.title}</p>
-                  {a.source && <p className="mt-0.5 text-xs text-steel">{a.source}</p>}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted">{t("noArticles")}</p>
-          )}
+          <Maybe veiled={locked}>
+            {wp.articles.length ? (
+              <ul className="space-y-2.5">
+                {wp.articles.map((a, i) => (
+                  <li key={i} className="rounded-lg border border-fog bg-mist p-3">
+                    <p className="text-sm font-medium text-text">{a.title}</p>
+                    {a.source && <p className="mt-0.5 text-xs text-steel">{a.source}</p>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">{t("noArticles")}</p>
+            )}
+          </Maybe>
         </AnimatedCard>
       </div>
 
       {wp.findings.length > 0 && (
         <AnimatedCard delay={0.15}>
           <h4 className="mb-3 font-semibold">{t("findingsTitle")}</h4>
-          <ul className="space-y-2">
-            {wp.findings.map((f, i) => (
-              <li key={i} className="flex gap-2 text-sm text-muted">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-obsidian" aria-hidden />
-                <span>{f}</span>
-              </li>
-            ))}
-          </ul>
+          <Maybe veiled={locked}>
+            <ul className="space-y-2">
+              {wp.findings.map((f, i) => (
+                <li key={i} className="flex gap-2 text-sm text-muted">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-obsidian" aria-hidden />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          </Maybe>
         </AnimatedCard>
       )}
 
       <p className="text-xs text-muted/80">{t("disclaimer")}</p>
 
-      <SolutionBlock prompt={buildSolutionPrompt("presence", result, diagnostic)} />
+      <SolutionBlock prompt={buildSolutionPrompt("presence", result, diagnostic)} locked={locked} />
+      {locked && <UnlockBar variant="presence" />}
     </div>
   );
+}
+
+/** Voile un bloc de conclusions quand il est verrouillé, le laisse net sinon. */
+function Maybe({ veiled, children }: { veiled: boolean; children: React.ReactNode }) {
+  return veiled ? <Obscured strength="sm">{children}</Obscured> : <>{children}</>;
 }
 
 function MapsPanel({
   result,
   diagnostic,
+  locked,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
+  locked: boolean;
 }) {
   const t = useTranslations("analysisReport.maps");
   const coherence = result.mapsCoherence;
   const mapsUrl = result.mapsUrl;
 
-  const solution = <SolutionBlock prompt={buildSolutionPrompt("maps", result, diagnostic)} />;
+  const solution = (
+    <>
+      <SolutionBlock prompt={buildSolutionPrompt("maps", result, diagnostic)} locked={locked} />
+      {locked && <UnlockBar variant="maps" />}
+    </>
+  );
 
   // Aucune fiche fournie
   if (!mapsUrl) {
@@ -905,19 +991,26 @@ function MapsPanel({
   // Analyse de cohérence disponible
   return (
     <div className="space-y-4">
-      {/* Fiche renseignée : capture Maps assombrie, score de cohérence centré dessus */}
+      <SectionHeader title={t("title")} subtitle={t("subtitle")} locked={locked} />
+
+      {/* Fiche renseignée : capture Maps assombrie, score de cohérence centré dessus.
+          Le nom de la fiche et le lien restent nets — ce sont des faits, pas des conclusions. */}
       <SiteScreenshot url={mapsUrl} variant="maps" label={coherence.listingName ?? undefined}>
-        <AnimatedScoreRing
-          score={coherence.score}
-          size={140}
-          stroke={12}
-          label={t("scoreLabel")}
-          trackColor="rgba(255,255,255,0.18)"
-          labelClassName="text-white/80"
-        />
+        <Maybe veiled={locked}>
+          <AnimatedScoreRing
+            score={coherence.score}
+            size={140}
+            stroke={12}
+            label={t("scoreLabel")}
+            trackColor="rgba(255,255,255,0.18)"
+            labelClassName="text-white/80"
+          />
+        </Maybe>
         <div>
           <h3 className="text-lg font-bold text-white">{coherence.listingName ?? t("title")}</h3>
-          <p className="mx-auto mt-2 max-w-xl text-pretty text-sm text-white/90">{coherence.summary}</p>
+          <Maybe veiled={locked}>
+            <p className="mx-auto mt-2 max-w-xl text-pretty text-sm text-white/90">{coherence.summary}</p>
+          </Maybe>
           <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block cursor-pointer text-sm font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
             {t("viewListing")}
           </a>
@@ -926,15 +1019,27 @@ function MapsPanel({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <AnimatedCard delay={0.05} className="flex flex-col justify-center gap-4 lg:col-span-3 sm:flex-row sm:justify-center sm:gap-16">
           {coherence.rating != null && (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-muted">{t("ratingLabel")}</span>
-              <span className="text-lg font-bold">{coherence.rating.toFixed(1)} / 5</span>
+              {locked ? (
+                <Veil>
+                  <span className="text-lg font-bold">{coherence.rating.toFixed(1)} / 5</span>
+                </Veil>
+              ) : (
+                <span className="text-lg font-bold">{coherence.rating.toFixed(1)} / 5</span>
+              )}
             </div>
           )}
           {coherence.reviewCount != null && (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-muted">{t("reviewsLabel")}</span>
-              <span className="text-lg font-bold">{coherence.reviewCount}</span>
+              {locked ? (
+                <Veil>
+                  <span className="text-lg font-bold">{coherence.reviewCount}</span>
+                </Veil>
+              ) : (
+                <span className="text-lg font-bold">{coherence.reviewCount}</span>
+              )}
             </div>
           )}
           {coherence.rating == null && coherence.reviewCount == null && (
@@ -949,10 +1054,15 @@ function MapsPanel({
               {coherence.matches.map((m, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 border-b border-fog py-2.5 last:border-0">
                   <div className="min-w-0">
+                    {/* Le point vérifié est constant ; son verdict, non. */}
                     <p className="truncate text-sm text-text">{m.label}</p>
-                    <p className="truncate text-xs text-muted">{m.detail}</p>
+                    <Maybe veiled={locked}>
+                      <p className="truncate text-xs text-muted">{m.detail}</p>
+                    </Maybe>
                   </div>
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: m.consistent ? "#11b48c" : "#e5484d" }} />
+                  <Maybe veiled={locked}>
+                    <span className="block h-2 w-2 shrink-0 rounded-full" style={{ background: m.consistent ? "#11b48c" : "#e5484d" }} />
+                  </Maybe>
                 </li>
               ))}
             </ul>

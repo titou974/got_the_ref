@@ -15,6 +15,19 @@ const AnalysisIdContext = createContext<string>("");
 export const AnalysisIdProvider = AnalysisIdContext.Provider;
 
 /**
+ * Rapport verrouillé ? Porté par contexte parce que la question se pose jusque
+ * dans les cellules d'un tableau de diagnostic : la faire descendre en props
+ * traverserait trois niveaux pour une réponse identique partout.
+ */
+const LockedContext = createContext<boolean>(false);
+
+export const LockedProvider = LockedContext.Provider;
+
+export function useLocked(): boolean {
+  return useContext(LockedContext);
+}
+
+/**
  * Verrouillage d'un aperçu, version « structure lisible » : on garde nets les
  * titres, les intitulés et les noms de moteurs — le lecteur voit donc CE QUI
  * existe — et on ne floute que la donnée elle-même (positions, notes, analyses).
@@ -52,6 +65,47 @@ export function Obscured({
       } ${className}`}
     >
       {children}
+    </div>
+  );
+}
+
+/**
+ * Voile une valeur seule — un score, une conclusion, une ligne de constat —
+ * sans toucher au libellé qui l'accompagne. C'est la granularité visée : on cache
+ * ce que l'analyse a trouvé, jamais ce qu'elle a regardé.
+ */
+export function Veil({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      aria-hidden
+      inert
+      className="pointer-events-none inline-block select-none blur-[5px] saturate-[0.75]"
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
+ * En-tête de section : titre et sous-titre restent nets même verrouillés — ils
+ * ne dépendent pas de l'analyse, ils disent seulement ce qui a été examiné.
+ */
+export function SectionHeader({
+  title,
+  subtitle,
+  locked = false,
+}: {
+  title: string;
+  subtitle?: string;
+  locked?: boolean;
+}) {
+  return (
+    <div className="mb-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <h3 className="text-lg font-bold">{title}</h3>
+        {locked && <LockedPill />}
+      </div>
+      {subtitle && <p className="mt-1 max-w-2xl text-sm text-muted">{subtitle}</p>}
     </div>
   );
 }
