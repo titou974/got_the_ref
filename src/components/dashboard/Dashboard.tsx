@@ -9,7 +9,7 @@ import { SiteScreenshot } from "./SiteScreenshot";
 import { ReportTabs } from "./ReportTabs";
 import { FreeReportCard } from "./FreeReportCard";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
-import { ServicesCta } from "@/components/ServicesCta";
+import { UnlockPricingCta } from "./UnlockPricingCta";
 import { ROUTES } from "@/constants/routes";
 
 export async function Dashboard({
@@ -107,8 +107,8 @@ export async function Dashboard({
         </p>
       </AnimatedCard>
 
-      {/* CTA agence : redirige vers les services en bas de chaque rapport */}
-      <ServicesCta />
+      {/* Bandeau de fin de rapport : mène aux tarifs, pas à la prise de rendez-vous */}
+      <UnlockPricingCta analysisId={analysisId} locked={locked} />
     </div>
   );
 }

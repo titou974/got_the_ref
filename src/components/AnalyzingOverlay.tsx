@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { lockScroll } from "@/lib/scroll-lock";
 
 // Animations d'assets + 1 animation générée (emerald). L'étape « Scoring GEO »
 // n'utilise pas de Lottie : elle affiche les logos IA animés (framer-motion).
@@ -180,14 +181,9 @@ export function AnalyzingOverlay({
     return () => clearInterval(id);
   }, []);
 
-  // Verrouille le scroll de la page pendant l'analyse.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
+  // Verrouille le scroll de la page pendant l'analyse (verrou partagé : la
+  // modale Maps peut encore être en cours de sortie quand l'overlay se monte).
+  useEffect(() => lockScroll(), []);
 
   const phase = PHASES[step];
   const overall = Math.min(100, ((prefix[step] + elapsed) / totalMs) * 100);

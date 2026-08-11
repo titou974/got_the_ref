@@ -43,6 +43,19 @@
     "button": "Découvrir nos services",
     "secondary": "Prendre rendez-vous"
   },
+  "ctaUnlock": {
+    "eyebrow": "Abonnement got_the_ref",
+    "title": "Débloquez tout le rapport et laissez les agents IA corriger",
+    "subtitle": "Classements, recommandations, mots-clés tendances, calendrier d'articles et prompts prêts à coller : tout s'ouvre avec l'abonnement.",
+    "bullet1": "Analyses illimitées",
+    "bullet2": "Prompts solution par section",
+    "bullet3": "Articles générés pour votre niche",
+    "button": "Résoudre gratuitement avec les agents IA",
+    "secondary": "Voir les tarifs",
+    "openTitle": "Gardez la main sur votre visibilité IA",
+    "openSubtitle": "Analyses illimitées, mots-clés suivis mois après mois et articles publiés pour votre niche : votre abonnement couvre tout got_the_ref.",
+    "openButton": "Voir mon offre et les options"
+  },
   "home": {
     "logoOpenaiAlt": "Logo OpenAI",
     "logoGeminiAlt": "Logo Gemini",
@@ -243,7 +256,8 @@
       "shareSubject": "Résultats de l'analyse GEO got_the_ref",
       "shareBody": "Voici les résultats de l'analyse de visibilité IA de notre site : {url}",
       "agencyCtaText": "Vous préférez qu'on s'en occupe pour vous ?",
-      "agencyCtaLink": "Découvrir les services de l'agence"
+      "agencyCtaLink": "Découvrir les services de l'agence",
+      "unlockPrompt": "Débloquer le prompt solution gratuitement"
     },
     "maps": {
       "title": "Cohérence Google Maps ↔ site",
@@ -261,7 +275,7 @@
       "findingsTitle": "Constats"
     },
     "paywall": {
-      "cta": "Résoudre avec les agents IA",
+      "cta": "Résoudre gratuitement avec les agents IA",
       "lockedLabel": "Verrouillé",
       "alreadyPaid": "Déjà abonné ?",
       "signIn": "Se connecter",
@@ -294,7 +308,48 @@
         "title": "Cohérence Maps",
         "subtitle": "L'alignement de votre fiche Google avec votre site, vu par les IA.",
         "pitch": "Une fiche qui contredit le site fait perdre des places sur les requêtes locales."
+      },
+      "keywords": {
+        "title": "Mots-clés tendances",
+        "subtitle": "Les requêtes en hausse dans votre niche, et où les écrire.",
+        "pitch": "Les mots-clés du moment sont relevés sur Google, avec le title, la meta description et le H1 réécrits."
+      },
+      "articles": {
+        "title": "Calendrier éditorial",
+        "subtitle": "Les articles SEO générés et publiés pour vous, mois après mois.",
+        "pitch": "Chaque article du calendrier est rédigé puis publié automatiquement sur votre niche."
       }
+    },
+    "keywords": {
+      "title": "Mots-clés tendances de votre niche",
+      "subtitle": "Les requêtes qui montent en ce moment sur votre activité, et l'endroit exact où les placer : balise title, meta description, H1.",
+      "listTitle": "Requêtes à cibler",
+      "sourceMeasured": "Relevé sur Google",
+      "sourceEstimated": "Déduit de la niche",
+      "rewritesTitle": "Vos trois éléments, réécrits",
+      "rewritesSubtitle": "À copier tel quel : chaque version reprend les mots-clés les plus porteurs sans sacrifier la lecture.",
+      "currentLabel": "Actuel",
+      "currentEmpty": "absent du site",
+      "charCount": "{count} caractères",
+      "elements": {
+        "title": "Balise title",
+        "metaDescription": "Meta description",
+        "h1": "Titre H1"
+      },
+      "placements": {
+        "title": "Title",
+        "metaDescription": "Meta",
+        "h1": "H1"
+      }
+    },
+    "articlesPlan": {
+      "title": "Calendrier des articles",
+      "subtitle": "Les articles SEO générés pour votre niche, puis publiés automatiquement aux dates prévues.",
+      "countLabel": "{count} articles programmés",
+      "queueTitle": "À paraître",
+      "queueSubtitle": "Rédigés sur vos mots-clés, relus, puis mis en ligne sans intervention de votre part.",
+      "statusScheduled": "Programmé",
+      "disclaimer": "Aperçu du calendrier : la génération et la publication automatiques arrivent — aucun article n'est encore publié sur votre site."
     }
   },
   "analysisApi": {

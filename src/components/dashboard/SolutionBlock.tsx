@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AnimatedCard } from "./AnimatedCard";
-import { LockedPill } from "./LockedContent";
+import { LockedPill, unlockHref, useAnalysisId } from "./LockedContent";
 import { ROUTES } from "@/constants/routes";
 
 /**
@@ -18,6 +18,7 @@ import { ROUTES } from "@/constants/routes";
  */
 export function SolutionBlock({ prompt, locked = false }: { prompt: string; locked?: boolean }) {
   const t = useTranslations("analysisReport.solution");
+  const analysisId = useAnalysisId();
   const [copied, setCopied] = useState(false);
 
   async function copyPrompt() {
@@ -89,26 +90,39 @@ export function SolutionBlock({ prompt, locked = false }: { prompt: string; lock
       </div>
 
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          onClick={copyPrompt}
-          disabled={locked}
-          title={locked ? t("lockedCopyHint") : undefined}
-          aria-live="polite"
-          className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          {copied ? (
+        {/* Verrouillé, un bouton « copier » désactivé ne dit pas comment obtenir
+            le prompt : on le remplace par le chemin de déblocage lui-même. */}
+        {locked ? (
+          <Link
+            href={unlockHref(analysisId)}
+            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.7" />
+              <path d="M8 11V8a4 4 0 0 1 7.5-2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
             </svg>
-          ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          )}
-          {copied ? t("copied") : t("copyPrompt")}
-        </button>
+            {t("unlockPrompt")}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={copyPrompt}
+            aria-live="polite"
+            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+          >
+            {copied ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            )}
+            {copied ? t("copied") : t("copyPrompt")}
+          </button>
+        )}
         <button
           type="button"
           onClick={shareDev}

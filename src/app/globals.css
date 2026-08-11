@@ -237,6 +237,30 @@ h1, h2, h3, h4, h5 {
   to { transform: translateX(-50%); }
 }
 
+/* ── Verrou de scroll (overlay d'analyse, modales, tiroir mobile) ─────────────
+   Piloté par `lockScroll()` (src/lib/scroll-lock.ts), qui pose la classe sur
+   <html>. `overflow: hidden` seul laisse iOS Safari faire défiler la page au
+   doigt : on coupe donc aussi le pan tactile et le rebond de fin de course. */
+html.scroll-locked,
+html.scroll-locked body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* ── Pas de zoom automatique à la saisie sur mobile ──────────────────────────
+   iOS Safari zoome sur tout champ dont la police descend sous 16px. Les champs
+   du site sont dessinés en 13–15px : on les remonte à 16px sous le point de
+   rupture `sm`, plutôt que de neutraliser le zoom via la balise viewport, ce qui
+   priverait aussi l'utilisateur du zoom manuel. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .thinking-dot, .shimmer, .caret::after, .animate-spin-slow, .sweep::before {
     animation: none !important;

@@ -24,6 +24,8 @@ import { AnimatedCard } from "./AnimatedCard";
 import { CategoryRadar } from "./CategoryRadar";
 import { SolutionBlock } from "./SolutionBlock";
 import { SiteScreenshot } from "./SiteScreenshot";
+import { TrendingKeywords } from "./TrendingKeywords";
+import { ArticleCalendar } from "./ArticleCalendar";
 import {
   AnalysisIdProvider,
   LockedBlock,
@@ -209,9 +211,11 @@ export function ReportTabs({
   analysisId: string;
 }) {
   const t = useTranslations("analysisReport");
-  // Analyse verrouillée : on ouvre sur l'architecture (gratuite, jamais
-  // floutée) plutôt que sur les classements, verrouillés dès le premier bloc.
-  const [active, setActive] = useState<TabKey>(locked ? "architecture" : "results");
+  // On ouvre toujours sur « Résultats et recommandations », y compris en
+  // gratuit : c'est ce que le visiteur vient chercher en sortant de l'analyse.
+  // Le premier bloc de l'onglet (profil + diagnostic d'architecture) est libre,
+  // seules les mesures plus bas restent floutées.
+  const [active, setActive] = useState<TabKey>("results");
 
   // L'onglet Maps n'a de sens que pour un commerce physique.
   const tabs: TabKey[] = result.profile.isPhysical
@@ -800,6 +804,20 @@ function ContentPanel({
           {locked && <UnlockBar variant="content" />}
         </div>
       </section>
+
+      {/* Mots-clés tendances de la niche + réécriture du title, de la meta
+          description et du H1 (Gemini + recherche Google sur l'audit complet). */}
+      {result.trendingKeywords && (
+        <TrendingKeywords
+          insight={result.trendingKeywords}
+          current={{
+            title: result.onPageContent.title.text,
+            metaDescription: result.onPageContent.metaDescription.text,
+            h1: result.onPageContent.h1.text,
+          }}
+          locked={locked}
+        />
+      )}
     </div>
   );
 }
@@ -906,6 +924,9 @@ function PresencePanel({
           </Maybe>
         </AnimatedCard>
       </div>
+
+      {/* Articles : le calendrier de publication automatique pour la niche. */}
+      <ArticleCalendar profile={result.profile} createdAt={result.createdAt} locked={locked} />
 
       {wp.findings.length > 0 && (
         <AnimatedCard delay={0.15}>
