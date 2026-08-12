@@ -36,17 +36,20 @@ export async function Dashboard({
           <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
             {t("heroEyebrow")}
           </p>
+          {/* L'anneau se resserre sur mobile : le titre, la ligne de méta et le
+              verdict doivent tenir dans le cadre avec lui. */}
           <AnimatedScoreRing
             score={result.overallScore}
+            sizeSm={124}
             label={scoreLabel(result.overallScore)}
             trackColor="rgba(255,255,255,0.18)"
             labelClassName="text-white/80"
           />
           <div>
-            <h1 className="text-2xl font-bold text-white sm:text-3xl">
+            <h1 className="text-balance text-xl font-bold text-white sm:text-3xl">
               {result.businessName}
             </h1>
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-white/80">
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[13px] text-white/80 sm:text-sm">
               <a
                 href={result.url}
                 target="_blank"
@@ -60,7 +63,7 @@ export async function Dashboard({
               <span aria-hidden>·</span>
               <span>{date}</span>
             </div>
-            <p className="mx-auto mt-3 max-w-xl text-pretty text-base text-white/90">
+            <p className="mx-auto mt-3 max-w-xl text-pretty text-sm text-white/90 sm:text-base">
               {result.verdict}
             </p>
           </div>

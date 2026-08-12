@@ -252,6 +252,22 @@ html.scroll-locked body {
   touch-action: none;
 }
 
+/* ── Anneau de score ────────────────────────────────────────────────────────
+   Diamètre porté par deux variables posées en style inline par le composant :
+   `--ring` (défaut) et `--ring-sm` (sous le point de rupture sm). Le tracé étant
+   en viewBox, il suit la largeur — un seul rendu sert les deux tailles, sans
+   mesurer la fenêtre en JavaScript. */
+.score-ring {
+  width: var(--ring);
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+}
+@media (max-width: 639px) {
+  .score-ring {
+    width: var(--ring-sm);
+  }
+}
+
 /* ── Pas de zoom automatique à la saisie sur mobile ──────────────────────────
    iOS Safari zoome sur tout champ dont la police descend sous 16px. Les champs
    du site sont dessinés en 13–15px : on les remonte à 16px sous le point de

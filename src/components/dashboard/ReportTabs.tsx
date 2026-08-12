@@ -1056,6 +1056,7 @@ function MapsPanel({
           <AnimatedScoreRing
             score={coherence.score}
             size={140}
+            sizeSm={112}
             stroke={12}
             label={t("scoreLabel")}
             trackColor="rgba(255,255,255,0.18)"
