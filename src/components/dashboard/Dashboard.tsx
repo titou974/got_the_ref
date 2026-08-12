@@ -6,6 +6,7 @@ import { AnimatedScoreRing } from "./AnimatedScoreRing";
 import { SiteScreenshot } from "./SiteScreenshot";
 import { ReportTabs } from "./ReportTabs";
 import { FreeReportCard } from "./FreeReportCard";
+import { PaidReportCard } from "./PaidReportCard";
 import { UnlockPricingCta } from "./UnlockPricingCta";
 
 export async function Dashboard({
@@ -70,8 +71,13 @@ export async function Dashboard({
         </SiteScreenshot>
       </div>
 
-      {/* Constat livré d'office : ce qui tient, ce qui manque, ce qui reste à mesurer. */}
-      {locked && <FreeReportCard result={result} diagnostic={diagnostic} />}
+      {/* Constat écrit à la frappe. En aperçu : ce qui tient, ce qui manque, ce
+          qui reste à mesurer. Rapport complet : ce que l'audit a relevé. */}
+      {locked ? (
+        <FreeReportCard result={result} diagnostic={diagnostic} />
+      ) : (
+        <PaidReportCard result={result} diagnostic={diagnostic} />
+      )}
 
       {/* Diagnostic complet (onglets) */}
       <div>

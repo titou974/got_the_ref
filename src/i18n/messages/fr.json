@@ -509,6 +509,45 @@
     },
     "sourceChip": "Crawl du site · {count} contrôles d'architecture"
   },
+  "paidReport": {
+    "headlines": [
+      "Ce que les IA retiennent de {domain}, et ce qui reste à gagner",
+      "{domain} vu par ChatGPT et Gemini : le relevé complet",
+      "Le dossier complet de {domain} : positions, contenu, notoriété",
+      "{domain} : ce qui vous place, ce qui vous freine, chiffres en main",
+      "Audit complet de {domain} — voici où vous en êtes vraiment",
+      "Tout a été mesuré sur {domain} : voici le verdict"
+    ],
+    "intros": [
+      "Note finale : {score}/100, cette fois sur l'ensemble des signaux — ==architecture, contenu, notoriété et positions réellement relevées sur les moteurs==.",
+      "{score}/100 après audit complet. Chaque volet a été mesuré : ==la note ne repose plus sur la seule ossature technique, mais sur ce que les IA font vraiment de votre site==.",
+      "Le rapport complet donne {score}/100. ==Les positions viennent des moteurs eux-mêmes==, les notes éditoriales d'une lecture page par page.",
+      "Score global : {score}/100. Tout ce que l'aperçu laissait fermé est ouvert ici — ==classements, qualité de contenu, autorité hors-site et plan d'action chiffré==.",
+      "{score}/100, audit complet. ==Vous voyez désormais votre place face aux concurrents==, et le détail de ce qui la détermine.",
+      "Résultat consolidé : {score}/100. ==Rien n'est estimé au doigt mouillé== : chaque ligne ci-dessous s'appuie sur une mesure."
+    ],
+    "sourceChip": "Audit complet · {count} moteurs interrogés",
+    "strengthsTitle": "Ce qui tient déjà",
+    "gapsTitle": "Ce qui reste à corriger",
+    "measuredTitle": "Ce que l'audit a mesuré",
+    "rankOn": "{engine} #{rank}",
+    "notRankedOn": "{engine} hors classement",
+    "measured": {
+      "rankings": "**Classement IA** : {detail}. Le détail des concurrents cités devant vous est dans l'onglet Résultats.",
+      "content": "**Contenu** : {score}/100 sur la qualité éditoriale et la citabilité de vos pages — ce qu'une IA peut reprendre tel quel.",
+      "presence": "**Notoriété** : {score}/100 sur les signaux d'autorité hors-site, distinctions et mentions presse comprises.",
+      "keywords": "**Mots-clés** : {count} requêtes tendances relevées sur votre niche, avec la balise title, la meta description et le H1 réécrits.",
+      "recommendations": "**Plan d'action** : {count} correctifs priorisés par impact, chacun accompagné de son prompt prêt à coller.",
+      "recommendationsWithTop": "**Plan d'action** : {count} correctifs priorisés par impact. À traiter d'abord — « {top} ».",
+      "maps": "**Fiche Google** : {score}/100 de cohérence entre votre fiche et le site, sur le nom, la catégorie, l'adresse et les horaires."
+    },
+    "closings": [
+      "Tout est ouvert : les prompts de chaque onglet reprennent ces correctifs, ==prêts à coller dans votre agent IA==.",
+      "Vous avez la mesure et le remède : ==chaque section porte son prompt solution==, à exécuter dans l'ordre d'impact.",
+      "Il ne reste qu'à exécuter. ==Le plan est priorisé== ; commencez par le haut, remesurez ensuite.",
+      "Ce relevé est votre point de départ chiffré : ==relancez l'analyse après les correctifs== pour voir les places gagnées."
+    ]
+  },
   "postCheckout": {
     "metaTitle": "Paiement confirmé",
     "title": "Paiement confirmé 🎉",
