@@ -1,16 +1,12 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import { AnimatedScoreRing } from "./AnimatedScoreRing";
-import { AnimatedCard } from "./AnimatedCard";
 import { SiteScreenshot } from "./SiteScreenshot";
 import { ReportTabs } from "./ReportTabs";
 import { FreeReportCard } from "./FreeReportCard";
-import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { UnlockPricingCta } from "./UnlockPricingCta";
-import { ROUTES } from "@/constants/routes";
 
 export async function Dashboard({
   result,
@@ -24,8 +20,6 @@ export async function Dashboard({
   locked: boolean;
 }) {
   const t = await getTranslations("analysisReport");
-  const td = await getTranslations("dashboard");
-  const tc = await getTranslations("common");
   const diagnostic = buildDiagnostic(result);
 
   const date = new Date(result.createdAt).toLocaleDateString("fr-FR", {
@@ -91,21 +85,6 @@ export async function Dashboard({
           analysisId={analysisId}
         />
       </div>
-
-      {/* CTA */}
-      <AnimatedCard className="text-center">
-        <h3 className="text-xl font-bold">{td("ctaAnotherTitle")}</h3>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted">{td("ctaAnotherSubtitle")}</p>
-        <div className="mx-auto mt-5 max-w-lg">
-          <UrlAnalyzeForm size="md" />
-        </div>
-        <p className="mt-4 text-sm text-muted">
-          {td("ctaUnlimited")}{" "}
-          <Link href={ROUTES.pricing} className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian">
-            {tc("discoverOffers")}
-          </Link>
-        </p>
-      </AnimatedCard>
 
       {/* Bandeau de fin de rapport : mène aux tarifs, pas à la prise de rendez-vous */}
       <UnlockPricingCta analysisId={analysisId} locked={locked} />

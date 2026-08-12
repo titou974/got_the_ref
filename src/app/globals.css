@@ -31,6 +31,10 @@
   --color-accent: #09090b;       /* emphase = sombre (pas d'accent chromatique UI) */
   --color-cta: #09090b;          /* action principale : pilule noire */
   --color-cta-hover: #18181b;
+  /* Surlignage d'un passage clé, à la manière d'un texte sélectionné dans un
+     aperçu IA. Teinte de la palette (obsidian dilué) : lisible sans introduire
+     une couleur étrangère au système. */
+  --color-highlight: #dfe0e4;
   --color-danger: #dc2626;
   --color-warning: #d97706;
 

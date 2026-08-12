@@ -122,11 +122,6 @@
     "modeOnline": "Commerce en ligne",
     "modeAriaLabel": "Type de commerce à analyser"
   },
-  "dashboard": {
-    "ctaAnotherTitle": "Analysez un autre site",
-    "ctaAnotherSubtitle": "Comparez vos concurrents ou suivez votre progression dans le temps.",
-    "ctaUnlimited": "Besoin d'analyses illimitées ?"
-  },
   "analysisReport": {
     "heroEyebrow": "Note de visibilité IA",
     "visitSite": "Voir le site",
@@ -451,12 +446,12 @@
       "Ce que les IA voient de {domain}, et ce qui leur manque pour le citer"
     ],
     "intros": [
-      "Cet aperçu note {score}/100. Il ne regarde que l'ossature du site : ce que les crawlers IA lisent avant même de juger le contenu. C'est un point de départ honnête, pas un verdict.",
-      "Note de l'aperçu : {score}/100. Elle ne porte que sur la structure technique du site — la partie qui décide si une IA peut vous lire, pas si elle décide de vous citer.",
-      "{score}/100 sur l'architecture seule. C'est la seule chose mesurable gratuitement : le reste du dossier, celui qui explique votre position réelle, demande d'interroger les moteurs.",
-      "L'aperçu s'arrête à {score}/100 parce qu'il s'arrête à l'ossature. Les signaux qui font vraiment la différence dans une réponse d'IA n'ont pas encore été mesurés.",
-      "Score de l'aperçu : {score}/100, sur la base des seuls signaux techniques. Une bonne structure ne garantit rien — elle rend juste la citation possible.",
-      "{score}/100 : c'est ce que vaut le site vu de l'extérieur, avant analyse du contenu, de la notoriété et des classements moteurs."
+      "Cet aperçu note {score}/100. Il ne regarde que l'ossature du site : ==ce que les crawlers IA lisent avant même de juger le contenu==. C'est un point de départ honnête, pas un verdict.",
+      "Note de l'aperçu : {score}/100. Elle ne porte que sur la structure technique du site — ==la partie qui décide si une IA peut vous lire, pas si elle décide de vous citer==.",
+      "{score}/100 sur l'architecture seule. C'est la seule chose mesurable gratuitement : ==le reste du dossier, celui qui explique votre position réelle, demande d'interroger les moteurs==.",
+      "L'aperçu s'arrête à {score}/100 parce qu'il s'arrête à l'ossature. ==Les signaux qui font vraiment la différence dans une réponse d'IA== n'ont pas encore été mesurés.",
+      "Score de l'aperçu : {score}/100, sur la base des seuls signaux techniques. ==Une bonne structure ne garantit rien — elle rend juste la citation possible==.",
+      "{score}/100 : c'est ce que vaut le site vu de l'extérieur, ==avant analyse du contenu, de la notoriété et des classements moteurs==."
     ],
     "unmeasured": {
       "keywords": [
@@ -491,19 +486,28 @@
       ]
     },
     "closings": [
-      "Sur ces quatre plans, votre classement sur les IA et sur Google peut être nettement amélioré : les manques relevés ici sont tous corrigeables, et ce sont eux qui vous coûtent des places.",
-      "Chacune de ces parties non mesurées est un levier de classement. Bien traitées, elles remontent votre position sur les IA comme sur Google — le potentiel est largement au-dessus de la note actuelle.",
-      "Il y a de la marge, et elle est concrète : les points listés ci-dessus se corrigent, et chaque correction se traduit en places gagnées sur les IA et sur Google.",
-      "Rien de tout cela n'est définitif. Ces angles non mesurés sont exactement ceux qui font gagner des positions sur les IA et sur Google une fois traités dans le bon ordre.",
-      "Votre visibilité sur les IA et sur Google peut progresser fortement : les leviers sont dans les parties encore fermées, et ils s'actionnent l'un après l'autre.",
-      "Le constat est loin d'être plafonné. Ces mesures manquantes portent l'essentiel du gain possible sur votre classement dans les IA et sur Google."
+      "Sur ces quatre plans, ==votre classement sur les IA et sur Google peut être nettement amélioré== : les manques relevés ici sont tous corrigeables, et ce sont eux qui vous coûtent des places.",
+      "Chacune de ces parties non mesurées est un levier de classement. Bien traitées, elles remontent votre position sur les IA comme sur Google — ==le potentiel est largement au-dessus de la note actuelle==.",
+      "Il y a de la marge, et elle est concrète : ==chaque correction se traduit en places gagnées sur les IA et sur Google==.",
+      "Rien de tout cela n'est définitif. ==Ces angles non mesurés sont exactement ceux qui font gagner des positions== sur les IA et sur Google une fois traités dans le bon ordre.",
+      "Votre visibilité sur les IA et sur Google peut progresser fortement : ==les leviers sont dans les parties encore fermées==, et ils s'actionnent l'un après l'autre.",
+      "Le constat est loin d'être plafonné. ==Ces mesures manquantes portent l'essentiel du gain possible== sur votre classement dans les IA et sur Google."
     ],
     "ctas": [
-      "Résoudre avec les agents IA",
-      "Corriger avec les agents IA",
-      "Confier ces points aux agents IA",
-      "Lancer les agents IA sur ces points"
-    ]
+      "Résoudre gratuitement avec les agents IA",
+      "Corriger gratuitement avec les agents IA",
+      "Confier ces points aux agents IA, gratuitement",
+      "Lancer gratuitement les agents IA sur ces points"
+    ],
+    "angleLabels": {
+      "keywords": "Mots-clés",
+      "rankings": "Classement IA",
+      "recommendations": "Plan d'action",
+      "content": "Contenu",
+      "presence": "Notoriété",
+      "maps": "Fiche Google"
+    },
+    "sourceChip": "Crawl du site · {count} contrôles d'architecture"
   },
   "postCheckout": {
     "metaTitle": "Paiement confirmé",
