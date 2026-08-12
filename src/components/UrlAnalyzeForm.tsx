@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { AnalyzingOverlay } from "./AnalyzingOverlay";
+import { lockScroll } from "@/lib/scroll-lock";
 import { ROUTES, pricingWithReason } from "@/constants/routes";
 
 type Mode = "physical" | "online";
@@ -291,11 +292,10 @@ function ConfirmNoMapsDialog({
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const release = lockScroll();
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      release();
     };
   }, [onClose]);
 

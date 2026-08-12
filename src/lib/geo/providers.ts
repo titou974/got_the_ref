@@ -38,7 +38,7 @@ function isAbortError(err: unknown): boolean {
   );
 }
 
-async function postJson(
+export async function postJson(
   url: string,
   init: RequestInit,
   label = "fetch",

@@ -30,6 +30,7 @@ import {
   type MeasuredEngine,
   type LiveEngineResult,
 } from "./providers";
+import { fetchTrendingKeywords, fallbackTrendingKeywords } from "./keywords";
 import { scrapeMapsListing } from "./maps";
 import { FREE_SCORE_CAP } from "@/constants/plans";
 import { GEO_AUDIT_METHODOLOGY, DASHBOARD_MAPPING } from "./methodology";
@@ -1363,8 +1364,8 @@ export async function analyzeSite(
 
   // ÉTAPE 2b — En parallèle : audit complet (Opus 4.8, n'estime QUE les moteurs
   // manquants) + estimation backlinks (Claude + recherche web).
-  geoLog(`Étape 2b — Audit (${MODEL}) + backlinks en parallèle`);
-  const [core, backlinks] = await Promise.all([
+  geoLog(`Étape 2b — Audit (${MODEL}) + backlinks + mots-clés tendances en parallèle`);
+  const [core, backlinks, liveKeywords] = await Promise.all([
     (async (): Promise<EngineCore> => {
       if (!hasKey) return heuristicAnalysis(signals, ctx, profile);
       try {
@@ -1377,6 +1378,13 @@ export async function analyzeSite(
     hasKey
       ? estimateBacklinks(signals, profile).catch((err) => {
           console.error("Estimation backlinks échouée :", err);
+          return null;
+        })
+      : Promise.resolve(null),
+    // Mots-clés tendances : Gemini + recherche Google, payant uniquement.
+    useApis
+      ? fetchTrendingKeywords(profile, signals).catch((err) => {
+          console.error("Mots-clés tendances échoués :", err);
           return null;
         })
       : Promise.resolve(null),
@@ -1409,6 +1417,16 @@ export async function analyzeSite(
   );
 
   geoLog("Backlinks — estimation", backlinks ?? "(non estimé)");
+
+  // Mots-clés tendances de la niche (title / meta description / H1). Sans
+  // réponse Gemini exploitable — et en gratuit, où l'appel n'est pas tenté — on
+  // sert le repli déterministe : l'aperçu montre la livraison, floutée, sans
+  // jamais déclencher d'appel facturé.
+  const trendingKeywords = liveKeywords ?? fallbackTrendingKeywords(profile, signals);
+  geoLog("Mots-clés tendances", {
+    source: trendingKeywords.source,
+    motsClés: trendingKeywords.keywords.length,
+  });
 
   // L'aperçu gratuit ne mesure que l'architecture : sans classements moteurs, ni
   // audit éditorial, ni analyse de mots-clés, la notation reste sévère. On
@@ -1443,6 +1461,7 @@ export async function analyzeSite(
     overallScore,
     liveQuery,
     backlinks,
+    trendingKeywords,
     signals,
     createdAt: new Date().toISOString(),
   };

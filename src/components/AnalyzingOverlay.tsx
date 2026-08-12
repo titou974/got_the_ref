@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { lockScroll } from "@/lib/scroll-lock";
 
 // Animations d'assets + 1 animation générée (emerald). L'étape « Scoring GEO »
 // n'utilise pas de Lottie : elle affiche les logos IA animés (framer-motion).
@@ -11,7 +12,16 @@ import doc from "@/assets/animation1.json"; // document
 import satellite from "@/assets/animation2.json"; // satellite + bulles
 import search from "@/assets/animation3.json"; // loupe
 import rocket from "@/assets/animation5.json"; // fusée
-import citability from "@/lottie/citability.json"; // emerald (généré)
+import citability from "@/lottie/citability.json"; // repli de l'étape citabilité
+
+/**
+ * Étape « citabilité » : animation riche servie depuis /public et récupérée au
+ * montage de l'overlay, plutôt qu'importée. Elle pèse ~500 Ko : dans le bundle,
+ * ce poids serait payé au premier chargement de la home, alors qu'elle ne sert
+ * qu'une fois l'analyse lancée. Elle arrive donc pendant les deux premières
+ * étapes, largement avant d'être affichée — et à défaut, le repli reste en place.
+ */
+const CITABILITY_ANIMATION_URL = "/lottie/ai-digital.json";
 
 // lottie-react accède à `window` → chargé côté client uniquement.
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
@@ -136,6 +146,24 @@ export function AnalyzingOverlay({
   const [step, setStep] = useState(0);
   const [elapsed, setElapsed] = useState(0); // ms écoulées dans l'étape courante
   const [activeLogo, setActiveLogo] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [citabilityAnim, setCitabilityAnim] = useState<any>(null);
+
+  // Animation de l'étape citabilité : récupérée en tâche de fond dès le montage.
+  useEffect(() => {
+    let alive = true;
+    fetch(CITABILITY_ANIMATION_URL)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (alive && data) setCitabilityAnim(data);
+      })
+      .catch(() => {
+        /* animation indisponible : le repli importé reste affiché */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Horloge des étapes : avance le step et tient à jour le faux temps (~10 fps).
   const stepRef = useRef(0);
@@ -180,16 +208,12 @@ export function AnalyzingOverlay({
     return () => clearInterval(id);
   }, []);
 
-  // Verrouille le scroll de la page pendant l'analyse.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
+  // Verrouille le scroll de la page pendant l'analyse (verrou partagé : la
+  // modale Maps peut encore être en cours de sortie quand l'overlay se monte).
+  useEffect(() => lockScroll(), []);
 
   const phase = PHASES[step];
+  const phaseAnim = phase.key === "citability" ? citabilityAnim ?? phase.anim : phase.anim;
   const overall = Math.min(100, ((prefix[step] + elapsed) / totalMs) * 100);
   const stepSeconds = (elapsed / 1000).toFixed(1);
 
@@ -241,7 +265,7 @@ export function AnalyzingOverlay({
               {phase.key === "logos" ? (
                 <LogosShowcase activeLogo={activeLogo} />
               ) : (
-                <Lottie animationData={phase.anim} loop autoplay className="h-full w-full" />
+                <Lottie animationData={phaseAnim} loop autoplay className="h-full w-full" />
               )}
             </motion.div>
           </AnimatePresence>

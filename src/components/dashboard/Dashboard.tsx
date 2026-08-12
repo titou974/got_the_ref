@@ -1,16 +1,12 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import { AnimatedScoreRing } from "./AnimatedScoreRing";
-import { AnimatedCard } from "./AnimatedCard";
 import { SiteScreenshot } from "./SiteScreenshot";
 import { ReportTabs } from "./ReportTabs";
 import { FreeReportCard } from "./FreeReportCard";
-import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
-import { ServicesCta } from "@/components/ServicesCta";
-import { ROUTES } from "@/constants/routes";
+import { UnlockPricingCta } from "./UnlockPricingCta";
 
 export async function Dashboard({
   result,
@@ -24,8 +20,6 @@ export async function Dashboard({
   locked: boolean;
 }) {
   const t = await getTranslations("analysisReport");
-  const td = await getTranslations("dashboard");
-  const tc = await getTranslations("common");
   const diagnostic = buildDiagnostic(result);
 
   const date = new Date(result.createdAt).toLocaleDateString("fr-FR", {
@@ -42,17 +36,20 @@ export async function Dashboard({
           <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
             {t("heroEyebrow")}
           </p>
+          {/* L'anneau se resserre sur mobile : le titre, la ligne de méta et le
+              verdict doivent tenir dans le cadre avec lui. */}
           <AnimatedScoreRing
             score={result.overallScore}
+            sizeSm={124}
             label={scoreLabel(result.overallScore)}
             trackColor="rgba(255,255,255,0.18)"
             labelClassName="text-white/80"
           />
           <div>
-            <h1 className="text-2xl font-bold text-white sm:text-3xl">
+            <h1 className="text-balance text-xl font-bold text-white sm:text-3xl">
               {result.businessName}
             </h1>
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-white/80">
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[13px] text-white/80 sm:text-sm">
               <a
                 href={result.url}
                 target="_blank"
@@ -66,7 +63,7 @@ export async function Dashboard({
               <span aria-hidden>·</span>
               <span>{date}</span>
             </div>
-            <p className="mx-auto mt-3 max-w-xl text-pretty text-base text-white/90">
+            <p className="mx-auto mt-3 max-w-xl text-pretty text-sm text-white/90 sm:text-base">
               {result.verdict}
             </p>
           </div>
@@ -92,23 +89,8 @@ export async function Dashboard({
         />
       </div>
 
-      {/* CTA */}
-      <AnimatedCard className="text-center">
-        <h3 className="text-xl font-bold">{td("ctaAnotherTitle")}</h3>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted">{td("ctaAnotherSubtitle")}</p>
-        <div className="mx-auto mt-5 max-w-lg">
-          <UrlAnalyzeForm size="md" />
-        </div>
-        <p className="mt-4 text-sm text-muted">
-          {td("ctaUnlimited")}{" "}
-          <Link href={ROUTES.pricing} className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian">
-            {tc("discoverOffers")}
-          </Link>
-        </p>
-      </AnimatedCard>
-
-      {/* CTA agence : redirige vers les services en bas de chaque rapport */}
-      <ServicesCta />
+      {/* Bandeau de fin de rapport : mène aux tarifs, pas à la prise de rendez-vous */}
+      <UnlockPricingCta analysisId={analysisId} locked={locked} />
     </div>
   );
 }

@@ -18,12 +18,15 @@ import type {
   DiagnosticStatus,
 } from "@/lib/geo/diagnostic";
 import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
+import { decoyRanking } from "@/lib/geo/decoy-ranking";
 import { scoreColor, visibilityColor, priorityColor } from "@/lib/score";
 import { AnimatedScoreRing } from "./AnimatedScoreRing";
 import { AnimatedCard } from "./AnimatedCard";
 import { CategoryRadar } from "./CategoryRadar";
 import { SolutionBlock } from "./SolutionBlock";
 import { SiteScreenshot } from "./SiteScreenshot";
+import { TrendingKeywords } from "./TrendingKeywords";
+import { ArticleCalendar } from "./ArticleCalendar";
 import {
   AnalysisIdProvider,
   LockedBlock,
@@ -209,9 +212,11 @@ export function ReportTabs({
   analysisId: string;
 }) {
   const t = useTranslations("analysisReport");
-  // Analyse verrouillée : on ouvre sur l'architecture (gratuite, jamais
-  // floutée) plutôt que sur les classements, verrouillés dès le premier bloc.
-  const [active, setActive] = useState<TabKey>(locked ? "architecture" : "results");
+  // On ouvre toujours sur « Résultats et recommandations », y compris en
+  // gratuit : c'est ce que le visiteur vient chercher en sortant de l'analyse.
+  // Le premier bloc de l'onglet (profil + diagnostic d'architecture) est libre,
+  // seules les mesures plus bas restent floutées.
+  const [active, setActive] = useState<TabKey>("results");
 
   // L'onglet Maps n'a de sens que pour un commerce physique.
   const tabs: TabKey[] = result.profile.isPhysical
@@ -321,8 +326,12 @@ function ProfileHeader({ result }: { result: GeoAnalysisResult }) {
 
 /* ----------------------------- Carte moteur IA ---------------------------- */
 
-/** Un classement (direct ou indirect) d'un moteur, avec le commerce surligné. */
-function RankingList({ ranking }: { ranking: EngineRanking }) {
+/**
+ * Un classement (direct ou indirect) d'un moteur, avec le commerce surligné.
+ * Verrouillé, les vraies lignes cèdent la place à des bandes fictives : on doit
+ * voir qu'un classement existe, sans pouvoir y repérer sa propre position.
+ */
+function RankingList({ ranking, locked = false }: { ranking: EngineRanking; locked?: boolean }) {
   const t = useTranslations("analysisReport.results");
   const scopeLabel = ranking.scope === "direct" ? t("directScope") : t("indirectScope");
   const isDirect = ranking.scope === "direct";
@@ -343,7 +352,12 @@ function RankingList({ ranking }: { ranking: EngineRanking }) {
           </span>
           <p className="mt-1 truncate text-xs text-muted">{ranking.label}</p>
         </div>
-        {ranking.targetRank != null ? (
+        {locked ? (
+          // Même « non classé » est une information : on n'en dit rien.
+          <span className="shrink-0 rounded-lg bg-fog px-2 py-0.5 text-sm font-bold text-ash">
+            #?
+          </span>
+        ) : ranking.targetRank != null ? (
           <span className="shrink-0 rounded-lg bg-obsidian/10 px-2 py-0.5 text-sm font-bold text-obsidian">
             #{ranking.targetRank}
           </span>
@@ -353,7 +367,9 @@ function RankingList({ ranking }: { ranking: EngineRanking }) {
           </span>
         )}
       </div>
-      {ranking.competitors.length > 0 ? (
+      {locked ? (
+        <DecoyBands seedKey={`${ranking.label}|${ranking.scope}`} />
+      ) : ranking.competitors.length > 0 ? (
         <ol className="space-y-0.5">
           {ranking.competitors.map((c) => (
             <li
@@ -389,6 +405,29 @@ function RankingList({ ranking }: { ranking: EngineRanking }) {
   );
 }
 
+/**
+ * Bandes de classement fictives : des rangs, des noms, aucune ligne « vous ».
+ * C'est ce qui remplace le classement réel sur l'aperçu gratuit.
+ */
+function DecoyBands({ seedKey }: { seedKey: string }) {
+  const entries = decoyRanking(seedKey);
+  return (
+    <ol className="space-y-0.5">
+      {entries.map((e) => (
+        <li
+          key={e.rank}
+          className="flex items-center gap-2 rounded-md px-2 py-1 odd:bg-obsidian/[0.03]"
+        >
+          <span className="w-5 shrink-0 text-center text-xs font-bold tabular-nums text-muted">
+            {e.rank}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs text-text">{e.name}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function EngineCard({
   engine,
   delay,
@@ -409,7 +448,7 @@ function EngineCard({
       {engine.rankings.length > 0 && (
         <div className={`grid grid-cols-1 gap-3 ${engine.rankings.length > 1 ? "lg:grid-cols-2" : ""}`}>
           {engine.rankings.map((r) => (
-            <RankingList key={r.scope} ranking={r} />
+            <RankingList key={r.scope} ranking={r} locked={locked} />
           ))}
         </div>
       )}
@@ -800,6 +839,20 @@ function ContentPanel({
           {locked && <UnlockBar variant="content" />}
         </div>
       </section>
+
+      {/* Mots-clés tendances de la niche + réécriture du title, de la meta
+          description et du H1 (Gemini + recherche Google sur l'audit complet). */}
+      {result.trendingKeywords && (
+        <TrendingKeywords
+          insight={result.trendingKeywords}
+          current={{
+            title: result.onPageContent.title.text,
+            metaDescription: result.onPageContent.metaDescription.text,
+            h1: result.onPageContent.h1.text,
+          }}
+          locked={locked}
+        />
+      )}
     </div>
   );
 }
@@ -907,6 +960,9 @@ function PresencePanel({
         </AnimatedCard>
       </div>
 
+      {/* Articles : le calendrier de publication automatique pour la niche. */}
+      <ArticleCalendar profile={result.profile} createdAt={result.createdAt} locked={locked} />
+
       {wp.findings.length > 0 && (
         <AnimatedCard delay={0.15}>
           <h4 className="mb-3 font-semibold">{t("findingsTitle")}</h4>
@@ -1000,6 +1056,7 @@ function MapsPanel({
           <AnimatedScoreRing
             score={coherence.score}
             size={140}
+            sizeSm={112}
             stroke={12}
             label={t("scoreLabel")}
             trackColor="rgba(255,255,255,0.18)"
