@@ -119,8 +119,9 @@ export function AiOverview({
   /** Titre du constat : posé d'emblée, il annonce ce que la frappe va dérouler. */
   headline: string;
   blocks: OverviewBlock[];
-  cta: string;
-  ctaHref: string;
+  /** Appel à l'action final. Omis sur un rapport déjà ouvert : rien à débloquer. */
+  cta?: string;
+  ctaHref?: string;
 }) {
   const lengths = useMemo(() => blocks.map(blockLength), [blocks]);
   const offsets = useMemo(() => {
@@ -216,17 +217,19 @@ export function AiOverview({
         ))}
       </div>
 
-      <Link
-        href={ctaHref}
-        className={`mt-6 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-6 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-opacity duration-500 hover:bg-cta-hover ${
-          done ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      >
-        {cta}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </Link>
+      {cta && ctaHref && (
+        <Link
+          href={ctaHref}
+          className={`mt-6 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-6 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-opacity duration-500 hover:bg-cta-hover ${
+            done ? "opacity-100" : "pointer-events-none opacity-0"
+          }`}
+        >
+          {cta}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
+      )}
     </section>
   );
 }
