@@ -5,7 +5,7 @@ import { RotatingWord } from "./RotatingWord";
 import { GoogleMark } from "./GoogleMark";
 import { AiSearchSimulation } from "@/components/AiSearchSimulation";
 import { ROUTES } from "@/constants/routes";
-import { SUBSCRIPTION_PRICE, TRIAL } from "@/constants/plans";
+import { TRIAL } from "@/constants/plans";
 
 /** Les moteurs dont on parle en haut de page — logos servis depuis /public. */
 const ENGINES = [
@@ -67,10 +67,26 @@ export async function HomeHero() {
           </svg>
         </Link>
 
-        <p className="mt-4 text-xs text-muted">
-          {t("ctaNote", { price: TRIAL.activationPrice, monthly: SUBSCRIPTION_PRICE })}
+        {/* Aucun prix au-dessus du pli : la home vend l'essai, la page tarifs vend
+            l'abonnement. Ici, on lève le risque plutôt que d'annoncer un montant. */}
+        <p className="mt-4 flex items-center gap-2 text-xs text-graphite">
+          <span
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-obsidian text-white"
+            aria-hidden
+          >
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
+              <path
+                d="m5 12.5 4.5 4.5L19 7"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          {t("guaranteeMain")}
         </p>
-        <p className="mt-1 text-xs text-ash">{t("guarantee")}</p>
+        <p className="mt-1.5 text-xs text-ash">{t("guarantee")}</p>
       </div>
 
       {/* La conversation IA, jouée en boucle : la démonstration avant l'argument. */}

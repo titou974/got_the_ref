@@ -762,10 +762,10 @@
     ],
     "subtitle": "Soyez recommandé par les intelligences artificielles et par Google, sans équipe SEO ni ligne de code.",
     "cta": "Commencer l'essai de {days} jours",
-    "ctaNote": "{price} € d'activation, puis {monthly} €/mois. Résiliable avant la fin de l'essai.",
     "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
     "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
-    "scrollHint": "Analyser mon site"
+    "scrollHint": "Analyser mon site",
+    "guaranteeMain": "Si votre visibilité ne progresse pas sous 90 jours, vous êtes remboursé."
   },
   "sectors": {
     "eyebrow": "En croissance",
@@ -795,7 +795,19 @@
           "Requêtes détectées",
           "Prompts clients",
           "Concurrents"
-        ]
+        ],
+        "mock": {
+          "url": "votre-site.fr",
+          "pill": "analyse en profondeur",
+          "chips": [
+            "NICHE DÉTECTÉE",
+            "AUDIENCE CIBLE",
+            "CONCURRENTS",
+            "MENTIONS DANS LES RÉPONSES IA",
+            "PRÉSENCE EN LIGNE",
+            "AVIS & NOTORIÉTÉ"
+          ]
+        }
       },
       {
         "num": "02",
@@ -805,7 +817,29 @@
           "ChatGPT",
           "Gemini",
           "Perplexity"
-        ]
+        ],
+        "mock": {
+          "label": "Position mesurée",
+          "you": "Votre entreprise",
+          "engines": [
+            {
+              "name": "ChatGPT",
+              "rank": "2",
+              "others": [
+                "Studio Pixel",
+                "WebFactory"
+              ]
+            },
+            {
+              "name": "Gemini",
+              "rank": "1",
+              "others": [
+                "Atelier Déco",
+                "Maison & Objet"
+              ]
+            }
+          ]
+        }
       },
       {
         "num": "03",
@@ -815,7 +849,29 @@
           "llms.txt",
           "JSON-LD",
           "Citabilité"
-        ]
+        ],
+        "mock": {
+          "applied": "appliqué",
+          "impact": "Impact {value}/10",
+          "rows": [
+            {
+              "title": "Servir un fichier llms.txt",
+              "value": "9"
+            },
+            {
+              "title": "Données structurées LocalBusiness",
+              "value": "8"
+            },
+            {
+              "title": "Réécrire la balise title",
+              "value": "6"
+            },
+            {
+              "title": "Baliser la FAQ de la page d'accueil",
+              "value": "5"
+            }
+          ]
+        }
       },
       {
         "num": "04",
@@ -825,9 +881,19 @@
           "Score GEO",
           "Position",
           "Avis"
-        ]
+        ],
+        "mock": {
+          "scoreLabel": "Score GEO",
+          "before": "42",
+          "after": "71",
+          "note": "remesuré il y a 2 h",
+          "legend": "Chaque correction est vérifiée sur le terrain, pas seulement cochée."
+        }
       }
-    ]
+    ],
+    "prev": "Étape précédente",
+    "next": "Étape suivante",
+    "goTo": "Aller à l'étape {num}"
   },
   "features": {
     "eyebrow": "Ce que vous obtenez",
@@ -937,24 +1003,28 @@
     "contact": "Écrivez-nous",
     "items": [
       {
-        "q": "Je n'y connais rien en SEO, c'est un problème ?",
-        "a": "Non. L'analyse est automatique, et chaque correctif arrive avec un prompt prêt à coller dans votre IA — ou peut être confié à l'agence."
+        "q": "Je ne suis pas expert en SEO, c'est un problème ?",
+        "a": "Vous n'avez pas besoin de l'être. got_the_ref pilote votre stratégie SEO et GEO de bout en bout — analyse de votre marché, requêtes à viser, contenus, corrections techniques et suivi de votre visibilité dans les réponses IA. Vous donnez l'adresse de votre site, on s'occupe du reste."
       },
       {
         "q": "En combien de temps voit-on des résultats ?",
-        "a": "Les correctifs techniques se voient en quelques jours. La position dans les réponses IA bouge plutôt sur quelques semaines, le temps que les moteurs repassent sur votre site."
+        "a": "Les corrections techniques se voient en quelques jours. Les premières vraies améliorations de position arrivent généralement au bout de deux à trois mois : le référencement se cumule, et les contenus continuent d'amener des visiteurs longtemps après avoir été publiés."
       },
       {
-        "q": "Comment fonctionne l'essai de {days} jours ?",
-        "a": "{price} € d'activation ouvrent l'accès complet pendant {days} jours. Sans résiliation avant la fin, l'abonnement à {monthly} €/mois démarre. Résiliable à tout moment."
+        "q": "Comment fonctionne le réseau de citations ?",
+        "a": "Vous rejoignez un réseau de sites de votre secteur, qui se citent mutuellement. Plutôt que du démarchage manuel, vos mentions sont placées naturellement à l'intérieur de vrais articles, sur des sites pertinents — et votre site fait de même pour les autres. Plus le réseau grandit, plus il profite à chacun."
+      },
+      {
+        "q": "Google pénalise-t-il les contenus écrits par une IA ?",
+        "a": "Non. Google pénalise le contenu de mauvaise qualité, qu'il soit écrit par une IA ou par un humain. Sa position officielle est publiée sur son blog dédié à la recherche."
+      },
+      {
+        "q": "Quels types de contenus produisez-vous ?",
+        "a": "Des articles documentés et sourcés, écrits dans le ton de votre marque et calés sur votre clientèle : guides pratiques, articles explicatifs, sélections et comparatifs, chacun aligné sur l'intention de la requête visée — informationnelle, commerciale ou transactionnelle."
       },
       {
         "q": "Est-ce que ça marche avec ma plateforme ?",
         "a": "Oui. got_the_ref lit votre site depuis l'extérieur, comme le ferait une IA : aucun plugin, aucune installation, aucun accès à votre code."
-      },
-      {
-        "q": "Quels moteurs sont mesurés ?",
-        "a": "ChatGPT et Gemini sont interrogés directement sur votre marché. Perplexity, Claude et les AI Overviews de Google s'appuient sur les mêmes signaux de citabilité, mesurés eux aussi."
       },
       {
         "q": "Et pour un commerce physique ?",
