@@ -6,7 +6,6 @@ import { Footer } from "@/components/Footer";
 import { AnalysisCheckoutButton } from "@/components/AnalysisCheckoutButton";
 import { BrandProof } from "@/components/BrandProof";
 import { PlanCard } from "@/components/pricing/PlanCard";
-import { PricingComparison } from "@/components/pricing/PricingComparison";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
 import { TRIAL } from "@/constants/plans";
@@ -70,18 +69,6 @@ export default async function TarifsPage({ searchParams }: Props) {
             }
           />
         </div>
-
-        {/* Le comparatif : ce que coûte l'alternative, face à ce qu'on propose. */}
-        <PricingComparison
-          cta={
-            <Link
-              href={ROUTES.home}
-              className="inline-flex cursor-pointer items-center justify-center rounded-full bg-cta px-6 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-            >
-              {t("compare.cta")}
-            </Link>
-          }
-        />
 
         <p className="mt-10 text-sm text-muted">{t("secureNote", { days: TRIAL.days })}</p>
       </div>

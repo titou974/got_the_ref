@@ -52,11 +52,17 @@ function Check() {
 export function PlanCard({
   cta,
   showAgents = true,
+  compact = false,
+  ctaNote,
   className = "",
 }: {
   /** Bouton d'action, rendu par le parent (checkout Stripe ou lien). */
   cta: ReactNode;
   showAgents?: boolean;
+  /** Version resserrée : la carte doit tenir dans un écran quand elle est seule. */
+  compact?: boolean;
+  /** Remplace la note sous le bouton (le CTA n'est pas le même partout). */
+  ctaNote?: string;
   className?: string;
 }) {
   const t = useTranslations("pricing");
@@ -128,7 +134,11 @@ export function PlanCard({
           </span>
         </div>
 
-        <section className="rounded-[36px] bg-obsidian p-6 pt-8 text-white shadow-[var(--shadow-md)] sm:p-9 sm:pt-10">
+        <section
+          className={`rounded-[36px] bg-obsidian text-white shadow-[var(--shadow-md)] ${
+            compact ? "p-6 pt-7 sm:p-7 sm:pt-8" : "p-6 pt-8 sm:p-9 sm:pt-10"
+          }`}
+        >
           <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
             {t("plan.eyebrow")}
           </p>
@@ -136,8 +146,12 @@ export function PlanCard({
           <p className="mt-2 max-w-md text-sm leading-relaxed text-white/60">{t("plan.tagline")}</p>
 
           {/* Ce qu'on paie aujourd'hui, en grand ; ce qui viendra ensuite, dessous. */}
-          <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-display text-5xl font-bold tabular-nums tracking-tight sm:text-6xl">
+          <div className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${compact ? "mt-4" : "mt-6"}`}>
+            <span
+              className={`font-display font-bold tabular-nums tracking-tight ${
+                compact ? "text-4xl sm:text-5xl" : "text-5xl sm:text-6xl"
+              }`}
+            >
               {euros(TRIAL.activationPrice)}
             </span>
             <span className="text-base text-white/50">{t("todayLabel")}</span>
@@ -146,7 +160,7 @@ export function PlanCard({
             {t("serverFeeNote", { days: TRIAL.days })}
           </p>
 
-          <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+          <div className={`flex flex-wrap items-baseline gap-x-2.5 gap-y-1 ${compact ? "mt-4" : "mt-5"}`}>
             <span className="text-sm text-white/50">{t("thenLabel")}</span>
             {cycle === "yearly" && (
               <span className="text-base tabular-nums text-white/35 line-through">
@@ -164,12 +178,14 @@ export function PlanCard({
           </p>
           <p className="mt-1 text-xs text-white/40">{t("vat")}</p>
 
-          <div className="mt-7">
+          <div className={compact ? "mt-5" : "mt-7"}>
             {cta}
-            <p className="mt-2.5 text-center text-xs text-white/50">{t("plan.ctaNote")}</p>
+            <p className="mt-2.5 text-center text-xs text-white/50">
+              {ctaNote ?? t("plan.ctaNote")}
+            </p>
           </div>
 
-          <ul className="mt-7 space-y-2.5">
+          <ul className={`space-y-2.5 ${compact ? "mt-6" : "mt-7"}`}>
             {features.map((f) => (
               <li key={f} className="flex items-start gap-2.5 text-sm text-white/85">
                 <Check />

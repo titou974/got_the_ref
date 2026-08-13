@@ -10,7 +10,7 @@ import { SITE } from "@/constants/site";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
 import { analysisCheckoutSchema, checkoutSchema } from "./schemas";
-import { ANALYSIS_CHECKOUT_KIND } from "./unlock";
+import { ANALYSIS_CHECKOUT_KIND, TRIAL_CHECKOUT_KIND } from "./unlock";
 import { CLAIM_METADATA_KEY, newClaimToken, rememberClaim } from "./claim";
 
 /**
@@ -141,6 +141,63 @@ export const createAnalysisCheckoutAction = actionClient
 
     return { url: session.url };
   });
+
+/**
+ * Souscription à l'essai depuis la carte tarif, **sans compte ni analyse**.
+ * C'est le chemin court : le visiteur clique sur le prix et arrive sur Stripe.
+ *
+ * Même montage que la souscription depuis un rapport — abonnement en essai plus
+ * les frais d'activation facturés tout de suite — à ceci près qu'il n'y a rien
+ * à débloquer au retour : la page de succès propose alors la création du compte,
+ * puis l'espace client.
+ */
+export const createTrialCheckoutAction = actionClient.action(async () => {
+  const user = await getCurrentUser();
+  const stripe = getStripe();
+  const price = await resolvePriceId("pro");
+
+  // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
+  // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
+  const claimToken = newClaimToken();
+  await rememberClaim(claimToken);
+
+  const metadata = {
+    kind: TRIAL_CHECKOUT_KIND,
+    [CLAIM_METADATA_KEY]: claimToken,
+    ...(user ? { userId: user.id } : {}),
+  };
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    line_items: [
+      { price, quantity: 1 },
+      {
+        quantity: 1,
+        price_data: {
+          currency: "eur",
+          unit_amount: TRIAL.activationPrice * 100,
+          product_data: {
+            name: `Activation de l'essai got_the_ref (${TRIAL.days} jours)`,
+          },
+        },
+      },
+    ],
+    ...(user?.stripeCustomerId
+      ? { customer: user.stripeCustomerId }
+      : { customer_email: user?.email }),
+    success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${SITE.url}${ROUTES.pricing}?checkout=cancel`,
+    metadata,
+    subscription_data: { metadata, trial_period_days: TRIAL.days },
+    allow_promotion_codes: true,
+  });
+
+  if (!session.url) {
+    throw new AppError("Le paiement est momentanément indisponible.", "STRIPE_NO_URL", 502);
+  }
+
+  return { url: session.url };
+});
 
 /**
  * Ouvre le portail de facturation Stripe.

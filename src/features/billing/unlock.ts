@@ -6,6 +6,13 @@ import { prisma } from "@/lib/prisma";
 /** Marqueur porté par les sessions Stripe qui débloquent une analyse. */
 export const ANALYSIS_CHECKOUT_KIND = "analysis_unlock";
 
+/**
+ * Marqueur des sessions ouvertes sans analyse : l'essai souscrit directement
+ * depuis la carte tarif. Rien à débloquer — le paiement ouvre un compte, pas un
+ * rapport — mais la session doit rester reconnaissable au retour de Stripe.
+ */
+export const TRIAL_CHECKOUT_KIND = "trial_start";
+
 /** Identifiants extraits d'une session Stripe réglée. */
 type SessionIdentity = {
   analysisId: string;

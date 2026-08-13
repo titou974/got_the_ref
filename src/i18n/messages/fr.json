@@ -83,7 +83,8 @@
     "quoteAuthor": "Valérie H. · avis Google Maps · ★★★★★",
     "resultBody": "Site clair, fiche Google cohérente, avis nombreux : c'est exactement ce que les IA lisent avant de citer un commerce. got_the_ref mesure ces signaux sur votre site et vous dit lesquels vous manquent.",
     "cta": "Analyser mon commerce gratuitement",
-    "adopters": "Adopté par {count} entreprises françaises"
+    "adopters": "Adopté par {count} entreprises françaises",
+    "cocorico": "Cocoricooo !"
   },
   "analyzeForm": {
     "placeholder": "votre-site.fr",
@@ -466,7 +467,11 @@
     "skip": "Voir mon rapport tout de suite",
     "pendingTitle": "Paiement en cours de confirmation",
     "pendingBody": "Votre paiement n'est pas encore confirmé par Stripe. Patientez quelques secondes puis rechargez cette page — si le problème persiste, contactez-nous.",
-    "backHome": "← Retour à l'accueil"
+    "backHome": "← Retour à l'accueil",
+    "trialSubtitle": "Créez votre mot de passe pour ouvrir votre espace et lancer votre première analyse.",
+    "trialExistingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous pour retrouver votre abonnement.",
+    "trialOtherDeviceSubtitle": "Votre essai est ouvert. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous.",
+    "trialSkip": "Retour à l'accueil"
   },
   "pricing": {
     "metaTitle": "Tarifs",
@@ -496,7 +501,9 @@
         "Contenu, notoriété et cohérence Google Maps suivis dans le temps",
         "Aucune compétence technique requise"
       ],
-      "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique."
+      "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
+      "ctaStripe": "Démarrer l'essai pour {price}",
+      "ctaStripeNote": "Sans engagement · résiliable avant la fin de l'essai"
     },
     "agents": {
       "title": "Agents en service",
@@ -543,8 +550,7 @@
           "Corrections appliquées puis revérifiées par les agents",
           "Votre stratégie et vos données restent chez vous"
         ]
-      },
-      "cta": "Analyser mon site gratuitement"
+      }
     },
     "todayLabel": "aujourd'hui",
     "thenLabel": "puis",
@@ -1418,9 +1424,48 @@
     "allDetails": "Voir le détail des tarifs"
   },
   "homeDemoCta": {
-    "eyebrow": "Démo",
-    "title": "Prêt à faire venir vos clients depuis les IA ?",
-    "subtitle": "Réservez une démo de 30 minutes : on regarde votre visibilité sur ChatGPT, Gemini et Perplexity ensemble, et on vous dit quoi corriger en premier.",
+    "title": "Réservez votre démo",
     "button": "Réserver ma démo"
+  },
+  "audiences": {
+    "eyebrow": "À qui nous nous adressons",
+    "title": "Deux façons d'être trouvé, un même moteur",
+    "subtitle": "Que vos clients vous cherchent depuis leur canapé ou à trois rues de chez vous, la question posée à l'IA est la même : « qui me recommandez-vous ? »",
+    "online": {
+      "title": "Commerces en ligne, SaaS et médias",
+      "body": "Vos clients demandent une recommandation à ChatGPT avant d'ouvrir Google. On travaille votre site pour qu'il devienne la source citée — pas celle qu'on cite après.",
+      "caption": "Sources de la réponse",
+      "query": "« Quel outil pour suivre ma visibilité IA ? »",
+      "sources": [
+        "comparateur-secteur.fr",
+        "blog-du-marche.com",
+        "annuaire-pro.fr"
+      ],
+      "you": "votre-site.fr",
+      "badge": "Cité en source n° 1",
+      "points": [
+        "E-commerce",
+        "SaaS & applications",
+        "Médias & créateurs"
+      ]
+    },
+    "local": {
+      "title": "Commerces et artisans de quartier",
+      "body": "Un client cherche « près d'ici » et l'IA répond par un nom. On aligne votre fiche, vos avis et vos pages pour que ce nom soit le vôtre, avant vos voisins de rue.",
+      "caption": "Réponse locale · votre zone",
+      "query": "« Où manger des fruits de mer aux Sables-d'Olonne ? »",
+      "you": "Votre commerce",
+      "competitors": [
+        "Concurrent",
+        "Concurrent",
+        "Concurrent"
+      ],
+      "badge": "Recommandé en premier",
+      "points": [
+        "Restaurants & hôtels",
+        "Artisans & BTP",
+        "Santé & bien-être"
+      ]
+    }
   }
 }

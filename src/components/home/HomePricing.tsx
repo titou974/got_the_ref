@@ -1,21 +1,28 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { BrandProof } from "@/components/BrandProof";
+import { TrialCheckoutButton } from "@/components/TrialCheckoutButton";
 import { PlanCard } from "@/components/pricing/PlanCard";
 import { ROUTES } from "@/constants/routes";
+import { TRIAL } from "@/constants/plans";
+
+/** Montant formaté à la française, sans décimales (20 000 €). */
+const euros = (amount: number) => `${amount.toLocaleString("fr-FR")} €`;
 
 /**
  * Le tarif, en bas de home : après la démonstration, une seule carte, la même
  * que sur la page tarifs — mêmes onglets, même garantie, même montant du jour.
- * Le roster d'agents reste à la page tarifs : ici, la home a déjà montré le
- * produit, et la carte doit se lire d'un écran.
+ *
+ * Version resserrée, et bouton qui part droit sur Stripe : à ce stade de la
+ * page, le visiteur a déjà vu le produit tourner ; le renvoyer vers l'analyse
+ * gratuite serait le faire reculer d'un cran.
  */
 export async function HomePricing() {
   const t = await getTranslations("homePricing");
   const tp = await getTranslations("pricing");
 
   return (
-    <section id="tarif" className="mx-auto w-full max-w-3xl scroll-mt-8 px-5 py-16 sm:py-20">
+    <section id="tarif" className="mx-auto w-full max-w-xl scroll-mt-8 px-5 py-16 sm:py-20">
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("eyebrow")}</p>
         <h2 className="mt-2 text-balance text-3xl font-bold leading-tight sm:text-4xl">
@@ -27,14 +34,13 @@ export async function HomePricing() {
 
       <PlanCard
         className="mt-10"
+        compact
         showAgents={false}
+        ctaNote={tp("plan.ctaStripeNote")}
         cta={
-          <Link
-            href="#analyser"
-            className="block w-full cursor-pointer rounded-full bg-white py-3 text-center font-medium text-obsidian transition-colors duration-200 hover:bg-white/90"
-          >
-            {tp("plan.cta")}
-          </Link>
+          <TrialCheckoutButton
+            label={tp("plan.ctaStripe", { price: euros(TRIAL.activationPrice) })}
+          />
         }
       />
 

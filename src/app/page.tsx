@@ -7,12 +7,14 @@ import { HomeHero } from "@/components/home/HomeHero";
 import { SectorsMarquee } from "@/components/home/SectorsMarquee";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { FeatureCards } from "@/components/home/FeatureCards";
+import { Audiences } from "@/components/home/Audiences";
 import { QueryChips } from "@/components/home/QueryChips";
 import { FreeAuditSection } from "@/components/home/FreeAuditSection";
 import { ExamplesSection } from "@/components/home/ExamplesSection";
 import { CitationNetwork } from "@/components/home/CitationNetwork";
 import { RankAndMentions } from "@/components/home/RankAndMentions";
 import { HomePricing } from "@/components/home/HomePricing";
+import { PricingComparison } from "@/components/pricing/PricingComparison";
 import { DemoCtaSection } from "@/components/home/DemoCtaSection";
 import { Faq } from "@/components/home/Faq";
 import { getTranslations } from "next-intl/server";
@@ -20,7 +22,7 @@ import { getTranslations } from "next-intl/server";
 /**
  * La home suit une progression volontaire : promesse → secteurs → méthode →
  * résultats → produit → analyse gratuite → exemples → preuves → réseau →
- * Google et assistants → tarif → démo → questions.
+ * Google et assistants → tarif → comparatif agence → démo → questions.
  *
  * Le prix n'arrive qu'à la fin, une fois la démonstration faite ; la démo prend
  * le relais juste après, pour qui préfère en parler plutôt que souscrire.
@@ -47,6 +49,9 @@ export default async function Home() {
       {/* Le produit, carte par carte */}
       <FeatureCards />
 
+      {/* Les deux publics : en ligne et de quartier */}
+      <Audiences />
+
       {/* Les requêtes suivies : ce que got_the_ref écoute vraiment */}
       <QueryChips />
 
@@ -62,8 +67,11 @@ export default async function Home() {
       <CitationNetwork />
       <RankAndMentions />
 
-      {/* Le tarif d'abord, la démo ensuite : on chiffre, puis on propose d'en parler. */}
+      {/* Le tarif d'abord, ce qu'il évite ensuite, la démo pour finir. */}
       <HomePricing />
+      <div className="mx-auto w-full max-w-5xl px-5 pb-4">
+        <PricingComparison />
+      </div>
       <DemoCtaSection />
 
       <Faq />
