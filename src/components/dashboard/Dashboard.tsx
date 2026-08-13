@@ -11,6 +11,8 @@ import { DemoCta } from "@/components/DemoCta";
 import { ROUTES } from "@/constants/routes";
 import { PaidReportCard } from "./PaidReportCard";
 import { UnlockPricingCta } from "./UnlockPricingCta";
+import { AnimatedCard } from "./AnimatedCard";
+import Link from "next/link";
 
 export async function Dashboard({
   result,
@@ -88,7 +90,9 @@ export async function Dashboard({
           <p className="text-xs font-semibold uppercase tracking-wider text-steel">
             {t("sectionEyebrow")}
           </p>
-          <h2 className="mt-1 text-xl font-bold sm:text-2xl">{t("sectionTitle")}</h2>
+          <h2 className="mt-1 text-xl font-bold sm:text-2xl">
+            {t("sectionTitle")}
+          </h2>
         </div>
         <ReportTabs
           result={result}
@@ -100,15 +104,20 @@ export async function Dashboard({
 
       {/* CTA */}
       <AnimatedCard className="text-center">
-        <h3 className="text-xl font-bold">{td("ctaAnotherTitle")}</h3>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted">{td("ctaAnotherSubtitle")}</p>
+        <h3 className="text-xl font-bold">{t("ctaAnotherTitle")}</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+          {t("ctaAnotherSubtitle")}
+        </p>
         <div className="mx-auto mt-5 max-w-lg">
           <UrlAnalyzeForm size="md" />
         </div>
         <p className="mt-4 text-sm text-muted">
-          {td("ctaUnlimited")}{" "}
-          <Link href={ROUTES.pricing} className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian">
-            {tc("discoverOffers")}
+          {t("ctaUnlimited")}{" "}
+          <Link
+            href={ROUTES.pricing}
+            className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian"
+          >
+            {t("discoverOffers")}
           </Link>
         </p>
       </AnimatedCard>
