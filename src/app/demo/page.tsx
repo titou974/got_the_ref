@@ -4,6 +4,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BookCallButton } from "@/components/BookCallButton";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
+import { Stars } from "@/components/BrandProof";
 import { ROUTES } from "@/constants/routes";
 import { SITE } from "@/constants/site";
 
@@ -24,19 +25,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 type Step = { step: string; title: string; body: string };
-
-/** Cinq étoiles pleines, dessinées plutôt qu'importées : une image de moins à charger. */
-function Stars() {
-  return (
-    <div className="flex gap-0.5" aria-hidden>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <svg key={i} width="15" height="15" viewBox="0 0 20 20" fill="#f5a623">
-          <path d="M10 1.6l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7 1-5.6-4.1-3.9 5.6-.8z" />
-        </svg>
-      ))}
-    </div>
-  );
-}
 
 function Check() {
   return (

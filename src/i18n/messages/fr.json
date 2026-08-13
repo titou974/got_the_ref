@@ -82,7 +82,8 @@
     "quote": "« Nous étions de passage aux Sables d'Olonne et n'avions aucune référence de bon restaurant de poisson. Après une demande ChatGPT, nous nous sommes retrouvés là :-) »",
     "quoteAuthor": "Valérie H. · avis Google Maps · ★★★★★",
     "resultBody": "Site clair, fiche Google cohérente, avis nombreux : c'est exactement ce que les IA lisent avant de citer un commerce. got_the_ref mesure ces signaux sur votre site et vous dit lesquels vous manquent.",
-    "cta": "Analyser mon commerce gratuitement"
+    "cta": "Analyser mon commerce gratuitement",
+    "adopters": "Adopté par {count} entreprises françaises"
   },
   "analyzeForm": {
     "placeholder": "votre-site.fr",
@@ -472,7 +473,7 @@
     "eyebrow": "Abonnement",
     "headingBefore": "Des agents qui travaillent votre visibilité IA ",
     "headingHighlight": "en continu",
-    "subtitle": "L'analyse est gratuite. L'abonnement ouvre tout got_the_ref et met des agents spécialisés sur votre site : ils mesurent, corrigent et remesurent votre position sur ChatGPT, Gemini et Google, sans que vous ayez à toucher une ligne de code.",
+    "subtitle": "L'analyse est gratuite. L'abonnement met des agents spécialisés sur votre site : ils mesurent votre position sur ChatGPT, Gemini et Google, corrigent ce qui vous empêche d'être cité, puis remesurent — sans que vous ayez à toucher une ligne de code.",
     "quotaNote": "Vous avez atteint la limite d'analyses gratuites. Réessayez plus tard ou parlons-en directement.",
     "perMonth": "/mois",
     "perYear": " par an",
@@ -494,7 +495,8 @@
         "Plan d'action priorisé et prompts solution prêts à coller",
         "Contenu, notoriété et cohérence Google Maps suivis dans le temps",
         "Aucune compétence technique requise"
-      ]
+      ],
+      "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique."
     },
     "agents": {
       "title": "Agents en service",
@@ -515,56 +517,46 @@
       ],
       "note": "Les agents repassent sur votre site en continu : chaque correction est remesurée, pas seulement recommandée."
     },
-    "agency": {
-      "eyebrow": "Le repère",
-      "name": "Agence SEO / référencement IA",
-      "description": "Le budget d'un accompagnement classique, pour le même objectif : sortir dans les réponses des IA et sur Google.",
-      "notForSale": "Pour comparaison — got_the_ref ne vend pas cette prestation.",
-      "limits": [
-        "Audit initial de quatre à six semaines avant le premier livrable",
-        "Un rapport par mois, figé entre deux points",
-        "Corrections à réimplémenter par vos soins ou par un développeur",
-        "Engagement de six à douze mois, souvent avec frais de setup",
-        "Expertise généraliste, rarement entraînée sur votre niche"
-      ]
-    },
     "compare": {
-      "title": "Ce que change la différence de modèle",
-      "criterion": "Critère",
-      "visiaColumn": "got_the_ref",
-      "agencyColumn": "Agence classique",
-      "rows": [
-        {
-          "label": "Pour démarrer",
-          "visia": "1 €",
-          "agency": "Devis, puis frais de setup"
-        },
-        {
-          "label": "Premier résultat",
-          "visia": "Immédiat",
-          "agency": "4 à 6 semaines"
-        },
-        {
-          "label": "Fréquence d'analyse",
-          "visia": "En continu",
-          "agency": "1 rapport par mois"
-        },
-        {
-          "label": "Compétence technique requise",
-          "visia": "Aucune",
-          "agency": "Aller-retours avec un développeur"
-        },
-        {
-          "label": "Engagement",
-          "visia": "Résiliable à tout moment",
-          "agency": "6 à 12 mois"
-        },
-        {
-          "label": "Tarif",
-          "visia": "79 €/mois",
-          "agency": "20 000 – 24 000 €/an"
-        }
-      ]
+      "title": "Réfléchissez à deux fois avant de payer une agence SEO",
+      "subtitle": "Même objectif — sortir dans les réponses des IA et sur Google. Deux façons de le financer.",
+      "costLabel": "Coût minimal",
+      "perYear": " par an",
+      "agency": {
+        "name": "Agence SEO",
+        "budget": "Au moins {price} par mois, hors frais de setup",
+        "points": [
+          "Engagement de six à douze mois",
+          "Quatre à six semaines avant le premier livrable",
+          "Un rapport par mois, figé entre deux points",
+          "Corrections à réimplémenter par vos soins ou par un développeur",
+          "Vous ne savez pas qui travaille réellement sur votre site"
+        ]
+      },
+      "ours": {
+        "name": "got_the_ref",
+        "trial": "{days} jours d'accès complet pour {price}, puis {monthly}/mois",
+        "points": [
+          "Résiliable à tout moment, sans frais de setup",
+          "Premier constat immédiat, analyses illimitées",
+          "Vos positions sur ChatGPT et Gemini remesurées en continu",
+          "Corrections appliquées puis revérifiées par les agents",
+          "Votre stratégie et vos données restent chez vous"
+        ]
+      },
+      "cta": "Analyser mon site gratuitement"
+    },
+    "todayLabel": "aujourd'hui",
+    "thenLabel": "puis",
+    "serverFeeNote": "Frais de serveur IA pour vos {days} jours d'accès complet. L'abonnement ne démarre qu'ensuite.",
+    "guaranteeBadge": "Remboursé si aucun résultat sous {days} jours",
+    "cycle": {
+      "label": "Rythme de facturation",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "discount": "-{pct} %",
+      "monthlyTerms": "Facturé chaque mois · résiliable à tout moment",
+      "yearlyTerms": "Facturé à l'année, affiché par mois · engagement de douze mois"
     }
   },
   "agency": {
@@ -1418,5 +1410,17 @@
         "Ouvert à l'année, terrasse face au port."
       ]
     }
+  },
+  "homePricing": {
+    "eyebrow": "Tarif",
+    "title": "Un seul abonnement, tous les moteurs",
+    "subtitle": "Pas de palier, pas d'option : l'accès complet à got_the_ref, et des agents qui travaillent votre visibilité en continu.",
+    "allDetails": "Voir le détail des tarifs"
+  },
+  "homeDemoCta": {
+    "eyebrow": "Démo",
+    "title": "Prêt à faire venir vos clients depuis les IA ?",
+    "subtitle": "Réservez une démo de 30 minutes : on regarde votre visibilité sur ChatGPT, Gemini et Perplexity ensemble, et on vous dit quoi corriger en premier.",
+    "button": "Réserver ma démo"
   }
 }
