@@ -206,6 +206,15 @@ h1, h2, h3, h4, h5 {
   animation: spin-slow 8s linear infinite;
 }
 
+/* Traits du réseau de citations : le pointillé défile, le maillage paraît vivant. */
+@keyframes dash-flow {
+  to { stroke-dashoffset: -32; }
+}
+.net-edge {
+  stroke-dasharray: 2 6;
+  animation: dash-flow 3.2s linear infinite;
+}
+
 /* Carrousel orbital des plateformes : l'anneau tourne, chaque logo tourne en
    sens inverse à la même vitesse — il reste donc droit tout du long. */
 .orbit-ring {
@@ -257,7 +266,7 @@ h1, h2, h3, h4, h5 {
 
 @media (prefers-reduced-motion: reduce) {
   .thinking-dot, .shimmer, .caret::after, .animate-spin-slow, .sweep::before,
-  .orbit-ring, .orbit-badge {
+  .orbit-ring, .orbit-badge, .net-edge {
     animation: none !important;
   }
   .card-cal { transition: none !important; }

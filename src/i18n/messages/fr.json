@@ -380,7 +380,9 @@
     "clicks": "Clics",
     "impressions": "Impressions",
     "position": "Position moy.",
-    "illustrativeNote": "Progressions et témoignages présentés à titre d'illustration, hors La Cotriade. Ils seront remplacés par les résultats et les avis de nos clients, publiés avec leur accord."
+    "illustrativeNote": "Progressions et témoignages présentés à titre d'illustration, hors La Cotriade. Ils seront remplacés par les résultats et les avis de nos clients, publiés avec leur accord.",
+    "chartMarker": "got_the_ref activé",
+    "chartCaption": "Courbe de démonstration : le repère marque la mise en place."
   },
   "freeReport": {
     "eyebrow": "Constat",
@@ -928,105 +930,6 @@
     "titleAfter": "recommandent votre site ?",
     "subtitle": "Collez votre adresse : vous obtenez votre score et le constat en moins de deux minutes, sans carte bancaire."
   },
-  "reportExample": {
-    "eyebrow": "Exemple",
-    "title": "Un rapport écrit pour votre site, pas un modèle",
-    "subtitle": "On part de votre marché, de vos concurrents et de vos vraies requêtes — le même rapport n'aurait aucun sens pour un autre site.",
-    "tailoredFor": "Comment on a calé ce rapport pour",
-    "domain": "lacotriade.fr",
-    "blocks": [
-      {
-        "num": "1",
-        "title": "Secteur & marché détectés",
-        "items": [
-          "Restaurant de fruits de mer",
-          "Les Sables-d'Olonne",
-          "Clientèle de passage"
-        ]
-      },
-      {
-        "num": "2",
-        "title": "Concurrents identifiés",
-        "items": [
-          "Le Quai des Saveurs",
-          "La Table du Port",
-          "Chez Marcel"
-        ]
-      },
-      {
-        "num": "3",
-        "title": "Requêtes suivies",
-        "items": [
-          "où manger du poisson frais",
-          "meilleur restaurant du port",
-          "restaurant vue mer"
-        ]
-      }
-    ],
-    "checklistTitle": "Pensé pour la citation IA",
-    "checklistBody": "Vos pages sont structurées pour que ChatGPT, Gemini et Perplexity puissent les trouver, les citer et vous recommander — pas seulement vous mentionner vaguement.",
-    "checks": [
-      "Réponse dès la première phrase",
-      "Sources crédibles",
-      "Structure de titres nette",
-      "Données structurées JSON-LD",
-      "Fichier llms.txt servi en 200",
-      "Robots IA autorisés",
-      "Balises méta optimisées",
-      "Textes alternatifs d'images",
-      "Liens internes",
-      "FAQ balisée",
-      "Avis clients affichés",
-      "Connexion HTTPS"
-    ],
-    "stats": [
-      {
-        "label": "Points vérifiés",
-        "value": "32"
-      },
-      {
-        "label": "Moteurs interrogés",
-        "value": "2"
-      },
-      {
-        "label": "Concurrents comparés",
-        "value": "8"
-      },
-      {
-        "label": "Correctifs priorisés",
-        "value": "14"
-      }
-    ]
-  },
-  "googleRank": {
-    "eyebrow": "Et Google dans tout ça",
-    "title": "Ce qui vous rend citable rend aussi vos pages lisibles",
-    "subtitle": "Structure claire, données propres, réponses nettes : les IA et Google lisent les mêmes signaux. Les deux courbes montent ensemble.",
-    "stats": [
-      {
-        "label": "Clics",
-        "value": "12,5 k"
-      },
-      {
-        "label": "Impressions",
-        "value": "788 k"
-      },
-      {
-        "label": "CTR moyen",
-        "value": "1,1 %"
-      },
-      {
-        "label": "Position moyenne",
-        "value": "9,3"
-      }
-    ],
-    "caption": "Aperçu de suivi Search Console — données de démonstration."
-  },
-  "aiMentions": {
-    "eyebrow": "Mentions IA",
-    "title": "Voyez-vous citer par les assistants",
-    "subtitle": "Les IA lisent votre site, puis vous recommandent quand un client pose la question. C'est exactement ce que got_the_ref mesure."
-  },
   "faq": {
     "eyebrow": "FAQ",
     "title": "Questions fréquentes",
@@ -1058,5 +961,355 @@
         "a": "C'est le cœur du produit. Avec votre fiche Google Maps, on mesure la cohérence fiche ↔ site, vos avis et votre position locale face aux concurrents de votre ville."
       }
     ]
+  },
+  "examples": {
+    "eyebrow": "Exemples",
+    "title": "Un contenu qui parle comme vous",
+    "subtitle": "On reprend votre univers de marque, on met en avant ce que vous vendez, et on écrit des pages qui se classent et se font citer — sans l'odeur du texte généré.",
+    "sites": [
+      {
+        "domain": "lacotriade.fr",
+        "colors": [
+          "#0B3C49",
+          "#1B7F79",
+          "#E8F3F1",
+          "#F7FBFA"
+        ],
+        "voice": [
+          "chaleureux, ancré local",
+          "cuisine de la marée",
+          "français simple"
+        ],
+        "offers": [
+          "Menu du jour",
+          "Plateaux de fruits de mer",
+          "Privatisation",
+          "Réservation en ligne"
+        ],
+        "article": {
+          "date": "4 mars 2026",
+          "readTime": "7 MIN DE LECTURE",
+          "category": "Restaurant · Vendée",
+          "title": "Où manger des fruits de mer aux Sables-d'Olonne : le guide 2026",
+          "intro": "Aux Sables-d'Olonne, la qualité d'un plateau de fruits de mer se joue avant la cuisine : à la criée, le matin même. C'est ce qui sépare une table de passage d'une adresse où l'on revient.",
+          "beforeList": "Trois choses à savoir avant d'aller plus loin :",
+          "bullets": [
+            {
+              "strong": "La fraîcheur se lit sur la carte.",
+              "text": "Une carte qui change chaque jour signale un approvisionnement à la marée. Une carte figée toute l'année signale l'inverse."
+            },
+            {
+              "strong": "L'origine doit être affichée.",
+              "text": "Huîtres de Vendée, homard de casier, criée des Sables : un restaurant qui nomme ses provenances les assume."
+            },
+            {
+              "strong": "La saison commande.",
+              "text": "Les coquillages ont leurs mois. Un plateau de septembre n'a rien à voir avec un plateau de mars, et c'est tant mieux."
+            }
+          ],
+          "takeawaysLead": "Un bon plateau tient à trois choses : la provenance, la saison et la rotation. Le cadre, le service et la vue viennent après.",
+          "tableRows": [
+            [
+              "Provenance",
+              "Criée des Sables-d'Olonne, huîtres de la baie de Bourgneuf, homard de casier."
+            ],
+            [
+              "Saison",
+              "Coquillages d'octobre à avril ; crustacés toute l'année, au meilleur de leur chair l'été."
+            ],
+            [
+              "Rotation",
+              "Une carte qui bouge chaque matin reste le meilleur indicateur de fraîcheur."
+            ],
+            [
+              "La Cotriade",
+              "Table du port ouverte à l'année, carte calée sur l'arrivage du jour, réservation en ligne."
+            ]
+          ],
+          "toc": [
+            "Ce qui fait un bon plateau de fruits de mer",
+            "Les provenances vendéennes, criée par criée",
+            "Quelle saison pour quel coquillage",
+            "Comment lire une carte de restaurant de poisson",
+            "Réserver au bon moment, même en haute saison"
+          ]
+        }
+      },
+      {
+        "domain": "atelier-lubin.fr",
+        "colors": [
+          "#3E2A18",
+          "#B07D4B",
+          "#F0E4D4",
+          "#FBF7F2"
+        ],
+        "voice": [
+          "artisanal, précis",
+          "vocabulaire du bois",
+          "conseil sans jargon"
+        ],
+        "offers": [
+          "Cuisine sur mesure",
+          "Escaliers",
+          "Bibliothèques",
+          "Devis en 48 h"
+        ],
+        "article": {
+          "date": "18 février 2026",
+          "readTime": "6 MIN DE LECTURE",
+          "category": "Menuiserie · Sur mesure",
+          "title": "Quel bois choisir pour une cuisine sur mesure qui dure vingt ans",
+          "intro": "Le choix de l'essence décide de tout : la tenue à l'humidité, la réparabilité, et le budget. Un chêne massif et un contrecollé ne vieillissent pas de la même façon dans une cuisine.",
+          "beforeList": "Trois repères avant de trancher :",
+          "bullets": [
+            {
+              "strong": "L'humidité est l'ennemi numéro un.",
+              "text": "Sous l'évier et derrière la plaque, seule une essence stable et une finition adaptée tiennent la distance."
+            },
+            {
+              "strong": "Le massif se répare, le panneau se remplace.",
+              "text": "Une façade en chêne se ponce et se reprend ; un stratifié abîmé se change entièrement."
+            },
+            {
+              "strong": "Le prix se juge au mètre linéaire posé.",
+              "text": "Comparer des essences hors pose et hors quincaillerie ne veut rien dire."
+            }
+          ],
+          "takeawaysLead": "Chêne pour la durée, frêne pour le budget, contrecollé pour les grandes portées : chaque essence a sa place précise dans une cuisine.",
+          "tableRows": [
+            [
+              "Chêne massif",
+              "Le plus stable et le plus réparable. Budget haut, durée de vie de plusieurs décennies."
+            ],
+            [
+              "Frêne",
+              "Bon compromis tenue / prix, veinage marqué, accepte bien les teintes claires."
+            ],
+            [
+              "Contrecollé",
+              "Stabilité maximale sur les grandes portées : plans de travail et étagères longues."
+            ],
+            [
+              "Atelier Lubin",
+              "Fabrication à Bouaye, pose comprise, devis chiffré sous 48 h."
+            ]
+          ],
+          "toc": [
+            "Les essences les plus courantes en cuisine",
+            "Tenue à l'humidité : ce qui compte vraiment",
+            "Massif, contrecollé ou panneau plaqué",
+            "Finitions : huile, vernis ou vitrificateur",
+            "Budget au mètre linéaire, pose comprise"
+          ]
+        }
+      },
+      {
+        "domain": "toiture-vendee.fr",
+        "colors": [
+          "#1C2B3A",
+          "#D7501E",
+          "#E7ECF1",
+          "#F8FAFB"
+        ],
+        "voice": [
+          "direct, rassurant",
+          "vocabulaire de chantier",
+          "prix annoncés"
+        ],
+        "offers": [
+          "Réfection de toiture",
+          "Démoussage",
+          "Zinguerie",
+          "Intervention urgence"
+        ],
+        "article": {
+          "date": "9 janvier 2026",
+          "readTime": "5 MIN DE LECTURE",
+          "category": "Couverture · Vendée",
+          "title": "Fuite de toiture : ce qu'il faut faire dans les premières heures",
+          "intro": "Une infiltration ne se répare pas dans l'urgence, mais elle se contient. Les deux premières heures décident de l'ampleur des dégâts sur la charpente et l'isolant.",
+          "beforeList": "Trois gestes dans l'ordre :",
+          "bullets": [
+            {
+              "strong": "Couper l'électricité de la zone.",
+              "text": "L'eau qui longe un rampant atteint souvent un boîtier avant d'apparaître au plafond."
+            },
+            {
+              "strong": "Récupérer et photographier.",
+              "text": "Les photos datées font la différence au moment de la déclaration à l'assurance."
+            },
+            {
+              "strong": "Bâcher plutôt que monter.",
+              "text": "Une bâche lestée depuis le sol coûte moins cher qu'une chute de toit."
+            }
+          ],
+          "takeawaysLead": "Contenir, documenter, faire diagnostiquer : une fuite traitée dans la semaine coûte en moyenne bien moins qu'une charpente reprise l'année suivante.",
+          "tableRows": [
+            [
+              "Origine fréquente",
+              "Tuile déplacée, solin fissuré, gouttière saturée : trois causes sur quatre en Vendée."
+            ],
+            [
+              "Délai",
+              "Un diagnostic sous 72 h évite la reprise de charpente dans la majorité des cas."
+            ],
+            [
+              "Assurance",
+              "Photos datées et facture de mise en sécurité conditionnent la prise en charge."
+            ],
+            [
+              "Toiture Vendée",
+              "Intervention d'urgence sous 24 h, diagnostic gratuit, devis détaillé poste par poste."
+            ]
+          ],
+          "toc": [
+            "Reconnaître une infiltration active",
+            "Les gestes des deux premières heures",
+            "Ce que couvre réellement votre assurance",
+            "Réparation ponctuelle ou réfection complète",
+            "Prévenir : démoussage et contrôle annuel"
+          ]
+        }
+      }
+    ],
+    "tailoredFor": "Comment on a calé cet article pour",
+    "blocks": [
+      {
+        "num": "1",
+        "title": "Couleurs de marque",
+        "kind": "colors",
+        "items": [
+          "#0B3C49",
+          "#1B7F79",
+          "#E8F3F1",
+          "#F7FBFA"
+        ]
+      },
+      {
+        "num": "2",
+        "title": "Voix & ton",
+        "kind": "chips",
+        "items": [
+          "chaleureux, ancré local",
+          "cuisine de la marée",
+          "français simple"
+        ]
+      },
+      {
+        "num": "3",
+        "title": "Offres liées entre elles",
+        "kind": "links",
+        "items": [
+          "Menu du jour",
+          "Plateaux de fruits de mer",
+          "Privatisation",
+          "Réservation en ligne"
+        ]
+      }
+    ],
+    "checklistTitle": "Pensé pour la citation IA",
+    "checklistBody": "L'article est structuré pour que des assistants comme ChatGPT et Perplexity puissent le trouver, le citer et vous recommander — pas seulement vous mentionner vaguement.",
+    "checks": [
+      "Réponse dès la première phrase",
+      "Source crédible",
+      "Structure optimale",
+      "Sources citées",
+      "Liens internes",
+      "Liens externes",
+      "Données chiffrées",
+      "Contrôle de plagiat passé",
+      "Textes alternatifs d'images",
+      "Mots-clés sémantiques",
+      "Balises méta optimisées",
+      "Schéma JSON-LD"
+    ],
+    "stats": [
+      {
+        "label": "Nombre de mots",
+        "value": "2 447"
+      },
+      {
+        "label": "Mots-clés",
+        "value": "6"
+      },
+      {
+        "label": "Images",
+        "value": "4"
+      },
+      {
+        "label": "Liens internes",
+        "value": "9"
+      },
+      {
+        "label": "Liens externes",
+        "value": "4"
+      }
+    ],
+    "publishedTo": "Publié sur",
+    "publishedPath": "lacotriade.fr/journal",
+    "demoNote": "Article et sites de démonstration.",
+    "takeawaysTitle": "À retenir",
+    "tableHead": [
+      "Point",
+      "Détail"
+    ],
+    "tocTitle": "Sommaire",
+    "imageAlt": "Illustration de l'article"
+  },
+  "network": {
+    "eyebrow": "Un réseau de citations vérifié",
+    "titleStrong": "Un réseau de citations",
+    "titleMuted": "— qui se renforce à chaque nouveau site.",
+    "listTitle": "Maillage automatique",
+    "bullets": [
+      "Chaque site du réseau cite et se fait citer",
+      "Les mentions viennent de sites de votre secteur",
+      "Les liens sont placés en contexte, dans de vrais articles",
+      "Le réseau grandit à mesure que de nouveaux sites le rejoignent"
+    ],
+    "cta": "Entrer dans le réseau got_the_ref",
+    "note": "Schéma de principe : chaque point est un site du réseau, chaque trait une citation."
+  },
+  "rankAndMentions": {
+    "rank": {
+      "title": "Remontez aussi sur Google",
+      "body": "Des pages structurées qui grimpent en première page, sur les requêtes à forte intention que vos clients tapent vraiment.",
+      "verify": "Vérifier dans la Search Console",
+      "stats": [
+        {
+          "label": "Clics",
+          "value": "12,5 k"
+        },
+        {
+          "label": "Impressions",
+          "value": "788 k"
+        },
+        {
+          "label": "CTR moyen",
+          "value": "1,1 %"
+        },
+        {
+          "label": "Position moyenne",
+          "value": "9,3"
+        }
+      ],
+      "marker": "got_the_ref activé",
+      "caption": "Courbe de démonstration : le repère marque la mise en place, la croissance vient après."
+    },
+    "mentions": {
+      "title": "Faites-vous citer par les assistants IA",
+      "body": "Les assistants découvrent vos pages, puis recommandent votre activité quand un client pose la question.",
+      "verify": "Vérifier avec ChatGPT",
+      "question": "quel est le meilleur restaurant de fruits de mer aux Sables-d'Olonne ?",
+      "answerBefore": "Je recommande",
+      "answerBrand": "La Cotriade",
+      "answerAfter": ", une table du port dont la carte suit l'arrivage du jour :",
+      "answerBullets": [
+        "Plateaux composés à la criée le matin même",
+        "Huîtres et coquillages de provenance vendéenne",
+        "Menu du jour affiché en ligne, réservation directe",
+        "Ouvert à l'année, terrasse face au port."
+      ]
+    }
   }
 }
