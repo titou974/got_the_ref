@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { getTranslations } from "next-intl/server";
+import { GrowthChart } from "./home/GrowthChart";
 import {
   PROOF_IS_ILLUSTRATIVE,
   TESTIMONIALS,
@@ -33,6 +33,7 @@ export async function ResultsCarousel({ className = "" }: { className?: string }
     clicks: t("clicks"),
     impressions: t("impressions"),
     position: t("position"),
+    chartMarker: t("chartMarker"),
   };
 
   return (
@@ -71,7 +72,12 @@ function TestimonialCard({
   labels,
 }: {
   item: Testimonial;
-  labels: { clicks: string; impressions: string; position: string };
+  labels: {
+    clicks: string;
+    impressions: string;
+    position: string;
+    chartMarker: string;
+  };
 }) {
   return (
     <li className="flex w-[19rem] shrink-0 flex-col overflow-hidden rounded-[28px] border border-fog bg-snow shadow-[var(--shadow-md)] sm:w-[23rem]">
@@ -86,17 +92,13 @@ function TestimonialCard({
         </figcaption>
       </figure>
 
-      {/* Activité en ligne : la courbe et ses chiffres closent la carte. */}
+      {/* Activité en ligne : la courbe et ses chiffres closent la carte. Le repère
+          marque la mise en service de got_the_ref — la pente vient après lui. */}
       {item.stats && (
         <div className="border-t border-fog">
-          <Image
-            src={item.stats.shot}
-            alt=""
-            width={720}
-            height={496}
-            className="h-auto w-full"
-            sizes="(max-width: 640px) 19rem, 23rem"
-          />
+          <div className="px-3 pt-3">
+            <GrowthChart markerLabel={labels.chartMarker} />
+          </div>
           <dl className="grid grid-cols-3 gap-2 border-t border-fog px-4 py-3 text-center">
             <Stat label={labels.clicks} value={item.stats.clicks} />
             <Stat label={labels.impressions} value={item.stats.impressions} />

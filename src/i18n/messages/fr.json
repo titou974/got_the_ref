@@ -430,7 +430,9 @@
     "clicks": "Clics",
     "impressions": "Impressions",
     "position": "Position moy.",
-    "illustrativeNote": "Progressions et témoignages présentés à titre d'illustration, hors La Cotriade. Ils seront remplacés par les résultats et les avis de nos clients, publiés avec leur accord."
+    "illustrativeNote": "Progressions et témoignages présentés à titre d'illustration, hors La Cotriade. Ils seront remplacés par les résultats et les avis de nos clients, publiés avec leur accord.",
+    "chartMarker": "got_the_ref activé",
+    "chartCaption": "Courbe de démonstration : le repère marque la mise en place."
   },
   "freeReport": {
     "eyebrow": "Constat",
@@ -846,5 +848,636 @@
     "newAnalysis": "+ Nouvelle analyse",
     "emptyState": "Vous n'avez pas encore lancé d'analyse.",
     "analyzeMySite": "Analyser mon site"
+  },
+  "homeHero": {
+    "headingBefore": "Faites venir vos clients depuis",
+    "headingAfter": "en pilote automatique",
+    "engines": [
+      "ChatGPT",
+      "Gemini",
+      "Perplexity",
+      "Google"
+    ],
+    "subtitle": "Soyez recommandé par les intelligences artificielles et par Google, sans équipe SEO ni ligne de code.",
+    "cta": "Commencer l'essai de {days} jours",
+    "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
+    "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
+    "scrollHint": "Analyser mon site",
+    "guaranteeMain": "Si votre visibilité ne progresse pas sous 90 jours, vous êtes remboursé."
+  },
+  "sectors": {
+    "eyebrow": "En croissance",
+    "title": "Des commerces et des marques dans tous les secteurs",
+    "items": [
+      "SaaS & Tech",
+      "Marketing & Médias",
+      "Restauration & Hôtellerie",
+      "Commerce & E-commerce",
+      "Santé & Bien-être",
+      "Artisans & BTP",
+      "Immobilier",
+      "Tourisme & Loisirs",
+      "Services aux entreprises"
+    ]
+  },
+  "howItWorks": {
+    "eyebrow": "Comment ça marche",
+    "title": "La visibilité IA, en quatre temps",
+    "subtitle": "Aucune installation, aucun accès à votre code : got_the_ref lit votre site depuis l'extérieur, exactement comme le fait une IA.",
+    "steps": [
+      {
+        "num": "01",
+        "title": "Analyse de votre activité",
+        "body": "On lit votre site comme une IA : secteur, marché, concurrents, et les questions que vos clients posent vraiment.",
+        "chips": [
+          "Requêtes détectées",
+          "Prompts clients",
+          "Concurrents"
+        ],
+        "mock": {
+          "url": "votre-site.fr",
+          "pill": "analyse en profondeur",
+          "chips": [
+            "NICHE DÉTECTÉE",
+            "AUDIENCE CIBLE",
+            "CONCURRENTS",
+            "MENTIONS DANS LES RÉPONSES IA",
+            "PRÉSENCE EN LIGNE",
+            "AVIS & NOTORIÉTÉ"
+          ]
+        }
+      },
+      {
+        "num": "02",
+        "title": "Position mesurée sur les moteurs",
+        "body": "On interroge ChatGPT et Gemini sur votre marché, puis on relève qui est cité avant vous.",
+        "chips": [
+          "ChatGPT",
+          "Gemini",
+          "Perplexity"
+        ],
+        "mock": {
+          "label": "Position mesurée",
+          "you": "Votre entreprise",
+          "engines": [
+            {
+              "name": "ChatGPT",
+              "rank": "2",
+              "others": [
+                "Studio Pixel",
+                "WebFactory"
+              ]
+            },
+            {
+              "name": "Gemini",
+              "rank": "1",
+              "others": [
+                "Atelier Déco",
+                "Maison & Objet"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "num": "03",
+        "title": "Correctifs priorisés",
+        "body": "llms.txt, données structurées, pages citables : chaque manque a son correctif chiffré et son prompt prêt à coller.",
+        "chips": [
+          "llms.txt",
+          "JSON-LD",
+          "Citabilité"
+        ],
+        "mock": {
+          "applied": "appliqué",
+          "impact": "Impact {value}/10",
+          "rows": [
+            {
+              "title": "Servir un fichier llms.txt",
+              "value": "9"
+            },
+            {
+              "title": "Données structurées LocalBusiness",
+              "value": "8"
+            },
+            {
+              "title": "Réécrire la balise title",
+              "value": "6"
+            },
+            {
+              "title": "Baliser la FAQ de la page d'accueil",
+              "value": "5"
+            }
+          ]
+        }
+      },
+      {
+        "num": "04",
+        "title": "Remesure en continu",
+        "body": "Les agents repassent sur votre site, remesurent la position, et vous voyez la courbe bouger.",
+        "chips": [
+          "Score GEO",
+          "Position",
+          "Avis"
+        ],
+        "mock": {
+          "scoreLabel": "Score GEO",
+          "before": "42",
+          "after": "71",
+          "note": "remesuré il y a 2 h",
+          "legend": "Chaque correction est vérifiée sur le terrain, pas seulement cochée."
+        }
+      }
+    ],
+    "prev": "Étape précédente",
+    "next": "Étape suivante",
+    "goTo": "Aller à l'étape {num}"
+  },
+  "features": {
+    "eyebrow": "Ce que vous obtenez",
+    "title": "Gagnez en visibilité sans travail manuel",
+    "subtitle": "Sept chantiers que got_the_ref prend en charge à votre place.",
+    "voice": {
+      "title": "Des contenus qui parlent comme vous",
+      "body": "On reprend votre ton, on met votre activité en avant et on écrit des pages qui se font citer — sans l'odeur du texte généré.",
+      "demo": "Aux Sables-d'Olonne, La Cotriade sert une cuisine de la marée : la carte change chaque matin, au retour du port.",
+      "badge": "Votre ton, appris sur vos pages"
+    },
+    "strategy": {
+      "title": "Une stratégie calée sur votre marché",
+      "body": "On planifie un mois entier de contenu à partir de ce qui se classe déjà dans votre niche.",
+      "month": "Mars",
+      "legend": "Article programmé"
+    },
+    "publish": {
+      "title": "Publiez sans lever le petit doigt",
+      "body": "Les contenus partent sur WordPress, Shopify, Wix, Webflow et les autres."
+    },
+    "authority": {
+      "title": "Gagnez en autorité sans démarchage",
+      "body": "On repère les pages, guides et annuaires qui vous citent déjà — et ceux qui devraient. Ni agence, ni e-mails à froid.",
+      "mentionLabel": "Mention",
+      "mentionText": "Votre entreprise a été citée",
+      "url": "www.guide-local.fr"
+    },
+    "fix": {
+      "title": "Corrigez ce qui bloque vos classements",
+      "body": "Vitesse, balises, schémas JSON-LD manquants, llms.txt absent : chaque point technique est relevé, puis corrigé.",
+      "page": "Page",
+      "score": "Score GEO",
+      "issues": "Problèmes",
+      "fixed": "Corrigé",
+      "high": "Haute",
+      "medium": "Moyenne",
+      "low": "Faible",
+      "rows": [
+        "Longueur de la balise title",
+        "Longueur de la méta description",
+        "Textes alternatifs d'images",
+        "Schéma JSON-LD manquant"
+      ]
+    },
+    "social": {
+      "title": "Visibilité sociale",
+      "body": "L'agent repère les fils Reddit et Quora dont les IA apprennent, puis propose des commentaires qui citent votre marque naturellement.",
+      "suggested": "Commentaire suggéré pour vous",
+      "copy": "Copier & ouvrir Reddit"
+    },
+    "recommend": {
+      "title": "Sachez quand une IA vous recommande",
+      "body": "Vous voyez sur quelles questions votre activité est citée — et sur lesquelles elle ne l'est pas.",
+      "queryLabel": "Requête",
+      "searches": "{count} recherches",
+      "missing": "Votre entreprise n'était pas citée",
+      "cited": "Votre entreprise citée en 1ᵉʳ",
+      "queries": [
+        "meilleur restaurant de poisson aux Sables-d'Olonne",
+        "quelle agence web choisir à Bordeaux",
+        "salon de coiffure ouvert le lundi à Nantes"
+      ]
+    }
+  },
+  "queries": {
+    "eyebrow": "Requêtes suivies",
+    "title": "Les questions que vos clients posent aux IA",
+    "subtitle": "Pas seulement des mots-clés Google : des phrases entières, telles qu'elles sont tapées dans ChatGPT ou Gemini.",
+    "items": [
+      "où manger des fruits de mer aux Sables-d'Olonne",
+      "quelle agence web choisir à Bordeaux",
+      "meilleur salon de coiffure à Nantes",
+      "dentiste qui prend des nouveaux patients à Lyon",
+      "boutique de décoration tendance près de moi",
+      "quel plombier appeler en urgence à Toulouse",
+      "meilleur restaurant italien à Marseille",
+      "coach sportif à domicile à Lille",
+      "où acheter du café de spécialité à Paris",
+      "quelle mutuelle pour un indépendant",
+      "photographe de mariage en Vendée",
+      "meilleur logiciel de facturation français",
+      "garage fiable pour une révision à Rennes",
+      "institut de beauté ouvert le dimanche",
+      "quel traiteur pour un mariage en Bretagne",
+      "école de surf à Biarritz pour débutants",
+      "meilleure boulangerie de quartier à Strasbourg",
+      "cabinet comptable pour une petite SAS",
+      "hôtel avec spa près des Sables-d'Olonne",
+      "où faire réparer son vélo à Grenoble",
+      "meilleur fleuriste pour une livraison le jour même",
+      "avocat en droit du travail à Montpellier"
+    ],
+    "footnote": "Chaque requête est rejouée à intervalle régulier : vous voyez votre position bouger, pas seulement votre score."
+  },
+  "audit": {
+    "eyebrow": "Analyse gratuite",
+    "titleBefore": "Est-ce que",
+    "titleHighlight": "ChatGPT, Gemini, Perplexity et Claude",
+    "titleAfter": "recommandent votre site ?",
+    "subtitle": "Collez votre adresse : vous obtenez votre score et le constat en moins de deux minutes, sans carte bancaire."
+  },
+  "faq": {
+    "eyebrow": "FAQ",
+    "title": "Questions fréquentes",
+    "subtitle": "Vous ne trouvez pas votre réponse ?",
+    "contact": "Écrivez-nous",
+    "items": [
+      {
+        "q": "Je ne suis pas expert en SEO, c'est un problème ?",
+        "a": "Vous n'avez pas besoin de l'être. got_the_ref pilote votre stratégie SEO et GEO de bout en bout — analyse de votre marché, requêtes à viser, contenus, corrections techniques et suivi de votre visibilité dans les réponses IA. Vous donnez l'adresse de votre site, on s'occupe du reste."
+      },
+      {
+        "q": "En combien de temps voit-on des résultats ?",
+        "a": "Les corrections techniques se voient en quelques jours. Les premières vraies améliorations de position arrivent généralement au bout de deux à trois mois : le référencement se cumule, et les contenus continuent d'amener des visiteurs longtemps après avoir été publiés."
+      },
+      {
+        "q": "Comment fonctionne le réseau de citations ?",
+        "a": "Vous rejoignez un réseau de sites de votre secteur, qui se citent mutuellement. Plutôt que du démarchage manuel, vos mentions sont placées naturellement à l'intérieur de vrais articles, sur des sites pertinents — et votre site fait de même pour les autres. Plus le réseau grandit, plus il profite à chacun."
+      },
+      {
+        "q": "Google pénalise-t-il les contenus écrits par une IA ?",
+        "a": "Non. Google pénalise le contenu de mauvaise qualité, qu'il soit écrit par une IA ou par un humain. Sa position officielle est publiée sur son blog dédié à la recherche."
+      },
+      {
+        "q": "Quels types de contenus produisez-vous ?",
+        "a": "Des articles documentés et sourcés, écrits dans le ton de votre marque et calés sur votre clientèle : guides pratiques, articles explicatifs, sélections et comparatifs, chacun aligné sur l'intention de la requête visée — informationnelle, commerciale ou transactionnelle."
+      },
+      {
+        "q": "Est-ce que ça marche avec ma plateforme ?",
+        "a": "Oui. got_the_ref lit votre site depuis l'extérieur, comme le ferait une IA : aucun plugin, aucune installation, aucun accès à votre code."
+      },
+      {
+        "q": "Et pour un commerce physique ?",
+        "a": "C'est le cœur du produit. Avec votre fiche Google Maps, on mesure la cohérence fiche ↔ site, vos avis et votre position locale face aux concurrents de votre ville."
+      }
+    ]
+  },
+  "examples": {
+    "eyebrow": "Exemples",
+    "title": "Un contenu qui parle comme vous",
+    "subtitle": "On reprend votre univers de marque, on met en avant ce que vous vendez, et on écrit des pages qui se classent et se font citer — sans l'odeur du texte généré.",
+    "sites": [
+      {
+        "domain": "lacotriade.fr",
+        "colors": [
+          "#0B3C49",
+          "#1B7F79",
+          "#E8F3F1",
+          "#F7FBFA"
+        ],
+        "voice": [
+          "chaleureux, ancré local",
+          "cuisine de la marée",
+          "français simple"
+        ],
+        "offers": [
+          "Menu du jour",
+          "Plateaux de fruits de mer",
+          "Privatisation",
+          "Réservation en ligne"
+        ],
+        "article": {
+          "date": "4 mars 2026",
+          "readTime": "7 MIN DE LECTURE",
+          "category": "Restaurant · Vendée",
+          "title": "Où manger des fruits de mer aux Sables-d'Olonne : le guide 2026",
+          "intro": "Aux Sables-d'Olonne, la qualité d'un plateau de fruits de mer se joue avant la cuisine : à la criée, le matin même. C'est ce qui sépare une table de passage d'une adresse où l'on revient.",
+          "beforeList": "Trois choses à savoir avant d'aller plus loin :",
+          "bullets": [
+            {
+              "strong": "La fraîcheur se lit sur la carte.",
+              "text": "Une carte qui change chaque jour signale un approvisionnement à la marée. Une carte figée toute l'année signale l'inverse."
+            },
+            {
+              "strong": "L'origine doit être affichée.",
+              "text": "Huîtres de Vendée, homard de casier, criée des Sables : un restaurant qui nomme ses provenances les assume."
+            },
+            {
+              "strong": "La saison commande.",
+              "text": "Les coquillages ont leurs mois. Un plateau de septembre n'a rien à voir avec un plateau de mars, et c'est tant mieux."
+            }
+          ],
+          "takeawaysLead": "Un bon plateau tient à trois choses : la provenance, la saison et la rotation. Le cadre, le service et la vue viennent après.",
+          "tableRows": [
+            [
+              "Provenance",
+              "Criée des Sables-d'Olonne, huîtres de la baie de Bourgneuf, homard de casier."
+            ],
+            [
+              "Saison",
+              "Coquillages d'octobre à avril ; crustacés toute l'année, au meilleur de leur chair l'été."
+            ],
+            [
+              "Rotation",
+              "Une carte qui bouge chaque matin reste le meilleur indicateur de fraîcheur."
+            ],
+            [
+              "La Cotriade",
+              "Table du port ouverte à l'année, carte calée sur l'arrivage du jour, réservation en ligne."
+            ]
+          ],
+          "toc": [
+            "Ce qui fait un bon plateau de fruits de mer",
+            "Les provenances vendéennes, criée par criée",
+            "Quelle saison pour quel coquillage",
+            "Comment lire une carte de restaurant de poisson",
+            "Réserver au bon moment, même en haute saison"
+          ]
+        }
+      },
+      {
+        "domain": "atelier-lubin.fr",
+        "colors": [
+          "#3E2A18",
+          "#B07D4B",
+          "#F0E4D4",
+          "#FBF7F2"
+        ],
+        "voice": [
+          "artisanal, précis",
+          "vocabulaire du bois",
+          "conseil sans jargon"
+        ],
+        "offers": [
+          "Cuisine sur mesure",
+          "Escaliers",
+          "Bibliothèques",
+          "Devis en 48 h"
+        ],
+        "article": {
+          "date": "18 février 2026",
+          "readTime": "6 MIN DE LECTURE",
+          "category": "Menuiserie · Sur mesure",
+          "title": "Quel bois choisir pour une cuisine sur mesure qui dure vingt ans",
+          "intro": "Le choix de l'essence décide de tout : la tenue à l'humidité, la réparabilité, et le budget. Un chêne massif et un contrecollé ne vieillissent pas de la même façon dans une cuisine.",
+          "beforeList": "Trois repères avant de trancher :",
+          "bullets": [
+            {
+              "strong": "L'humidité est l'ennemi numéro un.",
+              "text": "Sous l'évier et derrière la plaque, seule une essence stable et une finition adaptée tiennent la distance."
+            },
+            {
+              "strong": "Le massif se répare, le panneau se remplace.",
+              "text": "Une façade en chêne se ponce et se reprend ; un stratifié abîmé se change entièrement."
+            },
+            {
+              "strong": "Le prix se juge au mètre linéaire posé.",
+              "text": "Comparer des essences hors pose et hors quincaillerie ne veut rien dire."
+            }
+          ],
+          "takeawaysLead": "Chêne pour la durée, frêne pour le budget, contrecollé pour les grandes portées : chaque essence a sa place précise dans une cuisine.",
+          "tableRows": [
+            [
+              "Chêne massif",
+              "Le plus stable et le plus réparable. Budget haut, durée de vie de plusieurs décennies."
+            ],
+            [
+              "Frêne",
+              "Bon compromis tenue / prix, veinage marqué, accepte bien les teintes claires."
+            ],
+            [
+              "Contrecollé",
+              "Stabilité maximale sur les grandes portées : plans de travail et étagères longues."
+            ],
+            [
+              "Atelier Lubin",
+              "Fabrication à Bouaye, pose comprise, devis chiffré sous 48 h."
+            ]
+          ],
+          "toc": [
+            "Les essences les plus courantes en cuisine",
+            "Tenue à l'humidité : ce qui compte vraiment",
+            "Massif, contrecollé ou panneau plaqué",
+            "Finitions : huile, vernis ou vitrificateur",
+            "Budget au mètre linéaire, pose comprise"
+          ]
+        }
+      },
+      {
+        "domain": "toiture-vendee.fr",
+        "colors": [
+          "#1C2B3A",
+          "#D7501E",
+          "#E7ECF1",
+          "#F8FAFB"
+        ],
+        "voice": [
+          "direct, rassurant",
+          "vocabulaire de chantier",
+          "prix annoncés"
+        ],
+        "offers": [
+          "Réfection de toiture",
+          "Démoussage",
+          "Zinguerie",
+          "Intervention urgence"
+        ],
+        "article": {
+          "date": "9 janvier 2026",
+          "readTime": "5 MIN DE LECTURE",
+          "category": "Couverture · Vendée",
+          "title": "Fuite de toiture : ce qu'il faut faire dans les premières heures",
+          "intro": "Une infiltration ne se répare pas dans l'urgence, mais elle se contient. Les deux premières heures décident de l'ampleur des dégâts sur la charpente et l'isolant.",
+          "beforeList": "Trois gestes dans l'ordre :",
+          "bullets": [
+            {
+              "strong": "Couper l'électricité de la zone.",
+              "text": "L'eau qui longe un rampant atteint souvent un boîtier avant d'apparaître au plafond."
+            },
+            {
+              "strong": "Récupérer et photographier.",
+              "text": "Les photos datées font la différence au moment de la déclaration à l'assurance."
+            },
+            {
+              "strong": "Bâcher plutôt que monter.",
+              "text": "Une bâche lestée depuis le sol coûte moins cher qu'une chute de toit."
+            }
+          ],
+          "takeawaysLead": "Contenir, documenter, faire diagnostiquer : une fuite traitée dans la semaine coûte en moyenne bien moins qu'une charpente reprise l'année suivante.",
+          "tableRows": [
+            [
+              "Origine fréquente",
+              "Tuile déplacée, solin fissuré, gouttière saturée : trois causes sur quatre en Vendée."
+            ],
+            [
+              "Délai",
+              "Un diagnostic sous 72 h évite la reprise de charpente dans la majorité des cas."
+            ],
+            [
+              "Assurance",
+              "Photos datées et facture de mise en sécurité conditionnent la prise en charge."
+            ],
+            [
+              "Toiture Vendée",
+              "Intervention d'urgence sous 24 h, diagnostic gratuit, devis détaillé poste par poste."
+            ]
+          ],
+          "toc": [
+            "Reconnaître une infiltration active",
+            "Les gestes des deux premières heures",
+            "Ce que couvre réellement votre assurance",
+            "Réparation ponctuelle ou réfection complète",
+            "Prévenir : démoussage et contrôle annuel"
+          ]
+        }
+      }
+    ],
+    "tailoredFor": "Comment on a calé cet article pour",
+    "blocks": [
+      {
+        "num": "1",
+        "title": "Couleurs de marque",
+        "kind": "colors",
+        "items": [
+          "#0B3C49",
+          "#1B7F79",
+          "#E8F3F1",
+          "#F7FBFA"
+        ]
+      },
+      {
+        "num": "2",
+        "title": "Voix & ton",
+        "kind": "chips",
+        "items": [
+          "chaleureux, ancré local",
+          "cuisine de la marée",
+          "français simple"
+        ]
+      },
+      {
+        "num": "3",
+        "title": "Offres liées entre elles",
+        "kind": "links",
+        "items": [
+          "Menu du jour",
+          "Plateaux de fruits de mer",
+          "Privatisation",
+          "Réservation en ligne"
+        ]
+      }
+    ],
+    "checklistTitle": "Pensé pour la citation IA",
+    "checklistBody": "L'article est structuré pour que des assistants comme ChatGPT et Perplexity puissent le trouver, le citer et vous recommander — pas seulement vous mentionner vaguement.",
+    "checks": [
+      "Réponse dès la première phrase",
+      "Source crédible",
+      "Structure optimale",
+      "Sources citées",
+      "Liens internes",
+      "Liens externes",
+      "Données chiffrées",
+      "Contrôle de plagiat passé",
+      "Textes alternatifs d'images",
+      "Mots-clés sémantiques",
+      "Balises méta optimisées",
+      "Schéma JSON-LD"
+    ],
+    "stats": [
+      {
+        "label": "Nombre de mots",
+        "value": "2 447"
+      },
+      {
+        "label": "Mots-clés",
+        "value": "6"
+      },
+      {
+        "label": "Images",
+        "value": "4"
+      },
+      {
+        "label": "Liens internes",
+        "value": "9"
+      },
+      {
+        "label": "Liens externes",
+        "value": "4"
+      }
+    ],
+    "publishedTo": "Publié sur",
+    "publishedPath": "lacotriade.fr/journal",
+    "demoNote": "Article et sites de démonstration.",
+    "takeawaysTitle": "À retenir",
+    "tableHead": [
+      "Point",
+      "Détail"
+    ],
+    "tocTitle": "Sommaire",
+    "imageAlt": "Illustration de l'article"
+  },
+  "network": {
+    "eyebrow": "Un réseau de citations vérifié",
+    "titleStrong": "Un réseau de citations",
+    "titleMuted": "— qui se renforce à chaque nouveau site.",
+    "listTitle": "Maillage automatique",
+    "bullets": [
+      "Chaque site du réseau cite et se fait citer",
+      "Les mentions viennent de sites de votre secteur",
+      "Les liens sont placés en contexte, dans de vrais articles",
+      "Le réseau grandit à mesure que de nouveaux sites le rejoignent"
+    ],
+    "cta": "Entrer dans le réseau got_the_ref",
+    "note": "Schéma de principe : chaque point est un site du réseau, chaque trait une citation."
+  },
+  "rankAndMentions": {
+    "rank": {
+      "title": "Remontez aussi sur Google",
+      "body": "Des pages structurées qui grimpent en première page, sur les requêtes à forte intention que vos clients tapent vraiment.",
+      "verify": "Vérifier dans la Search Console",
+      "stats": [
+        {
+          "label": "Clics",
+          "value": "12,5 k"
+        },
+        {
+          "label": "Impressions",
+          "value": "788 k"
+        },
+        {
+          "label": "CTR moyen",
+          "value": "1,1 %"
+        },
+        {
+          "label": "Position moyenne",
+          "value": "9,3"
+        }
+      ],
+      "marker": "got_the_ref activé",
+      "caption": "Courbe de démonstration : le repère marque la mise en place, la croissance vient après."
+    },
+    "mentions": {
+      "title": "Faites-vous citer par les assistants IA",
+      "body": "Les assistants découvrent vos pages, puis recommandent votre activité quand un client pose la question.",
+      "verify": "Vérifier avec ChatGPT",
+      "question": "quel est le meilleur restaurant de fruits de mer aux Sables-d'Olonne ?",
+      "answerBefore": "Je recommande",
+      "answerBrand": "La Cotriade",
+      "answerAfter": ", une table du port dont la carte suit l'arrivage du jour :",
+      "answerBullets": [
+        "Plateaux composés à la criée le matin même",
+        "Huîtres et coquillages de provenance vendéenne",
+        "Menu du jour affiché en ligne, réservation directe",
+        "Ouvert à l'année, terrasse face au port."
+      ]
+    }
   }
 }
