@@ -6,6 +6,9 @@ import { AnimatedScoreRing } from "./AnimatedScoreRing";
 import { SiteScreenshot } from "./SiteScreenshot";
 import { ReportTabs } from "./ReportTabs";
 import { FreeReportCard } from "./FreeReportCard";
+import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
+import { DemoCta } from "@/components/DemoCta";
+import { ROUTES } from "@/constants/routes";
 import { PaidReportCard } from "./PaidReportCard";
 import { UnlockPricingCta } from "./UnlockPricingCta";
 
@@ -95,6 +98,23 @@ export async function Dashboard({
         />
       </div>
 
+      {/* CTA */}
+      <AnimatedCard className="text-center">
+        <h3 className="text-xl font-bold">{td("ctaAnotherTitle")}</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted">{td("ctaAnotherSubtitle")}</p>
+        <div className="mx-auto mt-5 max-w-lg">
+          <UrlAnalyzeForm size="md" />
+        </div>
+        <p className="mt-4 text-sm text-muted">
+          {td("ctaUnlimited")}{" "}
+          <Link href={ROUTES.pricing} className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian">
+            {tc("discoverOffers")}
+          </Link>
+        </p>
+      </AnimatedCard>
+
+      {/* CTA agence : redirige vers les services en bas de chaque rapport */}
+      <DemoCta />
       {/* Bandeau de fin de rapport : mène aux tarifs, pas à la prise de rendez-vous */}
       <UnlockPricingCta analysisId={analysisId} locked={locked} />
     </div>

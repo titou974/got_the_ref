@@ -19,9 +19,10 @@
     "viewPricing": "voir les tarifs",
     "discoverOffers": "Découvrir nos offres",
     "agency": "Notre agence",
-    "services": "Nos services",
+    "demo": "Démo",
+    "contact": "Contact",
     "bookCall": "Prendre rendez-vous",
-    "discoverServices": "Découvrir nos services"
+    "bookDemo": "Réserver une démo"
   },
   "nav": {
     "myAccount": "Mon compte"
@@ -30,17 +31,18 @@
     "rights": "© {year} got_the_ref. Tous droits réservés.",
     "tagline": "La première agence de GEO française.",
     "agency": "Notre agence",
-    "services": "Nos services",
+    "demo": "Démo",
+    "contact": "Contact",
     "pricing": "Tarifs",
     "legalMentions": "Mentions légales",
     "terms": "CGV / CGU",
     "privacy": "Confidentialité"
   },
-  "ctaServices": {
+  "ctaDemo": {
     "eyebrow": "got_the_ref · Agence GEO",
     "title": "Envie d'apparaître en premier dans les IA ?",
     "subtitle": "Notre agence optimise votre commerce pour ChatGPT, Gemini et Perplexity. Discutons de votre projet et faisons monter votre business tout en haut des réponses IA.",
-    "button": "Découvrir nos services",
+    "button": "Réserver une démo",
     "secondary": "Prendre rendez-vous"
   },
   "ctaUnlock": {
@@ -93,7 +95,9 @@
     "quote": "« Nous étions de passage aux Sables d'Olonne et n'avions aucune référence de bon restaurant de poisson. Après une demande ChatGPT, nous nous sommes retrouvés là :-) »",
     "quoteAuthor": "Valérie H. · avis Google Maps · ★★★★★",
     "resultBody": "Site clair, fiche Google cohérente, avis nombreux : c'est exactement ce que les IA lisent avant de citer un commerce. got_the_ref mesure ces signaux sur votre site et vous dit lesquels vous manquent.",
-    "cta": "Analyser mon commerce gratuitement"
+    "cta": "Analyser mon commerce gratuitement",
+    "adopters": "Adopté par {count} entreprises françaises",
+    "cocorico": "Cocoricooo !"
   },
   "analyzeForm": {
     "placeholder": "votre-site.fr",
@@ -561,14 +565,18 @@
     "skip": "Voir mon rapport tout de suite",
     "pendingTitle": "Paiement en cours de confirmation",
     "pendingBody": "Votre paiement n'est pas encore confirmé par Stripe. Patientez quelques secondes puis rechargez cette page — si le problème persiste, contactez-nous.",
-    "backHome": "← Retour à l'accueil"
+    "backHome": "← Retour à l'accueil",
+    "trialSubtitle": "Créez votre mot de passe pour ouvrir votre espace et lancer votre première analyse.",
+    "trialExistingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous pour retrouver votre abonnement.",
+    "trialOtherDeviceSubtitle": "Votre essai est ouvert. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous.",
+    "trialSkip": "Retour à l'accueil"
   },
   "pricing": {
     "metaTitle": "Tarifs",
     "eyebrow": "Abonnement",
     "headingBefore": "Des agents qui travaillent votre visibilité IA ",
     "headingHighlight": "en continu",
-    "subtitle": "L'analyse est gratuite. L'abonnement ouvre tout got_the_ref et met des agents spécialisés sur votre site : ils mesurent, corrigent et remesurent votre position sur ChatGPT, Gemini et Google, sans que vous ayez à toucher une ligne de code.",
+    "subtitle": "L'analyse est gratuite. L'abonnement met des agents spécialisés sur votre site : ils mesurent votre position sur ChatGPT, Gemini et Google, corrigent ce qui vous empêche d'être cité, puis remesurent — sans que vous ayez à toucher une ligne de code.",
     "quotaNote": "Vous avez atteint la limite d'analyses gratuites. Réessayez plus tard ou parlons-en directement.",
     "perMonth": "/mois",
     "perYear": " par an",
@@ -590,7 +598,10 @@
         "Plan d'action priorisé et prompts solution prêts à coller",
         "Contenu, notoriété et cohérence Google Maps suivis dans le temps",
         "Aucune compétence technique requise"
-      ]
+      ],
+      "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
+      "ctaStripe": "Démarrer l'essai pour {price}",
+      "ctaStripeNote": "Sans engagement · résiliable avant la fin de l'essai"
     },
     "agents": {
       "title": "Agents en service",
@@ -611,56 +622,45 @@
       ],
       "note": "Les agents repassent sur votre site en continu : chaque correction est remesurée, pas seulement recommandée."
     },
-    "agency": {
-      "eyebrow": "Le repère",
-      "name": "Agence SEO / référencement IA",
-      "description": "Le budget d'un accompagnement classique, pour le même objectif : sortir dans les réponses des IA et sur Google.",
-      "notForSale": "Pour comparaison — got_the_ref ne vend pas cette prestation.",
-      "limits": [
-        "Audit initial de quatre à six semaines avant le premier livrable",
-        "Un rapport par mois, figé entre deux points",
-        "Corrections à réimplémenter par vos soins ou par un développeur",
-        "Engagement de six à douze mois, souvent avec frais de setup",
-        "Expertise généraliste, rarement entraînée sur votre niche"
-      ]
-    },
     "compare": {
-      "title": "Ce que change la différence de modèle",
-      "criterion": "Critère",
-      "visiaColumn": "got_the_ref",
-      "agencyColumn": "Agence classique",
-      "rows": [
-        {
-          "label": "Pour démarrer",
-          "visia": "1 €",
-          "agency": "Devis, puis frais de setup"
-        },
-        {
-          "label": "Premier résultat",
-          "visia": "Immédiat",
-          "agency": "4 à 6 semaines"
-        },
-        {
-          "label": "Fréquence d'analyse",
-          "visia": "En continu",
-          "agency": "1 rapport par mois"
-        },
-        {
-          "label": "Compétence technique requise",
-          "visia": "Aucune",
-          "agency": "Aller-retours avec un développeur"
-        },
-        {
-          "label": "Engagement",
-          "visia": "Résiliable à tout moment",
-          "agency": "6 à 12 mois"
-        },
-        {
-          "label": "Tarif",
-          "visia": "79 €/mois",
-          "agency": "20 000 – 24 000 €/an"
-        }
-      ]
+      "title": "Réfléchissez à deux fois avant de payer une agence SEO",
+      "subtitle": "Même objectif — sortir dans les réponses des IA et sur Google. Deux façons de le financer.",
+      "costLabel": "Coût minimal",
+      "perYear": " par an",
+      "agency": {
+        "name": "Agence SEO",
+        "budget": "Au moins {price} par mois, hors frais de setup",
+        "points": [
+          "Engagement de six à douze mois",
+          "Quatre à six semaines avant le premier livrable",
+          "Un rapport par mois, figé entre deux points",
+          "Corrections à réimplémenter par vos soins ou par un développeur",
+          "Vous ne savez pas qui travaille réellement sur votre site"
+        ]
+      },
+      "ours": {
+        "name": "got_the_ref",
+        "trial": "{days} jours d'accès complet pour {price}, puis {monthly}/mois",
+        "points": [
+          "Résiliable à tout moment, sans frais de setup",
+          "Premier constat immédiat, analyses illimitées",
+          "Vos positions sur ChatGPT et Gemini remesurées en continu",
+          "Corrections appliquées puis revérifiées par les agents",
+          "Votre stratégie et vos données restent chez vous"
+        ]
+      }
+    },
+    "todayLabel": "aujourd'hui",
+    "thenLabel": "puis",
+    "serverFeeNote": "Frais de serveur IA pour vos {days} jours d'accès complet. L'abonnement ne démarre qu'ensuite.",
+    "guaranteeBadge": "Remboursé si aucun résultat sous {days} jours",
+    "cycle": {
+      "label": "Rythme de facturation",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "discount": "-{pct} %",
+      "monthlyTerms": "Facturé chaque mois · résiliable à tout moment",
+      "yearlyTerms": "Facturé à l'année, affiché par mois · engagement de douze mois"
     }
   },
   "agency": {
@@ -784,29 +784,32 @@
       }
     ]
   },
-  "services": {
-    "metaTitle": "Nos services",
-    "metaDescription": "Accompagnement GEO sur-mesure : audit de visibilité IA, optimisation et suivi pour apparaître en premier sur ChatGPT, Gemini et Perplexity. Réservez un appel découverte avec got_the_ref.",
-    "keywords": "audit de visibilité IA, agence GEO, optimisation GEO, consultant generative engine optimization, apparaître sur ChatGPT, référencement IA, suivi des mentions de marque ChatGPT",
-    "heroEyebrow": "Nos services",
-    "heroTitleBefore": "Faites monter votre commerce ",
-    "heroTitleHighlight": "tout en haut des IA",
-    "heroSubtitle": "Un accompagnement GEO complet, de l'audit à la première position sur ChatGPT, Gemini et Perplexity. Conçu pour les commerçants et entreprises qui veulent être recommandés par les IA.",
-    "offerBadge": "Sur estimation",
-    "offerTitle": "Accompagnement GEO sur-mesure",
-    "offerSubtitle": "Chaque business est unique : votre tarif est établi sur estimation, après un premier échange découverte.",
-    "offerIncludesTitle": "Ce qui est inclus",
-    "offerIncludes": [
-      "Audit complet de votre visibilité sur ChatGPT, Gemini & Perplexity",
-      "Optimisation de votre fiche Google Maps et de votre ancrage local",
-      "Fichier llms.txt + données structurées (schémas JSON-LD)",
-      "Réécriture des contenus clés pour être citable par les IA (E-E-A-T)",
-      "Suivi de votre positionnement et des mentions de marque sur les IA",
-      "Un rapport clair, avec des actions priorisées par impact"
+  "demo": {
+    "metaTitle": "Réserver une démo",
+    "metaDescription": "Réservez une démo gratuite de got_the_ref : on vous montre votre visibilité réelle sur ChatGPT, Gemini et Perplexity, et le plan pour monter tout en haut de leurs réponses.",
+    "keywords": "démo GEO, réserver un appel, agence GEO, audit de visibilité IA, apparaître sur ChatGPT, optimisation pour les IA, consultant generative engine optimization",
+    "heroEyebrow": "Démo",
+    "heroTitleBefore": "Réservez votre démo et découvrez comment ",
+    "heroTitleHighlight": "faire venir vos clients depuis les IA",
+    "heroSubtitle": "30 minutes en visio, sans engagement. On regarde ensemble votre visibilité actuelle sur ChatGPT, Gemini et Perplexity, et on vous dit exactement quoi corriger pour être recommandé.",
+    "heroCta": "Réserver ma démo",
+    "heroNote": "Gratuit · 30 minutes · aucun engagement",
+    "guarantee": "Si votre visibilité ne progresse pas sous 90 jours, vous êtes remboursé.",
+    "trustLabel": "Des commerces et des marques dans tous les secteurs",
+    "agendaEyebrow": "Au programme",
+    "agendaTitle": "Ce qu'on couvre pendant l'appel",
+    "agendaSubtitle": "Un tour complet de votre position dans les moteurs qui répondent à vos clients — et du chemin pour la changer.",
+    "agendaItems": [
+      "Suivi de vos mentions dans les IA",
+      "Requêtes réelles de vos clients",
+      "Audit GEO / SEO de votre site",
+      "Fiche Google et ancrage local",
+      "Données structurées et llms.txt",
+      "Contenus citables par les IA",
+      "Autorité et citations externes",
+      "Analyse de vos concurrents",
+      "Plan d'action priorisé par impact"
     ],
-    "offerPriceLabel": "Sur estimation",
-    "offerPriceNote": "Tarif établi après un appel découverte gratuit, selon votre niche et vos objectifs.",
-    "offerCta": "Prendre rendez-vous",
     "processEyebrow": "Comment ça se passe",
     "processTitle": "De l'appel à la première position",
     "processSteps": [
@@ -817,7 +820,7 @@
       },
       {
         "step": "02",
-        "title": "Audit & devis sur estimation",
+        "title": "Audit & plan chiffré",
         "body": "On mesure votre visibilité actuelle sur les IA et on établit un plan d'action chiffré sur estimation."
       },
       {
@@ -829,9 +832,41 @@
     "forEyebrow": "Pour qui ?",
     "forTitle": "Vous voulez être recommandé par les IA ?",
     "forBody": "Restaurateurs, commerçants, artisans, e-commerçants, SaaS — si vos clients cherchent désormais sur ChatGPT, Gemini ou Perplexity, votre place est tout en haut de leurs réponses. C'est exactement ce que nous allons construire ensemble.",
-    "ctaTitle": "Discutons de votre projet",
-    "ctaSubtitle": "Réservez un appel découverte gratuit. On vous dit où vous en êtes sur les IA et comment monter tout en haut.",
-    "ctaButton": "Prendre rendez-vous"
+    "ctaTitle": "Prêt à faire venir vos clients depuis les IA ?",
+    "ctaSubtitle": "Réservez votre démo gratuite. On vous dit où vous en êtes sur les IA et comment monter tout en haut.",
+    "ctaButton": "Réserver ma démo"
+  },
+  "contact": {
+    "metaTitle": "Nous contacter",
+    "metaDescription": "Une question sur got_the_ref, votre analyse ou votre accompagnement GEO ? Écrivez-nous : nous répondons sous 24 heures, sous 12 heures pour les clients.",
+    "keywords": "contact got_the_ref, support GEO, aide analyse IA, agence GEO française, assistance",
+    "heroEyebrow": "Contact",
+    "heroTitleBefore": "Une question ? ",
+    "heroTitleHighlight": "On vous répond",
+    "heroSubtitle": "Votre réussite est notre priorité.",
+    "priorityTitle": "Vous êtes client (réponse sous 12 h)",
+    "priorityBody": "Client ou accompagnement en cours : votre message passe en priorité. Précisez l'adresse du site concerné, nous répondons sous 12 heures ouvrées.",
+    "priorityCta": "Écrire au support",
+    "generalTitle": "Question générale (réponse sous 24 h)",
+    "generalBody": "Avant de nous écrire, ces pages répondent peut-être déjà à votre question :",
+    "generalCta": "Réserver une démo",
+    "formTitle": "Écrivez-nous",
+    "formSubtitle": "Décrivez votre situation en quelques lignes : plus c'est précis, plus la réponse est utile.",
+    "formName": "Votre nom",
+    "formNamePlaceholder": "Camille Martin",
+    "formEmail": "Votre e-mail",
+    "formEmailPlaceholder": "camille@monsite.fr",
+    "formSite": "Votre site (facultatif)",
+    "formSitePlaceholder": "https://monsite.fr",
+    "formSubject": "Sujet",
+    "formSubjectPlaceholder": "Visibilité de mon restaurant sur ChatGPT",
+    "formMessage": "Votre message",
+    "formMessagePlaceholder": "Parlez-nous de votre activité, de votre zone et de ce que vous cherchez à obtenir.",
+    "formSubmit": "Envoyer le message",
+    "formNote": "Le bouton ouvre votre messagerie avec le message prérempli. Vous pouvez aussi écrire directement à {email}.",
+    "ctaTitle": "Plutôt en parler de vive voix ?",
+    "ctaSubtitle": "Réservez une démo gratuite de 30 minutes : on regarde votre visibilité sur les IA ensemble.",
+    "ctaButton": "Réserver ma démo"
   },
   "account": {
     "metaTitle": "Mon compte",
@@ -1477,6 +1512,57 @@
         "Huîtres et coquillages de provenance vendéenne",
         "Menu du jour affiché en ligne, réservation directe",
         "Ouvert à l'année, terrasse face au port."
+      ]
+    }
+  },
+  "homePricing": {
+    "eyebrow": "Tarif",
+    "title": "Un seul abonnement, tous les moteurs",
+    "subtitle": "Pas de palier, pas d'option : l'accès complet à got_the_ref, et des agents qui travaillent votre visibilité en continu.",
+    "allDetails": "Voir le détail des tarifs"
+  },
+  "homeDemoCta": {
+    "title": "Réservez votre démo",
+    "button": "Réserver ma démo"
+  },
+  "audiences": {
+    "eyebrow": "À qui nous nous adressons",
+    "title": "Deux façons d'être trouvé, un même moteur",
+    "subtitle": "Que vos clients vous cherchent depuis leur canapé ou à trois rues de chez vous, la question posée à l'IA est la même : « qui me recommandez-vous ? »",
+    "online": {
+      "title": "Commerces en ligne, SaaS et médias",
+      "body": "Vos clients demandent une recommandation à ChatGPT avant d'ouvrir Google. On travaille votre site pour qu'il devienne la source citée — pas celle qu'on cite après.",
+      "caption": "Sources de la réponse",
+      "query": "« Quel outil pour suivre ma visibilité IA ? »",
+      "sources": [
+        "comparateur-secteur.fr",
+        "blog-du-marche.com",
+        "annuaire-pro.fr"
+      ],
+      "you": "votre-site.fr",
+      "badge": "Cité en source n° 1",
+      "points": [
+        "E-commerce",
+        "SaaS & applications",
+        "Médias & créateurs"
+      ]
+    },
+    "local": {
+      "title": "Commerces et artisans de quartier",
+      "body": "Un client cherche « près d'ici » et l'IA répond par un nom. On aligne votre fiche, vos avis et vos pages pour que ce nom soit le vôtre, avant vos voisins de rue.",
+      "caption": "Réponse locale · votre zone",
+      "query": "« Où manger des fruits de mer aux Sables-d'Olonne ? »",
+      "you": "Votre commerce",
+      "competitors": [
+        "Concurrent",
+        "Concurrent",
+        "Concurrent"
+      ],
+      "badge": "Recommandé en premier",
+      "points": [
+        "Restaurants & hôtels",
+        "Artisans & BTP",
+        "Santé & bien-être"
       ]
     }
   }

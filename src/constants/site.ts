@@ -24,6 +24,17 @@ export const SITE = {
   lang: "fr",
 } as const;
 
+/**
+ * Nombre d'entreprises annoncé sous les titres (« Adopté par N entreprises
+ * françaises »).
+ *
+ * ⚠️ Même régime que `PROOF_IS_ILLUSTRATIVE` dans `constants/testimonials.ts` :
+ * un chiffre d'adoption est une allégation commerciale, contrôlée par la DGCCRF
+ * (art. L121-2 du Code de la consommation). Alignez cette valeur sur le nombre
+ * réel de comptes actifs avant toute mise en ligne publique.
+ */
+export const ADOPTERS_COUNT = 400;
+
 /** Logos des moteurs IA affichés sur la home (chemins dans /public). */
 export const AI_ENGINE_LOGOS = [
   { src: "/chatgpt.png", key: "openai" },

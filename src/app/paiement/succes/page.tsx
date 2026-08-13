@@ -7,7 +7,7 @@ import { PostCheckoutAccountForm } from "@/components/PostCheckoutAccountForm";
 import { getStripe } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { unlockAnalysisFromSession } from "@/features/billing/unlock";
+import { TRIAL_CHECKOUT_KIND, unlockAnalysisFromSession } from "@/features/billing/unlock";
 import { ensurePaidAnalysis } from "@/features/analysis/service";
 import { CLAIM_METADATA_KEY, claimMatches } from "@/features/billing/claim";
 import { ROUTES } from "@/constants/routes";
@@ -41,7 +41,16 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
   // suite plutôt qu'au prochain chargement de la page d'analyse.
   if (unlocked) await ensurePaidAnalysis(unlocked.analysisId);
 
-  if (!unlocked) {
+  // Essai souscrit depuis la carte tarif : aucun rapport à ouvrir, mais le
+  // paiement vaut engagement — il reste à créer le compte.
+  const trialStarted =
+    !unlocked &&
+    session?.metadata?.kind === TRIAL_CHECKOUT_KIND &&
+    session.payment_status !== "unpaid";
+
+  const payerEmail = unlocked?.email ?? session?.customer_details?.email ?? null;
+
+  if (!unlocked && !trialStarted) {
     return (
       <main className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-10 text-center">
         <Logo className="mb-8" />
@@ -54,14 +63,15 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
     );
   }
 
-  // Déjà connecté : rien à créer, on l'emmène droit sur son rapport complet.
+  // Déjà connecté : rien à créer, on l'emmène droit sur son rapport complet —
+  // ou sur son espace client, si l'essai a été pris sans analyse.
   const user = await getCurrentUser();
-  if (user) redirect(ROUTES.analysis(unlocked.analysisId));
+  if (user) redirect(unlocked ? ROUTES.analysis(unlocked.analysisId) : ROUTES.account);
 
   // Un compte existe déjà pour cet e-mail : on propose la connexion.
-  const existing = unlocked.email
+  const existing = payerEmail
     ? await prisma.user.findUnique({
-        where: { email: unlocked.email },
+        where: { email: payerEmail },
         select: { id: true },
       })
     : null;
@@ -92,7 +102,11 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
 
         <h1 className="text-center text-2xl font-bold">{t("title")}</h1>
         <p className="mt-1 mb-6 text-center text-sm text-muted">
-          {existing ? t("existingSubtitle") : canClaim ? t("subtitle") : t("otherDeviceSubtitle")}
+          {existing
+            ? t(unlocked ? "existingSubtitle" : "trialExistingSubtitle")
+            : canClaim
+              ? t(unlocked ? "subtitle" : "trialSubtitle")
+              : t(unlocked ? "otherDeviceSubtitle" : "trialOtherDeviceSubtitle")}
         </p>
 
         {existing || !canClaim ? (
@@ -103,14 +117,14 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
             {t("signIn")}
           </Link>
         ) : (
-          <PostCheckoutAccountForm sessionId={sessionId} email={unlocked.email ?? ""} />
+          <PostCheckoutAccountForm sessionId={sessionId} email={payerEmail ?? ""} />
         )}
 
         <Link
-          href={ROUTES.analysis(unlocked.analysisId)}
+          href={unlocked ? ROUTES.analysis(unlocked.analysisId) : ROUTES.home}
           className="mt-4 block cursor-pointer text-center text-sm text-muted underline decoration-pebble underline-offset-4 hover:text-text"
         >
-          {t("skip")}
+          {t(unlocked ? "skip" : "trialSkip")}
         </Link>
       </div>
     </main>

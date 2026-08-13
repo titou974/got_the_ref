@@ -36,6 +36,28 @@ export const SUBSCRIPTION_PRICE = PLAN_PRICING.pro.amount as number;
 export const TRIAL = { days: 3, activationPrice: 1 } as const;
 
 /**
+ * Tarif mensuel de l'abonnement engagé à l'année. Toujours affiché **par mois**
+ * (jamais le total annuel) : c'est la seule unité que le visiteur compare d'un
+ * onglet à l'autre.
+ *
+ * ⚠️ Affichage seul pour l'instant : aucun price Stripe annuel n'est branché,
+ * le checkout part sur le price mensuel (`STRIPE_PRICE_UNIT`). Créez le price
+ * annuel côté Stripe avant d'ouvrir la souscription à l'année.
+ */
+export const YEARLY_MONTHLY_PRICE = 59;
+
+/** Remise de l'engagement annuel, arrondie à l'entier (badge de l'onglet). */
+export const YEARLY_DISCOUNT_PCT = Math.round(
+  (1 - YEARLY_MONTHLY_PRICE / SUBSCRIPTION_PRICE) * 100,
+);
+
+/** Cycles de facturation proposés par la carte d'abonnement. */
+export type BillingCycle = "monthly" | "yearly";
+
+/** Durée de la garantie « visibilité en progrès ou remboursé », en jours. */
+export const GUARANTEE_DAYS = 90;
+
+/**
  * Budget annuel d'une agence SEO / référencement IA classique.
  * Sert uniquement de repère comparatif sur la page tarifs.
  */

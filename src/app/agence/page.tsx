@@ -4,7 +4,7 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { ServicesCta } from "@/components/ServicesCta";
+import { DemoCta } from "@/components/DemoCta";
 import { ROUTES } from "@/constants/routes";
 import { SITE } from "@/constants/site";
 
@@ -105,7 +105,7 @@ export default async function AgencyPage() {
               {t("heroCtaPrimary")}
             </Link>
             <Link
-              href={ROUTES.services}
+              href={ROUTES.demo}
               className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border border-graphite bg-snow px-6 py-3 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
             >
               {t("heroCtaSecondary")}
@@ -256,7 +256,7 @@ export default async function AgencyPage() {
 
         {/* CTA services */}
         <div className="px-5 py-12">
-          <ServicesCta />
+          <DemoCta />
         </div>
       </div>
 

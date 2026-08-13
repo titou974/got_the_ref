@@ -11,6 +11,12 @@ import { motion, useReducedMotion } from "framer-motion";
  *
  * Les points sont générés une fois pour toutes ci-dessous : il s'agit d'une
  * courbe de démonstration, jamais de données client.
+ *
+ * Le tracé s'anime au montage, et non à l'entrée dans le champ de vision : le
+ * graphique vit dans le ruban de preuves, dont les cartes sont déplacées par une
+ * animation CSS. Un `IntersectionObserver` n'y voit pas passer les cartes de
+ * façon fiable — les courbes restaient alors à `pathLength: 0`, c'est-à-dire
+ * invisibles, sur un cadre vide.
  */
 
 const W = 420;
@@ -86,10 +92,9 @@ export function GrowthChart({ markerLabel }: { markerLabel: string }) {
           stroke="var(--color-ash)"
           strokeWidth="2"
           strokeLinecap="round"
-          initial={reduce ? undefined : { pathLength: 0 }}
-          whileInView={reduce ? undefined : { pathLength: 1 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 1.6, ease: "easeOut" }}
+          initial={reduce ? false : { pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: reduce ? 0 : 1.6, ease: "easeOut" }}
         />
         <motion.path
           d={path(CLICKS)}
@@ -97,10 +102,9 @@ export function GrowthChart({ markerLabel }: { markerLabel: string }) {
           stroke="var(--color-obsidian)"
           strokeWidth="2.4"
           strokeLinecap="round"
-          initial={reduce ? undefined : { pathLength: 0 }}
-          whileInView={reduce ? undefined : { pathLength: 1 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 1.6, ease: "easeOut", delay: 0.15 }}
+          initial={reduce ? false : { pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: reduce ? 0 : 1.6, ease: "easeOut", delay: reduce ? 0 : 0.15 }}
         />
 
         {DATES.map((date, i) => (

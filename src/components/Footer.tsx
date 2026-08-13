@@ -13,8 +13,11 @@ export async function Footer() {
           <Link href={ROUTES.agency} className="cursor-pointer transition-colors duration-200 hover:text-text">
             {t("agency")}
           </Link>
-          <Link href={ROUTES.services} className="cursor-pointer transition-colors duration-200 hover:text-text">
-            {t("services")}
+          <Link href={ROUTES.demo} className="cursor-pointer transition-colors duration-200 hover:text-text">
+            {t("demo")}
+          </Link>
+          <Link href={ROUTES.contact} className="cursor-pointer transition-colors duration-200 hover:text-text">
+            {t("contact")}
           </Link>
           <Link href={ROUTES.pricing} className="cursor-pointer transition-colors duration-200 hover:text-text">
             {t("pricing")}
