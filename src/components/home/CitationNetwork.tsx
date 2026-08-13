@@ -91,7 +91,7 @@ export function CitationNetwork() {
           </ul>
 
           <Link
-            href={ROUTES.services}
+            href={ROUTES.demo}
             className="mt-7 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-6 py-3.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
           >
             {t("cta")}

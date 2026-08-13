@@ -3,16 +3,17 @@ import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BookCallButton } from "@/components/BookCallButton";
+import { ResultsCarousel } from "@/components/ResultsCarousel";
 import { ROUTES } from "@/constants/routes";
 import { SITE } from "@/constants/site";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("services");
+  const t = await getTranslations("demo");
   return {
     title: t("metaTitle"),
     description: t("metaDescription"),
     keywords: t("keywords").split(",").map((k) => k.trim()),
-    alternates: { canonical: ROUTES.services },
+    alternates: { canonical: ROUTES.demo },
     openGraph: {
       title: `${t("metaTitle")} · ${SITE.name}`,
       description: t("metaDescription"),
@@ -24,18 +25,45 @@ export async function generateMetadata(): Promise<Metadata> {
 
 type Step = { step: string; title: string; body: string };
 
+/** Cinq étoiles pleines, dessinées plutôt qu'importées : une image de moins à charger. */
+function Stars() {
+  return (
+    <div className="flex gap-0.5" aria-hidden>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <svg key={i} width="15" height="15" viewBox="0 0 20 20" fill="#f5a623">
+          <path d="M10 1.6l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7 1-5.6-4.1-3.9 5.6-.8z" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
 function Check() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="mt-0.5 shrink-0">
       <circle cx="10" cy="10" r="9" fill="#11b48c" opacity="0.2" />
-      <path d="M6 10.5 8.5 13 14 7" stroke="#11b48c" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M6 10.5 8.5 13 14 7"
+        stroke="#11b48c"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-export default async function ServicesPage() {
-  const t = await getTranslations("services");
-  const includes = t.raw("offerIncludes") as string[];
+/**
+ * Page de prise de rendez-vous. Elle remplace l'ancienne page « Nos services » :
+ * un seul geste est proposé — réserver la démo — et tout le reste de la page
+ * n'est là que pour lever les objections avant le clic (preuves, programme de
+ * l'appel, déroulé de la mission).
+ *
+ * Aucun prix ici : le chiffrage se fait après l'appel, comme sur la page tarifs.
+ */
+export default async function DemoPage() {
+  const t = await getTranslations("demo");
+  const agenda = t.raw("agendaItems") as string[];
   const steps = t.raw("processSteps") as Step[];
 
   return (
@@ -43,7 +71,7 @@ export default async function ServicesPage() {
       <Nav />
 
       <div className="flex-1">
-        {/* Hero */}
+        {/* Hero : la promesse, le bouton, puis les réassurances */}
         <section className="mx-auto w-full max-w-6xl px-5 pb-10 pt-10 text-center sm:pt-16">
           <p className="text-xs font-semibold uppercase tracking-wider text-steel">
             {t("heroEyebrow")}
@@ -55,42 +83,46 @@ export default async function ServicesPage() {
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-muted sm:text-lg">
             {t("heroSubtitle")}
           </p>
+
+          <div className="mt-8 flex justify-center">
+            <BookCallButton label={t("heroCta")} />
+          </div>
+          <p className="mt-3 text-xs text-muted">{t("heroNote")}</p>
+
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <Stars />
+            <p className="text-sm text-muted">{t("trustLabel")}</p>
+          </div>
+
+          <p className="mx-auto mt-6 max-w-md text-pretty text-sm font-medium text-text">
+            {t("guarantee")}
+          </p>
         </section>
 
-        {/* Offre principale (sans prix : sur estimation) */}
-        <section className="mx-auto w-full max-w-3xl px-5 py-8">
-          <div className="sweep relative overflow-hidden rounded-[36px] border border-fog bg-snow p-7 shadow-[var(--shadow-md)] sm:p-10">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h2 className="font-display text-2xl font-bold sm:text-3xl">{t("offerTitle")}</h2>
-                <p className="mt-2 max-w-md text-sm text-muted">{t("offerSubtitle")}</p>
-              </div>
-              <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-sm font-semibold text-accent">
-                {t("offerBadge")}
-              </span>
-            </div>
+        {/* Ils y gagnent : le ruban de preuves de la home */}
+        <ResultsCarousel className="py-10 sm:py-14" />
 
-            <div className="mt-7 border-t border-fog pt-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-steel">
-                {t("offerIncludesTitle")}
-              </p>
-              <ul className="mt-4 space-y-3 text-sm">
-                {includes.map((f) => (
-                  <li key={f} className="flex gap-2.5">
-                    <Check />
-                    <span className="text-muted">{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+        {/* Le programme de l'appel : ce qu'on regarde, point par point */}
+        <section className="mx-auto w-full max-w-6xl px-5 py-14 sm:py-16">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-steel">
+              {t("agendaEyebrow")}
+            </p>
+            <h2 className="mt-2 text-balance text-2xl font-bold sm:text-3xl">{t("agendaTitle")}</h2>
+            <p className="mx-auto mt-3 max-w-xl text-pretty text-muted">{t("agendaSubtitle")}</p>
+          </div>
 
-            <div className="mt-8 flex flex-col gap-3">
-              <div>
-                <span className="font-display text-3xl font-bold text-text">{t("offerPriceLabel")}</span>
-              </div>
-              <p className="text-xs text-muted">{t("offerPriceNote")}</p>
-              <BookCallButton label={t("offerCta")} className="mt-2 w-full sm:w-auto" />
-            </div>
+          <ul className="mt-9 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {agenda.map((item) => (
+              <li key={item} className="card-cal flex gap-3 px-5 py-4 text-sm">
+                <Check />
+                <span className="text-muted">{item}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-9 flex justify-center">
+            <BookCallButton label={t("heroCta")} />
           </div>
         </section>
 
@@ -129,8 +161,10 @@ export default async function ServicesPage() {
               {t("ctaTitle")}
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-pretty text-muted">{t("ctaSubtitle")}</p>
-            <div className="mt-7 flex justify-center">
+            <div className="mt-7 flex flex-col items-center gap-3">
               <BookCallButton label={t("ctaButton")} />
+              <Stars />
+              <p className="text-sm text-muted">{t("trustLabel")}</p>
             </div>
           </section>
         </div>

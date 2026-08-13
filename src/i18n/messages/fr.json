@@ -19,9 +19,10 @@
     "viewPricing": "voir les tarifs",
     "discoverOffers": "Découvrir nos offres",
     "agency": "Notre agence",
-    "services": "Nos services",
+    "demo": "Démo",
+    "contact": "Contact",
     "bookCall": "Prendre rendez-vous",
-    "discoverServices": "Découvrir nos services"
+    "bookDemo": "Réserver une démo"
   },
   "nav": {
     "myAccount": "Mon compte"
@@ -30,17 +31,18 @@
     "rights": "© {year} got_the_ref. Tous droits réservés.",
     "tagline": "La première agence de GEO française.",
     "agency": "Notre agence",
-    "services": "Nos services",
+    "demo": "Démo",
+    "contact": "Contact",
     "pricing": "Tarifs",
     "legalMentions": "Mentions légales",
     "terms": "CGV / CGU",
     "privacy": "Confidentialité"
   },
-  "ctaServices": {
+  "ctaDemo": {
     "eyebrow": "got_the_ref · Agence GEO",
     "title": "Envie d'apparaître en premier dans les IA ?",
     "subtitle": "Notre agence optimise votre commerce pour ChatGPT, Gemini et Perplexity. Discutons de votre projet et faisons monter votre business tout en haut des réponses IA.",
-    "button": "Découvrir nos services",
+    "button": "Réserver une démo",
     "secondary": "Prendre rendez-vous"
   },
   "home": {
@@ -686,29 +688,32 @@
       }
     ]
   },
-  "services": {
-    "metaTitle": "Nos services",
-    "metaDescription": "Accompagnement GEO sur-mesure : audit de visibilité IA, optimisation et suivi pour apparaître en premier sur ChatGPT, Gemini et Perplexity. Réservez un appel découverte avec got_the_ref.",
-    "keywords": "audit de visibilité IA, agence GEO, optimisation GEO, consultant generative engine optimization, apparaître sur ChatGPT, référencement IA, suivi des mentions de marque ChatGPT",
-    "heroEyebrow": "Nos services",
-    "heroTitleBefore": "Faites monter votre commerce ",
-    "heroTitleHighlight": "tout en haut des IA",
-    "heroSubtitle": "Un accompagnement GEO complet, de l'audit à la première position sur ChatGPT, Gemini et Perplexity. Conçu pour les commerçants et entreprises qui veulent être recommandés par les IA.",
-    "offerBadge": "Sur estimation",
-    "offerTitle": "Accompagnement GEO sur-mesure",
-    "offerSubtitle": "Chaque business est unique : votre tarif est établi sur estimation, après un premier échange découverte.",
-    "offerIncludesTitle": "Ce qui est inclus",
-    "offerIncludes": [
-      "Audit complet de votre visibilité sur ChatGPT, Gemini & Perplexity",
-      "Optimisation de votre fiche Google Maps et de votre ancrage local",
-      "Fichier llms.txt + données structurées (schémas JSON-LD)",
-      "Réécriture des contenus clés pour être citable par les IA (E-E-A-T)",
-      "Suivi de votre positionnement et des mentions de marque sur les IA",
-      "Un rapport clair, avec des actions priorisées par impact"
+  "demo": {
+    "metaTitle": "Réserver une démo",
+    "metaDescription": "Réservez une démo gratuite de got_the_ref : on vous montre votre visibilité réelle sur ChatGPT, Gemini et Perplexity, et le plan pour monter tout en haut de leurs réponses.",
+    "keywords": "démo GEO, réserver un appel, agence GEO, audit de visibilité IA, apparaître sur ChatGPT, optimisation pour les IA, consultant generative engine optimization",
+    "heroEyebrow": "Démo",
+    "heroTitleBefore": "Réservez votre démo et découvrez comment ",
+    "heroTitleHighlight": "faire venir vos clients depuis les IA",
+    "heroSubtitle": "30 minutes en visio, sans engagement. On regarde ensemble votre visibilité actuelle sur ChatGPT, Gemini et Perplexity, et on vous dit exactement quoi corriger pour être recommandé.",
+    "heroCta": "Réserver ma démo",
+    "heroNote": "Gratuit · 30 minutes · aucun engagement",
+    "guarantee": "Si votre visibilité ne progresse pas sous 90 jours, vous êtes remboursé.",
+    "trustLabel": "Des commerces et des marques dans tous les secteurs",
+    "agendaEyebrow": "Au programme",
+    "agendaTitle": "Ce qu'on couvre pendant l'appel",
+    "agendaSubtitle": "Un tour complet de votre position dans les moteurs qui répondent à vos clients — et du chemin pour la changer.",
+    "agendaItems": [
+      "Suivi de vos mentions dans les IA",
+      "Requêtes réelles de vos clients",
+      "Audit GEO / SEO de votre site",
+      "Fiche Google et ancrage local",
+      "Données structurées et llms.txt",
+      "Contenus citables par les IA",
+      "Autorité et citations externes",
+      "Analyse de vos concurrents",
+      "Plan d'action priorisé par impact"
     ],
-    "offerPriceLabel": "Sur estimation",
-    "offerPriceNote": "Tarif établi après un appel découverte gratuit, selon votre niche et vos objectifs.",
-    "offerCta": "Prendre rendez-vous",
     "processEyebrow": "Comment ça se passe",
     "processTitle": "De l'appel à la première position",
     "processSteps": [
@@ -719,7 +724,7 @@
       },
       {
         "step": "02",
-        "title": "Audit & devis sur estimation",
+        "title": "Audit & plan chiffré",
         "body": "On mesure votre visibilité actuelle sur les IA et on établit un plan d'action chiffré sur estimation."
       },
       {
@@ -731,9 +736,41 @@
     "forEyebrow": "Pour qui ?",
     "forTitle": "Vous voulez être recommandé par les IA ?",
     "forBody": "Restaurateurs, commerçants, artisans, e-commerçants, SaaS — si vos clients cherchent désormais sur ChatGPT, Gemini ou Perplexity, votre place est tout en haut de leurs réponses. C'est exactement ce que nous allons construire ensemble.",
-    "ctaTitle": "Discutons de votre projet",
-    "ctaSubtitle": "Réservez un appel découverte gratuit. On vous dit où vous en êtes sur les IA et comment monter tout en haut.",
-    "ctaButton": "Prendre rendez-vous"
+    "ctaTitle": "Prêt à faire venir vos clients depuis les IA ?",
+    "ctaSubtitle": "Réservez votre démo gratuite. On vous dit où vous en êtes sur les IA et comment monter tout en haut.",
+    "ctaButton": "Réserver ma démo"
+  },
+  "contact": {
+    "metaTitle": "Nous contacter",
+    "metaDescription": "Une question sur got_the_ref, votre analyse ou votre accompagnement GEO ? Écrivez-nous : nous répondons sous 24 heures, sous 12 heures pour les clients.",
+    "keywords": "contact got_the_ref, support GEO, aide analyse IA, agence GEO française, assistance",
+    "heroEyebrow": "Contact",
+    "heroTitleBefore": "Une question ? ",
+    "heroTitleHighlight": "On vous répond",
+    "heroSubtitle": "Votre réussite est notre priorité.",
+    "priorityTitle": "Vous êtes client (réponse sous 12 h)",
+    "priorityBody": "Client ou accompagnement en cours : votre message passe en priorité. Précisez l'adresse du site concerné, nous répondons sous 12 heures ouvrées.",
+    "priorityCta": "Écrire au support",
+    "generalTitle": "Question générale (réponse sous 24 h)",
+    "generalBody": "Avant de nous écrire, ces pages répondent peut-être déjà à votre question :",
+    "generalCta": "Réserver une démo",
+    "formTitle": "Écrivez-nous",
+    "formSubtitle": "Décrivez votre situation en quelques lignes : plus c'est précis, plus la réponse est utile.",
+    "formName": "Votre nom",
+    "formNamePlaceholder": "Camille Martin",
+    "formEmail": "Votre e-mail",
+    "formEmailPlaceholder": "camille@monsite.fr",
+    "formSite": "Votre site (facultatif)",
+    "formSitePlaceholder": "https://monsite.fr",
+    "formSubject": "Sujet",
+    "formSubjectPlaceholder": "Visibilité de mon restaurant sur ChatGPT",
+    "formMessage": "Votre message",
+    "formMessagePlaceholder": "Parlez-nous de votre activité, de votre zone et de ce que vous cherchez à obtenir.",
+    "formSubmit": "Envoyer le message",
+    "formNote": "Le bouton ouvre votre messagerie avec le message prérempli. Vous pouvez aussi écrire directement à {email}.",
+    "ctaTitle": "Plutôt en parler de vive voix ?",
+    "ctaSubtitle": "Réservez une démo gratuite de 30 minutes : on regarde votre visibilité sur les IA ensemble.",
+    "ctaButton": "Réserver ma démo"
   },
   "account": {
     "metaTitle": "Mon compte",

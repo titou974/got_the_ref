@@ -128,7 +128,7 @@ export function SolutionBlock({ prompt, locked = false }: { prompt: string; lock
       <p className="mt-4 border-t border-fog pt-4 text-sm text-muted">
         {t("agencyCtaText")}{" "}
         <Link
-          href={ROUTES.services}
+          href={ROUTES.demo}
           className="cursor-pointer font-semibold text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian"
         >
           {t("agencyCtaLink")}

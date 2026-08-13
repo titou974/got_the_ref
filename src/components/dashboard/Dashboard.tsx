@@ -9,7 +9,7 @@ import { SiteScreenshot } from "./SiteScreenshot";
 import { ReportTabs } from "./ReportTabs";
 import { FreeReportCard } from "./FreeReportCard";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
-import { ServicesCta } from "@/components/ServicesCta";
+import { DemoCta } from "@/components/DemoCta";
 import { ROUTES } from "@/constants/routes";
 
 export async function Dashboard({
@@ -108,7 +108,7 @@ export async function Dashboard({
       </AnimatedCard>
 
       {/* CTA agence : redirige vers les services en bas de chaque rapport */}
-      <ServicesCta />
+      <DemoCta />
     </div>
   );
 }
