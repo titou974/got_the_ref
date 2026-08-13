@@ -206,6 +206,15 @@ h1, h2, h3, h4, h5 {
   animation: spin-slow 8s linear infinite;
 }
 
+/* Carrousel orbital des plateformes : l'anneau tourne, chaque logo tourne en
+   sens inverse à la même vitesse — il reste donc droit tout du long. */
+.orbit-ring {
+  animation: spin-slow 44s linear infinite;
+}
+.orbit-badge {
+  animation: spin-slow 44s linear infinite reverse;
+}
+
 /* ── Ruban de preuves ────────────────────────────────────────────────────────
    Défilement continu : la piste porte deux copies de la liste et se translate
    d'exactement la moitié de sa largeur, si bien que la seconde copie occupe la
@@ -230,6 +239,15 @@ h1, h2, h3, h4, h5 {
   margin: 0;
   list-style: none;
 }
+/* Variantes de ruban : quand plusieurs rangées se superposent, des vitesses et
+   des sens différents évitent l'effet « bloc unique qui glisse ». */
+.marquee-track--fast {
+  animation-duration: 42s;
+}
+.marquee-track--reverse {
+  animation-direction: reverse;
+}
+
 .marquee:hover .marquee-track {
   animation-play-state: paused;
 }
@@ -238,7 +256,8 @@ h1, h2, h3, h4, h5 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .thinking-dot, .shimmer, .caret::after, .animate-spin-slow, .sweep::before {
+  .thinking-dot, .shimmer, .caret::after, .animate-spin-slow, .sweep::before,
+  .orbit-ring, .orbit-badge {
     animation: none !important;
   }
   .card-cal { transition: none !important; }
