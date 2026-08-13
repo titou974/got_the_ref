@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "gen:lottie": "node scripts/gen-lottie.mjs"
+    "gen:lottie": "node scripts/gen-lottie.mjs",
+    "create:subscriber": "node scripts/create-subscriber.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

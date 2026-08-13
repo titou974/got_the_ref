@@ -72,11 +72,15 @@ export function SiteScreenshot({
         </span>
       </div>
 
-      {/* Capture */}
+      {/* Capture. Avec contenu superposé, le cadre est un conteneur flex dont la
+          hauteur minimale ne fait que garantir une belle proportion : le contenu
+          reste dans le flux et peut donc le faire grandir. En le positionnant en
+          absolu, tout ce qui dépassait de `min-h` sortait du cadre — sur mobile,
+          le titre, la ligne de méta et le verdict passaient sous la découpe. */}
       <div
         className={`relative w-full bg-mist ${
           hasOverlay
-            ? "min-h-[360px] sm:min-h-[420px]"
+            ? "flex min-h-[300px] flex-col sm:min-h-[420px]"
             : "aspect-[16/10]"
         }`}
       >
@@ -105,7 +109,7 @@ export function SiteScreenshot({
           <>
             {/* Filtre noir pour faire ressortir le contenu superposé */}
             <div className="absolute inset-0 bg-black/65" aria-hidden />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6 py-8 text-center">
+            <div className="relative flex flex-1 flex-col items-center justify-center gap-4 px-5 py-7 text-center sm:gap-5 sm:px-6 sm:py-8">
               {children}
             </div>
           </>
