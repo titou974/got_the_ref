@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
+import { Analytics } from "@vercel/analytics/next";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { SITE } from "@/constants/site";
 import "./globals.css";
@@ -44,6 +45,8 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>
+        {/* Visiteurs et pages vues Vercel — inerte hors production. */}
+        <Analytics />
       </body>
     </html>
   );

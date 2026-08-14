@@ -40,11 +40,13 @@ export const TRIAL = { days: 3, activationPrice: 1 } as const;
  * (jamais le total annuel) : c'est la seule unité que le visiteur compare d'un
  * onglet à l'autre.
  *
- * ⚠️ Affichage seul pour l'instant : aucun price Stripe annuel n'est branché,
- * le checkout part sur le price mensuel (`STRIPE_PRICE_UNIT`). Créez le price
- * annuel côté Stripe avant d'ouvrir la souscription à l'année.
+ * Le price Stripe correspondant est facturé une seule fois par an
+ * (`YEARLY_TOTAL_PRICE`) : les deux montants doivent rester cohérents.
  */
 export const YEARLY_MONTHLY_PRICE = 59;
+
+/** Montant réellement débité, une fois par an, pour l'engagement annuel. */
+export const YEARLY_TOTAL_PRICE = YEARLY_MONTHLY_PRICE * 12;
 
 /** Remise de l'engagement annuel, arrondie à l'entier (badge de l'onglet). */
 export const YEARLY_DISCOUNT_PCT = Math.round(
@@ -53,6 +55,11 @@ export const YEARLY_DISCOUNT_PCT = Math.round(
 
 /** Cycles de facturation proposés par la carte d'abonnement. */
 export type BillingCycle = "monthly" | "yearly";
+
+export const BILLING_CYCLES: readonly BillingCycle[] = ["monthly", "yearly"] as const;
+
+/** Cycle retenu quand l'appelant n'en précise aucun (anciens liens, API). */
+export const DEFAULT_BILLING_CYCLE: BillingCycle = "monthly";
 
 /** Durée de la garantie « visibilité en progrès ou remboursé », en jours. */
 export const GUARANTEE_DAYS = 90;
@@ -90,16 +97,42 @@ export const ANALYSIS_QUOTAS = {
 export type BillingMode = "payment" | "subscription";
 
 /**
- * Facturation par offre payante : mode Stripe + variable d'environnement.
- * La variable peut contenir un Price ID (`price_…`) **ou** un Product ID (`prod_…`) —
+ * Facturation par offre payante : mode Stripe + variables d'environnement.
+ * Une variable peut contenir un Price ID (`price_…`) **ou** un Product ID (`prod_…`) —
  * dans ce dernier cas, on résout le `default_price` du produit (cf. `resolvePriceId`).
+ *
+ * `envByCycle` donne un price par cycle de facturation : c'est ce qui permet aux
+ * onglets mensuel / annuel de la carte tarif de partir sur deux prices distincts.
+ * Une offre sans déclinaison annuelle retombe sur `env`.
+ *
+ * ⚠️ Ces prices doivent être **récurrents** côté Stripe : le checkout s'ouvre en
+ * `mode: "subscription"`, qui refuse un tarif ponctuel.
  */
-export const PLAN_BILLING: Record<PaidPlanKey, { mode: BillingMode; env: string }> = {
-  /** Abonnement got_the_ref : accès total, mensuel (produit/price « UNIT »). */
-  pro: { mode: "subscription", env: "STRIPE_PRICE_UNIT" },
+export const PLAN_BILLING: Record<
+  PaidPlanKey,
+  { mode: BillingMode; env: string; envByCycle?: Record<BillingCycle, string> }
+> = {
+  /** Abonnement got_the_ref : accès total, au mois ou à l'année. */
+  pro: {
+    mode: "subscription",
+    env: "STRIPE_PRICE_PRO_MONTHLY",
+    envByCycle: {
+      monthly: "STRIPE_PRICE_PRO_MONTHLY",
+      yearly: "STRIPE_PRICE_PRO_YEARLY",
+    },
+  },
   /** Ancien plan agence : conservé pour les abonnements déjà en cours. */
   agency: { mode: "subscription", env: "STRIPE_PRICE_AGENCY" },
 } as const;
+
+/** Nom de la variable d'environnement portant le price d'une offre, par cycle. */
+export function stripePriceEnvName(
+  plan: PaidPlanKey,
+  cycle: BillingCycle = DEFAULT_BILLING_CYCLE,
+): string {
+  const billing = PLAN_BILLING[plan];
+  return billing.envByCycle?.[cycle] ?? billing.env;
+}
 
 /** Rétro-compat : noms des variables d'environnement Stripe par offre payante. */
 export const STRIPE_PRICE_ENV: Record<PaidPlanKey, string> = {
@@ -108,8 +141,11 @@ export const STRIPE_PRICE_ENV: Record<PaidPlanKey, string> = {
 } as const;
 
 /** Valeur brute de l'env d'une offre (Price ID ou Product ID), côté serveur. */
-export function stripePriceEnvValue(plan: PaidPlanKey): string | undefined {
-  return process.env[PLAN_BILLING[plan].env];
+export function stripePriceEnvValue(
+  plan: PaidPlanKey,
+  cycle: BillingCycle = DEFAULT_BILLING_CYCLE,
+): string | undefined {
+  return process.env[stripePriceEnvName(plan, cycle)];
 }
 
 /** Statuts d'abonnement Stripe considérés comme actifs. */

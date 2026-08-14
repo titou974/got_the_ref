@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { AgentRoster } from "./AgentRoster";
+import { BillingCycleProvider } from "./BillingCycleContext";
 import {
   GUARANTEE_DAYS,
   SUBSCRIPTION_PRICE,
@@ -46,8 +47,8 @@ function Check() {
  * total annuel, avec le tarif mensuel barré à côté pour que l'écart se lise
  * d'un coup d'œil.
  *
- * ⚠️ Les onglets ne pilotent que l'affichage : aucun price Stripe annuel n'est
- * branché (cf. `YEARLY_MONTHLY_PRICE`), le checkout part sur le mensuel.
+ * L'onglet pilote aussi le paiement : le cycle est publié dans le contexte, où
+ * le bouton de checkout vient le lire (cf. `BillingCycleProvider`).
  */
 export function PlanCard({
   cta,
@@ -179,7 +180,7 @@ export function PlanCard({
           <p className="mt-1 text-xs text-white/40">{t("vat")}</p>
 
           <div className={compact ? "mt-5" : "mt-7"}>
-            {cta}
+            <BillingCycleProvider cycle={cycle}>{cta}</BillingCycleProvider>
             <p className="mt-2.5 text-center text-xs text-white/50">
               {ctaNote ?? t("plan.ctaNote")}
             </p>
