@@ -5,11 +5,11 @@ import { actionClient, authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
 import { getStripe, getCheckoutMode, resolvePriceId } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
-import { TRIAL } from "@/constants/plans";
+import { TRIAL, type BillingCycle } from "@/constants/plans";
 import { SITE } from "@/constants/site";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
-import { analysisCheckoutSchema, checkoutSchema } from "./schemas";
+import { analysisCheckoutSchema, checkoutSchema, trialCheckoutSchema } from "./schemas";
 import { ANALYSIS_CHECKOUT_KIND, TRIAL_CHECKOUT_KIND } from "./unlock";
 import { CLAIM_METADATA_KEY, newClaimToken, rememberClaim } from "./claim";
 
@@ -44,8 +44,8 @@ export const createCheckoutAction = authActionClient
     }
 
     const mode = getCheckoutMode(parsedInput.plan);
-    const price = await resolvePriceId(parsedInput.plan);
-    const metadata = { userId: user.id, plan: parsedInput.plan };
+    const price = await resolvePriceId(parsedInput.plan, parsedInput.cycle);
+    const metadata = { userId: user.id, plan: parsedInput.plan, cycle: parsedInput.cycle };
 
     const session = await stripe.checkout.sessions.create({
       mode,
@@ -70,6 +70,29 @@ export const createCheckoutAction = authActionClient
   });
 
 /**
+ * Les deux lignes de tout checkout d'essai : l'abonnement — mensuel ou annuel
+ * selon l'onglet choisi — et les frais d'activation.
+ *
+ * Les frais sont joints en prix ponctuel : Stripe les encaisse immédiatement,
+ * alors que l'abonnement lui-même ne commence à courir qu'à la fin de l'essai.
+ */
+function trialLineItems(price: string) {
+  return [
+    { price, quantity: 1 },
+    {
+      quantity: 1,
+      price_data: {
+        currency: "eur",
+        unit_amount: TRIAL.activationPrice * 100,
+        product_data: {
+          name: `Activation de l'essai got_the_ref (${TRIAL.days} jours)`,
+        },
+      },
+    },
+  ];
+}
+
+/**
  * Souscription à l'abonnement got_the_ref depuis un rapport précis, **sans compte
  * requis**. C'est le cœur du tunnel : le visiteur lance une analyse gratuite,
  * lit le constat, s'abonne, puis crée son compte au retour de Stripe — le
@@ -90,7 +113,8 @@ export const createAnalysisCheckoutAction = actionClient
 
     const user = await getCurrentUser();
     const stripe = getStripe();
-    const price = await resolvePriceId("pro");
+    const cycle: BillingCycle = parsedInput.cycle;
+    const price = await resolvePriceId("pro", cycle);
 
     // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
     // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
@@ -101,28 +125,14 @@ export const createAnalysisCheckoutAction = actionClient
       kind: ANALYSIS_CHECKOUT_KIND,
       analysisId: analysis.id,
       domain: analysis.domain,
+      cycle,
       [CLAIM_METADATA_KEY]: claimToken,
       ...(user ? { userId: user.id } : {}),
     };
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [
-        { price, quantity: 1 },
-        // Frais d'activation de l'essai. Joint au checkout en prix ponctuel :
-        // Stripe le facture immédiatement, alors que l'abonnement lui-même ne
-        // commence à courir qu'à la fin de la période d'essai.
-        {
-          quantity: 1,
-          price_data: {
-            currency: "eur",
-            unit_amount: TRIAL.activationPrice * 100,
-            product_data: {
-              name: `Activation de l'essai got_the_ref (${TRIAL.days} jours)`,
-            },
-          },
-        },
-      ],
+      line_items: trialLineItems(price),
       // Connecté : on réutilise son client Stripe. Anonyme : Stripe crée le
       // client à la volée, ce qui nous donne l'e-mail pour la création de compte.
       ...(user?.stripeCustomerId
@@ -151,53 +161,45 @@ export const createAnalysisCheckoutAction = actionClient
  * à débloquer au retour : la page de succès propose alors la création du compte,
  * puis l'espace client.
  */
-export const createTrialCheckoutAction = actionClient.action(async () => {
-  const user = await getCurrentUser();
-  const stripe = getStripe();
-  const price = await resolvePriceId("pro");
+export const createTrialCheckoutAction = actionClient
+  .inputSchema(trialCheckoutSchema)
+  .action(async ({ parsedInput }) => {
+    const user = await getCurrentUser();
+    const stripe = getStripe();
+    const cycle: BillingCycle = parsedInput.cycle;
+    const price = await resolvePriceId("pro", cycle);
 
-  // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
-  // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
-  const claimToken = newClaimToken();
-  await rememberClaim(claimToken);
+    // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
+    // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
+    const claimToken = newClaimToken();
+    await rememberClaim(claimToken);
 
-  const metadata = {
-    kind: TRIAL_CHECKOUT_KIND,
-    [CLAIM_METADATA_KEY]: claimToken,
-    ...(user ? { userId: user.id } : {}),
-  };
+    const metadata = {
+      kind: TRIAL_CHECKOUT_KIND,
+      cycle,
+      [CLAIM_METADATA_KEY]: claimToken,
+      ...(user ? { userId: user.id } : {}),
+    };
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    line_items: [
-      { price, quantity: 1 },
-      {
-        quantity: 1,
-        price_data: {
-          currency: "eur",
-          unit_amount: TRIAL.activationPrice * 100,
-          product_data: {
-            name: `Activation de l'essai got_the_ref (${TRIAL.days} jours)`,
-          },
-        },
-      },
-    ],
-    ...(user?.stripeCustomerId
-      ? { customer: user.stripeCustomerId }
-      : { customer_email: user?.email }),
-    success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE.url}${ROUTES.pricing}?checkout=cancel`,
-    metadata,
-    subscription_data: { metadata, trial_period_days: TRIAL.days },
-    allow_promotion_codes: true,
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: trialLineItems(price),
+      ...(user?.stripeCustomerId
+        ? { customer: user.stripeCustomerId }
+        : { customer_email: user?.email }),
+      success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${SITE.url}${ROUTES.pricing}?checkout=cancel`,
+      metadata,
+      subscription_data: { metadata, trial_period_days: TRIAL.days },
+      allow_promotion_codes: true,
+    });
+
+    if (!session.url) {
+      throw new AppError("Le paiement est momentanément indisponible.", "STRIPE_NO_URL", 502);
+    }
+
+    return { url: session.url };
   });
-
-  if (!session.url) {
-    throw new AppError("Le paiement est momentanément indisponible.", "STRIPE_NO_URL", 502);
-  }
-
-  return { url: session.url };
-});
 
 /**
  * Ouvre le portail de facturation Stripe.

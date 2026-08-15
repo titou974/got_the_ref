@@ -1,5 +1,5 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { GrowthChart } from "./home/GrowthChart";
 import {
   PROOF_IS_ILLUSTRATIVE,
   TESTIMONIALS,
@@ -7,9 +7,9 @@ import {
 } from "@/constants/testimonials";
 
 /**
- * Bandeau de preuves qui défile sans fin. Chaque carte porte une parole ; les
- * activités en ligne y ajoutent leur courbe Search Console, parce que c'est là
- * que leur progression se mesure — un restaurant, lui, se juge à sa salle.
+ * Bandeau de preuves qui défile sans fin. Chaque carte porte une parole, et une
+ * sur deux y ajoute sa capture Search Console — moitié commerces de quartier,
+ * moitié activités en ligne : la courbe n'appartient à aucune des deux familles.
  *
  * Le ruban déborde volontairement de la grille : il donne à voir une file qui
  * continue hors écran, plutôt qu'une liste qu'on aurait finie de lire.
@@ -33,7 +33,6 @@ export async function ResultsCarousel({ className = "" }: { className?: string }
     clicks: t("clicks"),
     impressions: t("impressions"),
     position: t("position"),
-    chartMarker: t("chartMarker"),
   };
 
   return (
@@ -76,14 +75,16 @@ function TestimonialCard({
     clicks: string;
     impressions: string;
     position: string;
-    chartMarker: string;
   };
 }) {
   return (
     <li className="flex w-[19rem] shrink-0 flex-col overflow-hidden rounded-[28px] border border-fog bg-snow shadow-[var(--shadow-md)] sm:w-[23rem]">
       <figure className="flex flex-1 flex-col p-6">
         <Stars />
-        <blockquote className="mt-4 flex-1 text-pretty text-sm leading-relaxed text-text">
+        {/* Toutes les cartes s'alignent sur la plus haute — celles qui portent une
+            capture. La parole est donc centrée dans la place qui lui reste,
+            plutôt que collée en haut au-dessus d'un grand vide. */}
+        <blockquote className="mt-4 flex flex-1 items-center text-pretty text-sm leading-relaxed text-text">
           « {item.quote} »
         </blockquote>
         <figcaption className="mt-5 border-t border-fog pt-4">
@@ -92,30 +93,23 @@ function TestimonialCard({
         </figcaption>
       </figure>
 
-      {/* Activité en ligne : la courbe et ses chiffres closent la carte. Le repère
-          marque la mise en service de got_the_ref — la pente vient après lui. */}
+      {/* La capture Search Console ferme la carte. Elle affiche déjà ses trois
+          chiffres en clair : les répéter dessous ferait doublon, ils servent
+          donc à écrire le texte alternatif. Dimensions déclarées et ratio fixe :
+          la place est réservée avant le chargement, le ruban ne saute pas. */}
       {item.stats && (
-        <div className="border-t border-fog">
-          <div className="px-3 pt-3">
-            <GrowthChart markerLabel={labels.chartMarker} />
-          </div>
-          <dl className="grid grid-cols-3 gap-2 border-t border-fog px-4 py-3 text-center">
-            <Stat label={labels.clicks} value={item.stats.clicks} />
-            <Stat label={labels.impressions} value={item.stats.impressions} />
-            <Stat label={labels.position} value={item.stats.position} />
-          </dl>
+        <div className="border-t border-fog bg-mist">
+          <Image
+            src={item.stats.shot}
+            alt={`${labels.clicks} ${item.stats.clicks}, ${labels.impressions} ${item.stats.impressions}, ${labels.position} ${item.stats.position}`}
+            width={720}
+            height={468}
+            sizes="(min-width: 640px) 23rem, 19rem"
+            className="aspect-[720/468] w-full object-cover object-top"
+          />
         </div>
       )}
     </li>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[10px] font-semibold uppercase tracking-wider text-steel">{label}</dt>
-      <dd className="mt-0.5 text-sm font-bold tabular-nums">{value}</dd>
-    </div>
   );
 }
 

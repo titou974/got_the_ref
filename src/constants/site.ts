@@ -10,8 +10,15 @@ export const SITE = {
   /** URL publique de l'app, surchargée par l'environnement. */
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   contactEmail: "titouanhirsch@gmail.com",
-  /** Lien de prise de rendez-vous (Cal). À remplacer par le vrai lien Cal. */
-  calUrl: process.env.NEXT_PUBLIC_CAL_URL ?? "https://cal.com/gottheref",
+  /**
+   * Créneau de démonstration (Cal), surchargeable par l'environnement.
+   *
+   * ⚠️ Le compte Cal s'écrit « gotheref », avec un seul « t » : ce n'est pas une
+   * faute de frappe de `got_the_ref`. La variante « gottheref » n'existe pas et
+   * renvoie une 404 — c'est l'ancienne valeur, qui menait chaque bouton de
+   * démonstration sur une page d'erreur.
+   */
+  calUrl: process.env.NEXT_PUBLIC_CAL_URL ?? "https://cal.com/gotheref/30min",
   /** Fondateur — profil public référencé pour l'E-E-A-T et le schema Person. */
   founder: {
     name: "Titouan Hirsch",
