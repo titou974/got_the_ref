@@ -580,14 +580,14 @@
     "perYear": " par an",
     "vat": "TVA en sus",
     "trialPrefix": "1 €",
-    "trialCta": "Démarrer l'essai pour {price}",
+    "trialCta": "Démarrer l'essai 3 jours pour {price}",
     "redirecting": "Redirection…",
     "secureNote": "Paiement sécurisé par Stripe · Essai de {days} jours, résiliable avant la fin sans être débité de l'abonnement · TVA en sus le cas échéant",
     "plan": {
       "eyebrow": "Accès complet",
       "name": "Tout-en-un",
       "terms": "{days} jours d'accès complet, puis {price}/mois. Résiliable à tout moment.",
-      "cta": "Analyser mon site pour {price}",
+      "cta": "Essai de 3 jours pour {price}",
       "ctaNote": "Accès complet pendant {days} jours · résiliable avant la fin de l'essai",
       "features": [
         "Analyses illimitées, e-commerce, SaaS ou commerce physique",
@@ -764,12 +764,7 @@
   "homeHero": {
     "headingBefore": "Faites venir vos clients depuis",
     "headingAfter": "en pilote automatique",
-    "engines": [
-      "ChatGPT",
-      "Gemini",
-      "Perplexity",
-      "Google"
-    ],
+    "engines": ["ChatGPT", "Gemini", "Perplexity", "Google"],
     "subtitle": "Soyez recommandé par les intelligences artificielles et par Google, sans équipe SEO ni ligne de code.",
     "cta": "Commencer l'essai de {days} jours",
     "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
@@ -801,11 +796,7 @@
         "num": "01",
         "title": "Analyse de votre activité",
         "body": "On lit votre site comme une IA : secteur, marché, concurrents, et les questions que vos clients posent vraiment.",
-        "chips": [
-          "Requêtes détectées",
-          "Prompts clients",
-          "Concurrents"
-        ],
+        "chips": ["Requêtes détectées", "Prompts clients", "Concurrents"],
         "mock": {
           "url": "votre-site.fr",
           "pill": "analyse en profondeur",
@@ -823,11 +814,7 @@
         "num": "02",
         "title": "Position mesurée sur les moteurs",
         "body": "On interroge ChatGPT et Gemini sur votre marché, puis on relève qui est cité avant vous.",
-        "chips": [
-          "ChatGPT",
-          "Gemini",
-          "Perplexity"
-        ],
+        "chips": ["ChatGPT", "Gemini", "Perplexity"],
         "mock": {
           "label": "Position mesurée",
           "you": "Votre entreprise",
@@ -835,18 +822,12 @@
             {
               "name": "ChatGPT",
               "rank": "2",
-              "others": [
-                "Studio Pixel",
-                "WebFactory"
-              ]
+              "others": ["Studio Pixel", "WebFactory"]
             },
             {
               "name": "Gemini",
               "rank": "1",
-              "others": [
-                "Atelier Déco",
-                "Maison & Objet"
-              ]
+              "others": ["Atelier Déco", "Maison & Objet"]
             }
           ]
         }
@@ -855,11 +836,7 @@
         "num": "03",
         "title": "Correctifs priorisés",
         "body": "llms.txt, données structurées, pages citables : chaque manque a son correctif chiffré et son prompt prêt à coller.",
-        "chips": [
-          "llms.txt",
-          "JSON-LD",
-          "Citabilité"
-        ],
+        "chips": ["llms.txt", "JSON-LD", "Citabilité"],
         "mock": {
           "applied": "appliqué",
           "impact": "Impact {value}/10",
@@ -887,11 +864,7 @@
         "num": "04",
         "title": "Remesure en continu",
         "body": "Les agents repassent sur votre site, remesurent la position, et vous voyez la courbe bouger.",
-        "chips": [
-          "Score GEO",
-          "Position",
-          "Avis"
-        ],
+        "chips": ["Score GEO", "Position", "Avis"],
         "mock": {
           "scoreLabel": "Score GEO",
           "before": "42",
@@ -1049,12 +1022,7 @@
     "sites": [
       {
         "domain": "lacotriade.fr",
-        "colors": [
-          "#0B3C49",
-          "#1B7F79",
-          "#E8F3F1",
-          "#F7FBFA"
-        ],
+        "colors": ["#0B3C49", "#1B7F79", "#E8F3F1", "#F7FBFA"],
         "voice": [
           "chaleureux, ancré local",
           "cuisine de la marée",
@@ -1117,12 +1085,7 @@
       },
       {
         "domain": "atelier-lubin.fr",
-        "colors": [
-          "#3E2A18",
-          "#B07D4B",
-          "#F0E4D4",
-          "#FBF7F2"
-        ],
+        "colors": ["#3E2A18", "#B07D4B", "#F0E4D4", "#FBF7F2"],
         "voice": [
           "artisanal, précis",
           "vocabulaire du bois",
@@ -1185,12 +1148,7 @@
       },
       {
         "domain": "toiture-vendee.fr",
-        "colors": [
-          "#1C2B3A",
-          "#D7501E",
-          "#E7ECF1",
-          "#F8FAFB"
-        ],
+        "colors": ["#1C2B3A", "#D7501E", "#E7ECF1", "#F8FAFB"],
         "voice": [
           "direct, rassurant",
           "vocabulaire de chantier",
@@ -1258,12 +1216,7 @@
         "num": "1",
         "title": "Couleurs de marque",
         "kind": "colors",
-        "items": [
-          "#0B3C49",
-          "#1B7F79",
-          "#E8F3F1",
-          "#F7FBFA"
-        ]
+        "items": ["#0B3C49", "#1B7F79", "#E8F3F1", "#F7FBFA"]
       },
       {
         "num": "2",
@@ -1329,10 +1282,7 @@
     "publishedPath": "lacotriade.fr/journal",
     "demoNote": "Article et sites de démonstration.",
     "takeawaysTitle": "À retenir",
-    "tableHead": [
-      "Point",
-      "Détail"
-    ],
+    "tableHead": ["Point", "Détail"],
     "tocTitle": "Sommaire",
     "imageAlt": "Illustration de l'article"
   },
@@ -1418,11 +1368,7 @@
       ],
       "you": "votre-site.fr",
       "badge": "Cité en source n° 1",
-      "points": [
-        "E-commerce",
-        "SaaS & applications",
-        "Médias & créateurs"
-      ]
+      "points": ["E-commerce", "SaaS & applications", "Médias & créateurs"]
     },
     "local": {
       "title": "Commerces et artisans de quartier",
@@ -1430,17 +1376,9 @@
       "caption": "Réponse locale · votre zone",
       "query": "« Où manger des fruits de mer aux Sables-d'Olonne ? »",
       "you": "Votre commerce",
-      "competitors": [
-        "Concurrent",
-        "Concurrent",
-        "Concurrent"
-      ],
+      "competitors": ["Concurrent", "Concurrent", "Concurrent"],
       "badge": "Recommandé en premier",
-      "points": [
-        "Restaurants & hôtels",
-        "Artisans & BTP",
-        "Santé & bien-être"
-      ]
+      "points": ["Restaurants & hôtels", "Artisans & BTP", "Santé & bien-être"]
     }
   }
 }
