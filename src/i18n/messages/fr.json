@@ -587,7 +587,7 @@
       "eyebrow": "Accès complet",
       "name": "Tout-en-un",
       "terms": "{days} jours d'accès complet, puis {price}/mois. Résiliable à tout moment.",
-      "cta": "Essai de 3 jours pour {price}",
+      "cta": "Essayer 3 jours pour {price}",
       "ctaNote": "Accès complet pendant {days} jours · résiliable avant la fin de l'essai",
       "features": [
         "Analyses illimitées, e-commerce, SaaS ou commerce physique",
@@ -598,7 +598,7 @@
         "Aucune compétence technique requise"
       ],
       "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
-      "ctaStripe": "Démarrer l'essai 3 jours pour {price}",
+      "ctaStripe": "Démarrer 3 jours pour {price}",
       "ctaStripeNote": "Sans engagement · résiliable avant la fin de l'essai"
     },
     "agents": {
