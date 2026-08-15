@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { AnalysisCheckoutButton } from "@/components/AnalysisCheckoutButton";
+import { TrialCheckoutButton } from "@/components/TrialCheckoutButton";
 import { BrandProof } from "@/components/BrandProof";
 import { PlanCard } from "@/components/pricing/PlanCard";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
-import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
+import { REDIRECT_REASONS } from "@/constants/routes";
 import { TRIAL } from "@/constants/plans";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -59,12 +59,12 @@ export default async function TarifsPage({ searchParams }: Props) {
                   label={t("trialCta", { price: euros(TRIAL.activationPrice) })}
                 />
               ) : (
-                <Link
-                  href={ROUTES.home}
-                  className="block w-full cursor-pointer rounded-full bg-white py-3 text-center font-medium text-obsidian transition-colors duration-200 hover:bg-white/90"
-                >
-                  {t("plan.cta")}
-                </Link>
+                // Sans rapport à rattacher, le bouton part quand même sur Stripe :
+                // renvoyer vers la home faisait reculer d'un cran un visiteur déjà
+                // venu voir le prix.
+                <TrialCheckoutButton
+                  label={t("plan.cta", { price: euros(TRIAL.activationPrice) })}
+                />
               )
             }
           />

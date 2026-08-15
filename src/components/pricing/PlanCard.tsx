@@ -182,7 +182,7 @@ export function PlanCard({
           <div className={compact ? "mt-5" : "mt-7"}>
             <BillingCycleProvider cycle={cycle}>{cta}</BillingCycleProvider>
             <p className="mt-2.5 text-center text-xs text-white/50">
-              {ctaNote ?? t("plan.ctaNote")}
+              {ctaNote ?? t("plan.ctaNote", { days: TRIAL.days })}
             </p>
           </div>
 
