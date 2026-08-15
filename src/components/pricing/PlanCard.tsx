@@ -161,23 +161,35 @@ export function PlanCard({
             {t("serverFeeNote", { days: TRIAL.days })}
           </p>
 
-          <div className={`flex flex-wrap items-baseline gap-x-2.5 gap-y-1 ${compact ? "mt-4" : "mt-5"}`}>
-            <span className="text-sm text-white/50">{t("thenLabel")}</span>
+          {/* L'abonnement à venir passe en note, du même gris que les frais de
+              serveur : un seul montant doit se lire en grand sur cette carte,
+              celui qu'on paie aujourd'hui. Le tarif remisé reste distingué du
+              tarif plein, par la graisse plutôt que par la taille. */}
+          {/* Trois lignes réservées tant que la carte est étroite : la mention
+              annuelle est plus longue que la mensuelle, et sans cette réserve la
+              carte grandissait de 19 px au changement d'onglet. Au-delà de `sm`
+              les deux tiennent sur deux lignes, la réserve devient inutile. */}
+          <p
+            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed text-white/45 first-letter:uppercase sm:min-h-0 ${
+              compact ? "mt-3" : "mt-4"
+            }`}
+          >
+            {t("thenLabel")}{" "}
             {cycle === "yearly" && (
-              <span className="text-base tabular-nums text-white/35 line-through">
+              <span className="tabular-nums text-white/30 line-through">
                 {euros(SUBSCRIPTION_PRICE)}
-                {t("perMonth")}
+                {t("perMonth")}{" "}
               </span>
             )}
-            <span className="font-display text-2xl font-bold tabular-nums">
+            <span className="font-semibold tabular-nums text-white/70">
               {euros(cycle === "yearly" ? YEARLY_MONTHLY_PRICE : SUBSCRIPTION_PRICE)}
-              <span className="text-base font-medium text-white/60">{t("perMonth")}</span>
+              {t("perMonth")}
             </span>
-          </div>
-          <p className="mt-1.5 text-sm text-white/60">
+            {" · "}
             {cycle === "yearly" ? t("cycle.yearlyTerms") : t("cycle.monthlyTerms")}
+            {" · "}
+            {t("vat")}
           </p>
-          <p className="mt-1 text-xs text-white/40">{t("vat")}</p>
 
           <div className={compact ? "mt-5" : "mt-7"}>
             <BillingCycleProvider cycle={cycle}>{cta}</BillingCycleProvider>
