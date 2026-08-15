@@ -76,8 +76,8 @@ export default async function Home() {
 
       <Faq />
       <Footer />
-
-      <ScrollTopCta label={t("scrollHint")} />
+      {/* 
+      <ScrollTopCta label={t("scrollHint")} /> */}
     </main>
   );
 }
