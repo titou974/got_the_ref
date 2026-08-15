@@ -589,8 +589,8 @@
       "eyebrow": "Accès complet",
       "name": "Tout-en-un",
       "terms": "{days} jours d'accès complet, puis {price}/mois. Résiliable à tout moment.",
-      "cta": "Analyser mon site gratuitement",
-      "ctaNote": "Vous ne démarrez l'essai qu'après avoir vu votre score.",
+      "cta": "Analyser mon site pour {price}",
+      "ctaNote": "Accès complet pendant {days} jours · résiliable avant la fin de l'essai",
       "features": [
         "Analyses illimitées, e-commerce, SaaS ou commerce physique",
         "Vos positions réelles sur ChatGPT et Gemini, remesurées en continu",
