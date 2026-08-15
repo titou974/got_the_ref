@@ -4,15 +4,18 @@
  * Deux familles, volontairement à parité : `local` (commerces physiques) et
  * `online` (SaaS, e-commerce, activités en ligne).
  *
- * Les six captures Search Console sont réparties à parts égales entre les deux —
- * trois d'un côté, trois de l'autre : la courbe n'est pas l'apanage du commerce
- * en ligne, une boulangerie se mesure aussi en recherches. Les captures les plus
- * modestes vont aux commerces de quartier, les plus gros volumes aux activités
- * en ligne, pour que chaque courbe reste à l'échelle du métier qu'elle illustre.
+ * Chaque famille a sa preuve, et ce n'est pas la même :
+ * — `online` porte `stats`, la capture Search Console, parce qu'une activité en
+ *   ligne se mesure en trafic. La capture affiche déjà ses chiffres en clair :
+ *   `clicks`, `impressions` et `position` ne sont pas réaffichés dessous, ils
+ *   servent à écrire le texte alternatif de l'image ;
+ * — `local` porte `aiShot`, la capture d'une réponse ChatGPT qui cite le
+ *   commerce. Pour une boulangerie, la preuve est d'être nommée dans la réponse,
+ *   pas une courbe de clics.
  *
- * Chaque capture porte déjà ses chiffres en clair : `clicks`, `impressions` et
- * `position` ne sont donc pas réaffichés sous l'image, ils servent à écrire son
- * texte alternatif.
+ * Pour ajouter la capture d'un commerce : déposez l'image dans
+ * `public/preuves-ia/` puis renseignez `aiShot` sur son témoignage. Une carte
+ * sans capture reste valable, elle n'affiche que la parole.
  *
  * ⚠️ Hormis La Cotriade, les témoignages ci-dessous n'ont pas encore été
  * recueillis auprès de clients réels, et les captures proviennent de comptes
@@ -33,13 +36,25 @@ export type ProofStats = {
   position: string;
 };
 
+/**
+ * Capture d'une réponse d'IA citant le commerce, avec sa description pour les
+ * lecteurs d'écran. Une image de conversation ne se devine pas : décrivez ce
+ * qu'on y lit (« ChatGPT recommande La Cotriade parmi trois restaurants »).
+ */
+export type AiProofShot = {
+  src: string;
+  alt: string;
+};
+
 export type Testimonial = {
   quote: string;
   author: string;
   role: string;
   kind: "local" | "online";
-  /** Renseigné pour la moitié des cartes de chaque famille. */
+  /** Activités en ligne : la capture Search Console. */
   stats?: ProofStats;
+  /** Commerces physiques : la capture d'une réponse d'IA qui les cite. */
+  aiShot?: AiProofShot;
 };
 
 export const TESTIMONIALS: Testimonial[] = [
@@ -50,12 +65,12 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "La Cotriade",
     role: "Restaurant de fruits de mer · Les Sables-d'Olonne",
     kind: "local",
-    stats: {
-      shot: "/resultats/result-1.webp",
-      clicks: "14,6 K",
-      impressions: "1,31 M",
-      position: "10,4",
-    },
+    // La capture de la réponse ChatGPT se branche ici, une fois l'image déposée
+    // dans public/preuves-ia/ :
+    // aiShot: {
+    //   src: "/preuves-ia/la-cotriade.webp",
+    //   alt: "ChatGPT cite La Cotriade en tête des restaurants de fruits de mer aux Sables-d'Olonne",
+    // },
   },
   {
     quote:
@@ -70,12 +85,6 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Dr. Marc L.",
     role: "Cabinet dentaire · Lyon",
     kind: "local",
-    stats: {
-      shot: "/resultats/result-2.webp",
-      clicks: "39,5 K",
-      impressions: "4,01 M",
-      position: "8,6",
-    },
   },
   {
     quote:
@@ -83,12 +92,6 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Camille R.",
     role: "Boulangerie artisanale · Bordeaux",
     kind: "local",
-    stats: {
-      shot: "/resultats/result-3.webp",
-      clicks: "30,1 K",
-      impressions: "1,03 M",
-      position: "8,5",
-    },
   },
   {
     quote:
@@ -108,15 +111,15 @@ export const TESTIMONIALS: Testimonial[] = [
   // ── Activités en ligne : la progression se lit dans Search Console ──────────
   {
     quote:
-      "Aucune visibilité au lancement, aucun budget pub. Nos deux premiers clients sont arrivés en citant une réponse d'IA — c'est ce canal qui nous a démarrés.",
+      "Aucune visibilité au lancement, aucun budget pub. Nos deux premiers clients sont arrivés en citant une réponse d'IA. C'est ce canal qui nous a démarrés.",
     author: "Julien M.",
     role: "Fondateur d'un SaaS B2B",
     kind: "online",
     stats: {
-      shot: "/resultats/result-4.webp",
-      clicks: "143 K",
-      impressions: "2,64 M",
-      position: "9",
+      shot: "/resultats/result-1.webp",
+      clicks: "14,6 K",
+      impressions: "1,31 M",
+      position: "10,4",
     },
   },
   {
@@ -126,18 +129,24 @@ export const TESTIMONIALS: Testimonial[] = [
     role: "Boutique e-commerce · mode",
     kind: "online",
     stats: {
-      shot: "/resultats/result-6.webp",
-      clicks: "74,1 K",
-      impressions: "4,35 M",
-      position: "7,3",
+      shot: "/resultats/result-2.webp",
+      clicks: "39,5 K",
+      impressions: "4,01 M",
+      position: "8,6",
     },
   },
   {
     quote:
-      "On payait une agence au mois pour un rapport qu'on ne savait pas appliquer. Ici c'est corrigé puis remesuré — on voit enfin l'effet de chaque action.",
+      "On payait une agence au mois pour un rapport qu'on ne savait pas appliquer. Ici c'est corrigé puis remesuré, on voit enfin l'effet de chaque action.",
     author: "Amandine G.",
     role: "Agence de voyage en ligne",
     kind: "online",
+    stats: {
+      shot: "/resultats/result-3.webp",
+      clicks: "30,1 K",
+      impressions: "1,03 M",
+      position: "8,5",
+    },
   },
   {
     quote:
@@ -145,6 +154,12 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Thomas D.",
     role: "Fondateur d'un SaaS analytics",
     kind: "online",
+    stats: {
+      shot: "/resultats/result-4.webp",
+      clicks: "143 K",
+      impressions: "2,64 M",
+      position: "9",
+    },
   },
   {
     quote:
@@ -165,5 +180,11 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Laure V.",
     role: "Formatrice indépendante en ligne",
     kind: "online",
+    stats: {
+      shot: "/resultats/result-6.webp",
+      clicks: "74,1 K",
+      impressions: "4,35 M",
+      position: "7,3",
+    },
   },
 ];

@@ -125,7 +125,7 @@ export function fallbackTrendingKeywords(
     period: currentPeriod(),
     keywords,
     suggested: {
-      title: `${name} — ${profile.niche}${cityLabel} | Avis & réservation`,
+      title: `${name} : ${profile.niche}${cityLabel} | Avis & réservation`,
       metaDescription: `${profile.niche}${cityLabel} : ${name} vous accueille. Avis clients, horaires, adresse et réservation en ligne.`,
       h1: `${profile.niche}${cityLabel}`,
     },

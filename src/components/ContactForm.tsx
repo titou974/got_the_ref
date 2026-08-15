@@ -39,7 +39,6 @@ export function ContactForm({ to, labels }: { to: string; labels: Labels }) {
     const body = [
       message,
       "",
-      "—",
       `${labels.name} : ${name}`,
       `${labels.email} : ${email}`,
       site ? `${labels.site} : ${site}` : null,

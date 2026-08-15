@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!analysis) return { title: "Analyse introuvable" };
   const { result } = analysis;
   return {
-    title: `Analyse GEO de ${result.domain} — Score ${result.overallScore}/100`,
+    title: `Analyse GEO de ${result.domain} : score ${result.overallScore}/100`,
     description: result.verdict,
   };
 }

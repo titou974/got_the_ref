@@ -7,9 +7,9 @@ import {
 } from "@/constants/testimonials";
 
 /**
- * Bandeau de preuves qui défile sans fin. Chaque carte porte une parole, et une
- * sur deux y ajoute sa capture Search Console — moitié commerces de quartier,
- * moitié activités en ligne : la courbe n'appartient à aucune des deux familles.
+ * Bandeau de preuves qui défile sans fin. Chaque carte porte une parole, et sa
+ * preuve quand elle en a une : la courbe Search Console pour les activités en
+ * ligne, la réponse d'IA qui les cite pour les commerces physiques.
  *
  * Le ruban déborde volontairement de la grille : il donne à voir une file qui
  * continue hors écran, plutôt qu'une liste qu'on aurait finie de lire.
@@ -102,6 +102,22 @@ function TestimonialCard({
           <Image
             src={item.stats.shot}
             alt={`${labels.clicks} ${item.stats.clicks}, ${labels.impressions} ${item.stats.impressions}, ${labels.position} ${item.stats.position}`}
+            width={720}
+            height={468}
+            sizes="(min-width: 640px) 23rem, 19rem"
+            className="aspect-[720/468] w-full object-cover object-top"
+          />
+        </div>
+      )}
+
+      {/* Commerce physique : la preuve est la réponse d'IA qui le cite. Même
+          cadre et même ratio que la capture Search Console, pour que le ruban
+          garde une seule silhouette de carte. */}
+      {!item.stats && item.aiShot && (
+        <div className="border-t border-fog bg-mist">
+          <Image
+            src={item.aiShot.src}
+            alt={item.aiShot.alt}
             width={720}
             height={468}
             sizes="(min-width: 640px) 23rem, 19rem"

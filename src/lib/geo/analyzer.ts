@@ -427,8 +427,8 @@ CONSIGNES :
    - metaDescription : signals = EXACTEMENT [{ "label": "Adresse", "present": … }, { "label": "Niche", "present": … }, { "label": "Note", "present": … }] — l'adresse/ville, la niche du commerce et la note/avis (ex. « 4,8★ ») y figurent-elles ? status ok si les 3 présents, warn si 1-2, ko si absente ou aucun. Pour un commerce EN LIGNE, "Adresse" et "Note" peuvent légitimement être absents : explique-le dans note.
    - h1 : signals = EXACTEMENT [{ "label": "Mots-clés niche", "present": … }] — le H1 contient-il les mots-clés de la niche (« ${profile.niche} ») ? status en conséquence.
    - firstSentence : signals = EXACTEMENT [{ "label": "Résume l'activité", "present": … }, { "label": "Adresse / zone", "present": … }] — la 1ʳᵉ phrase résume-t-elle l'activité ET situe-t-elle le commerce (adresse/zone) ? status en conséquence.
-   - openingHours : extrais les horaires d'ouverture du site (à partir de l'indice JSON-LD ET de l'extrait de contenu). Format court et lisible, ex. « Lun–Ven 9h–19h · Sam 9h–12h ». null si réellement introuvable.
-14. Réponds en français.
+   - openingHours : extrais les horaires d'ouverture du site (à partir de l'indice JSON-LD ET de l'extrait de contenu). Format court et lisible, ex. « Lun-Ven 9h-19h · Sam 9h-12h ». null si réellement introuvable.
+14. Réponds en français, et n'emploie jamais de tiret cadratin (—) ni de tiret demi-cadratin (–) pour séparer deux idées : une virgule, un deux-points ou un point. Ce tiret est la marque la plus reconnaissable d'un texte écrit par une IA, et ces phrases sont lues par les clients.
 
 FORMAT DE RÉPONSE — IMPÉRATIF :
 Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte avant ou après, sans bloc de code markdown. L'objet doit respecter exactement ce schéma JSON :
