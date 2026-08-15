@@ -15,6 +15,18 @@ const ENGINES = [
 ] as const;
 
 /**
+ * Logos affichés devant le mot qui tourne dans le titre. L'ordre suit celui de
+ * `homeHero.engines` dans les traductions — ChatGPT, Gemini, Perplexity, puis
+ * Google, dont la marque est un SVG et non une image.
+ */
+const HEADING_MARKS = [
+  ...ENGINES.map((engine) => (
+    <Image key={engine.src} src={engine.src} alt="" aria-hidden width={64} height={64} />
+  )),
+  <GoogleMark key="google" size={22} />,
+];
+
+/**
  * Haut de page : à gauche une promesse et un seul bouton, à droite la
  * conversation IA qui se joue toute seule — c'est elle qui fait comprendre le
  * produit en trois secondes, avant la moindre ligne lue.
@@ -44,7 +56,8 @@ export async function HomeHero() {
         </div>
 
         <h1 className="mt-6 text-balance text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-[3.4rem]">
-          {t("headingBefore")} <RotatingWord words={t.raw("engines") as string[]} />{" "}
+          {t("headingBefore")}{" "}
+          <RotatingWord words={t.raw("engines") as string[]} marks={HEADING_MARKS} />{" "}
           {t("headingAfter")}
         </h1>
 

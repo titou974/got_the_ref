@@ -262,8 +262,13 @@ export function AiSearchSimulation() {
             </div>
           )}
 
-          {/* ------------------------- Fil de conversation ------------------------- */}
-          <div className="flex min-h-[236px] flex-col gap-4 px-4 py-4">
+          {/* ------------------------- Fil de conversation -------------------------
+              Hauteur réservée sur la phase la plus haute — question envoyée,
+              réponse écrite, trois résultats affichés. Sur mobile la question
+              passe à la ligne, d'où les 272 px : sans cette réserve, la carte
+              grandissait en fin de boucle puis retombait, et tout le bas de la
+              home sautait à chaque cycle. */}
+          <div className="flex min-h-[272px] flex-col gap-4 px-4 py-4 lg:min-h-[236px]">
             {/* Message utilisateur : apparaît une fois « envoyé » depuis le composer */}
             <div className="flex min-h-[34px] justify-end">
               <AnimatePresence>
@@ -399,8 +404,11 @@ export function AiSearchSimulation() {
             )}
           </div>
 
-          {/* ---------------- Composer fidèle : c'est ici que « tape » la démo ---------------- */}
-          <div className="px-3 pb-3">
+          {/* ---------------- Composer fidèle : c'est ici que « tape » la démo ----------------
+              Les deux composers n'ont pas la même hauteur (58 px pour ChatGPT,
+              51,5 px pour Gemini) : on réserve la plus grande et on aligne en
+              bas, sinon la carte se rétractait au changement de scénario. */}
+          <div className="flex min-h-[58px] items-end px-3 pb-3 [&>*]:w-full">
             {isChatgpt ? (
               <div className="flex items-center gap-2.5 rounded-[24px] border border-[#e5e5e5] bg-snow px-3 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                 <span className="shrink-0 text-muted">

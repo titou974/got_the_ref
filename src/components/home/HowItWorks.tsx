@@ -55,35 +55,51 @@ export function HowItWorks() {
       <div className="card-cal mt-10 grid grid-cols-1 overflow-hidden lg:grid-cols-2">
         {/* Le texte de l'étape */}
         <div className="flex flex-col justify-between p-6 sm:p-9">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={step.num}
-              initial={reduce ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduce ? undefined : { opacity: 0, y: -10 }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
-            >
-              <span className="text-sm font-bold tabular-nums text-ash">{step.num}</span>
-              <h3 className="mt-4 text-balance text-2xl font-bold leading-snug sm:text-3xl">
-                {step.title}
-              </h3>
-              <p className="mt-3 max-w-md text-pretty text-sm leading-relaxed text-muted sm:text-base">
-                {step.body}
-              </p>
+          {/* Les quatre étapes occupent la même case de grille : la hauteur du
+              bloc est celle de l'étape la plus longue, une fois pour toutes.
+              Sans ça, passer d'une étape à l'autre changeait la hauteur de la
+              carte — jusqu'à 124 px sur mobile — et décalait toute la page. */}
+          <div className="grid">
+            {steps.map((s, i) => {
+              const current = i === index;
+              return (
+                <motion.div
+                  key={s.num}
+                  className="col-start-1 row-start-1"
+                  initial={false}
+                  animate={
+                    reduce
+                      ? { opacity: current ? 1 : 0 }
+                      : { opacity: current ? 1 : 0, y: current ? 0 : 10 }
+                  }
+                  transition={{ duration: 0.28, ease: "easeOut" }}
+                  // Les étapes en retrait restent dans le flux pour la hauteur,
+                  // mais sortent de la lecture (survol, clavier, lecteur d'écran).
+                  inert={!current}
+                >
+                  <span className="text-sm font-bold tabular-nums text-ash">{s.num}</span>
+                  <h3 className="mt-4 text-balance text-2xl font-bold leading-snug sm:text-3xl">
+                    {s.title}
+                  </h3>
+                  <p className="mt-3 max-w-md text-pretty text-sm leading-relaxed text-muted sm:text-base">
+                    {s.body}
+                  </p>
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                {step.chips.map((chip) => (
-                  <span
-                    key={chip}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-fog bg-snow px-3 py-1.5 text-xs font-medium text-graphite"
-                  >
-                    <CheckCircle />
-                    {chip}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
-          </AnimatePresence>
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    {s.chips.map((chip) => (
+                      <span
+                        key={chip}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-fog bg-snow px-3 py-1.5 text-xs font-medium text-graphite"
+                      >
+                        <CheckCircle />
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
 
           {/* Progression et navigation */}
           <div className="mt-10 flex items-center justify-between gap-4">
@@ -118,7 +134,11 @@ export function HowItWorks() {
         </div>
 
         {/* La maquette de l'étape */}
-        <div className="relative min-h-[20rem] border-t border-fog bg-mist p-6 sm:p-9 lg:border-l lg:border-t-0">
+        {/* Hauteur réservée sur la maquette la plus haute : 389 px relevés à
+            320 px de large, 406 px en `lg` où la maquette dépasse la colonne de
+            texte. Les maquettes, elles, se remplacent d'une étape à l'autre —
+            leurs animations d'entrée doivent rejouer à chaque passage. */}
+        <div className="relative min-h-[25rem] border-t border-fog bg-mist p-6 sm:p-9 lg:min-h-[25.5rem] lg:border-l lg:border-t-0">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={step.num}
