@@ -1,12 +1,18 @@
 /**
  * Témoignages du ruban de preuves.
  *
- * Deux familles, volontairement à parité :
- * — `online` (SaaS, e-commerce, activités en ligne) : ces cartes portent une
- *   capture Search Console et ses trois chiffres, parce que c'est là que la
- *   progression se mesure en trafic ;
- * — `local` (commerces physiques) : pas de capture — pour un restaurant ou un
- *   salon, la preuve est le client qui pousse la porte, pas une courbe.
+ * Deux familles, volontairement à parité : `local` (commerces physiques) et
+ * `online` (SaaS, e-commerce, activités en ligne).
+ *
+ * Les six captures Search Console sont réparties à parts égales entre les deux —
+ * trois d'un côté, trois de l'autre : la courbe n'est pas l'apanage du commerce
+ * en ligne, une boulangerie se mesure aussi en recherches. Les captures les plus
+ * modestes vont aux commerces de quartier, les plus gros volumes aux activités
+ * en ligne, pour que chaque courbe reste à l'échelle du métier qu'elle illustre.
+ *
+ * Chaque capture porte déjà ses chiffres en clair : `clicks`, `impressions` et
+ * `position` ne sont donc pas réaffichés sous l'image, ils servent à écrire son
+ * texte alternatif.
  *
  * ⚠️ Hormis La Cotriade, les témoignages ci-dessous n'ont pas encore été
  * recueillis auprès de clients réels, et les captures proviennent de comptes
@@ -19,7 +25,7 @@
  */
 export const PROOF_IS_ILLUSTRATIVE = true;
 
-/** Chiffres Search Console rattachés à une activité en ligne. */
+/** Capture Search Console et les chiffres qu'elle affiche. */
 export type ProofStats = {
   shot: string;
   clicks: string;
@@ -32,7 +38,7 @@ export type Testimonial = {
   author: string;
   role: string;
   kind: "local" | "online";
-  /** Renseigné pour les activités en ligne uniquement. */
+  /** Renseigné pour la moitié des cartes de chaque famille. */
   stats?: ProofStats;
 };
 
@@ -44,6 +50,12 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "La Cotriade",
     role: "Restaurant de fruits de mer · Les Sables-d'Olonne",
     kind: "local",
+    stats: {
+      shot: "/resultats/result-1.webp",
+      clicks: "14,6 K",
+      impressions: "1,31 M",
+      position: "10,4",
+    },
   },
   {
     quote:
@@ -58,6 +70,12 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Dr. Marc L.",
     role: "Cabinet dentaire · Lyon",
     kind: "local",
+    stats: {
+      shot: "/resultats/result-2.webp",
+      clicks: "39,5 K",
+      impressions: "4,01 M",
+      position: "8,6",
+    },
   },
   {
     quote:
@@ -65,6 +83,12 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Camille R.",
     role: "Boulangerie artisanale · Bordeaux",
     kind: "local",
+    stats: {
+      shot: "/resultats/result-3.webp",
+      clicks: "30,1 K",
+      impressions: "1,03 M",
+      position: "8,5",
+    },
   },
   {
     quote:
@@ -89,10 +113,10 @@ export const TESTIMONIALS: Testimonial[] = [
     role: "Fondateur d'un SaaS B2B",
     kind: "online",
     stats: {
-      shot: "/resultats/result-1.webp",
-      clicks: "14,6 K",
-      impressions: "1,31 M",
-      position: "10,4",
+      shot: "/resultats/result-4.webp",
+      clicks: "143 K",
+      impressions: "2,64 M",
+      position: "9",
     },
   },
   {
@@ -102,10 +126,10 @@ export const TESTIMONIALS: Testimonial[] = [
     role: "Boutique e-commerce · mode",
     kind: "online",
     stats: {
-      shot: "/resultats/result-2.webp",
-      clicks: "39,5 K",
-      impressions: "4,01 M",
-      position: "8,6",
+      shot: "/resultats/result-6.webp",
+      clicks: "74,1 K",
+      impressions: "4,35 M",
+      position: "7,3",
     },
   },
   {
@@ -114,12 +138,6 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Amandine G.",
     role: "Agence de voyage en ligne",
     kind: "online",
-    stats: {
-      shot: "/resultats/result-3.webp",
-      clicks: "30,1 K",
-      impressions: "1,03 M",
-      position: "8,5",
-    },
   },
   {
     quote:
@@ -127,12 +145,6 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Thomas D.",
     role: "Fondateur d'un SaaS analytics",
     kind: "online",
-    stats: {
-      shot: "/resultats/result-4.webp",
-      clicks: "143 K",
-      impressions: "2,64 M",
-      position: "9",
-    },
   },
   {
     quote:
@@ -153,11 +165,5 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Laure V.",
     role: "Formatrice indépendante en ligne",
     kind: "online",
-    stats: {
-      shot: "/resultats/result-6.webp",
-      clicks: "74,1 K",
-      impressions: "4,35 M",
-      position: "7,3",
-    },
   },
 ];
