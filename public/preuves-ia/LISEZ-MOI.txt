@@ -1,2 +1,0 @@
-Captures des réponses IA citant nos clients (une image par commerce).
-Branchez chaque fichier sur son témoignage via le champ aiShot, dans src/constants/testimonials.ts.

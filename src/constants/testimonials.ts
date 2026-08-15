@@ -67,10 +67,10 @@ export const TESTIMONIALS: Testimonial[] = [
     kind: "local",
     // La capture de la réponse ChatGPT se branche ici, une fois l'image déposée
     // dans public/preuves-ia/ :
-    // aiShot: {
-    //   src: "/preuves-ia/la-cotriade.webp",
-    //   alt: "ChatGPT cite La Cotriade en tête des restaurants de fruits de mer aux Sables-d'Olonne",
-    // },
+    aiShot: {
+      src: "/preuves-ia/la-cotriade.jpeg",
+      alt: "ChatGPT cite La Cotriade en tête des restaurants de fruits de mer aux Sables-d'Olonne",
+    },
   },
   {
     quote:
@@ -78,13 +78,21 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Sarah B.",
     role: "Salon de coiffure · Nantes",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/sarah-b.jpeg",
+      alt: "ChatGPT recommande le salon de coiffure de Sarah B. à Nantes",
+    },
   },
   {
     quote:
       "Les clients arrivent en disant « c'est l'IA qui vous a conseillé ». Il y a un an, cette phrase n'existait pas dans mon métier.",
-    author: "Dr. Marc L.",
+    author: "Dr. Nicolas M.",
     role: "Cabinet dentaire · Lyon",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/nicolas-m.jpeg",
+      alt: "ChatGPT recommande le cabinet dentaire de Dr. Marc L. à Lyon",
+    },
   },
   {
     quote:
@@ -92,6 +100,10 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Camille R.",
     role: "Boulangerie artisanale · Bordeaux",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/camille-r.jpeg",
+      alt: "ChatGPT recommande la boulangerie artisanale de Camille R. à Bordeaux",
+    },
   },
   {
     quote:
@@ -99,6 +111,10 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Karim T.",
     role: "Restaurant italien · Marseille",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/karim-t.jpeg",
+      alt: "ChatGPT recommande le restaurant italien de Karim T. à Marseille",
+    },
   },
   {
     quote:
@@ -106,6 +122,10 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Élodie F.",
     role: "Institut de beauté · Toulouse",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/elodie-f.jpeg",
+      alt: "ChatGPT recommande l'institut de beauté d'Élodie F. à Toulouse",
+    },
   },
 
   // ── Activités en ligne : la progression se lit dans Search Console ──────────
