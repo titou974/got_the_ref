@@ -72,7 +72,11 @@ export function PlanCard({
 
   const cycles: { key: BillingCycle; label: string; badge?: string }[] = [
     { key: "monthly", label: t("cycle.monthly") },
-    { key: "yearly", label: t("cycle.yearly"), badge: t("cycle.discount", { pct: YEARLY_DISCOUNT_PCT }) },
+    {
+      key: "yearly",
+      label: t("cycle.yearly"),
+      badge: t("cycle.discount", { pct: YEARLY_DISCOUNT_PCT }),
+    },
   ];
 
   return (
@@ -94,7 +98,9 @@ export function PlanCard({
                 aria-selected={active}
                 onClick={() => setCycle(c.key)}
                 className={`cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${
-                  active ? "bg-obsidian text-white" : "text-muted hover:text-text"
+                  active
+                    ? "bg-obsidian text-white"
+                    : "text-muted hover:text-text"
                 }`}
               >
                 {c.label}
@@ -116,7 +122,13 @@ export function PlanCard({
         {/* Centrée sur mobile, où la carte est trop étroite pour la loger dans un coin. */}
         <div className="absolute -top-3 left-1/2 z-10 w-max -translate-x-1/2 sm:left-auto sm:right-8 sm:translate-x-0">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-fog bg-snow px-3.5 py-1.5 text-[11px] font-semibold text-text shadow-[var(--shadow-md)] sm:text-xs">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+            >
               <path
                 d="M12 3l7 3v5c0 4.2-2.8 8-7 10-4.2-2-7-5.8-7-10V6l7-3z"
                 stroke="currentColor"
@@ -144,10 +156,14 @@ export function PlanCard({
             {t("plan.eyebrow")}
           </p>
           <h2 className="mt-2 text-2xl font-bold">{t("plan.name")}</h2>
-          <p className="mt-2 max-w-md text-sm leading-relaxed text-white/60">{t("plan.tagline")}</p>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-white/60">
+            {t("plan.tagline")}
+          </p>
 
           {/* Ce qu'on paie aujourd'hui, en grand ; ce qui viendra ensuite, dessous. */}
-          <div className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${compact ? "mt-4" : "mt-6"}`}>
+          <div
+            className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${compact ? "mt-4" : "mt-6"}`}
+          >
             <span
               className={`font-display font-bold tabular-nums tracking-tight ${
                 compact ? "text-4xl sm:text-5xl" : "text-5xl sm:text-6xl"
@@ -157,7 +173,7 @@ export function PlanCard({
             </span>
             <span className="text-base text-white/50">{t("todayLabel")}</span>
           </div>
-          <p className="mt-2 max-w-sm text-xs leading-relaxed text-white/45">
+          <p className="mt-2 max-w-sm text-xs leading-relaxed text-white/30">
             {t("serverFeeNote", { days: TRIAL.days })}
           </p>
 
@@ -170,23 +186,21 @@ export function PlanCard({
               carte grandissait de 19 px au changement d'onglet. Au-delà de `sm`
               les deux tiennent sur deux lignes, la réserve devient inutile. */}
           <p
-            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed text-white/45 first-letter:uppercase sm:min-h-0 ${
+            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed text-white/30 first-letter:uppercase sm:min-h-0 ${
               compact ? "mt-3" : "mt-4"
             }`}
           >
             {t("thenLabel")}{" "}
-            {cycle === "yearly" && (
-              <span className="tabular-nums text-white/30 line-through">
-                {euros(SUBSCRIPTION_PRICE)}
-                {t("perMonth")}{" "}
-              </span>
-            )}
-            <span className="font-semibold tabular-nums text-white/70">
-              {euros(cycle === "yearly" ? YEARLY_MONTHLY_PRICE : SUBSCRIPTION_PRICE)}
+            <span className="tabular-nums">
+              {euros(
+                cycle === "yearly" ? YEARLY_MONTHLY_PRICE : SUBSCRIPTION_PRICE,
+              )}
               {t("perMonth")}
             </span>
             {" · "}
-            {cycle === "yearly" ? t("cycle.yearlyTerms") : t("cycle.monthlyTerms")}
+            {cycle === "yearly"
+              ? t("cycle.yearlyTerms")
+              : t("cycle.monthlyTerms")}
             {" · "}
             {t("vat")}
           </p>
@@ -200,7 +214,10 @@ export function PlanCard({
 
           <ul className={`space-y-2.5 ${compact ? "mt-6" : "mt-7"}`}>
             {features.map((f) => (
-              <li key={f} className="flex items-start gap-2.5 text-sm text-white/85">
+              <li
+                key={f}
+                className="flex items-start gap-2.5 text-sm text-white/85"
+              >
                 <Check />
                 <span>{f}</span>
               </li>
