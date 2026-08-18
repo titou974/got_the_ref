@@ -579,16 +579,15 @@
     "perMonth": "/mois",
     "perYear": " par an",
     "vat": "TVA en sus",
-    "trialPrefix": "1 €",
-    "trialCta": "Démarrer l'essai 3 jours pour {price}",
+    "trialCta": "Essayer {days} jours gratuits",
     "redirecting": "Redirection…",
-    "secureNote": "Paiement sécurisé par Stripe · Essai de {days} jours, résiliable avant la fin sans être débité de l'abonnement · TVA en sus le cas échéant",
+    "secureNote": "Paiement sécurisé par Stripe · Essai de {days} jours gratuit, résiliable avant la fin sans être débité de l'abonnement · TVA en sus le cas échéant",
     "plan": {
       "eyebrow": "Accès complet",
       "name": "Tout-en-un",
-      "terms": "{days} jours d'accès complet, puis {price}/mois. Résiliable à tout moment.",
-      "cta": "Essayer 3 jours pour {price}",
-      "ctaNote": "Accès complet pendant {days} jours · résiliable avant la fin de l'essai",
+      "terms": "{days} jours d'accès complet gratuits, puis {price}/mois. Résiliable à tout moment.",
+      "cta": "Essayer {days} jours gratuits",
+      "ctaNote": "Accès complet gratuit pendant {days} jours · résiliable avant la fin de l'essai",
       "features": [
         "Analyses illimitées, e-commerce, SaaS ou commerce physique",
         "Vos positions réelles sur ChatGPT et Gemini, remesurées en continu",
@@ -598,7 +597,7 @@
         "Aucune compétence technique requise"
       ],
       "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
-      "ctaStripe": "Démarrer 3 jours pour {price}",
+      "ctaStripe": "Démarrer {days} jours gratuits",
       "ctaStripeNote": "Sans engagement · résiliable avant la fin de l'essai"
     },
     "agents": {
@@ -638,7 +637,7 @@
       },
       "ours": {
         "name": "got_the_ref",
-        "trial": "{days} jours d'accès complet pour {price}, puis {monthly}/mois",
+        "trial": "{days} jours d'accès complet gratuits, puis {monthly}/mois",
         "points": [
           "Résiliable à tout moment, sans frais de setup",
           "Premier constat immédiat, analyses illimitées",
@@ -650,7 +649,6 @@
     },
     "todayLabel": "aujourd'hui",
     "thenLabel": "puis",
-    "serverFeeNote": "Frais de serveur IA pour vos {days} jours d'accès complet. L'abonnement ne démarre qu'ensuite.",
     "guaranteeBadge": "Remboursé si aucun résultat sous {days} jours",
     "cycle": {
       "label": "Rythme de facturation",
@@ -766,7 +764,7 @@
     "headingAfter": "en pilote automatique",
     "engines": ["ChatGPT", "Gemini", "Perplexity", "Google"],
     "subtitle": "Soyez recommandé par les intelligences artificielles et par Google, sans équipe SEO ni ligne de code.",
-    "cta": "Commencer l'essai de {days} jours",
+    "cta": "Démarrer {days} jours gratuits",
     "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
     "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
     "scrollHint": "Analyser mon site",

@@ -41,11 +41,11 @@ function Check() {
  * La carte d'abonnement, seule surface sombre du site : la chose qui ne
  * s'arrête jamais. Elle vit sur la page tarifs et en bas de la home.
  *
- * Le montant en grand est toujours celui qu'on paie aujourd'hui — 1 € de frais
- * de serveur IA pour l'essai. L'onglet ne change que la suite : au mois, le
+ * Le montant en grand est toujours celui qu'on paie aujourd'hui — 0 €, l'essai
+ * étant gratuit —, précédé du tarif plein barré pour que la remise se lise d'un
+ * coup d'œil. L'onglet ne change que le tarif barré et la suite : au mois, le
  * tarif plein ; à l'année, le tarif remisé, affiché **par mois** et jamais en
- * total annuel, avec le tarif mensuel barré à côté pour que l'écart se lise
- * d'un coup d'œil.
+ * total annuel.
  *
  * L'onglet pilote aussi le paiement : le cycle est publié dans le contexte, où
  * le bouton de checkout vient le lire (cf. `BillingCycleProvider`).
@@ -160,22 +160,30 @@ export function PlanCard({
             {t("plan.tagline")}
           </p>
 
-          {/* Ce qu'on paie aujourd'hui, en grand ; ce qui viendra ensuite, dessous. */}
+          {/* Ce qu'on paie aujourd'hui, en grand ; ce qui viendra ensuite, dessous.
+              Le tarif plein du cycle choisi passe devant, barré : c'est lui qui
+              donne sa valeur au 0 €. */}
           <div
             className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${compact ? "mt-4" : "mt-6"}`}
           >
+            <span
+              className={`font-display font-bold tabular-nums tracking-tight text-white/35 line-through decoration-white/45 decoration-2 ${
+                compact ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl"
+              }`}
+            >
+              {euros(
+                cycle === "yearly" ? YEARLY_MONTHLY_PRICE : SUBSCRIPTION_PRICE,
+              )}
+            </span>
             <span
               className={`font-display font-bold tabular-nums tracking-tight ${
                 compact ? "text-4xl sm:text-5xl" : "text-5xl sm:text-6xl"
               }`}
             >
-              {euros(TRIAL.activationPrice)}
+              {euros(TRIAL.todayPrice)}
             </span>
             <span className="text-base text-white/50">{t("todayLabel")}</span>
           </div>
-          <p className="mt-2 max-w-sm text-xs leading-relaxed text-white/30">
-            {t("serverFeeNote", { days: TRIAL.days })}
-          </p>
 
           {/* L'abonnement à venir passe en note, du même gris que les frais de
               serveur : un seul montant doit se lire en grand sur cette carte,

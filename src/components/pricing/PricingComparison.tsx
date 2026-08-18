@@ -48,7 +48,6 @@ export async function PricingComparison({ cta }: { cta?: React.ReactNode }) {
   const ourPoints = [
     t("ours.trial", {
       days: TRIAL.days,
-      price: euros(TRIAL.activationPrice),
       monthly: euros(SUBSCRIPTION_PRICE),
     }),
     ...(t.raw("ours.points") as string[]),
@@ -109,8 +108,11 @@ export async function PricingComparison({ cta }: { cta?: React.ReactNode }) {
             <span className="text-xs font-semibold uppercase tracking-wider text-white/50">
               {t("costLabel")}
             </span>
-            <span className="font-display text-xl font-bold tabular-nums">
-              {euros(TRIAL.activationPrice)}
+            <span className="flex items-baseline gap-2 font-display text-xl font-bold tabular-nums">
+              <span className="text-base font-semibold text-white/35 line-through decoration-white/45">
+                {euros(SUBSCRIPTION_PRICE)}
+              </span>
+              {euros(TRIAL.todayPrice)}
             </span>
           </div>
         </div>

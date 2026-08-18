@@ -6,9 +6,6 @@ import { PlanCard } from "@/components/pricing/PlanCard";
 import { ROUTES } from "@/constants/routes";
 import { TRIAL } from "@/constants/plans";
 
-/** Montant formaté à la française, sans décimales (20 000 €). */
-const euros = (amount: number) => `${amount.toLocaleString("fr-FR")} €`;
-
 /**
  * Le tarif, en bas de home : après la démonstration, une seule carte, la même
  * que sur la page tarifs — mêmes onglets, même garantie, même montant du jour.
@@ -39,7 +36,7 @@ export async function HomePricing() {
         ctaNote={tp("plan.ctaStripeNote")}
         cta={
           <TrialCheckoutButton
-            label={tp("plan.ctaStripe", { price: euros(TRIAL.activationPrice) })}
+            label={tp("plan.ctaStripe", { days: TRIAL.days })}
           />
         }
       />
