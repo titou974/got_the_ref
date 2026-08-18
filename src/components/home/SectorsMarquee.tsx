@@ -12,9 +12,6 @@ export async function SectorsMarquee() {
 
   return (
     <section className="w-full py-8">
-      <p className="px-5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-ash">
-        {t("eyebrow")}
-      </p>
       <h2 className="mx-auto mt-2 max-w-2xl text-balance px-5 text-center text-lg font-semibold sm:text-xl">
         {t("title")}
       </h2>
@@ -22,13 +19,20 @@ export async function SectorsMarquee() {
       <div className="marquee mt-6">
         <div className="marquee-track marquee-track--fast">
           {[0, 1].map((pass) => (
-            <ul key={pass} className="marquee-row" aria-hidden={pass === 1 || undefined}>
+            <ul
+              key={pass}
+              className="marquee-row"
+              aria-hidden={pass === 1 || undefined}
+            >
               {items.map((item) => (
                 <li
                   key={`${pass}-${item}`}
                   className="flex shrink-0 items-center gap-2 rounded-full border border-fog bg-snow px-5 py-2.5 text-sm font-medium text-graphite"
                 >
-                  <span className="h-1.5 w-1.5 rounded-full bg-obsidian" aria-hidden />
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-obsidian"
+                    aria-hidden
+                  />
                   {item}
                 </li>
               ))}

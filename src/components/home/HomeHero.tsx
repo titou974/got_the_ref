@@ -21,7 +21,14 @@ const ENGINES = [
  */
 const HEADING_MARKS = [
   ...ENGINES.map((engine) => (
-    <Image key={engine.src} src={engine.src} alt="" aria-hidden width={64} height={64} />
+    <Image
+      key={engine.src}
+      src={engine.src}
+      alt=""
+      aria-hidden
+      width={64}
+      height={64}
+    />
   )),
   <GoogleMark key="google" size={22} />,
 ];
@@ -47,7 +54,12 @@ export async function HomeHero() {
               key={engine.src}
               className="flex h-10 w-10 items-center justify-center rounded-2xl border border-fog bg-snow p-2"
             >
-              <Image src={engine.src} alt={th(engine.altKey)} width={100} height={100} />
+              <Image
+                src={engine.src}
+                alt={th(engine.altKey)}
+                width={100}
+                height={100}
+              />
             </div>
           ))}
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-fog bg-snow p-2">
@@ -57,11 +69,16 @@ export async function HomeHero() {
 
         <h1 className="mt-6 text-balance text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-[3.4rem]">
           {t("headingBefore")}{" "}
-          <RotatingWord words={t.raw("engines") as string[]} marks={HEADING_MARKS} />{" "}
+          <RotatingWord
+            words={t.raw("engines") as string[]}
+            marks={HEADING_MARKS}
+          />{" "}
           {t("headingAfter")}
         </h1>
 
-        <p className="mt-5 max-w-md text-pretty text-base text-muted sm:text-lg">{t("subtitle")}</p>
+        <p className="mt-5 max-w-md text-pretty text-base text-muted sm:text-lg">
+          {t("subtitle")}
+        </p>
 
         {/* CTA unique. Le tunnel d'essai vit sur /tarifs, où le débit est expliqué. */}
         <Link
@@ -69,7 +86,13 @@ export async function HomeHero() {
           className="mt-8 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-7 py-4 text-base font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
           {t("cta", { days: TRIAL.days })}
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
             <path
               d="M5 12h14M13 6l6 6-6 6"
               stroke="currentColor"
@@ -99,13 +122,14 @@ export async function HomeHero() {
           </span>
           {t("guaranteeMain")}
         </p>
-        <p className="mt-1.5 text-xs text-ash">{t("guarantee")}</p>
       </div>
 
       {/* La conversation IA, jouée en boucle : la démonstration avant l'argument. */}
       <div className="w-full">
         <AiSearchSimulation />
-        <p className="mt-3 text-center text-xs text-muted">{th("simulationCaption")}</p>
+        <p className="mt-3 text-center text-xs text-muted">
+          {th("simulationCaption")}
+        </p>
       </div>
     </section>
   );

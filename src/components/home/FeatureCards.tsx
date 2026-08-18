@@ -21,42 +21,74 @@ export function FeatureCards() {
   const t = useTranslations("features");
 
   return (
-    <section id="fonctionnalites" className="mx-auto w-full max-w-6xl scroll-mt-8 px-5 py-16 sm:py-20">
+    <section
+      id="fonctionnalites"
+      className="mx-auto w-full max-w-6xl scroll-mt-8 px-5 py-16 sm:py-20"
+    >
       <div className="mx-auto max-w-2xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("eyebrow")}</p>
         <h2 className="mt-2 text-balance text-3xl font-bold leading-tight sm:text-4xl">
           {t("title")}
         </h2>
-        <p className="mx-auto mt-3 max-w-xl text-pretty text-muted">{t("subtitle")}</p>
+        <p className="mx-auto mt-3 max-w-xl text-pretty text-muted">
+          {t("subtitle")}
+        </p>
       </div>
 
       <div className="mt-10 flex flex-col gap-5">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <Card title={t("voice.title")} body={t("voice.body")} icon={<IconPen />}>
+          <Card
+            title={t("voice.title")}
+            body={t("voice.body")}
+            icon={<IconPen />}
+          >
             <VoiceDemo />
           </Card>
-          <Card title={t("strategy.title")} body={t("strategy.body")} icon={<IconCalendar />}>
+          <Card
+            title={t("strategy.title")}
+            body={t("strategy.body")}
+            icon={<IconCalendar />}
+          >
             <StrategyDemo />
           </Card>
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-          <Card title={t("publish.title")} body={t("publish.body")} icon={<IconBookmark />}>
+          <Card
+            title={t("publish.title")}
+            body={t("publish.body")}
+            icon={<IconBookmark />}
+          >
             <PublishDemo />
           </Card>
-          <Card title={t("authority.title")} body={t("authority.body")} icon={<IconShare />}>
+          <Card
+            title={t("authority.title")}
+            body={t("authority.body")}
+            icon={<IconShare />}
+          >
             <AuthorityDemo />
           </Card>
-          <Card title={t("fix.title")} body={t("fix.body")} icon={<IconWrench />}>
+          <Card
+            title={t("fix.title")}
+            body={t("fix.body")}
+            icon={<IconWrench />}
+          >
             <FixDemo />
           </Card>
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <Card title={t("social.title")} body={t("social.body")} icon={<IconMonitor />}>
+          <Card
+            title={t("social.title")}
+            body={t("social.body")}
+            icon={<IconMonitor />}
+          >
             <SocialDemo />
           </Card>
-          <Card title={t("recommend.title")} body={t("recommend.body")} icon={<IconEye />}>
+          <Card
+            title={t("recommend.title")}
+            body={t("recommend.body")}
+            icon={<IconEye />}
+          >
             <RecommendDemo />
           </Card>
         </div>
@@ -81,12 +113,16 @@ function Card({
   return (
     <article className="card-cal flex flex-col overflow-hidden p-6 sm:p-7">
       <div className="flex items-start justify-between gap-4">
-        <h3 className="text-balance text-xl font-bold leading-snug sm:text-2xl">{title}</h3>
+        <h3 className="text-balance text-xl font-bold leading-snug sm:text-2xl">
+          {title}
+        </h3>
         <span className="mt-1 shrink-0 text-ash" aria-hidden>
           {icon}
         </span>
       </div>
-      <p className="mt-3 max-w-md text-pretty text-sm leading-relaxed text-muted">{body}</p>
+      <p className="mt-3 max-w-md text-pretty text-sm leading-relaxed text-muted">
+        {body}
+      </p>
       <div className="mt-7 flex flex-1 items-end">
         <div className="w-full">{children}</div>
       </div>
@@ -125,7 +161,9 @@ function VoiceDemo() {
     <div ref={ref} className="rounded-[24px] border border-fog bg-mist p-4">
       <div className="rounded-[18px] border border-fog bg-snow p-4">
         <p className="min-h-[5.5rem] text-[13px] leading-relaxed text-text sm:min-h-[4.5rem]">
-          <span className={done ? undefined : "caret"}>{full.slice(0, shown)}</span>
+          <span className={done ? undefined : "caret"}>
+            {full.slice(0, shown)}
+          </span>
         </p>
       </div>
       <motion.p
@@ -154,7 +192,9 @@ function StrategyDemo() {
   return (
     <div ref={ref} className="rounded-[24px] border border-fog bg-mist p-4">
       <div className="flex items-center justify-between px-1 pb-3">
-        <span className="text-xs font-semibold text-graphite">{t("month")}</span>
+        <span className="text-xs font-semibold text-graphite">
+          {t("month")}
+        </span>
         <span className="flex items-center gap-1.5 text-[11px] text-muted">
           <span className="h-2 w-2 rounded-full bg-obsidian" aria-hidden />
           {t("legend")}
@@ -175,7 +215,9 @@ function StrategyDemo() {
               {planned && (
                 <motion.span
                   initial={{ scale: 0, opacity: 0 }}
-                  animate={inView ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
+                  animate={
+                    inView ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }
+                  }
                   transition={{
                     delay: reduce ? 0 : 0.12 * order,
                     duration: reduce ? 0 : 0.35,
@@ -203,7 +245,11 @@ function PublishDemo() {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[260px]">
       {/* Cibles concentriques et rayons : le décor fixe du radar. */}
-      <svg viewBox="0 0 240 240" className="absolute inset-0 h-full w-full text-pebble" aria-hidden>
+      <svg
+        viewBox="0 0 240 240"
+        className="absolute inset-0 h-full w-full text-pebble"
+        aria-hidden
+      >
         {[46, 70, 94].map((r) => (
           <circle
             key={r}
@@ -255,7 +301,13 @@ function PublishDemo() {
                 }`}
                 title={p.name}
               >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill={p.color} aria-hidden>
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill={p.color}
+                  aria-hidden
+                >
                   <path d={p.path} />
                 </svg>
               </div>
@@ -339,7 +391,9 @@ function AuthorityDemo() {
           <span className="block text-[9px] font-semibold uppercase tracking-wider text-steel">
             {t("mentionLabel")}
           </span>
-          <span className="block truncate text-[11px] font-semibold">{t("mentionText")}</span>
+          <span className="block truncate text-[11px] font-semibold">
+            {t("mentionText")}
+          </span>
         </span>
       </motion.div>
     </div>
@@ -402,7 +456,9 @@ function FixDemo() {
               >
                 {severityLabel[sev]}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[11px] text-graphite">{row}</span>
+              <span className="min-w-0 flex-1 truncate text-[11px] text-graphite">
+                {row}
+              </span>
 
               {isFixed ? (
                 <motion.span
@@ -447,7 +503,10 @@ function SocialDemo() {
           <div className="h-2 w-full rounded-full bg-mist" />
           <div className="h-2 w-4/5 rounded-full bg-mist" />
         </div>
-        <div className="mt-3 flex items-center gap-2 text-[10px] text-ash" aria-hidden>
+        <div
+          className="mt-3 flex items-center gap-2 text-[10px] text-ash"
+          aria-hidden
+        >
           <span className="rounded-full bg-mist px-2 py-0.5">↑ 74 ↓</span>
           <span className="rounded-full bg-mist px-2 py-0.5">💬 26</span>
         </div>
@@ -459,7 +518,11 @@ function SocialDemo() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-          transition={{ delay: reduce ? 0 : 0.35, duration: 0.35, ease: "easeOut" }}
+          transition={{
+            delay: reduce ? 0 : 0.35,
+            duration: 0.35,
+            ease: "easeOut",
+          }}
           className="mt-2 rounded-[14px] border border-fog p-2"
         >
           <div className="space-y-1.5" aria-hidden>
@@ -475,7 +538,10 @@ function SocialDemo() {
 
       {/* Fil Quora */}
       <div className="hidden rounded-[18px] border border-fog bg-snow p-3 sm:block">
-        <span className="font-serif text-xl font-bold leading-none text-[#b92b27]" aria-hidden>
+        <span
+          className="font-serif text-xl font-bold leading-none text-[#b92b27]"
+          aria-hidden
+        >
           Q
         </span>
         <div className="mt-4 space-y-1.5" aria-hidden>
@@ -483,7 +549,10 @@ function SocialDemo() {
           <div className="h-2 w-5/6 rounded-full bg-mist" />
           <div className="h-2 w-1/2 rounded-full bg-mist" />
         </div>
-        <div className="mt-4 flex items-center gap-2 text-[10px] text-ash" aria-hidden>
+        <div
+          className="mt-4 flex items-center gap-2 text-[10px] text-ash"
+          aria-hidden
+        >
           <span className="rounded-full bg-mist px-2 py-0.5">↑ 1,6 k</span>
           <span className="rounded-full bg-mist px-2 py-0.5">💬 26</span>
         </div>
@@ -500,7 +569,11 @@ function SocialDemo() {
 
 /* --------------------------- 7 · Recommandations -------------------------- */
 
-type QueryRow = { engine: "chatgpt" | "gemini"; searches: string; cited: boolean };
+type QueryRow = {
+  engine: "chatgpt" | "gemini";
+  searches: string;
+  cited: boolean;
+};
 
 const QUERY_ROWS: QueryRow[] = [
   { engine: "chatgpt", searches: "1 800", cited: true },
@@ -519,7 +592,10 @@ function RecommendDemo() {
       ref={ref}
       className="overflow-hidden rounded-[18px] border border-fog bg-snow shadow-[var(--shadow-md)]"
     >
-      <div className="flex items-center gap-1 border-b border-fog px-3 py-2" aria-hidden>
+      <div
+        className="flex items-center gap-1 border-b border-fog px-3 py-2"
+        aria-hidden
+      >
         <span className="h-1.5 w-1.5 rounded-full bg-[#ff5f57]" />
         <span className="h-1.5 w-1.5 rounded-full bg-[#febc2e]" />
         <span className="h-1.5 w-1.5 rounded-full bg-[#28c840]" />
@@ -541,7 +617,9 @@ function RecommendDemo() {
             <div className="flex items-start gap-2.5">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-fog bg-snow">
                 <Image
-                  src={row.engine === "chatgpt" ? "/chatgpt.png" : "/gemini.webp"}
+                  src={
+                    row.engine === "chatgpt" ? "/chatgpt.png" : "/gemini.webp"
+                  }
                   alt=""
                   aria-hidden
                   width={32}
@@ -559,7 +637,9 @@ function RecommendDemo() {
                     {t("searches", { count: row.searches })}
                   </span>
                 </div>
-                <p className="truncate text-[12px] font-medium text-text">{queries[i]}</p>
+                <p className="truncate text-[12px] font-medium text-text">
+                  {queries[i]}
+                </p>
                 <p
                   className={`mt-1.5 flex items-center gap-1 text-[10px] ${
                     row.cited ? "text-graphite" : "text-danger"
@@ -648,7 +728,10 @@ function IconMonitor() {
 function IconEye() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
-      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" {...stroke} />
+      <path
+        d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"
+        {...stroke}
+      />
       <circle cx="12" cy="12" r="2.8" {...stroke} />
     </svg>
   );
@@ -657,8 +740,14 @@ function IconEye() {
 function LinkIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden>
-      <path d="M10 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.2 1.2" {...stroke} />
-      <path d="M14 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.2-1.2" {...stroke} />
+      <path
+        d="M10 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.2 1.2"
+        {...stroke}
+      />
+      <path
+        d="M14 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.2-1.2"
+        {...stroke}
+      />
     </svg>
   );
 }
@@ -681,7 +770,13 @@ function CheckIcon() {
 
 function CheckCircleIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden className="shrink-0">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="shrink-0"
+    >
       <circle cx="12" cy="12" r="9" {...stroke} />
       <path d="m8 12.2 2.6 2.6L16 9.4" {...stroke} strokeWidth={2} />
     </svg>
@@ -690,7 +785,13 @@ function CheckCircleIcon() {
 
 function AlertIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden className="shrink-0">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="shrink-0"
+    >
       <circle cx="12" cy="12" r="9" {...stroke} />
       <path d="M12 7.5v5M12 16.2v.1" {...stroke} strokeWidth={2} />
     </svg>
@@ -699,7 +800,13 @@ function AlertIcon() {
 
 function SparkleIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
       <path d="M12 2c.9 5.3 4.7 9.1 10 10-5.3.9-9.1 4.7-10 10-.9-5.3-4.7-9.1-10-10 5.3-.9 9.1-4.7 10-10Z" />
     </svg>
   );
@@ -720,7 +827,13 @@ function RedditMark() {
         strokeWidth="1.1"
         strokeLinecap="round"
       />
-      <path d="M13.6 7.2 12.9 4l2.6.6" fill="none" stroke="#fff" strokeWidth="1.1" strokeLinecap="round" />
+      <path
+        d="M13.6 7.2 12.9 4l2.6.6"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+      />
       <circle cx="16" cy="4.9" r="1.3" fill="#fff" />
     </svg>
   );

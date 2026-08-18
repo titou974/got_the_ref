@@ -426,9 +426,9 @@
     "otherBody": "got_the_ref analyse votre site depuis l'extérieur, comme le ferait une IA : aucune installation, aucun plugin, aucun accès à votre code."
   },
   "results": {
-    "eyebrow": "Résultats clients",
-    "title": "Ce que ça change, chiffres à l'appui",
-    "subtitle": "Commerces de quartier comme activités en ligne : la visibilité se mesure, et elle se travaille.",
+    "eyebrow": "Nos utilisateurs parlent pour nous",
+    "title": "Ce qu'en pensent les commerces français",
+    "subtitle": "C'est +400 startups, commerces, artisans, et indépendants qui gagnent des clients quotidiennement grâce au trafic IA généré par got_the_ref.",
     "clicks": "Clics",
     "impressions": "Impressions",
     "position": "Position moy.",
@@ -763,7 +763,7 @@
     "headingBefore": "Faites venir vos clients depuis",
     "headingAfter": "en pilote automatique",
     "engines": ["ChatGPT", "Gemini", "Perplexity", "Google"],
-    "subtitle": "Soyez recommandé par les intelligences artificielles et par Google, sans équipe SEO ni ligne de code.",
+    "subtitle": "On apporte de la visibilité aux commerces français, locaux comme en ligne, en les référençant dans les IA et sur Google. Sans qu’ils aient à payer une agence ni à lever le petit doigt !",
     "cta": "Démarrer {days} jours gratuits",
     "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
     "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
@@ -787,13 +787,13 @@
   },
   "howItWorks": {
     "eyebrow": "Comment ça marche",
-    "title": "La visibilité IA, en quatre temps",
-    "subtitle": "Aucune installation, aucun accès à votre code : got_the_ref lit votre site depuis l'extérieur, exactement comme le fait une IA.",
+    "title": "Comment on vous donne de la visiblité IA",
+    "subtitle": "Vous rentrez votre url et got_the_ref lit votre site depuis l'extérieur. On a repris le même fonctionnement que l'algorithme de ChatGPT, Gemini et les autres IA qui analysent votre site.",
     "steps": [
       {
         "num": "01",
         "title": "Analyse de votre activité",
-        "body": "On lit votre site comme une IA : secteur, marché, concurrents, et les questions que vos clients posent vraiment.",
+        "body": "On lit votre site comme l'algorithme des IA : votre secteur, marché, concurrents, les mots clefs recherchées...",
         "chips": ["Requêtes détectées", "Prompts clients", "Concurrents"],
         "mock": {
           "url": "votre-site.fr",
@@ -811,8 +811,8 @@
       {
         "num": "02",
         "title": "Position mesurée sur les moteurs",
-        "body": "On interroge ChatGPT et Gemini sur votre marché, puis on relève qui est cité avant vous.",
-        "chips": ["ChatGPT", "Gemini", "Perplexity"],
+        "body": "On interroge les IAs sur votre marché, puis on relève le classement qu'elles vous donnent.",
+        "chips": ["ChatGPT", "Gemini", "Perplexity", "Google AI search"],
         "mock": {
           "label": "Position mesurée",
           "you": "Votre entreprise",
@@ -820,12 +820,12 @@
             {
               "name": "ChatGPT",
               "rank": "2",
-              "others": ["Studio Pixel", "WebFactory"]
+              "others": ["Café Joyeux", "Le petit coin"]
             },
             {
               "name": "Gemini",
               "rank": "1",
-              "others": ["Atelier Déco", "Maison & Objet"]
+              "others": ["Café des Arts", "La Pause Terrasse"]
             }
           ]
         }
@@ -833,7 +833,7 @@
       {
         "num": "03",
         "title": "Correctifs priorisés",
-        "body": "llms.txt, données structurées, pages citables : chaque manque a son correctif chiffré et son prompt prêt à coller.",
+        "body": "Structure, mots clés pertinents pour votre niche, pages citables : notre algorithmes compare tout ce qu'il a relevé sur votre site à nos standards de référencement, et on vous fait un diagnotic ! ",
         "chips": ["llms.txt", "JSON-LD", "Citabilité"],
         "mock": {
           "applied": "appliqué",
@@ -860,8 +860,8 @@
       },
       {
         "num": "04",
-        "title": "Remesure en continu",
-        "body": "Les agents repassent sur votre site, remesurent la position, et vous voyez la courbe bouger.",
+        "title": "Auto-correction par nos agents IA, et remesure continue",
+        "body": "Nos IAs viennent corriger tout les points sur votre site en une simple connexion, puis remesurent la position, et vous voyez la courbe bouger. En 1 semaine, vous apparaissez dans les IAs et sur Google.",
         "chips": ["Score GEO", "Position", "Avis"],
         "mock": {
           "scoreLabel": "Score GEO",
@@ -878,7 +878,7 @@
   },
   "features": {
     "eyebrow": "Ce que vous obtenez",
-    "title": "Gagnez en visibilité sans travail manuel",
+    "title": "Gagnez en visibilité juste en rentrant votre url",
     "subtitle": "Sept chantiers que got_the_ref prend en charge à votre place.",
     "voice": {
       "title": "Des contenus qui parlent comme vous",
@@ -1014,7 +1014,7 @@
     ]
   },
   "examples": {
-    "eyebrow": "Exemples",
+    "eyebrow": "Exemples de contenu généré",
     "title": "Un contenu qui parle comme vous",
     "subtitle": "On reprend votre univers de marque, on met en avant ce que vous vendez, et on écrit des pages qui se classent et se font citer, sans l'odeur du texte généré.",
     "sites": [
@@ -1352,11 +1352,11 @@
   },
   "audiences": {
     "eyebrow": "À qui nous nous adressons",
-    "title": "Deux façons d'être trouvé, un même moteur",
-    "subtitle": "Que vos clients vous cherchent depuis leur canapé ou à trois rues de chez vous, la question posée à l'IA est la même : « qui me recommandez-vous ? »",
+    "title": "Le physique et le digital",
+    "subtitle": "Notre algorithme s'adapte aussi bien aux business en ligne qu'aux commerces physiques.",
     "online": {
-      "title": "Commerces en ligne, SaaS et médias",
-      "body": "Vos clients demandent une recommandation à ChatGPT avant d'ouvrir Google. On travaille votre site pour qu'il devienne la source citée, pas celle qu'on cite après.",
+      "title": "E-commerçant, SaaS, applications mobiles et médias digitales",
+      "body": "Vos utilisateurs s'adresse maintenant à l'IA, et devez vous positionner en numéro 1 dans Google pour gagner du trafic organique sans dépenser en publicité.",
       "caption": "Sources de la réponse",
       "query": "« Quel outil pour suivre ma visibilité IA ? »",
       "sources": [

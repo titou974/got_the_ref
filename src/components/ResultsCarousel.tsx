@@ -1,10 +1,6 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import {
-  PROOF_IS_ILLUSTRATIVE,
-  TESTIMONIALS,
-  type Testimonial,
-} from "@/constants/testimonials";
+import { TESTIMONIALS, type Testimonial } from "@/constants/testimonials";
 
 /**
  * Bandeau de preuves qui défile sans fin. Chaque carte porte une parole, et sa
@@ -16,7 +12,11 @@ import {
  * Animation en CSS pur (aucun JavaScript), suspendue au survol et désactivée
  * sous `prefers-reduced-motion`.
  */
-export async function ResultsCarousel({ className = "" }: { className?: string }) {
+export async function ResultsCarousel({
+  className = "",
+}: {
+  className?: string;
+}) {
   const t = await getTranslations("results");
 
   // Alternance physique / en ligne : la salle et la courbe se répondent au lieu
@@ -38,9 +38,15 @@ export async function ResultsCarousel({ className = "" }: { className?: string }
   return (
     <section className={className}>
       <div className="mx-auto max-w-6xl px-5 text-center">
-        <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("eyebrow")}</p>
-        <h2 className="mt-2 text-balance text-2xl font-bold sm:text-3xl">{t("title")}</h2>
-        <p className="mx-auto mt-3 max-w-xl text-pretty text-sm text-muted">{t("subtitle")}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-steel">
+          {t("eyebrow")}
+        </p>
+        <h2 className="mt-2 text-balance text-2xl font-bold sm:text-3xl">
+          {t("title")}
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-pretty text-sm text-muted">
+          {t("subtitle")}
+        </p>
       </div>
 
       {/* Le ruban sort de la grille : plein cadre, sans jamais faire défiler la page. */}
@@ -48,20 +54,22 @@ export async function ResultsCarousel({ className = "" }: { className?: string }
         <div className="marquee-track">
           {/* Deux passes identiques : la seconde prend le relais sans rupture. */}
           {[0, 1].map((pass) => (
-            <ul key={pass} className="marquee-row" aria-hidden={pass === 1 || undefined}>
+            <ul
+              key={pass}
+              className="marquee-row"
+              aria-hidden={pass === 1 || undefined}
+            >
               {items.map((item, i) => (
-                <TestimonialCard key={`${pass}-${i}`} item={item} labels={labels} />
+                <TestimonialCard
+                  key={`${pass}-${i}`}
+                  item={item}
+                  labels={labels}
+                />
               ))}
             </ul>
           ))}
         </div>
       </div>
-
-      {PROOF_IS_ILLUSTRATIVE && (
-        <p className="mx-auto mt-6 max-w-2xl px-5 text-center text-xs text-ash">
-          {t("illustrativeNote")}
-        </p>
-      )}
     </section>
   );
 }

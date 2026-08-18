@@ -46,3 +46,5 @@ next-env.d.ts
 
 # Client Prisma généré (régénéré via `prisma generate`)
 /prisma/generated
+.claude/worktrees/demo-page
+.claude/worktrees/stripe-trial-cycles
