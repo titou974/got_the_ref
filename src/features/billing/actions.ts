@@ -70,26 +70,15 @@ export const createCheckoutAction = authActionClient
   });
 
 /**
- * Les deux lignes de tout checkout d'essai : l'abonnement — mensuel ou annuel
- * selon l'onglet choisi — et les frais d'activation.
+ * L'unique ligne de tout checkout d'essai : l'abonnement — mensuel ou annuel
+ * selon l'onglet choisi.
  *
- * Les frais sont joints en prix ponctuel : Stripe les encaisse immédiatement,
- * alors que l'abonnement lui-même ne commence à courir qu'à la fin de l'essai.
+ * L'essai est gratuit : rien n'est encaissé à l'ouverture du checkout. Stripe
+ * enregistre le moyen de paiement, puis ne débite l'abonnement qu'à la fin de
+ * l'essai (`trial_period_days`), et seulement s'il n'a pas été résilié.
  */
 function trialLineItems(price: string) {
-  return [
-    { price, quantity: 1 },
-    {
-      quantity: 1,
-      price_data: {
-        currency: "eur",
-        unit_amount: TRIAL.activationPrice * 100,
-        product_data: {
-          name: `Activation de l'essai got_the_ref (${TRIAL.days} jours)`,
-        },
-      },
-    },
-  ];
+  return [{ price, quantity: 1 }];
 }
 
 /**

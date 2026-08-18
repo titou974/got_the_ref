@@ -17,9 +17,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 type Props = { searchParams: Promise<{ raison?: string; analyse?: string }> };
 
-/** Montant formaté à la française, sans décimales (20 000 €). */
-const euros = (amount: number) => `${amount.toLocaleString("fr-FR")} €`;
-
 export default async function TarifsPage({ searchParams }: Props) {
   const { raison, analyse } = await searchParams;
   const t = await getTranslations("pricing");
@@ -56,14 +53,14 @@ export default async function TarifsPage({ searchParams }: Props) {
                 // Venu d'un rapport précis : on le rattache à l'abonnement souscrit.
                 <AnalysisCheckoutButton
                   analysisId={analyse}
-                  label={t("trialCta", { price: euros(TRIAL.activationPrice) })}
+                  label={t("trialCta", { days: TRIAL.days })}
                 />
               ) : (
                 // Sans rapport à rattacher, le bouton part quand même sur Stripe :
                 // renvoyer vers la home faisait reculer d'un cran un visiteur déjà
                 // venu voir le prix.
                 <TrialCheckoutButton
-                  label={t("plan.cta", { price: euros(TRIAL.activationPrice) })}
+                  label={t("plan.cta", { days: TRIAL.days })}
                 />
               )
             }

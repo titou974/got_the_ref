@@ -29,11 +29,14 @@ export const PLAN_PRICING: Record<PlanKey, { amount: number | null; recurring: b
 export const SUBSCRIPTION_PRICE = PLAN_PRICING.pro.amount as number;
 
 /**
- * Essai : accès complet quelques jours contre des frais d'activation.
- * Le montant est facturé immédiatement (prix ponctuel joint au checkout), la
- * facturation récurrente ne démarre qu'à la fin de l'essai.
+ * Essai : accès complet quelques jours, **gratuit**. Rien n'est débité à
+ * l'ouverture du checkout (`todayPrice` à 0) ; la facturation récurrente ne
+ * démarre qu'à la fin de l'essai, et seulement si l'abonnement n'est pas résilié.
+ *
+ * `todayPrice` reste une donnée plutôt qu'un littéral : c'est le montant affiché
+ * en grand sur la carte tarif, face au tarif plein barré.
  */
-export const TRIAL = { days: 3, activationPrice: 1 } as const;
+export const TRIAL = { days: 3, todayPrice: 0 } as const;
 
 /**
  * Tarif mensuel de l'abonnement engagé à l'année. Toujours affiché **par mois**
