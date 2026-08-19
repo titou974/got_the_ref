@@ -27,6 +27,7 @@ export async function Dashboard({
   locked: boolean;
 }) {
   const t = await getTranslations("analysisReport");
+  const tc = await getTranslations("common");
   const diagnostic = buildDiagnostic(result);
 
   const date = new Date(result.createdAt).toLocaleDateString("fr-FR", {
@@ -141,7 +142,7 @@ export async function Dashboard({
             href={ROUTES.pricing}
             className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian"
           >
-            {t("discoverOffers")}
+            {tc("discoverOffers")}
           </Link>
         </p>
       </AnimatedCard>

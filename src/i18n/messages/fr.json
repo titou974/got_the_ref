@@ -178,6 +178,9 @@
       "impact": "Impact {value}/10",
       "noRecommendations": "Aucune action prioritaire : votre site est déjà bien optimisé."
     },
+    "ctaAnotherTitle": "Analysez un autre site",
+    "ctaAnotherSubtitle": "Comparez vos concurrents ou suivez votre progression dans le temps.",
+    "ctaUnlimited": "Besoin d'analyses illimitées ?",
     "stack": {
       "title": "Plateforme du site",
       "sure": "Détecté",
