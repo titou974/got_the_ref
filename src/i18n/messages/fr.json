@@ -178,6 +178,35 @@
       "impact": "Impact {value}/10",
       "noRecommendations": "Aucune action prioritaire : votre site est déjà bien optimisé."
     },
+    "ctaAnotherTitle": "Analysez un autre site",
+    "ctaAnotherSubtitle": "Comparez vos concurrents ou suivez votre progression dans le temps.",
+    "ctaUnlimited": "Besoin d'analyses illimitées ?",
+    "stack": {
+      "title": "Plateforme du site",
+      "sure": "Détecté",
+      "probable": "Probable",
+      "probableShort": "probable",
+      "unknownTitle": "Plateforme non identifiée",
+      "unknownBody": "Le site ne laisse aucune empreinte publique reconnaissable — code sur-mesure, HTML réécrit ou cache agressif.",
+      "note": "La plateforme décide de l'endroit où se posent les correctifs : un llms.txt, un schéma ou une balise ne s'ajoutent pas au même endroit sur chacune."
+    },
+    "solve": {
+      "cta": "Résoudre avec les agents IA",
+      "share": "Partager",
+      "copied": "Lien copié",
+      "shareTitle": "Analyse GEO de {domain}",
+      "modal": {
+        "title": "Connecter votre site",
+        "body": "Les agents appliquent les correctifs directement sur votre site : fichiers, balises et données structurées. Vous validez chaque changement avant publication.",
+        "detected": "Plateforme détectée : {name}",
+        "cta": "Connecter le site",
+        "later": "Plus tard",
+        "reassurance": "Accès révocable à tout moment. Aucune publication sans votre validation.",
+        "fixedCount": "{count}/{total} corrigés",
+        "statusFixed": "Corrigé",
+        "statusPending": "À corriger"
+      }
+    },
     "architecture": {
       "title": "Architecture du site",
       "subtitle": "Structure technique qui rend votre site lisible et citable par les IA.",

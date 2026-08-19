@@ -58,6 +58,18 @@ export type CrawlSummary = {
   internalLinks: number; // liens internes détectés sur l'accueil
 };
 
+/**
+ * Plateforme qui sert le site, reconnue depuis les empreintes publiques de la
+ * page d'accueil (voir `lib/geo/stack.ts`). `null` quand le site n'en laisse
+ * aucune.
+ */
+export type DetectedStack = {
+  id: string; // clé du registre `constants/platforms` (« shopify », « nextjs »…)
+  name: string; // nom affiché (« Shopify »)
+  confidence: "sure" | "probable";
+  evidence: string; // marqueur qui a permis la reconnaissance, en clair
+};
+
 /** Signaux techniques collectés de manière déterministe (sans IA). */
 export type SiteSignals = {
   url: string;
@@ -80,6 +92,7 @@ export type SiteSignals = {
   firstParagraph: string | null; // 1ʳᵉ phrase du 1ᵉʳ paragraphe substantiel de la page d'accueil
   openingHoursHint: string | null; // horaires lus dans le JSON-LD (indice pour l'extraction)
   ratingHint: string | null; // note moyenne déclarée en JSON-LD (AggregateRating), ex. « 4.7/5 · 2500 avis »
+  stack: DetectedStack | null; // plateforme détectée (WordPress, Shopify, Next.js…)
   jsonLdTypes: string[];
   jsonLdCount: number;
   hasOpenGraph: boolean;

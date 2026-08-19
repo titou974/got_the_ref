@@ -16,16 +16,23 @@ type LoadedAnalysis = {
   result: GeoAnalysisResult;
   unlocked: boolean;
   userId: string | null;
+  ownerPlan: string | null;
 };
 
 async function loadAnalysis(id: string): Promise<LoadedAnalysis | null> {
-  const record = await prisma.analysis.findUnique({ where: { id } });
+  // L'offre du propriétaire décide de la lecture publique du rapport : elle est
+  // chargée avec l'analyse pour éviter une seconde requête.
+  const record = await prisma.analysis.findUnique({
+    where: { id },
+    include: { user: { select: { plan: true } } },
+  });
   if (!record) return null;
   try {
     return {
       result: hydrateAnalysisResult(JSON.parse(record.data) as GeoAnalysisResult),
       unlocked: record.unlocked,
       userId: record.userId,
+      ownerPlan: record.user?.plan ?? null,
     };
   } catch {
     return null;
@@ -49,7 +56,8 @@ export default async function AnalysePage({ params }: Props) {
   if (!analysis) notFound();
 
   // L'aperçu est gratuit ; le rapport complet s'ouvre après paiement de cette
-  // analyse, ou pour un compte dont l'offre le couvre.
+  // analyse, pour un compte dont l'offre le couvre, ou pour tout visiteur si
+  // l'analyse vient d'un compte abonné (rapport partageable).
   const user = await getCurrentUser();
   const locked = !isReportUnlocked(analysis, user);
 
@@ -63,7 +71,9 @@ export default async function AnalysePage({ params }: Props) {
   }
 
   return (
-    <main className="flex min-h-[100dvh] flex-col">
+    // Rapport ouvert : la barre d'action flotte au-dessus du bas de page — on
+    // lui réserve sa hauteur pour qu'elle ne recouvre jamais le pied de page.
+    <main className={`flex min-h-[100dvh] flex-col ${locked ? "" : "pb-24 sm:pb-28"}`}>
       <Nav minimal />
       <div className="flex-1">
         <Dashboard result={analysis.result} analysisId={id} locked={locked} />

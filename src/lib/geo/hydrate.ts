@@ -115,8 +115,12 @@ export function hydrateAnalysisResult(
     openingHours: s?.openingHoursHint ?? null,
   };
 
+  // Les analyses antérieures à la détection de plateforme n'ont pas de `stack`.
+  const signals = s ? { ...s, stack: s.stack ?? null } : s;
+
   return {
     ...raw,
+    signals,
     profile,
     engines,
     localRankings: Array.isArray(raw.localRankings) ? raw.localRankings : [],

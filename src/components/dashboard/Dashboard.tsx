@@ -8,6 +8,7 @@ import { ReportTabs } from "./ReportTabs";
 import { FreeReportCard } from "./FreeReportCard";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { DemoCta } from "@/components/DemoCta";
+import { SolveAgentsBar } from "./SolveAgentsBar";
 import { ROUTES } from "@/constants/routes";
 import { PaidReportCard } from "./PaidReportCard";
 import { UnlockPricingCta } from "./UnlockPricingCta";
@@ -26,6 +27,7 @@ export async function Dashboard({
   locked: boolean;
 }) {
   const t = await getTranslations("analysisReport");
+  const tc = await getTranslations("common");
   const diagnostic = buildDiagnostic(result);
 
   const date = new Date(result.createdAt).toLocaleDateString("fr-FR", {
@@ -34,11 +36,34 @@ export async function Dashboard({
     year: "numeric",
   });
 
+  // Manques réellement relevés : la barre en annonce le nombre, la modale les
+  // rejoue. Faute de manque, on montre les premiers contrôles d'architecture —
+  // ce sont ceux que les agents tiennent à jour.
+  const failing = [
+    ...diagnostic.architecture.checks
+      .filter((c) => c.status === "ko" || c.status === "warn")
+      .map((c) => `architecture.checks.${c.key}`),
+    ...diagnostic.content.checks
+      .filter((c) => c.status === "ko" || c.status === "warn")
+      .map((c) => `content.checks.${c.key}`),
+  ];
+  const issueKeys = (
+    failing.length
+      ? failing
+      : diagnostic.architecture.checks.map((c) => `architecture.checks.${c.key}`)
+  ).slice(0, 3);
+  const issues = issueKeys.map((key) => t(key));
+
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-5 py-8">
       {/* Hero : capture du site assombrie, avec la note globale centrée par-dessus */}
       <div className="mx-auto w-full max-w-3xl">
-        <SiteScreenshot url={result.url} domain={result.domain} variant="site">
+        <SiteScreenshot
+          url={result.url}
+          domain={result.domain}
+          variant="site"
+          stack={result.signals.stack ?? null}
+        >
           <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
             {t("heroEyebrow")}
           </p>
@@ -117,7 +142,7 @@ export async function Dashboard({
             href={ROUTES.pricing}
             className="cursor-pointer font-medium text-text underline decoration-pebble underline-offset-2 hover:decoration-obsidian"
           >
-            {t("discoverOffers")}
+            {tc("discoverOffers")}
           </Link>
         </p>
       </AnimatedCard>
@@ -126,6 +151,16 @@ export async function Dashboard({
       <DemoCta />
       {/* Bandeau de fin de rapport : mène aux tarifs, pas à la prise de rendez-vous */}
       <UnlockPricingCta analysisId={analysisId} locked={locked} />
+
+      {/* Rapport ouvert : l'action suivante (faire corriger) reste accessible
+          d'un bout à l'autre de la page. */}
+      {!locked && (
+        <SolveAgentsBar
+          domain={result.domain}
+          stack={result.signals.stack ?? null}
+          issues={issues}
+        />
+      )}
     </div>
   );
 }
