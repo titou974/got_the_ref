@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import dns from "node:dns/promises";
 import net from "node:net";
 import type { CrawlerAccess, SiteSignals } from "./types";
+import { detectStack } from "./stack";
 
 const UA =
   "Mozilla/5.0 (compatible; GotTheRef-Analyzer/1.0; +https://gottheref.fr)";
@@ -517,6 +518,7 @@ export async function collectSignals(inputUrl: string): Promise<SiteSignals> {
     firstParagraph: null,
     openingHoursHint: null,
     ratingHint: null,
+    stack: null,
     jsonLdTypes: [],
     jsonLdCount: 0,
     hasOpenGraph: false,
@@ -542,6 +544,12 @@ export async function collectSignals(inputUrl: string): Promise<SiteSignals> {
     base.statusCode = homeRes.status;
     base.fetchedOk = homeRes.ok;
     if (homeRes.ok) html = await homeRes.text().catch(() => "");
+  }
+
+  // Plateforme du site : lue sur le HTML brut ET les en-têtes de réponse (une
+  // partie des empreintes ne vit que là : x-shopid, x-powered-by…).
+  if (html || homeRes) {
+    base.stack = detectStack(html, homeRes?.headers ?? null);
   }
 
   if (html) {

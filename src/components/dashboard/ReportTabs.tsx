@@ -9,6 +9,7 @@ import type {
   EngineScore,
   EngineRanking,
   OnPageCheck,
+  DetectedStack,
 } from "@/lib/geo/types";
 import { CATEGORY_META } from "@/lib/geo/types";
 import type {
@@ -27,6 +28,7 @@ import { SolutionBlock } from "./SolutionBlock";
 import { SiteScreenshot } from "./SiteScreenshot";
 import { TrendingKeywords } from "./TrendingKeywords";
 import { ArticleCalendar } from "./ArticleCalendar";
+import { StackMark } from "@/components/StackMark";
 import {
   AnalysisIdProvider,
   LockedBlock,
@@ -281,6 +283,52 @@ export function ReportTabs({
     </section>
     </LockedProvider>
     </AnalysisIdProvider>
+  );
+}
+
+/* --------------------------- Plateforme du site --------------------------- */
+
+/**
+ * Plateforme qui sert le site (WordPress, Shopify, Next.js…). Elle a sa place
+ * dans l'architecture : c'est elle qui décide où se posent les correctifs —
+ * un llms.txt ne s'ajoute pas de la même façon sur Wix et sur Next.js.
+ */
+function StackCard({ stack }: { stack: DetectedStack | null }) {
+  const t = useTranslations("analysisReport.stack");
+
+  return (
+    <AnimatedCard delay={0.12} className="lg:col-span-3">
+      <h4 className="font-semibold">{t("title")}</h4>
+      {stack ? (
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-mist text-obsidian">
+            <StackMark id={stack.id} size={24} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              <span className="text-lg font-bold">{stack.name}</span>
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                style={
+                  stack.confidence === "sure"
+                    ? { background: "rgba(17,180,140,0.18)", color: "#0a8f6e" }
+                    : { background: "rgba(148,163,184,0.18)", color: "#52525b" }
+                }
+              >
+                {stack.confidence === "sure" ? t("sure") : t("probable")}
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted">{stack.evidence}</p>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3">
+          <p className="font-semibold text-text">{t("unknownTitle")}</p>
+          <p className="mt-1 text-sm text-muted">{t("unknownBody")}</p>
+        </div>
+      )}
+      <p className="mt-3 border-t border-fog pt-3 text-sm text-muted">{t("note")}</p>
+    </AnimatedCard>
   );
 }
 
@@ -646,6 +694,8 @@ function ArchitecturePanel({
         <AnimatedCard delay={0.1} className="lg:col-span-3">
           <DiagnosticGrid section={diagnostic.architecture} labelNs="architecture" />
         </AnimatedCard>
+
+        <StackCard stack={result.signals.stack ?? null} />
 
         <AnimatedCard delay={0.15} className="lg:col-span-3">
           <h4 className="mb-3 font-semibold">{t("architecture.checks.aiCrawlers")}</h4>
