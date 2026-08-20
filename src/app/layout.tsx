@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { Analytics } from "@vercel/analytics/next";
-import Script from "next/script";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { SITE } from "@/constants/site";
 import "./globals.css";
@@ -48,17 +47,6 @@ export default async function RootLayout({
         </NextIntlClientProvider>
         {/* Visiteurs et pages vues Vercel — inerte hors production. */}
         <Analytics />
-        {/*
-          Tracker Taap it — chargé via next/script, qui l'injecte en asynchrone
-          (stratégie `afterInteractive` par défaut) et transmet les `data-*` au
-          <script> final. La clé `pk_` est publique par nature.
-        */}
-        <Script
-          src="https://taap.it/scripts/tracker.js"
-          data-project="pk_cf3f9abe364deb8e6a3acdd55018f95e"
-          data-track-outbound="true"
-          data-track-forms="true"
-        />
       </body>
     </html>
   );
