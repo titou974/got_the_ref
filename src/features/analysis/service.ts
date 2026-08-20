@@ -12,10 +12,8 @@ import type { AnalysisContext } from "@/lib/geo/analyzer";
 import type { BusinessMode, GeoAnalysisResult } from "@/lib/geo/types";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { captureLead, normalizeEmail } from "@/features/leads/service";
 import { ANALYSIS_QUOTAS, type PlanKey } from "@/constants/plans";
-
-/** Contrôle de forme de l'e-mail invité — la vérité reste côté saisie. */
-const LEAD_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** Utilisateur minimal requis pour décider du quota. */
 export type AnalysisActor = { id: string; plan: PlanKey } | null;
@@ -103,10 +101,7 @@ export async function runAnalysis(params: {
 
   // Visiteur anonyme : son e-mail est rattaché à l'analyse (même colonne que
   // l'e-mail de paiement invité). Une saisie farfelue est simplement ignorée.
-  const guestEmail =
-    !params.actor && params.leadEmail && LEAD_EMAIL_RE.test(params.leadEmail.trim())
-      ? params.leadEmail.trim().toLowerCase()
-      : null;
+  const guestEmail = params.actor ? null : normalizeEmail(params.leadEmail);
 
   try {
     const signals = await collectSignals(url);
@@ -127,6 +122,21 @@ export async function runAnalysis(params: {
         userId: params.actor?.id ?? null,
       },
     });
+
+    // Liste de diffusion : une ligne par adresse, hors du cycle de vie des
+    // analyses. Best-effort — une erreur ici ne doit pas priver le visiteur du
+    // rapport qu'il vient d'attendre.
+    if (guestEmail) {
+      try {
+        await captureLead({
+          email: guestEmail,
+          domain: result.domain,
+          analysisId: record.id,
+        });
+      } catch (err) {
+        console.error("Enregistrement du lead échoué :", err);
+      }
+    }
 
     return { ok: true, id: record.id };
   } catch (err) {

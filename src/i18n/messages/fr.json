@@ -129,7 +129,7 @@
     "emailPlaceholder": "vous@votre-commerce.fr",
     "emailSubmit": "Lancer mon analyse gratuite",
     "emailInvalid": "Saisissez une adresse e-mail valide.",
-    "emailNote": "Pas de spam. Votre analyse et rien d'autre.",
+    "emailNote": "Votre analyse, puis quelques conseils pour être cité par les IA. Désinscription en un clic.",
     "emailClose": "Fermer"
   },
   "analysisReport": {
