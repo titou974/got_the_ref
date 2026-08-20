@@ -122,7 +122,15 @@
     "confirmClose": "Fermer",
     "modePhysical": "Commerce physique",
     "modeOnline": "Commerce en ligne",
-    "modeAriaLabel": "Type de commerce à analyser"
+    "modeAriaLabel": "Type de commerce à analyser",
+    "emailTitle": "Où envoyer votre analyse ?",
+    "emailBody": "Laissez votre e-mail : on y envoie le résultat de l'analyse et les points à corriger en priorité.",
+    "emailLabel": "Votre adresse e-mail",
+    "emailPlaceholder": "vous@votre-commerce.fr",
+    "emailSubmit": "Lancer mon analyse gratuite",
+    "emailInvalid": "Saisissez une adresse e-mail valide.",
+    "emailNote": "Pas de spam. Votre analyse et rien d'autre.",
+    "emailClose": "Fermer"
   },
   "analysisReport": {
     "heroEyebrow": "Note de visibilité IA",

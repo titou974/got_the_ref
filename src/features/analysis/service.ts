@@ -14,6 +14,9 @@ import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { ANALYSIS_QUOTAS, type PlanKey } from "@/constants/plans";
 
+/** Contrôle de forme de l'e-mail invité — la vérité reste côté saisie. */
+const LEAD_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 /** Utilisateur minimal requis pour décider du quota. */
 export type AnalysisActor = { id: string; plan: PlanKey } | null;
 
@@ -62,6 +65,8 @@ async function checkQuota(
 export async function runAnalysis(params: {
   rawUrl: string;
   rawMapsUrl?: string | null;
+  /** E-mail laissé par un visiteur non connecté avant de lancer l'analyse. */
+  leadEmail?: string | null;
   mode?: BusinessMode;
   actor: AnalysisActor;
   ip: string;
@@ -96,6 +101,13 @@ export async function runAnalysis(params: {
   const quotaFailure = await checkQuota(params.actor, params.ip);
   if (quotaFailure) return quotaFailure;
 
+  // Visiteur anonyme : son e-mail est rattaché à l'analyse (même colonne que
+  // l'e-mail de paiement invité). Une saisie farfelue est simplement ignorée.
+  const guestEmail =
+    !params.actor && params.leadEmail && LEAD_EMAIL_RE.test(params.leadEmail.trim())
+      ? params.leadEmail.trim().toLowerCase()
+      : null;
+
   try {
     const signals = await collectSignals(url);
     // Toujours "free" à la création : aucun appel payant (Claude, moteurs live)
@@ -111,6 +123,7 @@ export async function runAnalysis(params: {
         mapsUrl,
         overallScore: result.overallScore,
         data: JSON.stringify({ ...result, mapsUrl, tier: "free" }),
+        guestEmail,
         userId: params.actor?.id ?? null,
       },
     });

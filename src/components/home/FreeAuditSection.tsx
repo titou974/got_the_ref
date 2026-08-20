@@ -2,6 +2,7 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { WorksWith } from "@/components/WorksWith";
+import { getCurrentUser } from "@/lib/auth";
 
 /**
  * L'analyse gratuite, désormais au milieu de la page plutôt qu'en haut : le
@@ -11,6 +12,9 @@ import { WorksWith } from "@/components/WorksWith";
  */
 export async function FreeAuditSection() {
   const t = await getTranslations("audit");
+  // Visiteur non connecté : l'analyse gratuite passe par une petite modale qui
+  // demande son e-mail. Un membre connecté a déjà laissé le sien.
+  const user = await getCurrentUser();
 
   return (
     <section id="analyser" className="mx-auto w-full max-w-6xl scroll-mt-6 px-5 py-16 sm:py-20">
@@ -32,7 +36,7 @@ export async function FreeAuditSection() {
         </div>
 
         <div className="mx-auto mt-8 w-full max-w-lg">
-          <UrlAnalyzeForm size="lg" />
+          <UrlAnalyzeForm size="lg" askEmail={!user} />
         </div>
 
         <WorksWith className="mt-10" />
