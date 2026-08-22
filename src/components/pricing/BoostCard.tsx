@@ -54,8 +54,12 @@ function Ramp({ steps, note }: { steps: string[]; note: string }) {
           height={64}
           className="h-6 w-6 shrink-0 object-contain"
         />
+        {/* Le libellé démarre sur le centre de son point, pas sur son bord
+            gauche : sans ce décalage il glisse visiblement à gauche de la ligne.
+            2 px et non 3 (la moitié du point) — la marge propre au glyphe
+            fournit le pixel manquant, mesure faite. */}
         {steps.map((step) => (
-          <span key={step} className="text-[11px] font-medium text-ink">
+          <span key={step} className="pl-[2px] text-[11px] font-medium text-ink">
             {step}
           </span>
         ))}
