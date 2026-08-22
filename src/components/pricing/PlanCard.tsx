@@ -80,7 +80,7 @@ export function PlanCard({
   ];
 
   return (
-    <div className={className}>
+    <div className={`flex h-full flex-col ${className}`}>
       {/* Onglets de facturation */}
       <div className="flex justify-center">
         <div
@@ -117,7 +117,7 @@ export function PlanCard({
         </div>
       </div>
 
-      <div className="relative mt-5">
+      <div className="relative mt-5 flex flex-1">
         {/* Garantie : la même promesse que la home, posée sur le bord de la carte. */}
         {/* Centrée sur mobile, où la carte est trop étroite pour la loger dans un coin. */}
         <div className="absolute -top-3 left-1/2 z-10 w-max -translate-x-1/2 sm:left-auto sm:right-8 sm:translate-x-0">
@@ -148,7 +148,7 @@ export function PlanCard({
         </div>
 
         <section
-          className={`rounded-[36px] bg-obsidian text-white shadow-[var(--shadow-md)] ${
+          className={`flex w-full flex-col rounded-[36px] bg-obsidian text-white shadow-[var(--shadow-md)] ${
             compact ? "p-6 pt-7 sm:p-7 sm:pt-8" : "p-6 pt-8 sm:p-9 sm:pt-10"
           }`}
         >
@@ -162,7 +162,9 @@ export function PlanCard({
 
           {/* Ce qu'on paie aujourd'hui, en grand ; ce qui viendra ensuite, dessous.
               Le tarif plein du cycle choisi passe devant, barré : c'est lui qui
-              donne sa valeur au 0 €. */}
+              donne sa valeur au 0 €. Il porte son « /mois » — depuis qu'une
+              offre à paiement unique vit juste à côté, c'est ce suffixe qui dit
+              d'un coup d'œil laquelle des deux est un abonnement. */}
           <div
             className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${compact ? "mt-4" : "mt-6"}`}
           >
@@ -174,6 +176,13 @@ export function PlanCard({
               {euros(
                 cycle === "yearly" ? YEARLY_MONTHLY_PRICE : SUBSCRIPTION_PRICE,
               )}
+              {/* Le suffixe reste plus petit que le montant : il qualifie le
+                  tarif, il ne se compare pas au 0 € du jour — et à cette taille
+                  il ne pousse pas « aujourd'hui » à la ligne sur mobile.
+                  `inline-block` coupe la barre du montant, qui retomberait sous
+                  ce petit texte comme un soulignement : c'est le prix qui est
+                  barré, pas son unité. */}
+              <span className="inline-block text-[0.62em] font-semibold">{t("perMonth")}</span>
             </span>
             <span
               className={`font-display font-bold tabular-nums tracking-tight ${
@@ -189,12 +198,12 @@ export function PlanCard({
               serveur : un seul montant doit se lire en grand sur cette carte,
               celui qu'on paie aujourd'hui. Le tarif remisé reste distingué du
               tarif plein, par la graisse plutôt que par la taille. */}
-          {/* Trois lignes réservées tant que la carte est étroite : la mention
-              annuelle est plus longue que la mensuelle, et sans cette réserve la
-              carte grandissait de 19 px au changement d'onglet. Au-delà de `sm`
-              les deux tiennent sur deux lignes, la réserve devient inutile. */}
+          {/* Trois lignes réservées, à toutes les largeurs : la mention annuelle
+              est plus longue que la mensuelle, et sans cette réserve la carte
+              grandissait au changement d'onglet. La réserve tient aussi le
+              bouton sur la même ligne que celui du Coup de Boost, à côté. */}
           <p
-            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed text-white/30 first-letter:uppercase sm:min-h-0 ${
+            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed text-white/30 first-letter:uppercase ${
               compact ? "mt-3" : "mt-4"
             }`}
           >
@@ -232,11 +241,20 @@ export function PlanCard({
             ))}
           </ul>
 
-          {showAgents && (
-            <div className="mt-7">
+          {/* Le pied de carte, poussé en bas quand la colonne d'à côté est plus
+              haute : l'espace en trop se pose là, pas entre deux lignes.
+              Sans roster — en bas de home —, il reste la phrase des agents, qui
+              répond mot pour mot à la note de périmètre du Coup de Boost, en
+              face : l'un ne s'arrête pas, l'autre s'arrête. */}
+          <div className="mt-7 flex flex-1 flex-col justify-end">
+            {showAgents ? (
               <AgentRoster />
-            </div>
-          )}
+            ) : (
+              <p className="rounded-2xl bg-white/5 px-4 py-3 text-xs leading-relaxed text-white/45">
+                {t("agents.note")}
+              </p>
+            )}
+          </div>
         </section>
       </div>
     </div>

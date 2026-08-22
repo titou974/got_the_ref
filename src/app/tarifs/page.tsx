@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer";
 import { AnalysisCheckoutButton } from "@/components/AnalysisCheckoutButton";
 import { TrialCheckoutButton } from "@/components/TrialCheckoutButton";
 import { BrandProof } from "@/components/BrandProof";
-import { PlanCard } from "@/components/pricing/PlanCard";
+import { PricingOffers } from "@/components/pricing/PricingOffers";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
 import { REDIRECT_REASONS } from "@/constants/routes";
 import { TRIAL } from "@/constants/plans";
@@ -25,7 +25,9 @@ export default async function TarifsPage({ searchParams }: Props) {
     <main className="flex min-h-[100dvh] flex-col">
       <Nav minimal />
 
-      <div className="mx-auto w-full max-w-5xl flex-1 px-5 py-12 sm:py-16">
+      {/* Élargi depuis que les deux offres se posent côte à côte : à 1024 px, les
+          colonnes se serraient au point de casser les lignes de la carte sombre. */}
+      <div className="mx-auto w-full max-w-6xl flex-1 px-5 py-12 sm:py-16">
         <header className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-wider text-steel">
             {t("eyebrow")}
@@ -45,10 +47,12 @@ export default async function TarifsPage({ searchParams }: Props) {
           )}
         </header>
 
-        {/* L'abonnement : onglets de facturation, garantie, puis la carte sombre. */}
-        <div className="mx-auto mt-12 w-full max-w-2xl">
-          <PlanCard
-            cta={
+        {/* Les deux offres : l'abonnement (carte sombre, onglets, garantie) et le
+            Coup de Boost, la passe unique, à sa droite. */}
+        <div className="mx-auto mt-12 w-full max-w-2xl lg:max-w-none">
+          <PricingOffers
+            analysisId={analyse}
+            subscriptionCta={
               analyse ? (
                 // Venu d'un rapport précis : on le rattache à l'abonnement souscrit.
                 <AnalysisCheckoutButton

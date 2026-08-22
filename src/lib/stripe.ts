@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import {
+  BOOST,
   DEFAULT_BILLING_CYCLE,
   PLAN_BILLING,
   stripePriceEnvName,
@@ -42,10 +43,11 @@ const priceIdCache = new Map<string, string>();
  * soit un Product ID (`prod_…`) — dans ce cas on récupère le `default_price` du
  * produit. Résultat mémoïsé par couple offre/cycle.
  *
- * Les offres du site s'ouvrent toutes en `mode: "subscription"` : un tarif
- * ponctuel est refusé par Stripe au moment du checkout, avec un message qui ne
- * dit pas quelle variable est en cause. On vérifie donc ici, une fois, que le
- * price est bien récurrent — et on nomme la variable fautive.
+ * Les offres à plan s'ouvrent en `mode: "subscription"` : un tarif ponctuel est
+ * refusé par Stripe au moment du checkout, avec un message qui ne dit pas quelle
+ * variable est en cause. On vérifie donc ici, une fois, que le price est bien
+ * récurrent — et on nomme la variable fautive. Le « Coup de Boost » suit le
+ * chemin inverse (cf. `resolveBoostPriceId`).
  *
  * Toutes les erreurs levées ici nomment la variable, la valeur et le mode de la
  * clé. Le visiteur, lui, ne lit qu'un message générique (cf. `handleServerError`)
@@ -58,12 +60,36 @@ export async function resolvePriceId(
   plan: PaidPlanKey,
   cycle: BillingCycle = DEFAULT_BILLING_CYCLE,
 ): Promise<string> {
-  const cacheKey = `plan:${plan}:${cycle}`;
+  return resolveEnvPriceId(stripePriceEnvName(plan, cycle), PLAN_BILLING[plan].mode, {
+    cacheKey: `plan:${plan}:${cycle}`,
+    rawValue: stripePriceEnvValue(plan, cycle),
+  });
+}
+
+/** Tarif ponctuel du « Coup de Boost » (checkout en `mode: "payment"`). */
+export async function resolveBoostPriceId(): Promise<string> {
+  return resolveEnvPriceId(BOOST.env, "payment");
+}
+
+/**
+ * Le résolveur commun : lit la variable, récupère le tarif Stripe, vérifie
+ * qu'il correspond bien au mode de checkout attendu, mémoïse.
+ *
+ * `expected` est le mode dans lequel le tarif sera utilisé : un abonnement
+ * exige un tarif récurrent, un paiement unique exige l'inverse. Stripe refuse
+ * le mauvais couple au moment du checkout, sans dire quelle variable est en
+ * cause — d'où la vérification ici, une fois, en nommant la variable.
+ */
+async function resolveEnvPriceId(
+  envName: string,
+  expected: BillingMode,
+  options: { cacheKey?: string; rawValue?: string } = {},
+): Promise<string> {
+  const cacheKey = options.cacheKey ?? `env:${envName}`;
   const cached = priceIdCache.get(cacheKey);
   if (cached) return cached;
 
-  const envName = stripePriceEnvName(plan, cycle);
-  const raw = stripePriceEnvValue(plan, cycle);
+  const raw = options.rawValue ?? process.env[envName];
   if (!raw) {
     throw new Error(`${envName} manquant dans l'environnement.`);
   }
@@ -101,9 +127,14 @@ export async function resolvePriceId(
     throw err;
   }
 
-  if (PLAN_BILLING[plan].mode === "subscription" && !price.recurring) {
+  if (expected === "subscription" && !price.recurring) {
     throw new Error(
       `Le tarif Stripe ${price.id} (${envName}) est ponctuel : l'abonnement exige un tarif récurrent.`,
+    );
+  }
+  if (expected === "payment" && price.recurring) {
+    throw new Error(
+      `Le tarif Stripe ${price.id} (${envName}) est récurrent : le paiement unique exige un tarif ponctuel.`,
     );
   }
 

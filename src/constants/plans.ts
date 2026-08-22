@@ -29,6 +29,25 @@ export const PLAN_PRICING: Record<PlanKey, { amount: number | null; recurring: b
 export const SUBSCRIPTION_PRICE = PLAN_PRICING.pro.amount as number;
 
 /**
+ * « Coup de Boost » : l'offre ponctuelle, posée à côté de l'abonnement. Une
+ * seule passe des agents — mesure, corrections, articles — payée une fois, puis
+ * plus rien. Aucune remesure dans la durée : c'est la frontière avec
+ * l'abonnement, et elle est annoncée sur la carte.
+ */
+export const BOOST = {
+  /** Prix public, en euros, débité une seule fois. */
+  price: 49,
+  /** Articles rédigés pendant la passe — le seul volume promis. */
+  articles: 10,
+  /**
+   * Variable d'environnement portant le tarif Stripe de l'offre. Ce tarif doit
+   * être **ponctuel** : le checkout s'ouvre en `mode: "payment"`, qui refuse un
+   * tarif récurrent.
+   */
+  env: "STRIPE_PRICE_BOOST",
+} as const;
+
+/**
  * Essai : accès complet quelques jours, **gratuit**. Rien n'est débité à
  * l'ouverture du checkout (`todayPrice` à 0) ; la facturation récurrente ne
  * démarre qu'à la fin de l'essai, et seulement si l'abonnement n'est pas résilié.
