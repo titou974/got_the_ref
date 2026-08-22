@@ -604,14 +604,17 @@
     "trialSubtitle": "Créez votre mot de passe pour ouvrir votre espace et lancer votre première analyse.",
     "trialExistingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous pour retrouver votre abonnement.",
     "trialOtherDeviceSubtitle": "Votre essai est ouvert. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous.",
-    "trialSkip": "Retour à l'accueil"
+    "trialSkip": "Retour à l'accueil",
+    "boostSubtitle": "Créez votre mot de passe : c'est là que vous retrouverez le rapport et les corrections de votre Coup de Boost.",
+    "boostExistingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous, votre Coup de Boost y est rattaché.",
+    "boostOtherDeviceSubtitle": "Votre Coup de Boost est payé. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous."
   },
   "pricing": {
     "metaTitle": "Tarifs",
-    "eyebrow": "Abonnement",
+    "eyebrow": "Tarifs",
     "headingBefore": "Des agents qui travaillent votre visibilité IA ",
     "headingHighlight": "en continu",
-    "subtitle": "L'analyse est gratuite. L'abonnement met des agents spécialisés sur votre site : ils mesurent votre position sur ChatGPT, Gemini et Google, corrigent ce qui vous empêche d'être cité, puis remesurent, sans que vous ayez à toucher une ligne de code.",
+    "subtitle": "L'analyse est gratuite. L'abonnement met des agents spécialisés sur votre site : ils mesurent votre position sur ChatGPT, Gemini et Google, corrigent ce qui vous empêche d'être cité, puis remesurent, sans que vous ayez à toucher une ligne de code. Le Coup de Boost, lui, fait cette passe une seule fois.",
     "quotaNote": "Vous avez atteint la limite d'analyses gratuites. Réessayez plus tard ou parlons-en directement.",
     "perMonth": "/mois",
     "perYear": " par an",
@@ -636,6 +639,26 @@
       "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
       "ctaStripe": "Démarrer {days} jours gratuits",
       "ctaStripeNote": "Sans engagement · résiliable avant la fin de l'essai"
+    },
+    "boost": {
+      "rhythm": "Payé une seule fois",
+      "eyebrow": "Intervention unique",
+      "name": "Coup de Boost",
+      "tagline": "Une passe complète des agents sur votre site : on mesure, on corrige, on publie. Puis on s'arrête.",
+      "onceLabel": "une fois",
+      "terms": "Paiement unique, sans abonnement · rien à résilier",
+      "steps": ["Mesure", "Corrections", "Articles"],
+      "stepsNote": "Une passe, puis c'est terminé.",
+      "features": {
+        "analysis": "Analyse complète de votre site, e-commerce, SaaS ou commerce physique",
+        "measure": "Vos positions sur ChatGPT, Gemini et Google mesurées avant et après",
+        "fix": "Les agents got_the_ref corrigent ce qui vous empêche d'être cité",
+        "articles": "{count} articles rédigés et publiés pour installer votre visibilité",
+        "report": "Un rapport de fin de passe, avec ce qui reste à faire"
+      },
+      "limit": "Pas de remesure en continu, pas d'articles programmés dans la durée : ça, c'est l'abonnement.",
+      "cta": "Prendre le Coup de Boost",
+      "ctaNote": "Paiement unique par Stripe · aucun abonnement ouvert"
     },
     "agents": {
       "title": "Agents en service",
@@ -1378,9 +1401,9 @@
     }
   },
   "homePricing": {
-    "eyebrow": "Tarif",
-    "title": "Un seul abonnement, tous les moteurs",
-    "subtitle": "Pas de palier, pas d'option : l'accès complet à got_the_ref, et des agents qui travaillent votre visibilité en continu.",
+    "eyebrow": "Tarifs",
+    "title": "En continu, ou en une seule passe",
+    "subtitle": "L'abonnement met des agents sur votre visibilité et les y laisse. Le Coup de Boost fait la même passe, une fois, et s'arrête là.",
     "allDetails": "Voir le détail des tarifs"
   },
   "homeDemoCta": {

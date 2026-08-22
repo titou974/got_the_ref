@@ -29,3 +29,13 @@ export const trialCheckoutSchema = z.object({
 });
 
 export type TrialCheckoutInput = z.infer<typeof trialCheckoutSchema>;
+
+/**
+ * « Coup de Boost » : paiement unique, sans cycle de facturation. L'analyse est
+ * facultative — la carte vit sur la page tarifs comme au bas d'un rapport.
+ */
+export const boostCheckoutSchema = z.object({
+  analysisId: z.string().min(1).optional(),
+});
+
+export type BoostCheckoutInput = z.infer<typeof boostCheckoutSchema>;

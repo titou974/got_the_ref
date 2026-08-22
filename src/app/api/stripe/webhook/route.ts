@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe, resolvePriceId } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
-import { unlockAnalysisFromSession } from "@/features/billing/unlock";
+import { BOOST_CHECKOUT_KIND, unlockAnalysisFromSession } from "@/features/billing/unlock";
 import { BILLING_CYCLES, PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
 
 export const runtime = "nodejs";
@@ -117,6 +117,10 @@ export async function POST(request: Request) {
             await unlockAnalysisFromSession(session);
             break;
           }
+
+          // Coup de Boost pris sans rapport : rien à ouvrir ni à provisionner —
+          // aucun abonnement n'est créé, la prestation est lancée à la main.
+          if (session.metadata?.kind === BOOST_CHECKOUT_KIND) break;
 
           // Ancien flux transactionnel lié à un compte : on accorde l'offre.
           const plan = asPaidPlan(session.metadata?.plan);

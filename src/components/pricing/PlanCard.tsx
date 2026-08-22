@@ -162,7 +162,9 @@ export function PlanCard({
 
           {/* Ce qu'on paie aujourd'hui, en grand ; ce qui viendra ensuite, dessous.
               Le tarif plein du cycle choisi passe devant, barré : c'est lui qui
-              donne sa valeur au 0 €. */}
+              donne sa valeur au 0 €. Il porte son « /mois » — depuis qu'une
+              offre à paiement unique vit juste à côté, c'est ce suffixe qui dit
+              d'un coup d'œil laquelle des deux est un abonnement. */}
           <div
             className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${compact ? "mt-4" : "mt-6"}`}
           >
@@ -174,6 +176,13 @@ export function PlanCard({
               {euros(
                 cycle === "yearly" ? YEARLY_MONTHLY_PRICE : SUBSCRIPTION_PRICE,
               )}
+              {/* Le suffixe reste plus petit que le montant : il qualifie le
+                  tarif, il ne se compare pas au 0 € du jour — et à cette taille
+                  il ne pousse pas « aujourd'hui » à la ligne sur mobile.
+                  `inline-block` coupe la barre du montant, qui retomberait sous
+                  ce petit texte comme un soulignement : c'est le prix qui est
+                  barré, pas son unité. */}
+              <span className="inline-block text-[0.62em] font-semibold">{t("perMonth")}</span>
             </span>
             <span
               className={`font-display font-bold tabular-nums tracking-tight ${
@@ -189,12 +198,12 @@ export function PlanCard({
               serveur : un seul montant doit se lire en grand sur cette carte,
               celui qu'on paie aujourd'hui. Le tarif remisé reste distingué du
               tarif plein, par la graisse plutôt que par la taille. */}
-          {/* Trois lignes réservées tant que la carte est étroite : la mention
-              annuelle est plus longue que la mensuelle, et sans cette réserve la
-              carte grandissait de 19 px au changement d'onglet. Au-delà de `sm`
-              les deux tiennent sur deux lignes, la réserve devient inutile. */}
+          {/* Trois lignes réservées, à toutes les largeurs : la mention annuelle
+              est plus longue que la mensuelle, et sans cette réserve la carte
+              grandissait au changement d'onglet. La réserve tient aussi le
+              bouton sur la même ligne que celui du Coup de Boost, à côté. */}
           <p
-            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed text-white/30 first-letter:uppercase sm:min-h-0 ${
+            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed text-white/30 first-letter:uppercase ${
               compact ? "mt-3" : "mt-4"
             }`}
           >

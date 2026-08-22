@@ -2,13 +2,14 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { BrandProof } from "@/components/BrandProof";
 import { TrialCheckoutButton } from "@/components/TrialCheckoutButton";
-import { PlanCard } from "@/components/pricing/PlanCard";
+import { PricingOffers } from "@/components/pricing/PricingOffers";
 import { ROUTES } from "@/constants/routes";
 import { TRIAL } from "@/constants/plans";
 
 /**
- * Le tarif, en bas de home : après la démonstration, une seule carte, la même
- * que sur la page tarifs — mêmes onglets, même garantie, même montant du jour.
+ * Le tarif, en bas de home : après la démonstration, le même couple d'offres que
+ * sur la page tarifs — l'abonnement et le Coup de Boost, mêmes onglets, même
+ * garantie, mêmes montants.
  *
  * Version resserrée, et bouton qui part droit sur Stripe : à ce stade de la
  * page, le visiteur a déjà vu le produit tourner ; le renvoyer vers l'analyse
@@ -19,7 +20,7 @@ export async function HomePricing() {
   const tp = await getTranslations("pricing");
 
   return (
-    <section id="tarif" className="mx-auto w-full max-w-xl scroll-mt-8 px-5 py-16 sm:py-20">
+    <section id="tarif" className="mx-auto w-full max-w-xl scroll-mt-8 px-5 py-16 sm:py-20 lg:max-w-6xl">
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("eyebrow")}</p>
         <h2 className="mt-2 text-balance text-3xl font-bold leading-tight sm:text-4xl">
@@ -29,12 +30,12 @@ export async function HomePricing() {
         <BrandProof className="mt-7" />
       </div>
 
-      <PlanCard
+      <PricingOffers
         className="mt-10"
         compact
         showAgents={false}
-        ctaNote={tp("plan.ctaStripeNote")}
-        cta={
+        subscriptionCtaNote={tp("plan.ctaStripeNote")}
+        subscriptionCta={
           <TrialCheckoutButton
             label={tp("plan.ctaStripe", { days: TRIAL.days })}
           />
