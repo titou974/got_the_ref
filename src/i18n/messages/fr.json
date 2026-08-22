@@ -465,7 +465,7 @@
   "results": {
     "eyebrow": "Nos utilisateurs parlent pour nous",
     "title": "Ce qu'en pensent les commerces français",
-    "subtitle": "C'est +400 startups, commerces, artisans, et indépendants qui gagnent des clients quotidiennement grâce au trafic IA généré par got_the_ref.",
+    "subtitle": "C'est plus de 400 startups, commerces, artisans, et indépendants qui gagnent des clients quotidiennement grâce au trafic IA généré par got_the_ref.",
     "clicks": "Clics",
     "impressions": "Impressions",
     "position": "Position moy.",
@@ -612,9 +612,9 @@
   "pricing": {
     "metaTitle": "Tarifs",
     "eyebrow": "Tarifs",
-    "headingBefore": "Des agents qui travaillent votre visibilité IA ",
+    "headingBefore": "Des agents qui travaillent votre visibilité ",
     "headingHighlight": "en continu",
-    "subtitle": "L'analyse est gratuite. L'abonnement met des agents spécialisés sur votre site : ils mesurent votre position sur ChatGPT, Gemini et Google, corrigent ce qui vous empêche d'être cité, puis remesurent, sans que vous ayez à toucher une ligne de code. Le Coup de Boost, lui, fait cette passe une seule fois.",
+    "subtitle": "L'abonnement met des agents IA spécialisés en référencement sur votre site : ils mesurent votre position sur ChatGPT, Gemini et Google, corrigent ce qui vous empêche d'être cité, publient du contenu \"SEO et IA friendly\" tout en gardant votre image de marque, puis remesurent, le tout en automatique. Le Coup de Boost, lui, fait cette passe une seule fois.",
     "quotaNote": "Vous avez atteint la limite d'analyses gratuites. Réessayez plus tard ou parlons-en directement.",
     "perMonth": "/mois",
     "perYear": " par an",
@@ -629,12 +629,12 @@
       "cta": "Essayer {days} jours gratuits",
       "ctaNote": "Accès complet gratuit pendant {days} jours · résiliable avant la fin de l'essai",
       "features": [
-        "Analyses illimitées, e-commerce, SaaS ou commerce physique",
+        "Un tableau de bord simple à comprendre qui détaille toutes vos statistiques de référencement",
+        "Agents IA entraînés sur les données de votre niche qui travaillent 24h/24",
+        "Analyses continues et illimitées, e-commerce, SaaS ou commerce physique (fiche Google Maps comprise.)",
         "Vos positions réelles sur ChatGPT et Gemini, remesurées en continu",
-        "Agents entraînés sur les données de votre niche",
-        "Plan d'action priorisé et prompts solution prêts à coller",
-        "Contenu, notoriété et cohérence Google Maps suivis dans le temps",
-        "Aucune compétence technique requise"
+        "Corrections automatiques sur votre site",
+        "Aucune compétence technique requise, tout est fait en pilote automatique"
       ],
       "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
       "ctaStripe": "Démarrer {days} jours gratuits",
@@ -644,17 +644,17 @@
       "rhythm": "Payé une seule fois",
       "eyebrow": "Intervention unique",
       "name": "Coup de Boost",
-      "tagline": "Une passe complète des agents sur votre site : on mesure, on corrige, on publie. Puis on s'arrête.",
+      "tagline": "Une passe complète unique des agents IA sur votre site qui mesurent, corrigent et publient pour vous.",
       "onceLabel": "une fois",
       "terms": "Paiement unique, sans abonnement · rien à résilier",
       "features": {
-        "analysis": "Analyse complète de votre site, e-commerce, SaaS ou commerce physique",
-        "measure": "Vos positions sur ChatGPT, Gemini et Google mesurées avant et après",
-        "fix": "Les agents got_the_ref corrigent ce qui vous empêche d'être cité",
+        "analysis": "Analyse complète de votre site, e-commerce, SaaS ou commerce physique (fiche Google maps comprise.)",
+        "measure": "Vos positions sur ChatGPT, Gemini et Google mesurées avant et après corrections",
+        "fix": "Les agents IA got_the_ref corrigent automatiquement ce qui vous empêche d'être cité dans les IA et sur Google.",
         "articles": "{count} articles rédigés et publiés pour installer votre visibilité",
-        "report": "Un rapport de fin de passe, avec ce qui reste à faire"
+        "report": "Un rapport de référencement IA et Google à la fin de la passe, avec les bonnes pratiques à conserver"
       },
-      "limit": "Pas de remesure en continu, pas d'articles programmés dans la durée : ça, c'est l'abonnement.",
+      "limit": "Pas de remesure et travaille en continu, pas d'articles programmés dans la durée : ça, c'est l'abonnement.",
       "cta": "Prendre le Coup de Boost",
       "ctaNote": "Paiement unique par Stripe · aucun abonnement ouvert"
     },
@@ -675,7 +675,7 @@
         "vérifie l'indexation",
         "met le rapport à jour"
       ],
-      "note": "Les agents repassent sur votre site en continu : chaque correction est remesurée, pas seulement recommandée."
+      "note": "Les agents IA travaillent votre référencement 24h/24, vous repositionne, publie des articles quotidiennement en gardant votre image de marque... le tout automatiquement"
     },
     "compare": {
       "title": "Réfléchissez à deux fois avant de payer une agence SEO",
@@ -695,13 +695,13 @@
       },
       "ours": {
         "name": "got_the_ref",
-        "trial": "{days} jours d'accès complet gratuits, puis {monthly}/mois",
+        "trial": "{days} jours d'accès complet gratuits",
         "points": [
           "Résiliable à tout moment, sans frais de setup",
-          "Premier constat immédiat, analyses illimitées",
-          "Vos positions sur ChatGPT et Gemini remesurées en continu",
+          "Premier constat immédiat et corrections automatiques dans la foulée",
+          "Vos positions sur les IA et Google remesurées en continu",
           "Corrections appliquées puis revérifiées par les agents",
-          "Votre stratégie et vos données restent chez vous"
+          "Un tableau de bord avec des statistiques claires sur votre progression"
         ]
       }
     },
@@ -1401,7 +1401,7 @@
   "homePricing": {
     "eyebrow": "Tarifs",
     "title": "En continu, ou en une seule passe",
-    "subtitle": "L'abonnement met des agents sur votre visibilité et les y laisse. Le Coup de Boost fait la même passe, une fois, et s'arrête là.",
+    "subtitle": "L'abonnement met des agents IA qui travaillent 24h/24 sur le référencement de votre entreprise. Le Coup de Boost fait la même passe une seule fois.",
     "allDetails": "Voir le détail des tarifs"
   },
   "homeDemoCta": {
