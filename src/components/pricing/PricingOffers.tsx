@@ -11,8 +11,9 @@ import { PlanCard } from "./PlanCard";
  * du site : c'est lui qu'on recommande. En dessous de `lg`, les deux cartes
  * s'empilent — abonnement d'abord, Coup de Boost ensuite.
  *
- * Les cartes s'alignent par le haut (`items-start`) : le Coup de Boost est plus
- * court, l'étirer pour égaliser les hauteurs ne remplirait que du vide.
+ * Côte à côte, les deux cartes montent à la même hauteur : chacune pousse son
+ * bloc de pied (le roster d'agents, la note de périmètre) vers le bas, et
+ * l'espace en trop se pose là plutôt qu'entre deux lignes.
  */
 export function PricingOffers({
   subscriptionCta,
@@ -33,7 +34,7 @@ export function PricingOffers({
 }) {
   return (
     <div
-      className={`grid items-start gap-6 lg:grid-cols-[1.06fr_0.94fr] lg:gap-7 ${className}`}
+      className={`grid gap-6 lg:grid-cols-[1.06fr_0.94fr] lg:gap-7 ${className}`}
     >
       <PlanCard
         compact={compact}

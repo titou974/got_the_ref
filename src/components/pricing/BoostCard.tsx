@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { BoostCheckoutButton } from "@/components/BoostCheckoutButton";
 import { BOOST } from "@/constants/plans";
@@ -28,26 +28,36 @@ function Check() {
 }
 
 /**
- * La rampe : les trois temps de la passe, puis un butoir. C'est le seul endroit
- * du site où l'orange vif de la palette sort — une barre d'arrêt, à droite, là
- * où l'abonnement, lui, n'a pas de fin. Tout le sens de l'offre tient dans ce
- * petit trait : ça avance, puis ça s'arrête.
+ * La rampe : les trois temps de la passe, et le trophée qui la termine — là où
+ * l'abonnement, lui, n'a pas de fin. Tout le sens de l'offre tient dans cette
+ * ligne : ça avance, ça arrive quelque part, puis ça s'arrête.
+ *
+ * Points et libellés partagent la même grille, une colonne par temps : c'est ce
+ * qui garantit que chaque libellé tombe sous son point, quelle que soit la
+ * largeur de la carte.
  */
 function Ramp({ steps, note }: { steps: string[]; note: string }) {
   return (
     <div>
-      <div className="flex items-center gap-1.5" aria-hidden>
+      <div className="grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-x-1.5 gap-y-2">
         {steps.map((step) => (
-          <Fragment key={step}>
+          <span key={step} className="flex items-center gap-1.5" aria-hidden>
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-obsidian" />
             <span className="h-px flex-1 bg-pebble" />
-          </Fragment>
+          </span>
         ))}
-        <span className="h-3.5 w-[3px] shrink-0 rounded-full bg-ember" />
-      </div>
-      <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] font-medium text-ink">
+        <Image
+          src="/trophee-3d.png"
+          alt=""
+          aria-hidden
+          width={64}
+          height={64}
+          className="h-6 w-6 shrink-0 object-contain"
+        />
         {steps.map((step) => (
-          <span key={step}>{step}</span>
+          <span key={step} className="text-[11px] font-medium text-ink">
+            {step}
+          </span>
         ))}
       </div>
       <p className="mt-1.5 text-[11px] text-steel">{note}</p>
@@ -99,7 +109,7 @@ export async function BoostCard({
       ];
 
   return (
-    <div className={className}>
+    <div className={`flex h-full flex-col ${className}`}>
       {/* Le pendant des onglets de facturation de l'abonnement : même pilule,
           même hauteur — donc les deux cartes démarrent à la même ligne —, mais
           rien à choisir, l'offre n'a qu'un rythme. */}
@@ -112,7 +122,7 @@ export async function BoostCard({
       </div>
 
       <section
-        className={`mt-5 rounded-[36px] border border-pebble bg-snow shadow-[var(--shadow-md)] ${
+        className={`mt-5 flex flex-1 flex-col rounded-[36px] border border-pebble bg-snow shadow-[var(--shadow-md)] ${
           compact ? "p-6 pt-7 sm:p-7 sm:pt-8" : "p-6 pt-8 sm:p-9 sm:pt-10"
         }`}
       >
@@ -165,9 +175,14 @@ export async function BoostCard({
           ))}
         </ul>
 
-        <p className="mt-6 rounded-2xl bg-mist px-4 py-3 text-xs leading-relaxed text-steel">
-          {t("boost.limit")}
-        </p>
+        {/* Collé au bas de la carte : quand les deux colonnes s'alignent sur la
+            même hauteur, l'espace en trop tombe au-dessus de ce bloc, jamais
+            entre deux lignes de la liste. */}
+        <div className="mt-6 flex flex-1 flex-col justify-end">
+          <p className="rounded-2xl bg-mist px-4 py-3 text-xs leading-relaxed text-steel">
+            {t("boost.limit")}
+          </p>
+        </div>
       </section>
     </div>
   );

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { AGENCY_BENCHMARK_YEARLY, SUBSCRIPTION_PRICE, TRIAL } from "@/constants/plans";
+import { AGENCY_BENCHMARK_YEARLY, BOOST, SUBSCRIPTION_PRICE, TRIAL } from "@/constants/plans";
 
 /** Montant formaté à la française, sans décimales (20 000 €). */
 const euros = (amount: number) => `${amount.toLocaleString("fr-FR")} €`;
@@ -32,10 +32,14 @@ function Check() {
  * et donc l'endroit où l'œil se pose en dernier.
  *
  * Les deux montants du bas viennent des constantes (`AGENCY_BENCHMARK_YEARLY`,
- * `TRIAL`) : aucun chiffre n'est écrit en dur dans l'i18n.
+ * `BOOST`) : aucun chiffre n'est écrit en dur dans l'i18n. Côté got_the_ref,
+ * c'est le ticket d'entrée réel qui s'affiche — le Coup de Boost, payé une fois
+ * — et rien d'autre : un tarif barré à côté ferait douter du chiffre annoncé,
+ * juste là où on demande de nous croire sur le coût.
  */
 export async function PricingComparison({ cta }: { cta?: React.ReactNode }) {
   const t = await getTranslations("pricing.compare");
+  const tp = await getTranslations("pricing");
 
   // Le budget mensuel d'agence se déduit du repère annuel, arrondi à la centaine :
   // deux chiffres qui se contredisent sur la même page seraient pires qu'un seul.
@@ -108,11 +112,9 @@ export async function PricingComparison({ cta }: { cta?: React.ReactNode }) {
             <span className="text-xs font-semibold uppercase tracking-wider text-white/50">
               {t("costLabel")}
             </span>
-            <span className="flex items-baseline gap-2 font-display text-xl font-bold tabular-nums">
-              <span className="text-base font-semibold text-white/35 line-through decoration-white/45">
-                {euros(SUBSCRIPTION_PRICE)}
-              </span>
-              {euros(TRIAL.todayPrice)}
+            <span className="font-display text-xl font-bold tabular-nums">
+              {euros(BOOST.price)}
+              <span className="text-sm font-medium text-white/50"> {tp("boost.onceLabel")}</span>
             </span>
           </div>
         </div>

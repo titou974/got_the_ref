@@ -80,7 +80,7 @@ export function PlanCard({
   ];
 
   return (
-    <div className={className}>
+    <div className={`flex h-full flex-col ${className}`}>
       {/* Onglets de facturation */}
       <div className="flex justify-center">
         <div
@@ -117,7 +117,7 @@ export function PlanCard({
         </div>
       </div>
 
-      <div className="relative mt-5">
+      <div className="relative mt-5 flex flex-1">
         {/* Garantie : la même promesse que la home, posée sur le bord de la carte. */}
         {/* Centrée sur mobile, où la carte est trop étroite pour la loger dans un coin. */}
         <div className="absolute -top-3 left-1/2 z-10 w-max -translate-x-1/2 sm:left-auto sm:right-8 sm:translate-x-0">
@@ -148,7 +148,7 @@ export function PlanCard({
         </div>
 
         <section
-          className={`rounded-[36px] bg-obsidian text-white shadow-[var(--shadow-md)] ${
+          className={`flex w-full flex-col rounded-[36px] bg-obsidian text-white shadow-[var(--shadow-md)] ${
             compact ? "p-6 pt-7 sm:p-7 sm:pt-8" : "p-6 pt-8 sm:p-9 sm:pt-10"
           }`}
         >
@@ -241,11 +241,20 @@ export function PlanCard({
             ))}
           </ul>
 
-          {showAgents && (
-            <div className="mt-7">
+          {/* Le pied de carte, poussé en bas quand la colonne d'à côté est plus
+              haute : l'espace en trop se pose là, pas entre deux lignes.
+              Sans roster — en bas de home —, il reste la phrase des agents, qui
+              répond mot pour mot à la note de périmètre du Coup de Boost, en
+              face : l'un ne s'arrête pas, l'autre s'arrête. */}
+          <div className="mt-7 flex flex-1 flex-col justify-end">
+            {showAgents ? (
               <AgentRoster />
-            </div>
-          )}
+            ) : (
+              <p className="rounded-2xl bg-white/5 px-4 py-3 text-xs leading-relaxed text-white/45">
+                {t("agents.note")}
+              </p>
+            )}
+          </div>
         </section>
       </div>
     </div>
