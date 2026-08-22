@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { BoostCheckoutButton } from "@/components/BoostCheckoutButton";
 import { BOOST } from "@/constants/plans";
@@ -28,53 +27,10 @@ function Check() {
 }
 
 /**
- * La rampe : les trois temps de la passe, et le trophée qui la termine — là où
- * l'abonnement, lui, n'a pas de fin. Tout le sens de l'offre tient dans cette
- * ligne : ça avance, ça arrive quelque part, puis ça s'arrête.
- *
- * Points et libellés partagent la même grille, une colonne par temps : c'est ce
- * qui garantit que chaque libellé tombe sous son point, quelle que soit la
- * largeur de la carte.
- */
-function Ramp({ steps, note }: { steps: string[]; note: string }) {
-  return (
-    <div>
-      <div className="grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-x-1.5 gap-y-2">
-        {steps.map((step) => (
-          <span key={step} className="flex items-center gap-1.5" aria-hidden>
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-obsidian" />
-            <span className="h-px flex-1 bg-pebble" />
-          </span>
-        ))}
-        <Image
-          src="/trophee-3d.png"
-          alt=""
-          aria-hidden
-          width={64}
-          height={64}
-          className="h-6 w-6 shrink-0 object-contain"
-        />
-        {/* Le libellé démarre sur le centre de son point, pas sur son bord
-            gauche : sans ce décalage il glisse visiblement à gauche de la ligne.
-            2 px et non 3 (la moitié du point) — la marge propre au glyphe
-            fournit le pixel manquant, mesure faite. */}
-        {steps.map((step) => (
-          <span key={step} className="pl-[2px] text-[11px] font-medium text-ink">
-            {step}
-          </span>
-        ))}
-      </div>
-      <p className="mt-1.5 text-[11px] text-steel">{note}</p>
-    </div>
-  );
-}
-
-/**
  * Le « Coup de Boost » : la carte claire, à côté de la carte sombre de
- * l'abonnement. Une passe des agents, payée une fois — la carte le dit trois
- * fois, et de trois manières : le rythme annoncé au-dessus (là où l'abonnement
- * propose un choix, celle-ci n'a qu'une option), le montant suivi de « une
- * fois », et la rampe qui se termine sur un butoir.
+ * l'abonnement. Une passe des agents, payée une fois — la carte le dit deux
+ * fois : le rythme annoncé au-dessus (là où l'abonnement propose un choix,
+ * celle-ci n'a qu'une option) et le montant suivi de « une fois ».
  *
  * La frontière avec l'abonnement est écrite en toutes lettres en bas de carte :
  * ce qui manque ici — la remesure et les publications dans la durée — est
@@ -92,7 +48,6 @@ export async function BoostCard({
   className?: string;
 }) {
   const t = await getTranslations("pricing");
-  const steps = t.raw("boost.steps") as string[];
 
   // En bas de home, la carte d'abonnement en face perd son roster d'agents : la
   // liste complète ferait dépasser le Coup de Boost de deux cents pixels sous
@@ -164,10 +119,6 @@ export async function BoostCard({
         <div className={compact ? "mt-5" : "mt-7"}>
           <BoostCheckoutButton label={t("boost.cta")} analysisId={analysisId} />
           <p className="mt-2.5 text-center text-xs text-muted">{t("boost.ctaNote")}</p>
-        </div>
-
-        <div className={compact ? "mt-6" : "mt-7"}>
-          <Ramp steps={steps} note={t("boost.stepsNote")} />
         </div>
 
         <ul className={`space-y-2.5 ${compact ? "mt-6" : "mt-7"}`}>

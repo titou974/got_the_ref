@@ -647,8 +647,6 @@
       "tagline": "Une passe complète des agents sur votre site : on mesure, on corrige, on publie. Puis on s'arrête.",
       "onceLabel": "une fois",
       "terms": "Paiement unique, sans abonnement · rien à résilier",
-      "steps": ["Mesure", "Corrections", "Contenu"],
-      "stepsNote": "Une passe, puis c'est terminé.",
       "features": {
         "analysis": "Analyse complète de votre site, e-commerce, SaaS ou commerce physique",
         "measure": "Vos positions sur ChatGPT, Gemini et Google mesurées avant et après",
