@@ -13,7 +13,7 @@ import type { PlanKey } from "@/constants/plans";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("account");
-  return { title: t("metaTitle") };
+  return { title: t("metaTitle"), robots: { index: false, follow: false } };
 }
 
 const PLAN_LABEL_KEY: Record<PlanKey, "planLabelFree" | "planLabelPro" | "planLabelAgency"> = {

@@ -1,7 +1,21 @@
 import { getTranslations } from "next-intl/server";
 import { SITE } from "@/constants/site";
+import { JsonLd } from "@/lib/seo/json-ld";
 
 type Item = { q: string; a: string };
+
+/** FAQPage : reprend exactement le texte visible, question par question. */
+function faqJsonLd(items: Item[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+}
 
 /**
  * FAQ en `<details>` natifs : l'ouverture, la navigation au clavier et la
@@ -18,6 +32,7 @@ export async function Faq() {
 
   return (
     <section className="mx-auto w-full max-w-3xl px-5 py-16 sm:py-20">
+      <JsonLd data={faqJsonLd(items)} />
       <div className="text-center">
         <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("eyebrow")}</p>
         <h2 className="mt-2 text-balance text-3xl font-bold leading-tight sm:text-4xl">

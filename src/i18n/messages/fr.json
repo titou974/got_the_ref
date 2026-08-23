@@ -1,11 +1,11 @@
 {
   "metadata": {
-    "title": "got_the_ref : boostez votre visibilité dans les IA",
+    "title": "got_the_ref : le logiciel qui pilote votre visibilité sur les IA",
     "titleTemplate": "%s · got_the_ref",
-    "description": "Analysez et optimisez la visibilité de votre site dans ChatGPT, Perplexity, Gemini et Google. Score GEO par moteur IA, positionnement estimé et recommandations générées par l'IA.",
-    "ogTitle": "got_the_ref : boostez votre visibilité dans les IA",
-    "ogDescription": "L'outil tout-en-un pour mesurer et booster votre présence dans les moteurs de recherche IA.",
-    "keywords": "GEO, SEO, ChatGPT, Perplexity, Gemini, visibilité IA, référencement IA"
+    "description": "got_the_ref pilote votre visibilité sur ChatGPT, Gemini et Google. Indiquez l'adresse de votre site (et votre fiche Google Maps pour un commerce physique) : les agents IA mesurent, corrigent et publient à votre place, sans compétence technique requise.",
+    "ogTitle": "got_the_ref, le logiciel qui pilote votre visibilité IA",
+    "ogDescription": "Donnez l'adresse de votre site, laissez les agents IA corriger votre visibilité sur ChatGPT, Gemini et Google, regardez vos statistiques grimper sur votre tableau de bord.",
+    "keywords": "logiciel GEO, GEO commerces, SEO IA, ChatGPT, Perplexity, Gemini, visibilité IA, agents IA, fiche Google Maps"
   },
   "common": {
     "pricing": "Tarifs",
@@ -28,7 +28,7 @@
   },
   "footer": {
     "rights": "© {year} got_the_ref. Tous droits réservés.",
-    "tagline": "La première agence de GEO française.",
+    "tagline": "Le premier logiciel de GEO pour les commerces français, physiques et en ligne.",
     "demo": "Démo",
     "contact": "Contact",
     "pricing": "Tarifs",
@@ -37,9 +37,9 @@
     "privacy": "Confidentialité"
   },
   "ctaDemo": {
-    "eyebrow": "got_the_ref · Agence GEO",
+    "eyebrow": "got_the_ref · Logiciel GEO",
     "title": "Envie d'apparaître en premier dans les IA ?",
-    "subtitle": "Notre agence optimise votre commerce pour ChatGPT, Gemini et Perplexity. Discutons de votre projet et faisons monter votre business tout en haut des réponses IA.",
+    "subtitle": "got_the_ref optimise votre commerce pour ChatGPT, Gemini et Perplexity. Discutons de votre projet et faisons monter votre business tout en haut des réponses IA.",
     "button": "Réserver une démo",
     "secondary": "Prendre rendez-vous"
   },
@@ -63,7 +63,7 @@
     "headingBefore": "Devenez",
     "headingHighlight": " n°1 ",
     "headingAfter": "sur les IA",
-    "subtitle": "L'outil marketing pour faire apparaître son commerce en premier sur les IA. got_the_ref mesure votre visibilité et vous dit exactement comment y apparaître. ",
+    "subtitle": "Le logiciel qui pilote votre visibilité sur les IA. Donnez l'adresse de votre site (et votre fiche Google Maps pour un commerce physique), les agents IA corrigent, vous regardez vos statistiques grimper.",
     "viewPricing": "voir les tarifs",
     "simulationCaption": "Démonstration : comment votre entreprise pourrait apparaître dans les réponses IA.",
     "scrollTopCta": "Analyser"
@@ -290,7 +290,7 @@
       "shareSubject": "Résultats de l'analyse GEO got_the_ref",
       "shareBody": "Voici les résultats de l'analyse de visibilité IA de notre site : {url}",
       "agencyCtaText": "Vous préférez qu'on s'en occupe pour vous ?",
-      "agencyCtaLink": "Découvrir les services de l'agence",
+      "agencyCtaLink": "Découvrir got_the_ref",
       "unlockPrompt": "Débloquer le prompt solution gratuitement"
     },
     "maps": {
@@ -611,6 +611,8 @@
   },
   "pricing": {
     "metaTitle": "Tarifs",
+    "metaDescription": "got_the_ref : 79€/mois pour des agents IA qui mesurent et corrigent en continu votre visibilité sur ChatGPT, Gemini et Google, ou 49€ en une passe unique avec le Coup de Boost. 3 jours d'essai gratuit.",
+    "keywords": "tarifs GEO, prix référencement IA, abonnement visibilité IA, coût agence GEO, prix ChatGPT SEO, essai gratuit GEO",
     "eyebrow": "Tarifs",
     "headingBefore": "Des agents qui travaillent votre visibilité ",
     "headingHighlight": "en continu",

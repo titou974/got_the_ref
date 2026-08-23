@@ -9,7 +9,7 @@ import { ROUTES } from "@/constants/routes";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("auth");
-  return { title: t("metaSignup") };
+  return { title: t("metaSignup"), robots: { index: false, follow: false } };
 }
 
 export default async function InscriptionPage() {

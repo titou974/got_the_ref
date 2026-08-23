@@ -42,11 +42,14 @@ async function loadAnalysis(id: string): Promise<LoadedAnalysis | null> {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const analysis = await loadAnalysis(id);
-  if (!analysis) return { title: "Analyse introuvable" };
+  // Rapport propre à un visiteur : jamais indexé, quel que soit son état.
+  const robots = { index: false, follow: false } as const;
+  if (!analysis) return { title: "Analyse introuvable", robots };
   const { result } = analysis;
   return {
     title: `Analyse GEO de ${result.domain} : score ${result.overallScore}/100`,
     description: result.verdict,
+    robots,
   };
 }
 
