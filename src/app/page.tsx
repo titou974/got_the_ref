@@ -13,6 +13,7 @@ import { FreeAuditSection } from "@/components/home/FreeAuditSection";
 import { ExamplesSection } from "@/components/home/ExamplesSection";
 import { CitationNetwork } from "@/components/home/CitationNetwork";
 import { RankAndMentions } from "@/components/home/RankAndMentions";
+import { HomePricing } from "@/components/home/HomePricing";
 import { PricingComparison } from "@/components/pricing/PricingComparison";
 import { DemoCtaSection } from "@/components/home/DemoCtaSection";
 import { Faq } from "@/components/home/Faq";
@@ -23,10 +24,12 @@ import { getTranslations } from "next-intl/server";
  * résultats → produit → analyse gratuite → exemples → preuves → réseau →
  * Google et assistants → comparatif agence → démo → questions.
  *
- * Aucun montant n'est affiché ici. La home vend la démonstration ; le prix vit
- * sur `/tarifs`, où l'on n'arrive qu'une fois identifié — l'inscription s'est
- * intercalée entre les deux. Le comparatif agence reste : il dit ce que
- * l'abonnement évite, sans annoncer de chiffre.
+ * Le prix n'arrive qu'à la fin, une fois la démonstration faite ; la démo prend
+ * le relais juste après, pour qui préfère en parler plutôt que souscrire.
+ *
+ * Rien ne s'intercale avant : le visiteur voit le tarif sans avoir à ouvrir de
+ * compte. L'inscription reste accessible par la barre, mais elle ne barre plus
+ * la route au prix — ce verrou vit sur la branche `worktree-auth-gate`.
  *
  * Le champ d'analyse ne vit plus dans le hero : en haut, un seul geste est
  * proposé (démarrer l'essai) à côté de la conversation IA qui se joue seule.
@@ -68,8 +71,8 @@ export default async function Home() {
       <CitationNetwork />
       <RankAndMentions />
 
-      {/* Ce que l'abonnement évite, sans annoncer de montant : le prix se
-          découvre sur /tarifs, une fois le visiteur identifié. */}
+      {/* Le tarif d'abord, ce qu'il évite ensuite, la démo pour finir. */}
+      <HomePricing />
       <div className="mx-auto w-full max-w-5xl px-5 pb-4">
         <PricingComparison />
       </div>
