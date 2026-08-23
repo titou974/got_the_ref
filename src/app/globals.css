@@ -91,6 +91,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Supprime le délai de 300 ms hérité du double-tap-zoom sur les anciennes WebView
+   Android et navigateurs intégrés (Instagram, LinkedIn). Sans cela, un appui bref
+   sur un bouton peut n'être jamais converti en clic. */
+button,
+a,
+label,
+select,
+summary,
+[role="button"],
+input[type="button"],
+input[type="submit"] {
+  touch-action: manipulation;
+}
+
 /* Typo pilotée par la graisse, tracking normal (pas de letter-spacing serré) */
 h1, h2, h3, h4, h5 {
   font-family: var(--font-display);
@@ -103,6 +117,11 @@ h1, h2, h3, h4, h5 {
   inset: 0;
   z-index: -1;
   background: var(--color-bg);
+  /* Calque purement décoratif. Sans cette règle il reste candidat au hit-test :
+     sur iOS Safari et les WebView intégrées, un calque fixed promu en couche de
+     composition peut capter le toucher devant le contenu, et plus aucun bouton
+     de la page ne répond. */
+  pointer-events: none;
 }
 
 /* Carte « verre » version claire : blanc frosté, hairline */
@@ -133,10 +152,16 @@ h1, h2, h3, h4, h5 {
   background: var(--color-snow);
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
-.card-cal:hover {
-  transform: translateY(-4px);
-  border-color: var(--color-pebble);
-  box-shadow: var(--shadow-md);
+/* Le lift au survol est réservé aux pointeurs fins. Sur mobile, le :hover reste
+   collé après un appui : la carte garderait un `transform`, devenant le bloc
+   conteneur de ses descendants `position: fixed` (overlay d'analyse, modale).
+   Ceux-ci seraient alors rendus dans la carte au lieu du viewport, page bloquée. */
+@media (hover: hover) and (pointer: fine) {
+  .card-cal:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-pebble);
+    box-shadow: var(--shadow-md);
+  }
 }
 
 /* Bouton pilule primaire — qualité « verre pressé » réservée au CTA noir */

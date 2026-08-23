@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { SignOutButton } from "./SignOutButton";
-import { lockScroll } from "@/lib/scroll-lock";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import { ROUTES } from "@/constants/routes";
 
 type NavLink = { href: string; label: string };
@@ -37,10 +37,7 @@ export function MobileMenu({
   const isHome = pathname === ROUTES.home;
 
   // Verrouille le scroll de la page tant que le tiroir est ouvert.
-  useEffect(() => {
-    if (!open) return;
-    return lockScroll();
-  }, [open]);
+  useBodyScrollLock(open);
 
   return (
     <div className="sm:hidden">

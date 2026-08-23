@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { AnalyzingOverlay } from "./AnalyzingOverlay";
-import { Portal } from "./Portal";
-import { lockScroll } from "@/lib/scroll-lock";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import { ROUTES, pricingWithReason } from "@/constants/routes";
 
 type Mode = "physical" | "online";
@@ -98,6 +97,9 @@ export function UrlAnalyzeForm({
       });
 
       if (res.status === 402) {
+        // Sans ce retrait, l'overlay opaque plein écran reste monté si la
+        // navigation client tarde ou échoue : plus rien n'est cliquable.
+        setAnalyzing(false);
         router.push(pricingWithReason("quota"));
         return;
       }
@@ -503,16 +505,13 @@ function ConfirmNoMapsDialog({
   onClose: () => void;
 }) {
   // Échap ferme la modale ; verrou du scroll tant qu'elle est ouverte.
+  useBodyScrollLock();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    const release = lockScroll();
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      release();
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   return (
@@ -523,8 +522,11 @@ function ConfirmNoMapsDialog({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
     >
+      {/* `cursor-pointer` n'est pas décoratif : iOS Safari ne dispatche pas de
+          `click` sur un élément non interactif qui n'a pas ce curseur, et le
+          « appuyer à côté pour fermer » resterait mort sur iPhone. */}
       <div
-        className="absolute inset-0 bg-obsidian/40 backdrop-blur-[2px]"
+        className="absolute inset-0 cursor-pointer bg-obsidian/40 backdrop-blur-[2px]"
         onClick={onClose}
         aria-hidden
       />

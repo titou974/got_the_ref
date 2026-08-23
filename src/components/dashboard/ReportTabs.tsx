@@ -246,7 +246,10 @@ export function ReportTabs({
               {isActive && (
                 <motion.span
                   layoutId="report-tab-pill"
-                  className="absolute inset-0 rounded-full bg-obsidian"
+                  aria-hidden
+                  // Pendant le ressort, la pilule survole les onglets voisins :
+                  // sans cela elle intercepte leur appui.
+                  className="pointer-events-none absolute inset-0 rounded-full bg-obsidian"
                   transition={{ type: "spring", stiffness: 400, damping: 32 }}
                 />
               )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { StackBadge } from "@/components/StackMark";
@@ -45,10 +45,19 @@ export function SiteScreenshot({
   const isMaps = variant === "maps";
   const hasOverlay = Boolean(children);
 
+  // Même filet que dans AnimatedCard : la figure porte le CTA superposé, elle ne
+  // doit jamais rester transparente si l'IntersectionObserver ne répond pas.
+  const [forceVisible, setForceVisible] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setForceVisible(true), 1200);
+    return () => clearTimeout(id);
+  }, []);
+
   return (
     <motion.figure
       initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0 }}
+      animate={forceVisible ? { opacity: 1, y: 0 } : undefined}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="overflow-hidden rounded-[36px] border border-fog bg-snow shadow-[var(--shadow-md)]"
@@ -120,8 +129,8 @@ export function SiteScreenshot({
         {hasOverlay && (
           <>
             {/* Filtre noir pour faire ressortir le contenu superposé */}
-            <div className="absolute inset-0 bg-black/65" aria-hidden />
-            <div className="relative flex flex-1 flex-col items-center justify-center gap-4 px-5 py-7 text-center sm:gap-5 sm:px-6 sm:py-8">
+            <div className="pointer-events-none absolute inset-0 bg-black/65" aria-hidden />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6 py-8 text-center">
               {children}
             </div>
           </>

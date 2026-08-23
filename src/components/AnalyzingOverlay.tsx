@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import { lockScroll } from "@/lib/scroll-lock";
 
 // Animations d'assets + 1 animation générée (emerald). L'étape « Scoring GEO »
@@ -208,9 +209,8 @@ export function AnalyzingOverlay({
     return () => clearInterval(id);
   }, []);
 
-  // Verrouille le scroll de la page pendant l'analyse (verrou partagé : la
-  // modale Maps peut encore être en cours de sortie quand l'overlay se monte).
-  useEffect(() => lockScroll(), []);
+  // Verrouille le scroll de la page pendant l'analyse.
+  useBodyScrollLock();
 
   const phase = PHASES[step];
   const phaseAnim = phase.key === "citability" ? citabilityAnim ?? phase.anim : phase.anim;
