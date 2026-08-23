@@ -9,7 +9,7 @@ import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { unlockAnalysisFromSession } from "@/features/billing/unlock";
 import { CLAIM_METADATA_KEY, claimMatches, clearClaim } from "@/features/billing/claim";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES, safeNextPath } from "@/constants/routes";
 import { postCheckoutSignUpSchema, signInSchema, signUpSchema } from "./schemas";
 
 export const signUpAction = actionClient
@@ -30,7 +30,9 @@ export const signUpAction = actionClient
       });
     }
 
-    redirect(ROUTES.account);
+    // L'inscription ouvre sur les tarifs : c'est là qu'allait le visiteur venu
+    // de la home. `safeNextPath` écarte toute destination hors application.
+    redirect(safeNextPath(parsedInput.next, ROUTES.pricing));
   });
 
 export const signInAction = actionClient
@@ -50,7 +52,9 @@ export const signInAction = actionClient
       });
     }
 
-    redirect(ROUTES.account);
+    // Un client qui revient retrouve son compte, sauf s'il était en route vers
+    // une autre page — les tarifs, le plus souvent.
+    redirect(safeNextPath(parsedInput.next, ROUTES.account));
   });
 
 /**

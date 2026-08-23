@@ -30,12 +30,31 @@ npm run dev                 # http://localhost:3000
 |----------|------|
 | `DATABASE_URL` | Connexion SQLite (`file:./dev.db` par défaut) |
 | `AUTH_SECRET` | Secret de signature des sessions JWT (`openssl rand -base64 32`) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Connexion Google (facultatif — sans eux, le bouton Google n'est pas affiché) |
 | `ANTHROPIC_API_KEY` | Clé API Claude (optionnelle — fallback heuristique sinon) |
 | `STRIPE_SECRET_KEY` | Clé secrète Stripe |
 | `STRIPE_WEBHOOK_SECRET` | Secret du webhook Stripe |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Clé publique Stripe |
 | `STRIPE_PRICE_PRO` / `STRIPE_PRICE_AGENCY` | IDs de prix (abonnements mensuels) |
 | `NEXT_PUBLIC_APP_URL` | URL publique de l'app |
+
+## Connexion Google (facultative)
+
+Tant que `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET` sont absents, le fournisseur
+n'est pas déclaré et le bouton « S'inscrire avec Google » n'apparaît pas : les
+pages d'inscription et de connexion ouvrent alors directement le formulaire
+e-mail. Pour l'activer :
+
+1. Google Cloud Console → **APIs & Services** → **Credentials** → **Create
+   credentials** → **OAuth client ID** → **Web application**.
+2. Renseignez les URI de redirection autorisées :
+   - `http://localhost:3000/api/auth/callback/google` (développement)
+   - `https://votre-domaine.fr/api/auth/callback/google` (production)
+3. Reportez le Client ID et le Client Secret dans `.env`.
+
+L'URL de rappel est dérivée de `baseURL` (soit `NEXT_PUBLIC_APP_URL`) : si elle
+ne correspond pas à l'URI déclarée chez Google, l'échange échoue en
+`redirect_uri_mismatch`.
 
 ## Configuration Stripe
 

@@ -80,9 +80,11 @@ export async function HomeHero() {
           {t("subtitle")}
         </p>
 
-        {/* CTA unique. Le tunnel d'essai vit sur /tarifs, où le débit est expliqué. */}
+        {/* CTA unique. L'inscription précède désormais les tarifs : on sait qui
+            l'on accueille avant d'annoncer un montant, et le compte est déjà
+            ouvert quand le tunnel d'essai démarre. */}
         <Link
-          href={ROUTES.pricing}
+          href={ROUTES.signUp}
           className="mt-8 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-7 py-4 text-base font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
           {t("cta", { days: TRIAL.days })}

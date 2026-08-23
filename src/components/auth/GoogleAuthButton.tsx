@@ -1,0 +1,69 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { GoogleMark } from "@/components/home/GoogleMark";
+import { authClient } from "@/features/auth/client";
+
+/**
+ * Connexion Google en un geste.
+ *
+ * `signIn.social` renvoie le navigateur chez Google : au retour, Better Auth
+ * dépose la session puis suit `callbackURL`. C'est le seul parcours d'auth qui
+ * ne peut pas passer par une server action — la redirection doit partir du
+ * navigateur.
+ *
+ * L'état occupé n'est jamais relâché en cas de succès : la page part chez
+ * Google. On ne le remet à zéro que si l'appel échoue, pour laisser réessayer.
+ */
+export function GoogleAuthButton({
+  mode,
+  callbackURL,
+}: {
+  mode: "signin" | "signup";
+  callbackURL: string;
+}) {
+  const t = useTranslations("auth");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleClick() {
+    setPending(true);
+    setError(null);
+    try {
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL,
+        // Un échec côté Google ramène sur la page d'où l'on vient, avec le
+        // message d'erreur en clair plutôt qu'un écran blanc.
+        errorCallbackURL: window.location.pathname,
+      });
+    } catch {
+      setError(t("googleError"));
+      setPending(false);
+    }
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={pending}
+        className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-pill border border-ember/25 bg-ember/10 px-6 py-4 text-base font-medium text-text transition-colors duration-200 hover:bg-ember/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember/40 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <GoogleMark size={22} />
+        {pending
+          ? t("submitting")
+          : mode === "signup"
+            ? t("googleSignup")
+            : t("googleSignin")}
+      </button>
+      {error && (
+        <p className="mt-2 text-center text-sm text-danger" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
