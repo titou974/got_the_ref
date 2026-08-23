@@ -4,6 +4,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { Analytics } from "@vercel/analytics/next";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { SITE } from "@/constants/site";
+import { ROUTES } from "@/constants/routes";
+import { BOOST, SUBSCRIPTION_PRICE } from "@/constants/plans";
 import { JsonLd } from "@/lib/seo/json-ld";
 import "./globals.css";
 
@@ -84,6 +86,40 @@ function websiteJsonLd() {
   };
 }
 
+/**
+ * SoftwareApplication : marque explicitement got_the_ref comme logiciel
+ * plutôt qu'agence pour les moteurs qui lisent ce type structuré.
+ */
+function softwareApplicationJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": `${SITE.url}/#software`,
+    name: SITE.name,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "Logiciel qui pilote automatiquement la visibilité d'un commerce sur ChatGPT, Gemini et Google. Il suffit d'indiquer l'adresse du site et, pour un commerce physique, sa fiche Google Maps : des agents IA mesurent, corrigent et republient, sans compétence technique requise.",
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Abonnement mensuel",
+        price: SUBSCRIPTION_PRICE,
+        priceCurrency: "EUR",
+        url: `${SITE.url}${ROUTES.pricing}`,
+      },
+      {
+        "@type": "Offer",
+        name: "Coup de Boost",
+        price: BOOST.price,
+        priceCurrency: "EUR",
+        url: `${SITE.url}${ROUTES.pricing}`,
+      },
+    ],
+    publisher: { "@id": `${SITE.url}/#organization` },
+  };
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -95,6 +131,7 @@ export default async function RootLayout({
       <body className="min-h-full">
         <JsonLd data={organizationJsonLd()} />
         <JsonLd data={websiteJsonLd()} />
+        <JsonLd data={softwareApplicationJsonLd()} />
         <div className="bg-ambient" aria-hidden />
         <NextIntlClientProvider messages={messages}>
           {children}

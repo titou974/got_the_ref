@@ -1,4 +1,4 @@
-# Pricing — got_the_ref
+# got_the_ref pricing
 
 Currency: EUR. VAT not included where applicable ("TVA en sus"). Prices are per organization (one website analyzed).
 
@@ -25,7 +25,7 @@ Currency: EUR. VAT not included where applicable ("TVA en sus"). Prices are per 
   - Automatic corrections of what prevents AI/Google citation
   - 10 articles written and published
   - Final SEO/GEO report with best practices to keep
-- Limit: single pass only — no continuous remeasurement, no ongoing article schedule (that's the subscription)
+- Limit: single pass only. No continuous remeasurement, no ongoing article schedule (that's the subscription)
 
 ## Comparison point
 
