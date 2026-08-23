@@ -7,6 +7,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AnalyzingOverlay } from "./AnalyzingOverlay";
 import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import { ROUTES, pricingWithReason } from "@/constants/routes";
+import { Portal } from "./Portal";
+import { lockScroll } from "@/lib/scroll-lock";
 
 type Mode = "physical" | "online";
 
@@ -186,12 +188,27 @@ export function UrlAnalyzeForm({
                 <span aria-hidden>
                   {m === "physical" ? (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                      <path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9M4 9.5a2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0M9.5 19.5v-5h5v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                      <path
+                        d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9M4 9.5a2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0 2.5 2.5 0 0 0 4 0M9.5 19.5v-5h5v5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   ) : (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18" stroke="currentColor" strokeWidth="1.5" />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                      <path
+                        d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
                     </svg>
                   )}
                 </span>
@@ -250,7 +267,10 @@ export function UrlAnalyzeForm({
             essentielle à l'analyse de la position locale. */}
         {mode === "physical" && (
           <div className="mt-3">
-            <label htmlFor="maps-url" className="mb-1.5 flex items-center gap-2 pl-2 text-xs font-medium text-text">
+            <label
+              htmlFor="maps-url"
+              className="mb-1.5 flex items-center gap-2 pl-2 text-xs font-medium text-text"
+            >
               {t("mapsFieldLabel")}
               <span className="rounded-full bg-mist px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-steel">
                 {t("mapsRecommended")}
@@ -265,7 +285,13 @@ export function UrlAnalyzeForm({
                     strokeWidth="1.5"
                     strokeLinejoin="round"
                   />
-                  <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+                  <circle
+                    cx="12"
+                    cy="10"
+                    r="2.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
                 </svg>
               </span>
               <input
@@ -316,26 +342,26 @@ export function UrlAnalyzeForm({
       {/* Modale : confirme le lancement sans fiche Google Maps. */}
       <Portal>
         <AnimatePresence>
-        {confirmNoMaps && (
-          <ConfirmNoMapsDialog
-            labels={{
-              title: t("confirmTitle"),
-              body: t("confirmBody"),
-              add: t("confirmAdd"),
-              without: t("confirmWithout"),
-              close: t("confirmClose"),
-            }}
-            onAdd={() => {
-              setConfirmNoMaps(false);
-              mapsInputRef.current?.focus();
-            }}
-            onWithout={() => {
-              setConfirmNoMaps(false);
-              runAnalysis();
-            }}
-            onClose={() => setConfirmNoMaps(false)}
-          />
-        )}
+          {confirmNoMaps && (
+            <ConfirmNoMapsDialog
+              labels={{
+                title: t("confirmTitle"),
+                body: t("confirmBody"),
+                add: t("confirmAdd"),
+                without: t("confirmWithout"),
+                close: t("confirmClose"),
+              }}
+              onAdd={() => {
+                setConfirmNoMaps(false);
+                mapsInputRef.current?.focus();
+              }}
+              onWithout={() => {
+                setConfirmNoMaps(false);
+                runAnalysis();
+              }}
+              onClose={() => setConfirmNoMaps(false)}
+            />
+          )}
         </AnimatePresence>
       </Portal>
 
@@ -432,22 +458,57 @@ function EmailGateDialog({
           aria-label={labels.close}
           className="absolute right-4 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-muted transition-colors duration-200 hover:bg-mist hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="m6 6 12 12M18 6 6 18"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 
         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-mist text-accent">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" strokeWidth="1.6" />
-            <path d="m4 8 7.1 4.7a2 2 0 0 0 2.2 0L20 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
+            <rect
+              x="3"
+              y="5"
+              width="18"
+              height="14"
+              rx="3"
+              stroke="currentColor"
+              strokeWidth="1.6"
+            />
+            <path
+              d="m4 8 7.1 4.7a2 2 0 0 0 2.2 0L20 8"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
           </svg>
         </span>
 
-        <h2 id="email-gate-title" className="mt-4 text-lg font-bold text-text sm:text-xl">
+        <h2
+          id="email-gate-title"
+          className="mt-4 text-lg font-bold text-text sm:text-xl"
+        >
           {labels.title}
         </h2>
-        <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">{labels.body}</p>
+        <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">
+          {labels.body}
+        </p>
 
         <form onSubmit={submit} className="mt-5">
           <label htmlFor="lead-email" className="sr-only">
@@ -485,7 +546,9 @@ function EmailGateDialog({
           </button>
         </form>
 
-        <p className="mt-3 text-center text-[0.7rem] leading-relaxed text-muted/80">{labels.note}</p>
+        <p className="mt-3 text-center text-[0.7rem] leading-relaxed text-muted/80">
+          {labels.note}
+        </p>
       </motion.div>
     </motion.div>
   );
@@ -499,7 +562,13 @@ function ConfirmNoMapsDialog({
   onWithout,
   onClose,
 }: {
-  labels: { title: string; body: string; add: string; without: string; close: string };
+  labels: {
+    title: string;
+    body: string;
+    add: string;
+    without: string;
+    close: string;
+  };
   onAdd: () => void;
   onWithout: () => void;
   onClose: () => void;
@@ -541,16 +610,38 @@ function ConfirmNoMapsDialog({
         transition={{ duration: 0.22, ease: "easeOut" }}
       >
         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-mist text-accent">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11Z"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+            <circle
+              cx="12"
+              cy="10"
+              r="2.5"
+              stroke="currentColor"
+              strokeWidth="1.6"
+            />
           </svg>
         </span>
 
-        <h2 id="confirm-maps-title" className="mt-4 text-lg font-bold text-text sm:text-xl">
+        <h2
+          id="confirm-maps-title"
+          className="mt-4 text-lg font-bold text-text sm:text-xl"
+        >
           {labels.title}
         </h2>
-        <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">{labels.body}</p>
+        <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">
+          {labels.body}
+        </p>
 
         <div className="mt-6 flex flex-col gap-2.5">
           <button
