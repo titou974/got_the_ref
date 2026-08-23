@@ -56,7 +56,7 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
     // mais sous les calques modaux (`z-[90]` et plus) : le tiroir mobile et
     // l'overlay d'analyse continuent de la recouvrir.
     <header className="sticky top-0 z-50 w-full border-b border-fog/60 bg-bg/85 backdrop-blur-md">
-      <nav className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 py-4">
+      <nav className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 py-2.5">
         {/* Le déclencheur du tiroir se place à gauche du logo — c'est le premier
             geste attendu sur mobile, il vient donc avant la marque. */}
         <div className="flex items-center gap-3">

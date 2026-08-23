@@ -6,7 +6,7 @@ import { AnalysisCheckoutButton } from "@/components/AnalysisCheckoutButton";
 import { TrialCheckoutButton } from "@/components/TrialCheckoutButton";
 import { BrandProof } from "@/components/BrandProof";
 import { PricingOffers } from "@/components/pricing/PricingOffers";
-import { ResultsCarousel } from "@/components/ResultsCarousel";
+import { PricingFaq } from "@/components/pricing/PricingFaq";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
 import { BOOST, SUBSCRIPTION_PRICE, TRIAL, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
@@ -102,8 +102,6 @@ export default async function TarifsPage({ searchParams }: Props) {
             {t("headingBefore")}
             <span className="text-gradient">{t("headingHighlight")}</span>
           </h1>
-          <p className="mt-4 text-pretty text-base leading-relaxed text-muted">{t("subtitle")}</p>
-
           <BrandProof className="mt-7" />
 
           {raison === REDIRECT_REASONS.quota && (
@@ -140,7 +138,7 @@ export default async function TarifsPage({ searchParams }: Props) {
         <p className="mt-10 text-sm text-muted">{t("secureNote", { days: TRIAL.days })}</p>
       </div>
 
-      <ResultsCarousel className="pb-16" />
+      <PricingFaq className="pb-16" />
 
       <Footer />
     </main>
