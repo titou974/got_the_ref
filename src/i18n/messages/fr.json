@@ -28,7 +28,7 @@
   },
   "footer": {
     "rights": "© {year} got_the_ref. Tous droits réservés.",
-    "tagline": "La première agence de GEO française.",
+    "tagline": "Le premier logiciel de GEO français.",
     "demo": "Démo",
     "contact": "Contact",
     "pricing": "Tarifs",
@@ -37,9 +37,9 @@
     "privacy": "Confidentialité"
   },
   "ctaDemo": {
-    "eyebrow": "got_the_ref · Agence GEO",
+    "eyebrow": "got_the_ref · Logiciel GEO",
     "title": "Envie d'apparaître en premier dans les IA ?",
-    "subtitle": "Notre agence optimise votre commerce pour ChatGPT, Gemini et Perplexity. Discutons de votre projet et faisons monter votre business tout en haut des réponses IA.",
+    "subtitle": "got_the_ref optimise votre commerce pour ChatGPT, Gemini et Perplexity. Discutons de votre projet et faisons monter votre business tout en haut des réponses IA.",
     "button": "Réserver une démo",
     "secondary": "Prendre rendez-vous"
   },
@@ -290,7 +290,7 @@
       "shareSubject": "Résultats de l'analyse GEO got_the_ref",
       "shareBody": "Voici les résultats de l'analyse de visibilité IA de notre site : {url}",
       "agencyCtaText": "Vous préférez qu'on s'en occupe pour vous ?",
-      "agencyCtaLink": "Découvrir les services de l'agence",
+      "agencyCtaLink": "Découvrir got_the_ref",
       "unlockPrompt": "Débloquer le prompt solution gratuitement"
     },
     "maps": {
@@ -611,6 +611,8 @@
   },
   "pricing": {
     "metaTitle": "Tarifs",
+    "metaDescription": "got_the_ref : 79€/mois pour des agents IA qui mesurent et corrigent en continu votre visibilité sur ChatGPT, Gemini et Google, ou 49€ en une passe unique avec le Coup de Boost. 3 jours d'essai gratuit.",
+    "keywords": "tarifs GEO, prix référencement IA, abonnement visibilité IA, coût agence GEO, prix ChatGPT SEO, essai gratuit GEO",
     "eyebrow": "Tarifs",
     "headingBefore": "Des agents qui travaillent votre visibilité ",
     "headingHighlight": "en continu",

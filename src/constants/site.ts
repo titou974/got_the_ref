@@ -5,8 +5,8 @@
 
 export const SITE = {
   name: "got_the_ref",
-  /** Baseline de marque : la première agence de GEO française. */
-  tagline: "La première agence de GEO française",
+  /** Baseline de marque : le premier logiciel de GEO français — un logiciel, pas une agence. */
+  tagline: "Le premier logiciel de GEO français",
   /** URL publique de l'app, surchargée par l'environnement. */
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   contactEmail: "titouanhirsch@gmail.com",

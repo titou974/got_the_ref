@@ -7,12 +7,75 @@ import { TrialCheckoutButton } from "@/components/TrialCheckoutButton";
 import { BrandProof } from "@/components/BrandProof";
 import { PricingOffers } from "@/components/pricing/PricingOffers";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
-import { REDIRECT_REASONS } from "@/constants/routes";
-import { TRIAL } from "@/constants/plans";
+import { JsonLd } from "@/lib/seo/json-ld";
+import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
+import { BOOST, SUBSCRIPTION_PRICE, TRIAL, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
+import { SITE } from "@/constants/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("pricing");
-  return { title: t("metaTitle") };
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+    keywords: t("keywords").split(",").map((k) => k.trim()),
+    alternates: { canonical: ROUTES.pricing },
+    openGraph: {
+      title: `${t("metaTitle")} · ${SITE.name}`,
+      description: t("metaDescription"),
+      type: "website",
+      locale: SITE.locale,
+    },
+  };
+}
+
+/**
+ * Offres en `Product` + `Offer` : les IA extraient plus facilement un prix
+ * porté par un schema dédié qu'un chiffre noyé dans du texte marketing.
+ */
+function offersJsonLd() {
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: `${SITE.name} — Tout-en-un`,
+      description: "Agents IA qui mesurent et corrigent en continu la visibilité d'un site sur ChatGPT, Gemini et Google.",
+      brand: { "@type": "Brand", name: SITE.name },
+      offers: [
+        {
+          "@type": "Offer",
+          name: "Abonnement mensuel",
+          price: SUBSCRIPTION_PRICE,
+          priceCurrency: "EUR",
+          priceValidUntil: `${new Date().getFullYear() + 1}-12-31`,
+          availability: "https://schema.org/InStock",
+          url: `${SITE.url}${ROUTES.pricing}`,
+        },
+        {
+          "@type": "Offer",
+          name: "Abonnement annuel (mensualisé)",
+          price: YEARLY_MONTHLY_PRICE,
+          priceCurrency: "EUR",
+          priceValidUntil: `${new Date().getFullYear() + 1}-12-31`,
+          availability: "https://schema.org/InStock",
+          url: `${SITE.url}${ROUTES.pricing}`,
+        },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: `${SITE.name} — Coup de Boost`,
+      description: `Passe unique des agents IA : mesure, corrections et ${BOOST.articles} articles publiés, sans abonnement.`,
+      brand: { "@type": "Brand", name: SITE.name },
+      offers: {
+        "@type": "Offer",
+        price: BOOST.price,
+        priceCurrency: "EUR",
+        availability: "https://schema.org/InStock",
+        url: `${SITE.url}${ROUTES.pricing}`,
+      },
+    },
+  ];
 }
 
 type Props = { searchParams: Promise<{ raison?: string; analyse?: string }> };
@@ -23,6 +86,9 @@ export default async function TarifsPage({ searchParams }: Props) {
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
+      {offersJsonLd().map((data, i) => (
+        <JsonLd key={i} data={data} />
+      ))}
       <Nav minimal />
 
       {/* Élargi depuis que les deux offres se posent côte à côte : à 1024 px, les
