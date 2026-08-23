@@ -6,9 +6,17 @@ const password = z
   .string()
   .min(PASSWORD_MIN_LENGTH, `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`);
 
+/**
+ * Page à rejoindre une fois identifié. Elle vient du client : elle est reprise
+ * telle quelle ici, puis filtrée par `safeNextPath` au moment de rediriger —
+ * seul un chemin interne est retenu.
+ */
+const next = z.string().max(512).optional();
+
 export const signInSchema = z.object({
   email: z.email("Adresse e-mail invalide."),
   password: z.string().min(1, "Mot de passe requis."),
+  next,
 });
 export type SignInInput = z.infer<typeof signInSchema>;
 
@@ -37,5 +45,6 @@ export const signUpSchema = z.object({
     .transform((v) => (v ? v : undefined)),
   email: z.email("Adresse e-mail invalide."),
   password,
+  next,
 });
 export type SignUpInput = z.infer<typeof signUpSchema>;
