@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 // Animations d'assets + 1 animation générée (emerald). L'étape « Scoring GEO »
 // n'utilise pas de Lottie : elle affiche les logos IA animés (framer-motion).
@@ -181,13 +182,7 @@ export function AnalyzingOverlay({
   }, []);
 
   // Verrouille le scroll de la page pendant l'analyse.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
+  useBodyScrollLock();
 
   const phase = PHASES[step];
   const overall = Math.min(100, ((prefix[step] + elapsed) / totalMs) * 100);
