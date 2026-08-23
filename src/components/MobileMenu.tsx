@@ -58,9 +58,9 @@ export function MobileMenu({
         aria-label={labels.menu}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="relative z-10 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-fog bg-snow text-text transition-colors duration-200 hover:border-pebble focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+        className="relative z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-fog bg-snow text-text transition-colors duration-200 hover:border-pebble focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       </button>
@@ -85,10 +85,10 @@ export function MobileMenu({
                 // tiroir se cale sur son bloc conteneur — le viewport, grâce au
                 // portail — sans dépendre du support de `dvh` ni des barres
                 // d'outils mobiles qui font varier `vh`.
-                className="fixed inset-y-0 right-0 z-[95] flex w-72 max-w-[82vw] flex-col bg-snow shadow-[var(--shadow-md)] sm:hidden"
-                initial={{ x: "100%" }}
+                className="fixed inset-y-0 left-0 z-[95] flex w-72 max-w-[82vw] flex-col bg-snow shadow-[var(--shadow-md)] sm:hidden"
+                initial={{ x: "-100%" }}
                 animate={{ x: 0 }}
-                exit={{ x: "100%" }}
+                exit={{ x: "-100%" }}
                 transition={{ type: "tween", duration: 0.25, ease: "easeOut" }}
                 role="dialog"
                 aria-modal="true"

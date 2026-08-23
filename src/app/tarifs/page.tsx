@@ -7,6 +7,7 @@ import { TrialCheckoutButton } from "@/components/TrialCheckoutButton";
 import { BrandProof } from "@/components/BrandProof";
 import { PricingOffers } from "@/components/pricing/PricingOffers";
 import { PricingFaq } from "@/components/pricing/PricingFaq";
+import { ResultsCarousel } from "@/components/ResultsCarousel";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
 import { BOOST, SUBSCRIPTION_PRICE, TRIAL, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
@@ -91,51 +92,57 @@ export default async function TarifsPage({ searchParams }: Props) {
       ))}
       <Nav minimal />
 
-      {/* Élargi depuis que les deux offres se posent côte à côte : à 1024 px, les
-          colonnes se serraient au point de casser les lignes de la carte sombre. */}
-      <div className="mx-auto w-full max-w-6xl flex-1 px-5 py-12 sm:py-16">
-        <header className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-steel">
-            {t("eyebrow")}
-          </p>
-          <h1 className="mt-3 text-balance text-3xl font-bold leading-[1.1] sm:text-[40px]">
-            {t("headingBefore")}
-            <span className="text-gradient">{t("headingHighlight")}</span>
-          </h1>
-          <BrandProof className="mt-7" />
-
-          {raison === REDIRECT_REASONS.quota && (
-            <p className="mt-6 rounded-2xl bg-warning/10 px-4 py-3 text-sm text-warning">
-              {t("quotaNote")}
+      <div className="flex flex-1 flex-col">
+        <div className="mx-auto w-full max-w-6xl px-5 pt-12 sm:pt-16">
+          <header className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-steel">
+              {t("eyebrow")}
             </p>
-          )}
-        </header>
+            <h1 className="mt-3 text-balance text-3xl font-bold leading-[1.1] sm:text-[40px]">
+              {t("headingBefore")}
+              <span className="text-gradient">{t("headingHighlight")}</span>
+            </h1>
+            <BrandProof className="mt-7" />
 
-        {/* Les deux offres : l'abonnement (carte sombre, onglets, garantie) et le
-            Coup de Boost, la passe unique, à sa droite. */}
-        <div className="mx-auto mt-12 w-full max-w-2xl lg:max-w-none">
-          <PricingOffers
-            analysisId={analyse}
-            subscriptionCta={
-              analyse ? (
-                // Venu d'un rapport précis : on le rattache à l'abonnement souscrit.
-                <AnalysisCheckoutButton
-                  analysisId={analyse}
-                  label={t("trialCta", { days: TRIAL.days })}
-                />
-              ) : (
-                // Sans rapport à rattacher, le bouton part quand même sur Stripe :
-                // renvoyer vers la home faisait reculer d'un cran un visiteur déjà
-                // venu voir le prix.
-                <TrialCheckoutButton
-                  label={t("plan.cta", { days: TRIAL.days })}
-                />
-              )
-            }
-          />
+            {raison === REDIRECT_REASONS.quota && (
+              <p className="mt-6 rounded-2xl bg-warning/10 px-4 py-3 text-sm text-warning">
+                {t("quotaNote")}
+              </p>
+            )}
+          </header>
         </div>
 
-        <p className="mt-10 text-sm text-muted">{t("secureNote", { days: TRIAL.days })}</p>
+        <ResultsCarousel className="py-10 sm:py-14" />
+
+        {/* Élargi depuis que les deux offres se posent côte à côte : à 1024 px, les
+            colonnes se serraient au point de casser les lignes de la carte sombre. */}
+        <div className="mx-auto w-full max-w-6xl flex-1 px-5 pb-12 sm:pb-16">
+          {/* Les deux offres : l'abonnement (carte sombre, onglets, garantie) et le
+              Coup de Boost, la passe unique, à sa droite. */}
+          <div className="mx-auto w-full max-w-2xl lg:max-w-none">
+            <PricingOffers
+              analysisId={analyse}
+              subscriptionCta={
+                analyse ? (
+                  // Venu d'un rapport précis : on le rattache à l'abonnement souscrit.
+                  <AnalysisCheckoutButton
+                    analysisId={analyse}
+                    label={t("trialCta", { days: TRIAL.days })}
+                  />
+                ) : (
+                  // Sans rapport à rattacher, le bouton part quand même sur Stripe :
+                  // renvoyer vers la home faisait reculer d'un cran un visiteur déjà
+                  // venu voir le prix.
+                  <TrialCheckoutButton
+                    label={t("plan.cta", { days: TRIAL.days })}
+                  />
+                )
+              }
+            />
+          </div>
+
+          <p className="mt-10 text-sm text-muted">{t("secureNote", { days: TRIAL.days })}</p>
+        </div>
       </div>
 
       <PricingFaq className="pb-16" />
