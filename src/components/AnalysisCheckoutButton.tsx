@@ -3,6 +3,7 @@
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
 import { createAnalysisCheckoutAction } from "@/features/billing/actions";
+import { useBillingCycle } from "@/components/pricing/BillingCycleContext";
 
 /**
  * Ouvre l'essai got_the_ref pour un rapport précis : le rapport qui a amené le
@@ -22,6 +23,8 @@ export function AnalysisCheckoutButton({
   className?: string;
 }) {
   const t = useTranslations("pricing");
+  // Le cycle vient des onglets de la carte tarif (mensuel hors de la carte).
+  const cycle = useBillingCycle();
   const { execute, isPending, result } = useAction(createAnalysisCheckoutAction, {
     onSuccess: ({ data }) => {
       if (data?.url) window.location.href = data.url;
@@ -32,7 +35,7 @@ export function AnalysisCheckoutButton({
     <div className={className}>
       <button
         type="button"
-        onClick={() => execute({ analysisId })}
+        onClick={() => execute({ analysisId, cycle })}
         disabled={isPending}
         className={`block w-full cursor-pointer rounded-full py-3 text-center font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
           tone === "light"

@@ -2,6 +2,9 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
+import { StackBadge } from "@/components/StackMark";
+import type { DetectedStack } from "@/lib/geo/types";
 
 /** Aperçu de secours (WordPress mShots, gratuit et sans clé) si ApiFlash échoue. */
 function mshots(url: string) {
@@ -20,6 +23,7 @@ export function SiteScreenshot({
   domain,
   variant = "site",
   label,
+  stack = null,
   children,
 }: {
   url: string;
@@ -28,9 +32,12 @@ export function SiteScreenshot({
   variant?: "site" | "maps";
   /** Légende de la barre pour la variante maps (ex. nom de la fiche). */
   label?: string;
+  /** Plateforme reconnue : affichée dans la barre du navigateur, à droite. */
+  stack?: DetectedStack | null;
   /** Contenu superposé, centré sur la capture assombrie (ex. note globale). */
   children?: ReactNode;
 }) {
+  const t = useTranslations("analysisReport.stack");
   const [loaded, setLoaded] = useState(false);
   const [src, setSrc] = useState(
     `/api/screenshot?url=${encodeURIComponent(url)}`,
@@ -79,13 +86,22 @@ export function SiteScreenshot({
         <span className="min-w-0 flex-1 truncate rounded-full border border-fog bg-snow px-3 py-1 text-xs text-steel">
           {isMaps ? label ?? "Google Maps" : domain ?? url}
         </span>
+        {/* Plateforme du site, lue pendant le crawl : elle appartient à la
+            fenêtre du navigateur autant que l'adresse. */}
+        {!isMaps && stack && (
+          <StackBadge stack={stack} probableLabel={t("probableShort")} />
+        )}
       </div>
 
-      {/* Capture */}
+      {/* Capture. Avec contenu superposé, le cadre est un conteneur flex dont la
+          hauteur minimale ne fait que garantir une belle proportion : le contenu
+          reste dans le flux et peut donc le faire grandir. En le positionnant en
+          absolu, tout ce qui dépassait de `min-h` sortait du cadre — sur mobile,
+          le titre, la ligne de méta et le verdict passaient sous la découpe. */}
       <div
         className={`relative w-full bg-mist ${
           hasOverlay
-            ? "min-h-[360px] sm:min-h-[420px]"
+            ? "flex min-h-[300px] flex-col sm:min-h-[420px]"
             : "aspect-[16/10]"
         }`}
       >

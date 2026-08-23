@@ -3,14 +3,19 @@
 import { redirect } from "next/navigation";
 import { actionClient, authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
-import { getStripe, getCheckoutMode, resolvePriceId } from "@/lib/stripe";
+import { getStripe, getCheckoutMode, resolveBoostPriceId, resolvePriceId } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
-import { TRIAL } from "@/constants/plans";
+import { TRIAL, type BillingCycle } from "@/constants/plans";
 import { SITE } from "@/constants/site";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
-import { analysisCheckoutSchema, checkoutSchema } from "./schemas";
-import { ANALYSIS_CHECKOUT_KIND } from "./unlock";
+import {
+  analysisCheckoutSchema,
+  boostCheckoutSchema,
+  checkoutSchema,
+  trialCheckoutSchema,
+} from "./schemas";
+import { ANALYSIS_CHECKOUT_KIND, BOOST_CHECKOUT_KIND, TRIAL_CHECKOUT_KIND } from "./unlock";
 import { CLAIM_METADATA_KEY, newClaimToken, rememberClaim } from "./claim";
 
 /**
@@ -44,8 +49,8 @@ export const createCheckoutAction = authActionClient
     }
 
     const mode = getCheckoutMode(parsedInput.plan);
-    const price = await resolvePriceId(parsedInput.plan);
-    const metadata = { userId: user.id, plan: parsedInput.plan };
+    const price = await resolvePriceId(parsedInput.plan, parsedInput.cycle);
+    const metadata = { userId: user.id, plan: parsedInput.plan, cycle: parsedInput.cycle };
 
     const session = await stripe.checkout.sessions.create({
       mode,
@@ -70,6 +75,18 @@ export const createCheckoutAction = authActionClient
   });
 
 /**
+ * L'unique ligne de tout checkout d'essai : l'abonnement — mensuel ou annuel
+ * selon l'onglet choisi.
+ *
+ * L'essai est gratuit : rien n'est encaissé à l'ouverture du checkout. Stripe
+ * enregistre le moyen de paiement, puis ne débite l'abonnement qu'à la fin de
+ * l'essai (`trial_period_days`), et seulement s'il n'a pas été résilié.
+ */
+function trialLineItems(price: string) {
+  return [{ price, quantity: 1 }];
+}
+
+/**
  * Souscription à l'abonnement got_the_ref depuis un rapport précis, **sans compte
  * requis**. C'est le cœur du tunnel : le visiteur lance une analyse gratuite,
  * lit le constat, s'abonne, puis crée son compte au retour de Stripe — le
@@ -90,7 +107,8 @@ export const createAnalysisCheckoutAction = actionClient
 
     const user = await getCurrentUser();
     const stripe = getStripe();
-    const price = await resolvePriceId("pro");
+    const cycle: BillingCycle = parsedInput.cycle;
+    const price = await resolvePriceId("pro", cycle);
 
     // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
     // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
@@ -101,28 +119,14 @@ export const createAnalysisCheckoutAction = actionClient
       kind: ANALYSIS_CHECKOUT_KIND,
       analysisId: analysis.id,
       domain: analysis.domain,
+      cycle,
       [CLAIM_METADATA_KEY]: claimToken,
       ...(user ? { userId: user.id } : {}),
     };
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [
-        { price, quantity: 1 },
-        // Frais d'activation de l'essai. Joint au checkout en prix ponctuel :
-        // Stripe le facture immédiatement, alors que l'abonnement lui-même ne
-        // commence à courir qu'à la fin de la période d'essai.
-        {
-          quantity: 1,
-          price_data: {
-            currency: "eur",
-            unit_amount: TRIAL.activationPrice * 100,
-            product_data: {
-              name: `Activation de l'essai got_the_ref (${TRIAL.days} jours)`,
-            },
-          },
-        },
-      ],
+      line_items: trialLineItems(price),
       // Connecté : on réutilise son client Stripe. Anonyme : Stripe crée le
       // client à la volée, ce qui nous donne l'e-mail pour la création de compte.
       ...(user?.stripeCustomerId
@@ -132,6 +136,116 @@ export const createAnalysisCheckoutAction = actionClient
       cancel_url: `${SITE.url}${ROUTES.analysis(analysis.id)}?paiement=annule`,
       metadata,
       subscription_data: { metadata, trial_period_days: TRIAL.days },
+      allow_promotion_codes: true,
+    });
+
+    if (!session.url) {
+      throw new AppError("Le paiement est momentanément indisponible.", "STRIPE_NO_URL", 502);
+    }
+
+    return { url: session.url };
+  });
+
+/**
+ * Souscription à l'essai depuis la carte tarif, **sans compte ni analyse**.
+ * C'est le chemin court : le visiteur clique sur le prix et arrive sur Stripe.
+ *
+ * Même montage que la souscription depuis un rapport — abonnement en essai plus
+ * les frais d'activation facturés tout de suite — à ceci près qu'il n'y a rien
+ * à débloquer au retour : la page de succès propose alors la création du compte,
+ * puis l'espace client.
+ */
+export const createTrialCheckoutAction = actionClient
+  .inputSchema(trialCheckoutSchema)
+  .action(async ({ parsedInput }) => {
+    const user = await getCurrentUser();
+    const stripe = getStripe();
+    const cycle: BillingCycle = parsedInput.cycle;
+    const price = await resolvePriceId("pro", cycle);
+
+    // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
+    // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
+    const claimToken = newClaimToken();
+    await rememberClaim(claimToken);
+
+    const metadata = {
+      kind: TRIAL_CHECKOUT_KIND,
+      cycle,
+      [CLAIM_METADATA_KEY]: claimToken,
+      ...(user ? { userId: user.id } : {}),
+    };
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: trialLineItems(price),
+      ...(user?.stripeCustomerId
+        ? { customer: user.stripeCustomerId }
+        : { customer_email: user?.email }),
+      success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${SITE.url}${ROUTES.pricing}?checkout=cancel`,
+      metadata,
+      subscription_data: { metadata, trial_period_days: TRIAL.days },
+      allow_promotion_codes: true,
+    });
+
+    if (!session.url) {
+      throw new AppError("Le paiement est momentanément indisponible.", "STRIPE_NO_URL", 502);
+    }
+
+    return { url: session.url };
+  });
+
+/**
+ * « Coup de Boost » : le paiement unique. Une passe complète des agents, réglée
+ * en une fois — donc `mode: "payment"`, pas d'essai, pas d'abonnement créé
+ * derrière, rien à résilier.
+ *
+ * Ouvert depuis un rapport, le `analysisId` voyage dans les metadata : le
+ * webhook et la page de retour débloquent alors ce rapport comme pour n'importe
+ * quel paiement (cf. `unlockAnalysisFromSession`). Ouvert depuis la carte tarif,
+ * il n'y a rien à débloquer — le retour propose la création du compte.
+ */
+export const createBoostCheckoutAction = actionClient
+  .inputSchema(boostCheckoutSchema)
+  .action(async ({ parsedInput }) => {
+    const analysis = parsedInput.analysisId
+      ? await prisma.analysis.findUnique({
+          where: { id: parsedInput.analysisId },
+          select: { id: true, domain: true, unlocked: true },
+        })
+      : null;
+    if (parsedInput.analysisId && !analysis) {
+      throw new AppError("Analyse introuvable.", "ANALYSIS_NOT_FOUND", 404);
+    }
+
+    const user = await getCurrentUser();
+    const stripe = getStripe();
+    const price = await resolveBoostPriceId();
+
+    // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
+    // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
+    const claimToken = newClaimToken();
+    await rememberClaim(claimToken);
+
+    const metadata = {
+      kind: BOOST_CHECKOUT_KIND,
+      [CLAIM_METADATA_KEY]: claimToken,
+      ...(analysis ? { analysisId: analysis.id, domain: analysis.domain } : {}),
+      ...(user ? { userId: user.id } : {}),
+    };
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{ price, quantity: 1 }],
+      ...(user?.stripeCustomerId
+        ? { customer: user.stripeCustomerId }
+        : { customer_email: user?.email }),
+      success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: analysis
+        ? `${SITE.url}${ROUTES.analysis(analysis.id)}?paiement=annule`
+        : `${SITE.url}${ROUTES.pricing}?checkout=cancel`,
+      metadata,
+      payment_intent_data: { metadata },
       allow_promotion_codes: true,
     });
 

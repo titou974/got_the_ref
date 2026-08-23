@@ -16,8 +16,8 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
   const links = minimal
     ? []
     : [
-        { href: ROUTES.agency, label: t("agency") },
-        { href: ROUTES.services, label: t("services") },
+        { href: ROUTES.demo, label: t("demo") },
+        { href: ROUTES.contact, label: t("contact") },
         { href: ROUTES.pricing, label: t("pricing") },
       ];
 

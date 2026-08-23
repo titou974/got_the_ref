@@ -12,6 +12,7 @@ import type { AnalysisContext } from "@/lib/geo/analyzer";
 import type { BusinessMode, GeoAnalysisResult } from "@/lib/geo/types";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { captureLead, normalizeEmail } from "@/features/leads/service";
 import { ANALYSIS_QUOTAS, type PlanKey } from "@/constants/plans";
 
 /** Utilisateur minimal requis pour décider du quota. */
@@ -62,6 +63,8 @@ async function checkQuota(
 export async function runAnalysis(params: {
   rawUrl: string;
   rawMapsUrl?: string | null;
+  /** E-mail laissé par un visiteur non connecté avant de lancer l'analyse. */
+  leadEmail?: string | null;
   mode?: BusinessMode;
   actor: AnalysisActor;
   ip: string;
@@ -96,6 +99,10 @@ export async function runAnalysis(params: {
   const quotaFailure = await checkQuota(params.actor, params.ip);
   if (quotaFailure) return quotaFailure;
 
+  // Visiteur anonyme : son e-mail est rattaché à l'analyse (même colonne que
+  // l'e-mail de paiement invité). Une saisie farfelue est simplement ignorée.
+  const guestEmail = params.actor ? null : normalizeEmail(params.leadEmail);
+
   try {
     const signals = await collectSignals(url);
     // Toujours "free" à la création : aucun appel payant (Claude, moteurs live)
@@ -111,9 +118,25 @@ export async function runAnalysis(params: {
         mapsUrl,
         overallScore: result.overallScore,
         data: JSON.stringify({ ...result, mapsUrl, tier: "free" }),
+        guestEmail,
         userId: params.actor?.id ?? null,
       },
     });
+
+    // Liste de diffusion : une ligne par adresse, hors du cycle de vie des
+    // analyses. Best-effort — une erreur ici ne doit pas priver le visiteur du
+    // rapport qu'il vient d'attendre.
+    if (guestEmail) {
+      try {
+        await captureLead({
+          email: guestEmail,
+          domain: result.domain,
+          analysisId: record.id,
+        });
+      } catch (err) {
+        console.error("Enregistrement du lead échoué :", err);
+      }
+    }
 
     return { ok: true, id: record.id };
   } catch (err) {

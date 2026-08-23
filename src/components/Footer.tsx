@@ -10,11 +10,11 @@ export async function Footer() {
       <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 text-sm text-muted sm:flex-row">
         <p>{t("rights", { year: new Date().getFullYear() })}</p>
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          <Link href={ROUTES.agency} className="cursor-pointer transition-colors duration-200 hover:text-text">
-            {t("agency")}
+          <Link href={ROUTES.demo} className="cursor-pointer transition-colors duration-200 hover:text-text">
+            {t("demo")}
           </Link>
-          <Link href={ROUTES.services} className="cursor-pointer transition-colors duration-200 hover:text-text">
-            {t("services")}
+          <Link href={ROUTES.contact} className="cursor-pointer transition-colors duration-200 hover:text-text">
+            {t("contact")}
           </Link>
           <Link href={ROUTES.pricing} className="cursor-pointer transition-colors duration-200 hover:text-text">
             {t("pricing")}

@@ -52,6 +52,35 @@ model Analysis {
   @@index([userId])
 }
 
+/// Adresse laissée par un visiteur avant son analyse gratuite : la liste de
+/// diffusion. Séparée de `User` (aucun compte, aucun mot de passe) et de
+/// `Analysis.guestEmail` (qui reste attaché à une analyse précise) pour qu'une
+/// même adresse n'apparaisse qu'une fois, quel que soit son nombre d'analyses.
+model Lead {
+  id    String @id @default(cuid())
+  email String @unique
+
+  /// D'où vient l'adresse — pour l'instant « free_analysis ».
+  source String @default("free_analysis")
+  /// Dernier domaine analysé : de quoi personnaliser un envoi Resend.
+  domain         String?
+  lastAnalysisId String?
+  /// Nombre d'analyses lancées avec cette adresse (signal d'intérêt).
+  analysisCount  Int      @default(1)
+  lastAnalysisAt DateTime @default(now())
+
+  /// Consentement d'envoi. `unsubscribedAt` garde la trace de la désinscription
+  /// : on ne supprime pas la ligne, sinon une réinscription silencieuse
+  /// remettrait l'adresse dans la liste au prochain audit.
+  marketingOptIn Boolean   @default(true)
+  unsubscribedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+}
+
 model Subscription {
   id                   String    @id @default(cuid())
   userId               String    @unique

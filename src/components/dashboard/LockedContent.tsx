@@ -14,6 +14,15 @@ const AnalysisIdContext = createContext<string>("");
 
 export const AnalysisIdProvider = AnalysisIdContext.Provider;
 
+export function useAnalysisId(): string {
+  return useContext(AnalysisIdContext);
+}
+
+/** Lien de déblocage : la page tarifs, avec le rapport à rattacher s'il est connu. */
+export function unlockHref(analysisId: string): string {
+  return analysisId ? `${ROUTES.pricing}?analyse=${analysisId}` : ROUTES.pricing;
+}
+
 /**
  * Rapport verrouillé ? Porté par contexte parce que la question se pose jusque
  * dans les cellules d'un tableau de diagnostic : la faire descendre en props
@@ -42,6 +51,8 @@ export type PaywallVariant =
   | "recommendations"
   | "prompt"
   | "content"
+  | "keywords"
+  | "articles"
   | "presence"
   | "maps";
 
@@ -167,13 +178,13 @@ export function LockedBlock({
 /** Appel à l'action sous un bloc verrouillé — renvoie vers la page tarifs. */
 export function UnlockBar({ variant }: { variant: PaywallVariant }) {
   const t = useTranslations("analysisReport.paywall");
-  const analysisId = useContext(AnalysisIdContext);
+  const analysisId = useAnalysisId();
 
   return (
     <div className="mt-4 flex flex-col gap-3 rounded-3xl border border-fog bg-snow p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <p className="text-sm text-muted">{t(`${variant}.pitch`)}</p>
       <Link
-        href={analysisId ? `${ROUTES.pricing}?analyse=${analysisId}` : ROUTES.pricing}
+        href={unlockHref(analysisId)}
         className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
       >
         {t("cta")}

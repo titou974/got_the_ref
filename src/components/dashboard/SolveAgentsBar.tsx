@@ -1,0 +1,145 @@
+"use client";
+
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useTranslations } from "next-intl";
+import type { DetectedStack } from "@/lib/geo/types";
+import { ConnectSiteModal } from "./ConnectSiteModal";
+
+/**
+ * Barre d'action du rapport payé. Elle reste à portée de pouce en permanence :
+ * collée au bas de l'écran sur mobile, flottante au-dessus du contenu sur
+ * grand écran. Deux actions, une seule dominante — résoudre ; partager reste
+ * volontairement discret.
+ */
+
+const COPIED_FEEDBACK_MS = 2200;
+
+function SparkIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"
+        fill="currentColor"
+      />
+      <path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function SolveAgentsBar({
+  domain,
+  stack,
+  issues,
+}: {
+  domain: string;
+  stack: DetectedStack | null;
+  /** Manques relevés dans le rapport, rejoués dans la modale (3 au plus). */
+  issues: string[];
+}) {
+  const t = useTranslations("analysisReport.solve");
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  /**
+   * Sur un écran tactile, le partage passe par la feuille système (SMS, mail,
+   * messageries). Ailleurs, il n'y a rien à ouvrir : on copie le lien, c'est
+   * l'équivalent le plus direct.
+   */
+  async function share() {
+    const url = window.location.href;
+    const coarse =
+      typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+
+    if (coarse && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: t("shareTitle", { domain }), url });
+        return;
+      } catch {
+        // Partage refusé ou annulé : on retombe sur la copie du lien.
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
+    } catch {
+      // Presse-papiers refusé (contexte non sécurisé) : rien à annoncer.
+    }
+  }
+
+  return (
+    <>
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2">
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.35, ease: "easeOut" }}
+          className="pointer-events-auto flex items-center gap-2 border-t border-fog bg-snow/95 px-4 py-3 backdrop-blur-md [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))] sm:rounded-full sm:border sm:p-1.5 sm:shadow-[var(--shadow-md)]"
+        >
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:flex-none sm:px-6"
+          >
+            <SparkIcon />
+            {t("cta")}
+            {issues.length > 0 && (
+              <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold tabular-nums">
+                {issues.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={share}
+            aria-label={t("share")}
+            className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-fog px-3.5 py-3 text-sm font-medium text-muted transition-colors duration-200 hover:border-pebble hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:border-transparent sm:px-4"
+          >
+            {copied ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M5 13l4 4L19 7"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M12 3v12M12 3 8 7M12 3l4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+            <span className="hidden sm:inline">{copied ? t("copied") : t("share")}</span>
+          </button>
+        </motion.div>
+      </div>
+
+      <AnimatePresence>
+        {open && (
+          <ConnectSiteModal
+            domain={domain}
+            stack={stack}
+            issues={issues}
+            onClose={() => setOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}

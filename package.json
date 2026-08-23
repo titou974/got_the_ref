@@ -12,13 +12,16 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "gen:lottie": "node scripts/gen-lottie.mjs"
+    "gen:lottie": "node scripts/gen-lottie.mjs",
+    "create:subscriber": "node scripts/create-subscriber.mjs",
+    "export:leads": "node scripts/export-leads.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
     "@next-safe-action/adapter-better-auth": "^0.1.6",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.3",
     "better-auth": "^1.6.19",
     "cheerio": "^1.2.0",

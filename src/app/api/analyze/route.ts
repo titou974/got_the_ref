@@ -16,11 +16,13 @@ export async function POST(request: Request) {
 
   let rawUrl: string;
   let rawMapsUrl: string | null = null;
+  let rawEmail: string | null = null;
   let mode: BusinessMode = "physical";
   try {
     const body = await request.json();
     rawUrl = String(body.url ?? "");
     rawMapsUrl = body.mapsUrl ? String(body.mapsUrl) : null;
+    rawEmail = body.email ? String(body.email) : null;
     mode = body.mode === "online" ? "online" : "physical";
   } catch {
     return NextResponse.json({ error: t("invalidUrl") }, { status: 400 });
@@ -32,6 +34,9 @@ export async function POST(request: Request) {
   const result = await runAnalysis({
     rawUrl,
     rawMapsUrl,
+    // E-mail laissé dans la modale de l'analyse gratuite : rattaché à l'analyse
+    // du visiteur anonyme, ignoré pour un membre déjà identifié.
+    leadEmail: rawEmail,
     mode,
     actor,
     ip: clientIp(request),

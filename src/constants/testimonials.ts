@@ -1,12 +1,21 @@
 /**
  * Témoignages du ruban de preuves.
  *
- * Deux familles, volontairement à parité :
- * — `online` (SaaS, e-commerce, activités en ligne) : ces cartes portent une
- *   capture Search Console et ses trois chiffres, parce que c'est là que la
- *   progression se mesure en trafic ;
- * — `local` (commerces physiques) : pas de capture — pour un restaurant ou un
- *   salon, la preuve est le client qui pousse la porte, pas une courbe.
+ * Deux familles, volontairement à parité : `local` (commerces physiques) et
+ * `online` (SaaS, e-commerce, activités en ligne).
+ *
+ * Chaque famille a sa preuve, et ce n'est pas la même :
+ * — `online` porte `stats`, la capture Search Console, parce qu'une activité en
+ *   ligne se mesure en trafic. La capture affiche déjà ses chiffres en clair :
+ *   `clicks`, `impressions` et `position` ne sont pas réaffichés dessous, ils
+ *   servent à écrire le texte alternatif de l'image ;
+ * — `local` porte `aiShot`, la capture d'une réponse ChatGPT qui cite le
+ *   commerce. Pour une boulangerie, la preuve est d'être nommée dans la réponse,
+ *   pas une courbe de clics.
+ *
+ * Pour ajouter la capture d'un commerce : déposez l'image dans
+ * `public/preuves-ia/` puis renseignez `aiShot` sur son témoignage. Une carte
+ * sans capture reste valable, elle n'affiche que la parole.
  *
  * ⚠️ Hormis La Cotriade, les témoignages ci-dessous n'ont pas encore été
  * recueillis auprès de clients réels, et les captures proviennent de comptes
@@ -19,7 +28,7 @@
  */
 export const PROOF_IS_ILLUSTRATIVE = true;
 
-/** Chiffres Search Console rattachés à une activité en ligne. */
+/** Capture Search Console et les chiffres qu'elle affiche. */
 export type ProofStats = {
   shot: string;
   clicks: string;
@@ -27,13 +36,25 @@ export type ProofStats = {
   position: string;
 };
 
+/**
+ * Capture d'une réponse d'IA citant le commerce, avec sa description pour les
+ * lecteurs d'écran. Une image de conversation ne se devine pas : décrivez ce
+ * qu'on y lit (« ChatGPT recommande La Cotriade parmi trois restaurants »).
+ */
+export type AiProofShot = {
+  src: string;
+  alt: string;
+};
+
 export type Testimonial = {
   quote: string;
   author: string;
   role: string;
   kind: "local" | "online";
-  /** Renseigné pour les activités en ligne uniquement. */
+  /** Activités en ligne : la capture Search Console. */
   stats?: ProofStats;
+  /** Commerces physiques : la capture d'une réponse d'IA qui les cite. */
+  aiShot?: AiProofShot;
 };
 
 export const TESTIMONIALS: Testimonial[] = [
@@ -44,6 +65,12 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "La Cotriade",
     role: "Restaurant de fruits de mer · Les Sables-d'Olonne",
     kind: "local",
+    // La capture de la réponse ChatGPT se branche ici, une fois l'image déposée
+    // dans public/preuves-ia/ :
+    aiShot: {
+      src: "/preuves-ia/la-cotriade.jpeg",
+      alt: "ChatGPT cite La Cotriade en tête des restaurants de fruits de mer aux Sables-d'Olonne",
+    },
   },
   {
     quote:
@@ -51,13 +78,21 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Sarah B.",
     role: "Salon de coiffure · Nantes",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/sarah-b.jpeg",
+      alt: "ChatGPT recommande le salon de coiffure de Sarah B. à Nantes",
+    },
   },
   {
     quote:
       "Les clients arrivent en disant « c'est l'IA qui vous a conseillé ». Il y a un an, cette phrase n'existait pas dans mon métier.",
-    author: "Dr. Marc L.",
+    author: "Dr. Nicolas M.",
     role: "Cabinet dentaire · Lyon",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/nicolas-m.jpeg",
+      alt: "ChatGPT recommande le cabinet dentaire de Dr. Marc L. à Lyon",
+    },
   },
   {
     quote:
@@ -65,6 +100,10 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Camille R.",
     role: "Boulangerie artisanale · Bordeaux",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/camille-r.jpeg",
+      alt: "ChatGPT recommande la boulangerie artisanale de Camille R. à Bordeaux",
+    },
   },
   {
     quote:
@@ -72,6 +111,10 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Karim T.",
     role: "Restaurant italien · Marseille",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/karim-t.jpeg",
+      alt: "ChatGPT recommande le restaurant italien de Karim T. à Marseille",
+    },
   },
   {
     quote:
@@ -79,12 +122,16 @@ export const TESTIMONIALS: Testimonial[] = [
     author: "Élodie F.",
     role: "Institut de beauté · Toulouse",
     kind: "local",
+    aiShot: {
+      src: "/preuves-ia/elodie-f.jpeg",
+      alt: "ChatGPT recommande l'institut de beauté d'Élodie F. à Toulouse",
+    },
   },
 
   // ── Activités en ligne : la progression se lit dans Search Console ──────────
   {
     quote:
-      "Aucune visibilité au lancement, aucun budget pub. Nos deux premiers clients sont arrivés en citant une réponse d'IA — c'est ce canal qui nous a démarrés.",
+      "Aucune visibilité au lancement, aucun budget pub. Nos deux premiers clients sont arrivés en citant une réponse d'IA. C'est ce canal qui nous a démarrés.",
     author: "Julien M.",
     role: "Fondateur d'un SaaS B2B",
     kind: "online",
@@ -110,7 +157,7 @@ export const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
-      "On payait une agence au mois pour un rapport qu'on ne savait pas appliquer. Ici c'est corrigé puis remesuré — on voit enfin l'effet de chaque action.",
+      "On payait une agence au mois pour un rapport qu'on ne savait pas appliquer. Ici c'est corrigé puis remesuré, on voit enfin l'effet de chaque action.",
     author: "Amandine G.",
     role: "Agence de voyage en ligne",
     kind: "online",

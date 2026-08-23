@@ -7,6 +7,7 @@ import type {
   EngineScore,
   EngineRanking,
   Competitor,
+  TrendingKeywordsInsight,
 } from "./types";
 
 /** Élément on-page de repli : texte réel si connu, sinon état « non audité ». */
@@ -114,12 +115,48 @@ export function hydrateAnalysisResult(
     openingHours: s?.openingHoursHint ?? null,
   };
 
+  // Les analyses antérieures à la détection de plateforme n'ont pas de `stack`.
+  const signals = s ? { ...s, stack: s.stack ?? null } : s;
+
   return {
     ...raw,
+    signals,
     profile,
     engines,
     localRankings: Array.isArray(raw.localRankings) ? raw.localRankings : [],
     webPresence,
     onPageContent,
+    trendingKeywords: raw.trendingKeywords ?? legacyKeywords(profile),
+  };
+}
+
+/**
+ * Analyses antérieures aux mots-clés tendances : on reconstruit la même
+ * structure depuis la niche, pour que la section s'affiche au lieu de
+ * disparaître. `measured: false` la présente pour ce qu'elle est — une
+ * déduction, pas un relevé Google.
+ */
+function legacyKeywords(profile: BusinessProfile): TrendingKeywordsInsight {
+  const niche = profile.niche.toLowerCase();
+  const category = (profile.generalCategory || profile.niche).toLowerCase();
+  const inCity = profile.location ? ` ${profile.location}` : "";
+  const cityLabel = profile.location ? ` à ${profile.location}` : "";
+
+  return {
+    measured: false,
+    source: "heuristic",
+    period: new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" }),
+    keywords: [
+      { keyword: `${niche}${inCity}`, intent: "recherche principale", trend: "stable", placements: ["title", "h1", "metaDescription"] },
+      { keyword: `meilleur ${category}${inCity}`, intent: "comparaison", trend: "montant", placements: ["title", "metaDescription"] },
+      { keyword: `${category}${inCity} avis`, intent: "réassurance", trend: "montant", placements: ["metaDescription"] },
+      { keyword: `où trouver ${niche}${inCity}`, intent: "question conversationnelle", trend: "émergent", placements: ["h1"] },
+    ],
+    suggested: {
+      title: `${profile.niche}${cityLabel} | Avis & réservation`,
+      metaDescription: `${profile.niche}${cityLabel} : avis clients, horaires, adresse et réservation en ligne.`,
+      h1: `${profile.niche}${cityLabel}`,
+    },
+    notes: ["Analyse antérieure à la recherche de mots-clés : relancez l'audit pour les requêtes réellement en hausse."],
   };
 }

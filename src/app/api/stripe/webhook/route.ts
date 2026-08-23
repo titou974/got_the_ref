@@ -2,23 +2,29 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe, resolvePriceId } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
-import { unlockAnalysisFromSession } from "@/features/billing/unlock";
-import { PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
+import { BOOST_CHECKOUT_KIND, unlockAnalysisFromSession } from "@/features/billing/unlock";
+import { BILLING_CYCLES, PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
 
 export const runtime = "nodejs";
 
 /**
  * Retrouve l'offre payante correspondant à un Price ID en résolvant le tarif de
  * chaque offre (l'env peut contenir un Product ID, d'où la résolution).
+ *
+ * Chaque offre est testée sur ses deux cycles : un abonnement annuel porte un
+ * price différent du mensuel, et sans ça il ne serait rattaché à aucune offre —
+ * l'abonné retomberait en `free` au premier événement Stripe.
  */
 async function planFromPriceId(priceId: string | undefined): Promise<PaidPlanKey | null> {
   if (!priceId) return null;
 
   for (const plan of PAID_PLAN_KEYS) {
-    try {
-      if ((await resolvePriceId(plan)) === priceId) return plan;
-    } catch {
-      // env d'une offre absente : on ignore et on continue.
+    for (const cycle of BILLING_CYCLES) {
+      try {
+        if ((await resolvePriceId(plan, cycle)) === priceId) return plan;
+      } catch {
+        // env d'un cycle absente : on ignore et on continue.
+      }
     }
   }
   return null;
@@ -111,6 +117,10 @@ export async function POST(request: Request) {
             await unlockAnalysisFromSession(session);
             break;
           }
+
+          // Coup de Boost pris sans rapport : rien à ouvrir ni à provisionner —
+          // aucun abonnement n'est créé, la prestation est lancée à la main.
+          if (session.metadata?.kind === BOOST_CHECKOUT_KIND) break;
 
           // Ancien flux transactionnel lié à un compte : on accorde l'offre.
           const plan = asPaidPlan(session.metadata?.plan);

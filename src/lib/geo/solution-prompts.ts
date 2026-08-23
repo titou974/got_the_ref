@@ -44,7 +44,7 @@ function issues(checks: DiagnosticCheck[], labels: Record<string, string>): stri
 
 function header(result: GeoAnalysisResult): string {
   const loc = result.profile.location ? ` à ${result.profile.location}` : "";
-  return `Tu es un expert GEO (Generative Engine Optimization). Voici le diagnostic de visibilité IA de mon site ${result.domain} — ${result.profile.niche}${loc}.`;
+  return `Tu es un expert GEO (Generative Engine Optimization). Voici le diagnostic de visibilité IA de mon site ${result.domain}, ${result.profile.niche}${loc}.`;
 }
 
 export function buildSolutionPrompt(
@@ -101,7 +101,7 @@ ${
 Incohérences détectées entre la fiche et le site :
 ${inconsistencies.length ? inconsistencies.join("\n") : "- (à vérifier : nom, adresse, téléphone, catégorie, horaires)"}
 
-Donne-moi un plan pour aligner parfaitement ma fiche Google Maps et mon site : NAP identique, catégorie principale, description optimisée, photos, et stratégie d'avis — afin de renforcer ma cohérence locale aux yeux des IA.`;
+Donne-moi un plan pour aligner parfaitement ma fiche Google Maps et mon site : NAP identique, catégorie principale, description optimisée, photos, et stratégie d'avis, afin de renforcer ma cohérence locale aux yeux des IA.`;
     }
 
     case "results":

@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "title": "got_the_ref — Boostez votre visibilité dans les IA",
+    "title": "got_the_ref : boostez votre visibilité dans les IA",
     "titleTemplate": "%s · got_the_ref",
     "description": "Analysez et optimisez la visibilité de votre site dans ChatGPT, Perplexity, Gemini et Google. Score GEO par moteur IA, positionnement estimé et recommandations générées par l'IA.",
-    "ogTitle": "got_the_ref — Boostez votre visibilité dans les IA",
+    "ogTitle": "got_the_ref : boostez votre visibilité dans les IA",
     "ogDescription": "L'outil tout-en-un pour mesurer et booster votre présence dans les moteurs de recherche IA.",
     "keywords": "GEO, SEO, ChatGPT, Perplexity, Gemini, visibilité IA, référencement IA"
   },
@@ -18,10 +18,10 @@
     "closeMenu": "Fermer le menu",
     "viewPricing": "voir les tarifs",
     "discoverOffers": "Découvrir nos offres",
-    "agency": "Notre agence",
-    "services": "Nos services",
+    "demo": "Démo",
+    "contact": "Contact",
     "bookCall": "Prendre rendez-vous",
-    "discoverServices": "Découvrir nos services"
+    "bookDemo": "Réserver une démo"
   },
   "nav": {
     "myAccount": "Mon compte"
@@ -29,19 +29,32 @@
   "footer": {
     "rights": "© {year} got_the_ref. Tous droits réservés.",
     "tagline": "La première agence de GEO française.",
-    "agency": "Notre agence",
-    "services": "Nos services",
+    "demo": "Démo",
+    "contact": "Contact",
     "pricing": "Tarifs",
     "legalMentions": "Mentions légales",
     "terms": "CGV / CGU",
     "privacy": "Confidentialité"
   },
-  "ctaServices": {
+  "ctaDemo": {
     "eyebrow": "got_the_ref · Agence GEO",
     "title": "Envie d'apparaître en premier dans les IA ?",
     "subtitle": "Notre agence optimise votre commerce pour ChatGPT, Gemini et Perplexity. Discutons de votre projet et faisons monter votre business tout en haut des réponses IA.",
-    "button": "Découvrir nos services",
+    "button": "Réserver une démo",
     "secondary": "Prendre rendez-vous"
+  },
+  "ctaUnlock": {
+    "eyebrow": "Abonnement got_the_ref",
+    "title": "Débloquez tout le rapport et laissez les agents IA corriger",
+    "subtitle": "Classements, recommandations, mots-clés tendances, calendrier d'articles et prompts prêts à coller : tout s'ouvre avec l'abonnement.",
+    "bullet1": "Analyses illimitées",
+    "bullet2": "Prompts solution par section",
+    "bullet3": "Articles générés pour votre niche",
+    "button": "Résoudre gratuitement avec les agents IA",
+    "secondary": "Voir les tarifs",
+    "openTitle": "Gardez la main sur votre visibilité IA",
+    "openSubtitle": "Analyses illimitées, mots-clés suivis mois après mois et articles publiés pour votre niche : votre abonnement couvre tout got_the_ref.",
+    "openButton": "Voir mon offre et les options"
   },
   "home": {
     "logoOpenaiAlt": "Logo OpenAI",
@@ -58,7 +71,7 @@
   "proof": {
     "eyebrow": "Cas réel · La Cotriade, Les Sables-d'Olonne",
     "title": "Voilà à quoi ressemble un client qui vous trouve grâce à l'IA",
-    "subtitle": "Un internaute cherche où manger, il pose la question à une IA. Le commerce cité récupère le client — et le client le raconte dans son avis Google.",
+    "subtitle": "Un internaute cherche où manger, il pose la question à une IA. Le commerce cité récupère le client, et le client le raconte dans son avis Google.",
     "steps": [
       {
         "title": "La question posée à l'IA",
@@ -80,7 +93,9 @@
     "quote": "« Nous étions de passage aux Sables d'Olonne et n'avions aucune référence de bon restaurant de poisson. Après une demande ChatGPT, nous nous sommes retrouvés là :-) »",
     "quoteAuthor": "Valérie H. · avis Google Maps · ★★★★★",
     "resultBody": "Site clair, fiche Google cohérente, avis nombreux : c'est exactement ce que les IA lisent avant de citer un commerce. got_the_ref mesure ces signaux sur votre site et vous dit lesquels vous manquent.",
-    "cta": "Analyser mon commerce gratuitement"
+    "cta": "Analyser mon commerce gratuitement",
+    "adopters": "Adopté par {count} entreprises françaises",
+    "cocorico": "Cocoricooo !"
   },
   "analyzeForm": {
     "placeholder": "votre-site.fr",
@@ -107,12 +122,15 @@
     "confirmClose": "Fermer",
     "modePhysical": "Commerce physique",
     "modeOnline": "Commerce en ligne",
-    "modeAriaLabel": "Type de commerce à analyser"
-  },
-  "dashboard": {
-    "ctaAnotherTitle": "Analysez un autre site",
-    "ctaAnotherSubtitle": "Comparez vos concurrents ou suivez votre progression dans le temps.",
-    "ctaUnlimited": "Besoin d'analyses illimitées ?"
+    "modeAriaLabel": "Type de commerce à analyser",
+    "emailTitle": "Où envoyer votre analyse ?",
+    "emailBody": "Laissez votre e-mail : on y envoie le résultat de l'analyse et les points à corriger en priorité.",
+    "emailLabel": "Votre adresse e-mail",
+    "emailPlaceholder": "vous@votre-commerce.fr",
+    "emailSubmit": "Lancer mon analyse gratuite",
+    "emailInvalid": "Saisissez une adresse e-mail valide.",
+    "emailNote": "Votre analyse, puis quelques conseils pour être cité par les IA. Désinscription en un clic.",
+    "emailClose": "Fermer"
   },
   "analysisReport": {
     "heroEyebrow": "Note de visibilité IA",
@@ -159,7 +177,7 @@
       "competitorsAheadLabel": "Cités avant vous",
       "rankingsTitle": "Votre position sur le marché local",
       "rankingsSubtitle": "Où votre commerce se situe face à ses concurrents, dans votre ville.",
-      "rankingDisclaimer": "Classements estimés par l'IA à partir de sa connaissance du marché local — à titre indicatif, ce ne sont pas des positions mesurées.",
+      "rankingDisclaimer": "Classements estimés par l'IA à partir de sa connaissance du marché local, à titre indicatif : ce ne sont pas des positions mesurées.",
       "rankNiche": "Concurrents directs",
       "rankGeneral": "Marché général",
       "you": "Vous",
@@ -167,6 +185,35 @@
       "recommendationsSubtitle": "Priorisées par impact sur votre visibilité IA.",
       "impact": "Impact {value}/10",
       "noRecommendations": "Aucune action prioritaire : votre site est déjà bien optimisé."
+    },
+    "ctaAnotherTitle": "Analysez un autre site",
+    "ctaAnotherSubtitle": "Comparez vos concurrents ou suivez votre progression dans le temps.",
+    "ctaUnlimited": "Besoin d'analyses illimitées ?",
+    "stack": {
+      "title": "Plateforme du site",
+      "sure": "Détecté",
+      "probable": "Probable",
+      "probableShort": "probable",
+      "unknownTitle": "Plateforme non identifiée",
+      "unknownBody": "Le site ne laisse aucune empreinte publique reconnaissable — code sur-mesure, HTML réécrit ou cache agressif.",
+      "note": "La plateforme décide de l'endroit où se posent les correctifs : un llms.txt, un schéma ou une balise ne s'ajoutent pas au même endroit sur chacune."
+    },
+    "solve": {
+      "cta": "Résoudre avec les agents IA",
+      "share": "Partager",
+      "copied": "Lien copié",
+      "shareTitle": "Analyse GEO de {domain}",
+      "modal": {
+        "title": "Connecter votre site",
+        "body": "Les agents appliquent les correctifs directement sur votre site : fichiers, balises et données structurées. Vous validez chaque changement avant publication.",
+        "detected": "Plateforme détectée : {name}",
+        "cta": "Connecter le site",
+        "later": "Plus tard",
+        "reassurance": "Accès révocable à tout moment. Aucune publication sans votre validation.",
+        "fixedCount": "{count}/{total} corrigés",
+        "statusFixed": "Corrigé",
+        "statusPending": "À corriger"
+      }
     },
     "architecture": {
       "title": "Architecture du site",
@@ -184,7 +231,7 @@
       },
       "blockedCrawlers": "{value} robot(s) IA bloqué(s)",
       "h1Count": "{value} H1 détecté(s)",
-      "llmsTxtMisconfigured": "Présent mais renvoyé en 404 — à servir en HTTP 200 pour être pris en compte"
+      "llmsTxtMisconfigured": "Présent mais renvoyé en 404 : à servir en HTTP 200 pour être pris en compte"
     },
     "content": {
       "title": "Contenu éditorial",
@@ -230,7 +277,7 @@
       "noQualifications": "Aucune qualification ou distinction (guide, label, certification) détectée pour le moment.",
       "noArticles": "Aucune mention presse ou article notable détecté pour le moment.",
       "findingsTitle": "Constats",
-      "disclaimer": "Qualifications et mentions estimées par l'IA à partir de sa connaissance du secteur — vérifiez-les avant de les communiquer."
+      "disclaimer": "Qualifications et mentions estimées par l'IA à partir de sa connaissance du secteur : vérifiez-les avant de les communiquer."
     },
     "solution": {
       "title": "Votre solution, prête à l'emploi",
@@ -243,7 +290,8 @@
       "shareSubject": "Résultats de l'analyse GEO got_the_ref",
       "shareBody": "Voici les résultats de l'analyse de visibilité IA de notre site : {url}",
       "agencyCtaText": "Vous préférez qu'on s'en occupe pour vous ?",
-      "agencyCtaLink": "Découvrir les services de l'agence"
+      "agencyCtaLink": "Découvrir les services de l'agence",
+      "unlockPrompt": "Débloquer le prompt solution gratuitement"
     },
     "maps": {
       "title": "Cohérence Google Maps ↔ site",
@@ -252,7 +300,7 @@
       "viewListing": "Ouvrir la fiche Google Maps",
       "noListingTitle": "Aucune fiche Google Maps renseignée",
       "noListingBody": "Relancez une analyse en ajoutant le lien de votre fiche Google Maps pour évaluer la cohérence entre votre établissement et votre site, et votre position locale.",
-      "pendingTitle": "Fiche fournie — analyse de cohérence à venir",
+      "pendingTitle": "Fiche fournie, analyse de cohérence à venir",
       "pendingBody": "Le lien de votre fiche a bien été enregistré. L'analyse détaillée de cohérence (NAP, horaires, catégorie, avis) sera disponible prochainement.",
       "ratingLabel": "Note moyenne",
       "reviewsLabel": "Avis",
@@ -261,7 +309,7 @@
       "findingsTitle": "Constats"
     },
     "paywall": {
-      "cta": "Résoudre avec les agents IA",
+      "cta": "Résoudre gratuitement avec les agents IA",
       "lockedLabel": "Verrouillé",
       "alreadyPaid": "Déjà abonné ?",
       "signIn": "Se connecter",
@@ -294,7 +342,48 @@
         "title": "Cohérence Maps",
         "subtitle": "L'alignement de votre fiche Google avec votre site, vu par les IA.",
         "pitch": "Une fiche qui contredit le site fait perdre des places sur les requêtes locales."
+      },
+      "keywords": {
+        "title": "Mots-clés tendances",
+        "subtitle": "Les requêtes en hausse dans votre niche, et où les écrire.",
+        "pitch": "Les mots-clés du moment sont relevés sur Google, avec le title, la meta description et le H1 réécrits."
+      },
+      "articles": {
+        "title": "Calendrier éditorial",
+        "subtitle": "Les articles SEO générés et publiés pour vous, mois après mois.",
+        "pitch": "Chaque article du calendrier est rédigé puis publié automatiquement sur votre niche."
       }
+    },
+    "keywords": {
+      "title": "Mots-clés tendances de votre niche",
+      "subtitle": "Les requêtes qui montent en ce moment sur votre activité, et l'endroit exact où les placer : balise title, meta description, H1.",
+      "listTitle": "Requêtes à cibler",
+      "sourceMeasured": "Relevé sur Google",
+      "sourceEstimated": "Déduit de la niche",
+      "rewritesTitle": "Vos trois éléments, réécrits",
+      "rewritesSubtitle": "À copier tel quel : chaque version reprend les mots-clés les plus porteurs sans sacrifier la lecture.",
+      "currentLabel": "Actuel",
+      "currentEmpty": "absent du site",
+      "charCount": "{count} caractères",
+      "elements": {
+        "title": "Balise title",
+        "metaDescription": "Meta description",
+        "h1": "Titre H1"
+      },
+      "placements": {
+        "title": "Title",
+        "metaDescription": "Meta",
+        "h1": "H1"
+      }
+    },
+    "articlesPlan": {
+      "title": "Calendrier des articles",
+      "subtitle": "Les articles SEO générés pour votre niche, puis publiés automatiquement aux dates prévues.",
+      "countLabel": "{count} articles programmés",
+      "queueTitle": "À paraître",
+      "queueSubtitle": "Rédigés sur vos mots-clés, relus, puis mis en ligne sans intervention de votre part.",
+      "statusScheduled": "Programmé",
+      "disclaimer": "Aperçu du calendrier : la génération et la publication automatiques arrivent. Aucun article n'est encore publié sur votre site."
     }
   },
   "analysisApi": {
@@ -374,13 +463,15 @@
     "otherBody": "got_the_ref analyse votre site depuis l'extérieur, comme le ferait une IA : aucune installation, aucun plugin, aucun accès à votre code."
   },
   "results": {
-    "eyebrow": "Résultats clients",
-    "title": "Ce que ça change, chiffres à l'appui",
-    "subtitle": "Commerces de quartier comme activités en ligne : la visibilité se mesure, et elle se travaille.",
+    "eyebrow": "Nos utilisateurs parlent pour nous",
+    "title": "Ce qu'en pensent les commerces français",
+    "subtitle": "C'est plus de 400 startups, commerces, artisans, et indépendants qui gagnent des clients quotidiennement grâce au trafic IA généré par got_the_ref.",
     "clicks": "Clics",
     "impressions": "Impressions",
     "position": "Position moy.",
-    "illustrativeNote": "Progressions et témoignages présentés à titre d'illustration, hors La Cotriade. Ils seront remplacés par les résultats et les avis de nos clients, publiés avec leur accord."
+    "illustrativeNote": "Progressions et témoignages présentés à titre d'illustration, hors La Cotriade. Ils seront remplacés par les résultats et les avis de nos clients, publiés avec leur accord.",
+    "chartMarker": "got_the_ref activé",
+    "chartCaption": "Courbe de démonstration : le repère marque la mise en place."
   },
   "freeReport": {
     "eyebrow": "Constat",
@@ -391,27 +482,27 @@
       "{domain} est lisible par les IA, mais pas encore choisi par elles",
       "Les fondations de {domain} sont posées, la visibilité ne suit pas",
       "{domain} passe le premier filtre des IA, puis se fait dépasser",
-      "Rien ne bloque {domain} techniquement — et pourtant il ne ressort pas",
+      "Rien ne bloque {domain} techniquement, et pourtant il ne ressort pas",
       "{domain} existe pour les IA, sans peser dans leurs réponses",
       "Ce que les IA voient de {domain}, et ce qui leur manque pour le citer"
     ],
     "intros": [
-      "Cet aperçu note {score}/100. Il ne regarde que l'ossature du site : ce que les crawlers IA lisent avant même de juger le contenu. C'est un point de départ honnête, pas un verdict.",
-      "Note de l'aperçu : {score}/100. Elle ne porte que sur la structure technique du site — la partie qui décide si une IA peut vous lire, pas si elle décide de vous citer.",
-      "{score}/100 sur l'architecture seule. C'est la seule chose mesurable gratuitement : le reste du dossier, celui qui explique votre position réelle, demande d'interroger les moteurs.",
-      "L'aperçu s'arrête à {score}/100 parce qu'il s'arrête à l'ossature. Les signaux qui font vraiment la différence dans une réponse d'IA n'ont pas encore été mesurés.",
-      "Score de l'aperçu : {score}/100, sur la base des seuls signaux techniques. Une bonne structure ne garantit rien — elle rend juste la citation possible.",
-      "{score}/100 : c'est ce que vaut le site vu de l'extérieur, avant analyse du contenu, de la notoriété et des classements moteurs."
+      "Cet aperçu note {score}/100. Il ne regarde que l'ossature du site : ==ce que les crawlers IA lisent avant même de juger le contenu==. C'est un point de départ honnête, pas un verdict.",
+      "Note de l'aperçu : {score}/100. Elle ne porte que sur la structure technique du site, ==la partie qui décide si une IA peut vous lire, pas si elle décide de vous citer==.",
+      "{score}/100 sur l'architecture seule. C'est la seule chose mesurable gratuitement : ==le reste du dossier, celui qui explique votre position réelle, demande d'interroger les moteurs==.",
+      "L'aperçu s'arrête à {score}/100 parce qu'il s'arrête à l'ossature. ==Les signaux qui font vraiment la différence dans une réponse d'IA== n'ont pas encore été mesurés.",
+      "Score de l'aperçu : {score}/100, sur la base des seuls signaux techniques. ==Une bonne structure ne garantit rien, elle rend juste la citation possible==.",
+      "{score}/100 : c'est ce que vaut le site vu de l'extérieur, ==avant analyse du contenu, de la notoriété et des classements moteurs==."
     ],
     "unmeasured": {
       "keywords": [
         "Les mots-clés réellement présents sur le site : lesquels vous portent, lesquels manquent, et lesquels vous devriez viser. C'est le premier levier d'amélioration, et il est presque toujours sous-exploité.",
-        "Le travail des mots-clés du site. Ceux que vous employez aujourd'hui ne recouvrent qu'une partie des formulations que vos clients tapent — l'écart se comble et se mesure.",
+        "Le travail des mots-clés du site. Ceux que vous employez aujourd'hui ne recouvrent qu'une partie des formulations que vos clients tapent. L'écart se comble et se mesure.",
         "L'analyse des mots-clés page par page : leur pertinence, ceux qui manquent, et la formulation à reprendre pour être trouvé sur les requêtes qui comptent."
       ],
       "rankings": [
         "Votre position réelle dans ChatGPT et Gemini sur les requêtes de votre activité, et le nom des concurrents cités avant vous.",
-        "Ce que répondent réellement ChatGPT et Gemini quand un client cherche ce que vous vendez — et à quel rang vous apparaissez, si vous apparaissez.",
+        "Ce que répondent réellement ChatGPT et Gemini quand un client cherche ce que vous vendez, et à quel rang vous apparaissez, si vous apparaissez.",
         "Le classement mesuré, moteur par moteur, avec les établissements qui occupent les places devant vous."
       ],
       "recommendations": [
@@ -421,33 +512,81 @@
       ],
       "content": [
         "La qualité éditoriale de vos pages : profondeur, signaux E-E-A-T et citabilité des passages, c'est-à-dire ce qu'une IA peut reprendre tel quel.",
-        "L'analyse du contenu lui-même — expertise démontrée, précision des faits, passages autonomes qu'une IA peut citer sans réécrire.",
+        "L'analyse du contenu lui-même : expertise démontrée, précision des faits, passages autonomes qu'une IA peut citer sans réécrire.",
         "Ce que vaut votre contenu aux yeux d'un moteur génératif : assez concret pour être cité, ou trop vague pour être retenu."
       ],
       "presence": [
-        "Votre notoriété hors-site : mentions presse, guides, annuaires et sources qui vous citent — le signal qui pèse le plus dans le choix d'une IA.",
+        "Votre notoriété hors-site : mentions presse, guides, annuaires et sources qui vous citent. C'est le signal qui pèse le plus dans le choix d'une IA.",
         "Ce que le reste du web dit de vous. Les IA croisent toujours le site avec les sources tierces avant de recommander.",
         "Les signaux d'autorité extérieurs : distinctions, articles et sources référentes qui crédibilisent votre marque."
       ],
       "maps": [
         "La cohérence entre votre fiche Google et votre site : nom, catégorie, adresse, horaires. Une contradiction et vous perdez les requêtes locales.",
         "L'alignement de votre fiche Google Maps avec le site, et ce que la note et le volume d'avis pèsent dans les réponses locales.",
-        "Ce que votre fiche Google raconte face à votre site — c'est souvent là que se joue une requête « près de chez moi »."
+        "Ce que votre fiche Google raconte face à votre site : c'est souvent là que se joue une requête « près de chez moi »."
       ]
     },
     "closings": [
-      "Sur ces quatre plans, votre classement sur les IA et sur Google peut être nettement amélioré : les manques relevés ici sont tous corrigeables, et ce sont eux qui vous coûtent des places.",
-      "Chacune de ces parties non mesurées est un levier de classement. Bien traitées, elles remontent votre position sur les IA comme sur Google — le potentiel est largement au-dessus de la note actuelle.",
-      "Il y a de la marge, et elle est concrète : les points listés ci-dessus se corrigent, et chaque correction se traduit en places gagnées sur les IA et sur Google.",
-      "Rien de tout cela n'est définitif. Ces angles non mesurés sont exactement ceux qui font gagner des positions sur les IA et sur Google une fois traités dans le bon ordre.",
-      "Votre visibilité sur les IA et sur Google peut progresser fortement : les leviers sont dans les parties encore fermées, et ils s'actionnent l'un après l'autre.",
-      "Le constat est loin d'être plafonné. Ces mesures manquantes portent l'essentiel du gain possible sur votre classement dans les IA et sur Google."
+      "Sur ces quatre plans, ==votre classement sur les IA et sur Google peut être nettement amélioré== : les manques relevés ici sont tous corrigeables, et ce sont eux qui vous coûtent des places.",
+      "Chacune de ces parties non mesurées est un levier de classement. Bien traitées, elles remontent votre position sur les IA comme sur Google : ==le potentiel est largement au-dessus de la note actuelle==.",
+      "Il y a de la marge, et elle est concrète : ==chaque correction se traduit en places gagnées sur les IA et sur Google==.",
+      "Rien de tout cela n'est définitif. ==Ces angles non mesurés sont exactement ceux qui font gagner des positions== sur les IA et sur Google une fois traités dans le bon ordre.",
+      "Votre visibilité sur les IA et sur Google peut progresser fortement : ==les leviers sont dans les parties encore fermées==, et ils s'actionnent l'un après l'autre.",
+      "Le constat est loin d'être plafonné. ==Ces mesures manquantes portent l'essentiel du gain possible== sur votre classement dans les IA et sur Google."
     ],
     "ctas": [
-      "Résoudre avec les agents IA",
-      "Corriger avec les agents IA",
-      "Confier ces points aux agents IA",
-      "Lancer les agents IA sur ces points"
+      "Résoudre gratuitement avec les agents IA",
+      "Corriger gratuitement avec les agents IA",
+      "Confier ces points aux agents IA, gratuitement",
+      "Lancer gratuitement les agents IA sur ces points"
+    ],
+    "angleLabels": {
+      "keywords": "Mots-clés",
+      "rankings": "Classement IA",
+      "recommendations": "Plan d'action",
+      "content": "Contenu",
+      "presence": "Notoriété",
+      "maps": "Fiche Google"
+    },
+    "sourceChip": "Crawl du site · {count} contrôles d'architecture"
+  },
+  "paidReport": {
+    "headlines": [
+      "Ce que les IA retiennent de {domain}, et ce qui reste à gagner",
+      "{domain} vu par ChatGPT et Gemini : le relevé complet",
+      "Le dossier complet de {domain} : positions, contenu, notoriété",
+      "{domain} : ce qui vous place, ce qui vous freine, chiffres en main",
+      "Audit complet de {domain} : voici où vous en êtes vraiment",
+      "Tout a été mesuré sur {domain} : voici le verdict"
+    ],
+    "intros": [
+      "Note finale : {score}/100, cette fois sur l'ensemble des signaux, ==architecture, contenu, notoriété et positions réellement relevées sur les moteurs==.",
+      "{score}/100 après audit complet. Chaque volet a été mesuré : ==la note ne repose plus sur la seule ossature technique, mais sur ce que les IA font vraiment de votre site==.",
+      "Le rapport complet donne {score}/100. ==Les positions viennent des moteurs eux-mêmes==, les notes éditoriales d'une lecture page par page.",
+      "Score global : {score}/100. Tout ce que l'aperçu laissait fermé est ouvert ici : ==classements, qualité de contenu, autorité hors-site et plan d'action chiffré==.",
+      "{score}/100, audit complet. ==Vous voyez désormais votre place face aux concurrents==, et le détail de ce qui la détermine.",
+      "Résultat consolidé : {score}/100. ==Rien n'est estimé au doigt mouillé== : chaque ligne ci-dessous s'appuie sur une mesure."
+    ],
+    "sourceChip": "Audit complet · {count} moteurs interrogés",
+    "strengthsTitle": "Ce qui tient déjà",
+    "gapsTitle": "Ce qui reste à corriger",
+    "measuredTitle": "Ce que l'audit a mesuré",
+    "rankOn": "{engine} #{rank}",
+    "notRankedOn": "{engine} hors classement",
+    "measured": {
+      "rankings": "**Classement IA** : {detail}. Le détail des concurrents cités devant vous est dans l'onglet Résultats.",
+      "content": "**Contenu** : {score}/100 sur la qualité éditoriale et la citabilité de vos pages, ce qu'une IA peut reprendre tel quel.",
+      "presence": "**Notoriété** : {score}/100 sur les signaux d'autorité hors-site, distinctions et mentions presse comprises.",
+      "keywords": "**Mots-clés** : {count} requêtes tendances relevées sur votre niche, avec la balise title, la meta description et le H1 réécrits.",
+      "recommendations": "**Plan d'action** : {count} correctifs priorisés par impact, chacun accompagné de son prompt prêt à coller.",
+      "recommendationsWithTop": "**Plan d'action** : {count} correctifs priorisés par impact. À traiter d'abord : « {top} ».",
+      "maps": "**Fiche Google** : {score}/100 de cohérence entre votre fiche et le site, sur le nom, la catégorie, l'adresse et les horaires."
+    },
+    "closings": [
+      "Tout est ouvert : les prompts de chaque onglet reprennent ces correctifs, ==prêts à coller dans votre agent IA==.",
+      "Vous avez la mesure et le remède : ==chaque section porte son prompt solution==, à exécuter dans l'ordre d'impact.",
+      "Il ne reste qu'à exécuter. ==Le plan est priorisé== ; commencez par le haut, remesurez ensuite.",
+      "Ce relevé est votre point de départ chiffré : ==relancez l'analyse après les correctifs== pour voir les places gagnées."
     ]
   },
   "postCheckout": {
@@ -460,37 +599,64 @@
     "signIn": "Se connecter",
     "skip": "Voir mon rapport tout de suite",
     "pendingTitle": "Paiement en cours de confirmation",
-    "pendingBody": "Votre paiement n'est pas encore confirmé par Stripe. Patientez quelques secondes puis rechargez cette page — si le problème persiste, contactez-nous.",
-    "backHome": "← Retour à l'accueil"
+    "pendingBody": "Votre paiement n'est pas encore confirmé par Stripe. Patientez quelques secondes puis rechargez cette page. Si le problème persiste, contactez-nous.",
+    "backHome": "← Retour à l'accueil",
+    "trialSubtitle": "Créez votre mot de passe pour ouvrir votre espace et lancer votre première analyse.",
+    "trialExistingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous pour retrouver votre abonnement.",
+    "trialOtherDeviceSubtitle": "Votre essai est ouvert. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous.",
+    "trialSkip": "Retour à l'accueil",
+    "boostSubtitle": "Créez votre mot de passe : c'est là que vous retrouverez le rapport et les corrections de votre Coup de Boost.",
+    "boostExistingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous, votre Coup de Boost y est rattaché.",
+    "boostOtherDeviceSubtitle": "Votre Coup de Boost est payé. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous."
   },
   "pricing": {
     "metaTitle": "Tarifs",
-    "eyebrow": "Abonnement",
-    "headingBefore": "Des agents qui travaillent votre visibilité IA ",
+    "eyebrow": "Tarifs",
+    "headingBefore": "Des agents qui travaillent votre visibilité ",
     "headingHighlight": "en continu",
-    "subtitle": "L'analyse est gratuite. L'abonnement ouvre tout got_the_ref et met des agents spécialisés sur votre site : ils mesurent, corrigent et remesurent votre position sur ChatGPT, Gemini et Google, sans que vous ayez à toucher une ligne de code.",
+    "subtitle": "L'abonnement met des agents IA spécialisés en référencement sur votre site : ils mesurent votre position sur ChatGPT, Gemini et Google, corrigent ce qui vous empêche d'être cité, publient du contenu \"SEO et IA friendly\" tout en gardant votre image de marque, puis remesurent, le tout en automatique. Le Coup de Boost, lui, fait cette passe une seule fois.",
     "quotaNote": "Vous avez atteint la limite d'analyses gratuites. Réessayez plus tard ou parlons-en directement.",
     "perMonth": "/mois",
     "perYear": " par an",
     "vat": "TVA en sus",
-    "trialPrefix": "1 €",
-    "trialCta": "Démarrer l'essai pour {price}",
+    "trialCta": "Essayer {days} jours gratuits",
     "redirecting": "Redirection…",
-    "secureNote": "Paiement sécurisé par Stripe · Essai de {days} jours, résiliable avant la fin sans être débité de l'abonnement · TVA en sus le cas échéant",
+    "secureNote": "Paiement sécurisé par Stripe · Essai de {days} jours gratuit, résiliable avant la fin sans être débité de l'abonnement · TVA en sus le cas échéant",
     "plan": {
       "eyebrow": "Accès complet",
       "name": "Tout-en-un",
-      "terms": "{days} jours d'accès complet, puis {price}/mois. Résiliable à tout moment.",
-      "cta": "Analyser mon site gratuitement",
-      "ctaNote": "Vous ne démarrez l'essai qu'après avoir vu votre score.",
+      "terms": "{days} jours d'accès complet gratuits, puis {price}/mois. Résiliable à tout moment.",
+      "cta": "Essayer {days} jours gratuits",
+      "ctaNote": "Accès complet gratuit pendant {days} jours · résiliable avant la fin de l'essai",
       "features": [
-        "Analyses illimitées, e-commerce, SaaS ou commerce physique",
+        "Un tableau de bord simple à comprendre qui détaille toutes vos statistiques de référencement",
+        "Agents IA entraînés sur les données de votre niche qui travaillent 24h/24",
+        "Analyses continues et illimitées, e-commerce, SaaS ou commerce physique (fiche Google Maps comprise.)",
         "Vos positions réelles sur ChatGPT et Gemini, remesurées en continu",
-        "Agents entraînés sur les données de votre niche",
-        "Plan d'action priorisé et prompts solution prêts à coller",
-        "Contenu, notoriété et cohérence Google Maps suivis dans le temps",
-        "Aucune compétence technique requise"
-      ]
+        "Corrections automatiques sur votre site",
+        "Aucune compétence technique requise, tout est fait en pilote automatique"
+      ],
+      "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
+      "ctaStripe": "Démarrer {days} jours gratuits",
+      "ctaStripeNote": "Sans engagement · résiliable avant la fin de l'essai"
+    },
+    "boost": {
+      "rhythm": "Payé une seule fois",
+      "eyebrow": "Intervention unique",
+      "name": "Coup de Boost",
+      "tagline": "Une passe complète unique des agents IA sur votre site qui mesurent, corrigent et publient pour vous.",
+      "onceLabel": "une fois",
+      "terms": "Paiement unique, sans abonnement · rien à résilier",
+      "features": {
+        "analysis": "Analyse complète de votre site, e-commerce, SaaS ou commerce physique (fiche Google maps comprise.)",
+        "measure": "Vos positions sur ChatGPT, Gemini et Google mesurées avant et après corrections",
+        "fix": "Les agents IA got_the_ref corrigent automatiquement ce qui vous empêche d'être cité dans les IA et sur Google.",
+        "articles": "{count} articles rédigés et publiés pour installer votre visibilité",
+        "report": "Un rapport de référencement IA et Google à la fin de la passe, avec les bonnes pratiques à conserver"
+      },
+      "limit": "Pas de remesure et travaille en continu, pas d'articles programmés dans la durée : ça, c'est l'abonnement.",
+      "cta": "Prendre le Coup de Boost",
+      "ctaNote": "Paiement unique par Stripe · aucun abonnement ouvert"
     },
     "agents": {
       "title": "Agents en service",
@@ -509,204 +675,74 @@
         "vérifie l'indexation",
         "met le rapport à jour"
       ],
-      "note": "Les agents repassent sur votre site en continu : chaque correction est remesurée, pas seulement recommandée."
-    },
-    "agency": {
-      "eyebrow": "Le repère",
-      "name": "Agence SEO / référencement IA",
-      "description": "Le budget d'un accompagnement classique, pour le même objectif : sortir dans les réponses des IA et sur Google.",
-      "notForSale": "Pour comparaison — got_the_ref ne vend pas cette prestation.",
-      "limits": [
-        "Audit initial de quatre à six semaines avant le premier livrable",
-        "Un rapport par mois, figé entre deux points",
-        "Corrections à réimplémenter par vos soins ou par un développeur",
-        "Engagement de six à douze mois, souvent avec frais de setup",
-        "Expertise généraliste, rarement entraînée sur votre niche"
-      ]
+      "note": "Les agents IA travaillent votre référencement 24h/24, vous repositionne, publie des articles quotidiennement en gardant votre image de marque... le tout automatiquement"
     },
     "compare": {
-      "title": "Ce que change la différence de modèle",
-      "criterion": "Critère",
-      "visiaColumn": "got_the_ref",
-      "agencyColumn": "Agence classique",
-      "rows": [
-        {
-          "label": "Pour démarrer",
-          "visia": "1 €",
-          "agency": "Devis, puis frais de setup"
-        },
-        {
-          "label": "Premier résultat",
-          "visia": "Immédiat",
-          "agency": "4 à 6 semaines"
-        },
-        {
-          "label": "Fréquence d'analyse",
-          "visia": "En continu",
-          "agency": "1 rapport par mois"
-        },
-        {
-          "label": "Compétence technique requise",
-          "visia": "Aucune",
-          "agency": "Aller-retours avec un développeur"
-        },
-        {
-          "label": "Engagement",
-          "visia": "Résiliable à tout moment",
-          "agency": "6 à 12 mois"
-        },
-        {
-          "label": "Tarif",
-          "visia": "79 €/mois",
-          "agency": "20 000 – 24 000 €/an"
-        }
-      ]
+      "title": "Réfléchissez à deux fois avant de payer une agence SEO",
+      "subtitle": "Même objectif : sortir dans les réponses des IA et sur Google. Deux façons de le financer.",
+      "costLabel": "Coût minimal",
+      "perYear": " par an",
+      "agency": {
+        "name": "Agence SEO",
+        "budget": "Au moins {price} par mois, hors frais de setup",
+        "points": [
+          "Engagement de six à douze mois",
+          "Quatre à six semaines avant le premier livrable",
+          "Un rapport par mois, figé entre deux points",
+          "Corrections à réimplémenter par vos soins ou par un développeur",
+          "Vous ne savez pas qui travaille réellement sur votre site"
+        ]
+      },
+      "ours": {
+        "name": "got_the_ref",
+        "trial": "{days} jours d'accès complet gratuits",
+        "points": [
+          "Résiliable à tout moment, sans frais de setup",
+          "Premier constat immédiat et corrections automatiques dans la foulée",
+          "Vos positions sur les IA et Google remesurées en continu",
+          "Corrections appliquées puis revérifiées par les agents",
+          "Un tableau de bord avec des statistiques claires sur votre progression"
+        ]
+      }
+    },
+    "todayLabel": "aujourd'hui",
+    "thenLabel": "puis",
+    "guaranteeBadge": "Remboursé si aucun résultat sous {days} jours",
+    "cycle": {
+      "label": "Rythme de facturation",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "discount": "-{pct} %",
+      "monthlyTerms": "Facturé chaque mois · résiliable à tout moment",
+      "yearlyTerms": "Facturé à l'année, affiché par mois · engagement de douze mois"
     }
   },
-  "agency": {
-    "metaTitle": "Notre agence GEO",
-    "metaDescription": "got_the_ref est la première agence de Generative Engine Optimization (GEO) en France. Nous optimisons votre visibilité sur ChatGPT, Gemini et Perplexity — référencement IA pour commerces locaux, e-commerce et SaaS.",
-    "keywords": "agence GEO, agence SEO IA, generative engine optimization, référencement IA, référencement génératif, consultant GEO, optimiser son site pour ChatGPT, visibilité IA, agence GEO française, moteurs de réponse IA",
-    "heroEyebrow": "La première agence de GEO française",
-    "heroTitleBefore": "L'agence qui propulse votre business ",
-    "heroTitleHighlight": "tout en haut des IA",
-    "heroSubtitle": "got_the_ref est la première agence française de Generative Engine Optimization. Nous rendons votre site lisible, citable et recommandé par ChatGPT, Gemini et Perplexity — là où vos clients cherchent désormais.",
-    "heroCtaPrimary": "Analyser mon site gratuitement",
-    "heroCtaSecondary": "Découvrir nos services",
-    "whatEyebrow": "Définition",
-    "whatTitle": "Le GEO, c'est quoi ?",
-    "whatBody": "Le GEO (Generative Engine Optimization) est le référencement de l'ère de l'IA : l'art d'optimiser un site pour être cité et recommandé par les moteurs de réponse IA comme ChatGPT, Gemini ou Perplexity. Là où le SEO visait la première page de Google, le GEO — ou référencement génératif, le SEO 2.0 — vise la première phrase de la réponse de l'IA.",
-    "whatCards": [
-      {
-        "term": "Generative Engine Optimization",
-        "definition": "Optimiser son site pour les moteurs génératifs (ChatGPT, Gemini, Perplexity) plutôt que pour les seuls moteurs de recherche classiques."
-      },
-      {
-        "term": "Référencement IA / génératif",
-        "definition": "L'équivalent du SEO, mais pour les intelligences artificielles : devenir la source que l'IA cite en priorité dans sa réponse."
-      },
-      {
-        "term": "Moteurs de réponse IA",
-        "definition": "Les IA ne renvoient plus 10 liens bleus : elles donnent une réponse directe. Le GEO place votre marque dans cette réponse."
-      },
-      {
-        "term": "SEO 2.0 / SEO pour l'IA",
-        "definition": "Contenu structuré pour les LLM, langage naturel et données lisibles : les nouveaux fondamentaux pour être visible à l'ère de l'IA."
-      }
+  "demo": {
+    "metaTitle": "Réserver une démo",
+    "metaDescription": "Réservez une démo gratuite de got_the_ref : on vous montre votre visibilité réelle sur ChatGPT, Gemini et Perplexity, et le plan pour monter tout en haut de leurs réponses.",
+    "keywords": "démo GEO, réserver un appel, agence GEO, audit de visibilité IA, apparaître sur ChatGPT, optimisation pour les IA, consultant generative engine optimization",
+    "heroEyebrow": "Démo",
+    "heroTitleBefore": "Réservez votre démo et découvrez comment ",
+    "heroTitleHighlight": "faire venir vos clients depuis les IA",
+    "heroSubtitle": "30 minutes en visio, sans engagement. On regarde ensemble votre visibilité actuelle sur ChatGPT, Gemini et Perplexity, et on vous dit exactement quoi corriger pour être recommandé.",
+    "heroCta": "Réserver ma démo",
+    "heroNote": "Gratuit · 30 minutes · aucun engagement",
+    "guarantee": "Si votre visibilité ne progresse pas sous 90 jours, vous êtes remboursé.",
+    "trustLabel": "Des commerces et des marques dans tous les secteurs",
+    "agendaEyebrow": "Au programme",
+    "agendaTitle": "Ce qu'on couvre pendant l'appel",
+    "agendaSubtitle": "Un tour complet de votre position dans les moteurs qui répondent à vos clients, et du chemin pour la changer.",
+    "agendaItems": [
+      "Suivi de vos mentions dans les IA",
+      "Requêtes réelles de vos clients",
+      "Audit GEO / SEO de votre site",
+      "Fiche Google et ancrage local",
+      "Données structurées et llms.txt",
+      "Contenus citables par les IA",
+      "Autorité et citations externes",
+      "Analyse de vos concurrents",
+      "Plan d'action priorisé par impact"
     ],
-    "storyEyebrow": "Notre histoire",
-    "storyTitle": "Tout a commencé avec un restaurateur",
-    "storyParagraphs": [
-      "Un restaurateur des Sables d'Olonne nous contacte. Son problème : quand les gens cherchent « restaurant fruits de mer aux Sables d'Olonne » sur ChatGPT, il n'apparaît pas. Son établissement est excellent, sa fiche Google Maps existe, son site aussi. Mais les IA ne le voient pas.",
-      "On a tout repris : optimisation de la fiche Google Maps sur les mots-clés de sa niche (horaires, adresse, spécialités, avis 5 étoiles), création d'un fichier llms.txt — l'équivalent du robots.txt, mais pour les IA — intégration de schémas JSON dans le code avec toutes les infos du restaurant, et alignement du H1 et de la meta description sur les termes exacts que les IA utilisent pour recommander.",
-      "Résultat : il apparaît aujourd'hui en première position sur ChatGPT et Gemini pour sa niche locale. Après l'avoir fait monter tout en haut, nous avons codé got_the_ref pour automatiser ce workflow entier — puis nous en avons fait une agence.",
-      "got_the_ref optimise désormais commerces locaux, e-commerce et SaaS pour les moteurs de réponse IA. La méthode est la même, éprouvée terrain : rendre votre business impossible à ignorer pour les IA."
-    ],
-    "storyResultLabel": "Résultat client",
-    "storyResultValue": "1ʳᵉ position sur ChatGPT & Gemini",
-    "storyResultMeta": "Restaurant de fruits de mer · Les Sables d'Olonne",
-    "founderEyebrow": "Le fondateur",
-    "founderName": "Titouan Hirsch — bobodigital",
-    "founderRole": "Développeur web freelance & créateur de contenu",
-    "founderBody": "Titouan conçoit des applications web (Next.js, agents IA) et accompagne leur croissance. C'est en propulsant un restaurant tout en haut de ChatGPT qu'il a mis au point la méthode GEO de l'agence, puis développé got_the_ref pour l'automatiser. Il partage tout son travail en build in public.",
-    "founderLink": "Voir le profil du fondateur",
-    "methodEyebrow": "Notre méthode",
-    "methodTitle": "Ce que nous optimisons pour les IA",
-    "methodSubtitle": "Une checklist GEO complète, du contenu à la structure technique, pour maximiser vos citations dans les réponses IA.",
-    "methodCards": [
-      {
-        "title": "Fiche Google Maps & ancrage local",
-        "body": "Cohérence NAP, mots-clés de niche, avis 5 étoiles et alignement fiche ↔ site : le nerf de la guerre pour un business local sur GPT et Gemini."
-      },
-      {
-        "title": "Fichier llms.txt",
-        "body": "L'équivalent du robots.txt, mais pour les IA. Il guide les crawlers IA vers vos contenus et les rend immédiatement exploitables."
-      },
-      {
-        "title": "Données structurées (Schema.org / JSON-LD)",
-        "body": "Des schémas JSON dans des balises script avec toutes les infos de votre business — lus instantanément par les IA quand elles recherchent."
-      },
-      {
-        "title": "Contenu citable & E-E-A-T",
-        "body": "Langage naturel, contenu structuré pour les LLM et signaux d'expertise alignés sur les critères E-E-A-T Google 2026."
-      },
-      {
-        "title": "Optimisation sémantique & RAG",
-        "body": "Ciblage par thématique plutôt que par mot-clé, fraîcheur des données (sitemap lastmod) : le graal pour être retrouvé par le RAG des IA."
-      },
-      {
-        "title": "Suivi des mentions de marque IA",
-        "body": "Audit de visibilité IA, suivi de vos citations sur ChatGPT et gestion de votre réputation sur les LLM."
-      }
-    ],
-    "statsEyebrow": "Pourquoi maintenant",
-    "statsTitle": "Le GEO n'est plus une option",
-    "statsItems": [
-      {
-        "value": "+527 %",
-        "label": "de sessions issues des IA (janv.–mai 2025)"
-      },
-      {
-        "value": "-50 %",
-        "label": "de trafic de recherche classique attendu d'ici 2028 (Gartner)"
-      },
-      {
-        "value": "900 M+",
-        "label": "d'utilisateurs hebdomadaires de ChatGPT"
-      },
-      {
-        "value": "23 %",
-        "label": "des marketeurs investissent déjà dans le GEO"
-      }
-    ],
-    "faqEyebrow": "Questions fréquentes",
-    "faqTitle": "Le GEO en clair",
-    "faqItems": [
-      {
-        "q": "C'est quoi le GEO (Generative Engine Optimization) ?",
-        "a": "Le GEO est l'optimisation d'un site pour être cité et recommandé par les IA génératives comme ChatGPT, Gemini et Perplexity, plutôt que pour le seul classement Google. On parle aussi de référencement IA ou de SEO 2.0."
-      },
-      {
-        "q": "Quelle différence entre SEO et GEO ?",
-        "a": "Le SEO vise des positions dans une liste de liens. Le GEO vise la réponse elle-même : devenir la source que l'IA cite. Cela passe par des données structurées, un fichier llms.txt et un contenu pensé pour les LLM."
-      },
-      {
-        "q": "Comment être cité par ChatGPT ?",
-        "a": "En rendant votre contenu lisible et fiable pour l'IA : schémas JSON-LD, formulation citable, signaux d'autorité (E-E-A-T), fiche Google Maps cohérente et présence sur les plateformes que les IA consultent."
-      },
-      {
-        "q": "Le GEO fonctionne-t-il pour un commerce local ?",
-        "a": "Oui, c'est même là qu'il est le plus rentable. Restaurants, boutiques, artisans : la plupart des commerces locaux ne sont pas encore optimisés pour les IA, l'opportunité est immense."
-      },
-      {
-        "q": "Combien de temps pour voir des résultats ?",
-        "a": "Cela dépend de votre point de départ et de votre niche. Certains business apparaissent dans les réponses IA en quelques semaines après l'optimisation de leur fiche, de leurs schémas et de leurs contenus."
-      }
-    ]
-  },
-  "services": {
-    "metaTitle": "Nos services",
-    "metaDescription": "Accompagnement GEO sur-mesure : audit de visibilité IA, optimisation et suivi pour apparaître en premier sur ChatGPT, Gemini et Perplexity. Réservez un appel découverte avec got_the_ref.",
-    "keywords": "audit de visibilité IA, agence GEO, optimisation GEO, consultant generative engine optimization, apparaître sur ChatGPT, référencement IA, suivi des mentions de marque ChatGPT",
-    "heroEyebrow": "Nos services",
-    "heroTitleBefore": "Faites monter votre commerce ",
-    "heroTitleHighlight": "tout en haut des IA",
-    "heroSubtitle": "Un accompagnement GEO complet, de l'audit à la première position sur ChatGPT, Gemini et Perplexity. Conçu pour les commerçants et entreprises qui veulent être recommandés par les IA.",
-    "offerBadge": "Sur estimation",
-    "offerTitle": "Accompagnement GEO sur-mesure",
-    "offerSubtitle": "Chaque business est unique : votre tarif est établi sur estimation, après un premier échange découverte.",
-    "offerIncludesTitle": "Ce qui est inclus",
-    "offerIncludes": [
-      "Audit complet de votre visibilité sur ChatGPT, Gemini & Perplexity",
-      "Optimisation de votre fiche Google Maps et de votre ancrage local",
-      "Fichier llms.txt + données structurées (schémas JSON-LD)",
-      "Réécriture des contenus clés pour être citable par les IA (E-E-A-T)",
-      "Suivi de votre positionnement et des mentions de marque sur les IA",
-      "Un rapport clair, avec des actions priorisées par impact"
-    ],
-    "offerPriceLabel": "Sur estimation",
-    "offerPriceNote": "Tarif établi après un appel découverte gratuit, selon votre niche et vos objectifs.",
-    "offerCta": "Prendre rendez-vous",
     "processEyebrow": "Comment ça se passe",
     "processTitle": "De l'appel à la première position",
     "processSteps": [
@@ -717,7 +753,7 @@
       },
       {
         "step": "02",
-        "title": "Audit & devis sur estimation",
+        "title": "Audit & plan chiffré",
         "body": "On mesure votre visibilité actuelle sur les IA et on établit un plan d'action chiffré sur estimation."
       },
       {
@@ -728,10 +764,42 @@
     ],
     "forEyebrow": "Pour qui ?",
     "forTitle": "Vous voulez être recommandé par les IA ?",
-    "forBody": "Restaurateurs, commerçants, artisans, e-commerçants, SaaS — si vos clients cherchent désormais sur ChatGPT, Gemini ou Perplexity, votre place est tout en haut de leurs réponses. C'est exactement ce que nous allons construire ensemble.",
-    "ctaTitle": "Discutons de votre projet",
-    "ctaSubtitle": "Réservez un appel découverte gratuit. On vous dit où vous en êtes sur les IA et comment monter tout en haut.",
-    "ctaButton": "Prendre rendez-vous"
+    "forBody": "Restaurateurs, commerçants, artisans, e-commerçants, SaaS : si vos clients cherchent désormais sur ChatGPT, Gemini ou Perplexity, votre place est tout en haut de leurs réponses. C'est exactement ce que nous allons construire ensemble.",
+    "ctaTitle": "Prêt à faire venir vos clients depuis les IA ?",
+    "ctaSubtitle": "Réservez votre démo gratuite. On vous dit où vous en êtes sur les IA et comment monter tout en haut.",
+    "ctaButton": "Réserver ma démo"
+  },
+  "contact": {
+    "metaTitle": "Nous contacter",
+    "metaDescription": "Une question sur got_the_ref, votre analyse ou votre accompagnement GEO ? Écrivez-nous : nous répondons sous 24 heures, sous 12 heures pour les clients.",
+    "keywords": "contact got_the_ref, support GEO, aide analyse IA, agence GEO française, assistance",
+    "heroEyebrow": "Contact",
+    "heroTitleBefore": "Une question ? ",
+    "heroTitleHighlight": "On vous répond",
+    "heroSubtitle": "Votre réussite est notre priorité.",
+    "priorityTitle": "Vous êtes client (réponse sous 12 h)",
+    "priorityBody": "Client ou accompagnement en cours : votre message passe en priorité. Précisez l'adresse du site concerné, nous répondons sous 12 heures ouvrées.",
+    "priorityCta": "Écrire au support",
+    "generalTitle": "Question générale (réponse sous 24 h)",
+    "generalBody": "Avant de nous écrire, ces pages répondent peut-être déjà à votre question :",
+    "generalCta": "Réserver une démo",
+    "formTitle": "Écrivez-nous",
+    "formSubtitle": "Décrivez votre situation en quelques lignes : plus c'est précis, plus la réponse est utile.",
+    "formName": "Votre nom",
+    "formNamePlaceholder": "Camille Martin",
+    "formEmail": "Votre e-mail",
+    "formEmailPlaceholder": "camille@monsite.fr",
+    "formSite": "Votre site (facultatif)",
+    "formSitePlaceholder": "https://monsite.fr",
+    "formSubject": "Sujet",
+    "formSubjectPlaceholder": "Visibilité de mon restaurant sur ChatGPT",
+    "formMessage": "Votre message",
+    "formMessagePlaceholder": "Parlez-nous de votre activité, de votre zone et de ce que vous cherchez à obtenir.",
+    "formSubmit": "Envoyer le message",
+    "formNote": "Le bouton ouvre votre messagerie avec le message prérempli. Vous pouvez aussi écrire directement à {email}.",
+    "ctaTitle": "Plutôt en parler de vive voix ?",
+    "ctaSubtitle": "Réservez une démo gratuite de 30 minutes : on regarde votre visibilité sur les IA ensemble.",
+    "ctaButton": "Réserver ma démo"
   },
   "account": {
     "metaTitle": "Mon compte",
@@ -748,5 +816,625 @@
     "newAnalysis": "+ Nouvelle analyse",
     "emptyState": "Vous n'avez pas encore lancé d'analyse.",
     "analyzeMySite": "Analyser mon site"
+  },
+  "homeHero": {
+    "headingBefore": "Faites venir vos clients depuis",
+    "headingAfter": "en pilote automatique",
+    "engines": ["ChatGPT", "Gemini", "Perplexity", "Google"],
+    "subtitle": "On apporte de la visibilité aux commerces français, locaux comme en ligne, en les référençant dans les IA et sur Google. Sans qu’ils aient à payer une agence ni à lever le petit doigt !",
+    "cta": "Démarrer {days} jours gratuits",
+    "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
+    "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
+    "scrollHint": "Analyser mon site",
+    "guaranteeMain": "Si votre visibilité ne progresse pas sous 90 jours, vous êtes remboursé."
+  },
+  "sectors": {
+    "eyebrow": "En croissance",
+    "title": "Des commerces et des marques dans tous les secteurs",
+    "items": [
+      "SaaS & Tech",
+      "Marketing & Médias",
+      "Restauration & Hôtellerie",
+      "Commerce & E-commerce",
+      "Santé & Bien-être",
+      "Artisans & BTP",
+      "Immobilier",
+      "Tourisme & Loisirs",
+      "Services aux entreprises"
+    ]
+  },
+  "howItWorks": {
+    "eyebrow": "Comment ça marche",
+    "title": "Comment on vous donne de la visiblité IA",
+    "subtitle": "Vous rentrez votre url et got_the_ref lit votre site depuis l'extérieur. On a repris le même fonctionnement que l'algorithme de ChatGPT, Gemini et les autres IA qui analysent votre site.",
+    "steps": [
+      {
+        "num": "01",
+        "title": "Analyse de votre activité",
+        "body": "On lit votre site comme l'algorithme des IA : votre secteur, marché, concurrents, les mots clefs recherchées...",
+        "chips": ["Requêtes détectées", "Prompts clients", "Concurrents"],
+        "mock": {
+          "url": "votre-site.fr",
+          "pill": "analyse en profondeur",
+          "chips": [
+            "NICHE DÉTECTÉE",
+            "AUDIENCE CIBLE",
+            "CONCURRENTS",
+            "MENTIONS DANS LES RÉPONSES IA",
+            "PRÉSENCE EN LIGNE",
+            "AVIS & NOTORIÉTÉ"
+          ]
+        }
+      },
+      {
+        "num": "02",
+        "title": "Position mesurée sur les moteurs",
+        "body": "On interroge les IAs sur votre marché, puis on relève le classement qu'elles vous donnent.",
+        "chips": ["ChatGPT", "Gemini", "Perplexity", "Google AI search"],
+        "mock": {
+          "label": "Position mesurée",
+          "you": "Votre entreprise",
+          "engines": [
+            {
+              "name": "ChatGPT",
+              "rank": "2",
+              "others": ["Café Joyeux", "Le petit coin"]
+            },
+            {
+              "name": "Gemini",
+              "rank": "1",
+              "others": ["Café des Arts", "La Pause Terrasse"]
+            }
+          ]
+        }
+      },
+      {
+        "num": "03",
+        "title": "Correctifs priorisés",
+        "body": "Structure, mots clés pertinents pour votre niche, pages citables : notre algorithmes compare tout ce qu'il a relevé sur votre site à nos standards de référencement, et on vous fait un diagnotic ! ",
+        "chips": ["llms.txt", "JSON-LD", "Citabilité"],
+        "mock": {
+          "applied": "appliqué",
+          "impact": "Impact {value}/10",
+          "rows": [
+            {
+              "title": "Servir un fichier llms.txt",
+              "value": "9"
+            },
+            {
+              "title": "Données structurées LocalBusiness",
+              "value": "8"
+            },
+            {
+              "title": "Réécrire la balise title",
+              "value": "6"
+            },
+            {
+              "title": "Baliser la FAQ de la page d'accueil",
+              "value": "5"
+            }
+          ]
+        }
+      },
+      {
+        "num": "04",
+        "title": "Auto-correction par nos agents IA, et remesure continue",
+        "body": "Nos IAs viennent corriger tout les points sur votre site en une simple connexion, puis remesurent la position, et vous voyez la courbe bouger. En 1 semaine, vous apparaissez dans les IAs et sur Google.",
+        "chips": ["Score GEO", "Position", "Avis"],
+        "mock": {
+          "scoreLabel": "Score GEO",
+          "before": "42",
+          "after": "71",
+          "note": "remesuré il y a 2 h",
+          "legend": "Chaque correction est vérifiée sur le terrain, pas seulement cochée."
+        }
+      }
+    ],
+    "prev": "Étape précédente",
+    "next": "Étape suivante",
+    "goTo": "Aller à l'étape {num}"
+  },
+  "features": {
+    "eyebrow": "Ce que vous obtenez",
+    "title": "Gagnez en visibilité juste en rentrant votre url",
+    "subtitle": "Sept chantiers que got_the_ref prend en charge à votre place.",
+    "voice": {
+      "title": "Des contenus qui parlent comme vous",
+      "body": "On reprend votre ton, on met votre activité en avant et on écrit des pages qui se font citer, sans l'odeur du texte généré.",
+      "demo": "Aux Sables-d'Olonne, La Cotriade sert une cuisine de la marée : la carte change chaque matin, au retour du port.",
+      "badge": "Votre ton, appris sur vos pages"
+    },
+    "strategy": {
+      "title": "Une stratégie calée sur votre marché",
+      "body": "On planifie un mois entier de contenu à partir de ce qui se classe déjà dans votre niche.",
+      "month": "Mars",
+      "legend": "Article programmé"
+    },
+    "publish": {
+      "title": "Publiez sans lever le petit doigt",
+      "body": "Les contenus partent sur WordPress, Shopify, Wix, Webflow et les autres."
+    },
+    "authority": {
+      "title": "Gagnez en autorité sans démarchage",
+      "body": "On repère les pages, guides et annuaires qui vous citent déjà, et ceux qui devraient. Ni agence, ni e-mails à froid.",
+      "mentionLabel": "Mention",
+      "mentionText": "Votre entreprise a été citée",
+      "url": "www.guide-local.fr"
+    },
+    "fix": {
+      "title": "Corrigez ce qui bloque vos classements",
+      "body": "Vitesse, balises, schémas JSON-LD manquants, llms.txt absent : chaque point technique est relevé, puis corrigé.",
+      "page": "Page",
+      "score": "Score GEO",
+      "issues": "Problèmes",
+      "fixed": "Corrigé",
+      "high": "Haute",
+      "medium": "Moyenne",
+      "low": "Faible",
+      "rows": [
+        "Longueur de la balise title",
+        "Longueur de la méta description",
+        "Textes alternatifs d'images",
+        "Schéma JSON-LD manquant"
+      ]
+    },
+    "social": {
+      "title": "Visibilité sociale",
+      "body": "L'agent repère les fils Reddit et Quora dont les IA apprennent, puis propose des commentaires qui citent votre marque naturellement.",
+      "suggested": "Commentaire suggéré pour vous",
+      "copy": "Copier & ouvrir Reddit"
+    },
+    "recommend": {
+      "title": "Sachez quand une IA vous recommande",
+      "body": "Vous voyez sur quelles questions votre activité est citée, et sur lesquelles elle ne l'est pas.",
+      "queryLabel": "Requête",
+      "searches": "{count} recherches",
+      "missing": "Votre entreprise n'était pas citée",
+      "cited": "Votre entreprise citée en 1ᵉʳ",
+      "queries": [
+        "meilleur restaurant de poisson aux Sables-d'Olonne",
+        "quelle agence web choisir à Bordeaux",
+        "salon de coiffure ouvert le lundi à Nantes"
+      ]
+    }
+  },
+  "queries": {
+    "eyebrow": "Requêtes suivies",
+    "title": "Les questions que vos clients posent aux IA",
+    "subtitle": "Pas seulement des mots-clés Google : des phrases entières, telles qu'elles sont tapées dans ChatGPT ou Gemini.",
+    "items": [
+      "où manger des fruits de mer aux Sables-d'Olonne",
+      "quelle agence web choisir à Bordeaux",
+      "meilleur salon de coiffure à Nantes",
+      "dentiste qui prend des nouveaux patients à Lyon",
+      "boutique de décoration tendance près de moi",
+      "quel plombier appeler en urgence à Toulouse",
+      "meilleur restaurant italien à Marseille",
+      "coach sportif à domicile à Lille",
+      "où acheter du café de spécialité à Paris",
+      "quelle mutuelle pour un indépendant",
+      "photographe de mariage en Vendée",
+      "meilleur logiciel de facturation français",
+      "garage fiable pour une révision à Rennes",
+      "institut de beauté ouvert le dimanche",
+      "quel traiteur pour un mariage en Bretagne",
+      "école de surf à Biarritz pour débutants",
+      "meilleure boulangerie de quartier à Strasbourg",
+      "cabinet comptable pour une petite SAS",
+      "hôtel avec spa près des Sables-d'Olonne",
+      "où faire réparer son vélo à Grenoble",
+      "meilleur fleuriste pour une livraison le jour même",
+      "avocat en droit du travail à Montpellier"
+    ],
+    "footnote": "Chaque requête est rejouée à intervalle régulier : vous voyez votre position bouger, pas seulement votre score."
+  },
+  "audit": {
+    "eyebrow": "Analyse gratuite",
+    "titleBefore": "Est-ce que",
+    "titleHighlight": "ChatGPT, Gemini, Perplexity et Claude",
+    "titleAfter": "recommandent votre site ?",
+    "subtitle": "Collez votre adresse : vous obtenez votre score et le constat en moins de deux minutes, sans carte bancaire."
+  },
+  "faq": {
+    "eyebrow": "FAQ",
+    "title": "Questions fréquentes",
+    "subtitle": "Vous ne trouvez pas votre réponse ?",
+    "contact": "Écrivez-nous",
+    "items": [
+      {
+        "q": "Je ne suis pas expert en SEO, c'est un problème ?",
+        "a": "Vous n'avez pas besoin de l'être. got_the_ref pilote votre stratégie SEO et GEO de bout en bout : analyse de votre marché, requêtes à viser, contenus, corrections techniques et suivi de votre visibilité dans les réponses IA. Vous donnez l'adresse de votre site, on s'occupe du reste."
+      },
+      {
+        "q": "En combien de temps voit-on des résultats ?",
+        "a": "Les corrections techniques se voient en quelques jours. Les premières vraies améliorations de position arrivent généralement au bout de deux à trois mois : le référencement se cumule, et les contenus continuent d'amener des visiteurs longtemps après avoir été publiés."
+      },
+      {
+        "q": "Comment fonctionne le réseau de citations ?",
+        "a": "Vous rejoignez un réseau de sites de votre secteur, qui se citent mutuellement. Plutôt que du démarchage manuel, vos mentions sont placées naturellement à l'intérieur de vrais articles, sur des sites pertinents, et votre site fait de même pour les autres. Plus le réseau grandit, plus il profite à chacun."
+      },
+      {
+        "q": "Google pénalise-t-il les contenus écrits par une IA ?",
+        "a": "Non. Google pénalise le contenu de mauvaise qualité, qu'il soit écrit par une IA ou par un humain. Sa position officielle est publiée sur son blog dédié à la recherche."
+      },
+      {
+        "q": "Quels types de contenus produisez-vous ?",
+        "a": "Des articles documentés et sourcés, écrits dans le ton de votre marque et calés sur votre clientèle : guides pratiques, articles explicatifs, sélections et comparatifs, chacun aligné sur l'intention de la requête visée, informationnelle, commerciale ou transactionnelle."
+      },
+      {
+        "q": "Est-ce que ça marche avec ma plateforme ?",
+        "a": "Oui. got_the_ref lit votre site depuis l'extérieur, comme le ferait une IA : aucun plugin, aucune installation, aucun accès à votre code."
+      },
+      {
+        "q": "Et pour un commerce physique ?",
+        "a": "C'est le cœur du produit. Avec votre fiche Google Maps, on mesure la cohérence fiche ↔ site, vos avis et votre position locale face aux concurrents de votre ville."
+      }
+    ]
+  },
+  "examples": {
+    "eyebrow": "Exemples de contenu généré",
+    "title": "Un contenu qui parle comme vous",
+    "subtitle": "On reprend votre univers de marque, on met en avant ce que vous vendez, et on écrit des pages qui se classent et se font citer, sans l'odeur du texte généré.",
+    "sites": [
+      {
+        "domain": "lacotriade.fr",
+        "colors": ["#0B3C49", "#1B7F79", "#E8F3F1", "#F7FBFA"],
+        "voice": [
+          "chaleureux, ancré local",
+          "cuisine de la marée",
+          "français simple"
+        ],
+        "offers": [
+          "Menu du jour",
+          "Plateaux de fruits de mer",
+          "Privatisation",
+          "Réservation en ligne"
+        ],
+        "article": {
+          "date": "4 mars 2026",
+          "readTime": "7 MIN DE LECTURE",
+          "category": "Restaurant · Vendée",
+          "title": "Où manger des fruits de mer aux Sables-d'Olonne : le guide 2026",
+          "intro": "Aux Sables-d'Olonne, la qualité d'un plateau de fruits de mer se joue avant la cuisine : à la criée, le matin même. C'est ce qui sépare une table de passage d'une adresse où l'on revient.",
+          "beforeList": "Trois choses à savoir avant d'aller plus loin :",
+          "bullets": [
+            {
+              "strong": "La fraîcheur se lit sur la carte.",
+              "text": "Une carte qui change chaque jour signale un approvisionnement à la marée. Une carte figée toute l'année signale l'inverse."
+            },
+            {
+              "strong": "L'origine doit être affichée.",
+              "text": "Huîtres de Vendée, homard de casier, criée des Sables : un restaurant qui nomme ses provenances les assume."
+            },
+            {
+              "strong": "La saison commande.",
+              "text": "Les coquillages ont leurs mois. Un plateau de septembre n'a rien à voir avec un plateau de mars, et c'est tant mieux."
+            }
+          ],
+          "takeawaysLead": "Un bon plateau tient à trois choses : la provenance, la saison et la rotation. Le cadre, le service et la vue viennent après.",
+          "tableRows": [
+            [
+              "Provenance",
+              "Criée des Sables-d'Olonne, huîtres de la baie de Bourgneuf, homard de casier."
+            ],
+            [
+              "Saison",
+              "Coquillages d'octobre à avril ; crustacés toute l'année, au meilleur de leur chair l'été."
+            ],
+            [
+              "Rotation",
+              "Une carte qui bouge chaque matin reste le meilleur indicateur de fraîcheur."
+            ],
+            [
+              "La Cotriade",
+              "Table du port ouverte à l'année, carte calée sur l'arrivage du jour, réservation en ligne."
+            ]
+          ],
+          "toc": [
+            "Ce qui fait un bon plateau de fruits de mer",
+            "Les provenances vendéennes, criée par criée",
+            "Quelle saison pour quel coquillage",
+            "Comment lire une carte de restaurant de poisson",
+            "Réserver au bon moment, même en haute saison"
+          ]
+        }
+      },
+      {
+        "domain": "atelier-lubin.fr",
+        "colors": ["#3E2A18", "#B07D4B", "#F0E4D4", "#FBF7F2"],
+        "voice": [
+          "artisanal, précis",
+          "vocabulaire du bois",
+          "conseil sans jargon"
+        ],
+        "offers": [
+          "Cuisine sur mesure",
+          "Escaliers",
+          "Bibliothèques",
+          "Devis en 48 h"
+        ],
+        "article": {
+          "date": "18 février 2026",
+          "readTime": "6 MIN DE LECTURE",
+          "category": "Menuiserie · Sur mesure",
+          "title": "Quel bois choisir pour une cuisine sur mesure qui dure vingt ans",
+          "intro": "Le choix de l'essence décide de tout : la tenue à l'humidité, la réparabilité, et le budget. Un chêne massif et un contrecollé ne vieillissent pas de la même façon dans une cuisine.",
+          "beforeList": "Trois repères avant de trancher :",
+          "bullets": [
+            {
+              "strong": "L'humidité est l'ennemi numéro un.",
+              "text": "Sous l'évier et derrière la plaque, seule une essence stable et une finition adaptée tiennent la distance."
+            },
+            {
+              "strong": "Le massif se répare, le panneau se remplace.",
+              "text": "Une façade en chêne se ponce et se reprend ; un stratifié abîmé se change entièrement."
+            },
+            {
+              "strong": "Le prix se juge au mètre linéaire posé.",
+              "text": "Comparer des essences hors pose et hors quincaillerie ne veut rien dire."
+            }
+          ],
+          "takeawaysLead": "Chêne pour la durée, frêne pour le budget, contrecollé pour les grandes portées : chaque essence a sa place précise dans une cuisine.",
+          "tableRows": [
+            [
+              "Chêne massif",
+              "Le plus stable et le plus réparable. Budget haut, durée de vie de plusieurs décennies."
+            ],
+            [
+              "Frêne",
+              "Bon compromis tenue / prix, veinage marqué, accepte bien les teintes claires."
+            ],
+            [
+              "Contrecollé",
+              "Stabilité maximale sur les grandes portées : plans de travail et étagères longues."
+            ],
+            [
+              "Atelier Lubin",
+              "Fabrication à Bouaye, pose comprise, devis chiffré sous 48 h."
+            ]
+          ],
+          "toc": [
+            "Les essences les plus courantes en cuisine",
+            "Tenue à l'humidité : ce qui compte vraiment",
+            "Massif, contrecollé ou panneau plaqué",
+            "Finitions : huile, vernis ou vitrificateur",
+            "Budget au mètre linéaire, pose comprise"
+          ]
+        }
+      },
+      {
+        "domain": "toiture-vendee.fr",
+        "colors": ["#1C2B3A", "#D7501E", "#E7ECF1", "#F8FAFB"],
+        "voice": [
+          "direct, rassurant",
+          "vocabulaire de chantier",
+          "prix annoncés"
+        ],
+        "offers": [
+          "Réfection de toiture",
+          "Démoussage",
+          "Zinguerie",
+          "Intervention urgence"
+        ],
+        "article": {
+          "date": "9 janvier 2026",
+          "readTime": "5 MIN DE LECTURE",
+          "category": "Couverture · Vendée",
+          "title": "Fuite de toiture : ce qu'il faut faire dans les premières heures",
+          "intro": "Une infiltration ne se répare pas dans l'urgence, mais elle se contient. Les deux premières heures décident de l'ampleur des dégâts sur la charpente et l'isolant.",
+          "beforeList": "Trois gestes dans l'ordre :",
+          "bullets": [
+            {
+              "strong": "Couper l'électricité de la zone.",
+              "text": "L'eau qui longe un rampant atteint souvent un boîtier avant d'apparaître au plafond."
+            },
+            {
+              "strong": "Récupérer et photographier.",
+              "text": "Les photos datées font la différence au moment de la déclaration à l'assurance."
+            },
+            {
+              "strong": "Bâcher plutôt que monter.",
+              "text": "Une bâche lestée depuis le sol coûte moins cher qu'une chute de toit."
+            }
+          ],
+          "takeawaysLead": "Contenir, documenter, faire diagnostiquer : une fuite traitée dans la semaine coûte en moyenne bien moins qu'une charpente reprise l'année suivante.",
+          "tableRows": [
+            [
+              "Origine fréquente",
+              "Tuile déplacée, solin fissuré, gouttière saturée : trois causes sur quatre en Vendée."
+            ],
+            [
+              "Délai",
+              "Un diagnostic sous 72 h évite la reprise de charpente dans la majorité des cas."
+            ],
+            [
+              "Assurance",
+              "Photos datées et facture de mise en sécurité conditionnent la prise en charge."
+            ],
+            [
+              "Toiture Vendée",
+              "Intervention d'urgence sous 24 h, diagnostic gratuit, devis détaillé poste par poste."
+            ]
+          ],
+          "toc": [
+            "Reconnaître une infiltration active",
+            "Les gestes des deux premières heures",
+            "Ce que couvre réellement votre assurance",
+            "Réparation ponctuelle ou réfection complète",
+            "Prévenir : démoussage et contrôle annuel"
+          ]
+        }
+      }
+    ],
+    "tailoredFor": "Comment on a calé cet article pour",
+    "blocks": [
+      {
+        "num": "1",
+        "title": "Couleurs de marque",
+        "kind": "colors",
+        "items": ["#0B3C49", "#1B7F79", "#E8F3F1", "#F7FBFA"]
+      },
+      {
+        "num": "2",
+        "title": "Voix & ton",
+        "kind": "chips",
+        "items": [
+          "chaleureux, ancré local",
+          "cuisine de la marée",
+          "français simple"
+        ]
+      },
+      {
+        "num": "3",
+        "title": "Offres liées entre elles",
+        "kind": "links",
+        "items": [
+          "Menu du jour",
+          "Plateaux de fruits de mer",
+          "Privatisation",
+          "Réservation en ligne"
+        ]
+      }
+    ],
+    "checklistTitle": "Pensé pour la citation IA",
+    "checklistBody": "L'article est structuré pour que des assistants comme ChatGPT et Perplexity puissent le trouver, le citer et vous recommander, pas seulement vous mentionner vaguement.",
+    "checks": [
+      "Réponse dès la première phrase",
+      "Source crédible",
+      "Structure optimale",
+      "Sources citées",
+      "Liens internes",
+      "Liens externes",
+      "Données chiffrées",
+      "Contrôle de plagiat passé",
+      "Textes alternatifs d'images",
+      "Mots-clés sémantiques",
+      "Balises méta optimisées",
+      "Schéma JSON-LD"
+    ],
+    "stats": [
+      {
+        "label": "Nombre de mots",
+        "value": "2 447"
+      },
+      {
+        "label": "Mots-clés",
+        "value": "6"
+      },
+      {
+        "label": "Images",
+        "value": "4"
+      },
+      {
+        "label": "Liens internes",
+        "value": "9"
+      },
+      {
+        "label": "Liens externes",
+        "value": "4"
+      }
+    ],
+    "publishedTo": "Publié sur",
+    "publishedPath": "lacotriade.fr/journal",
+    "demoNote": "Article et sites de démonstration.",
+    "takeawaysTitle": "À retenir",
+    "tableHead": ["Point", "Détail"],
+    "tocTitle": "Sommaire",
+    "imageAlt": "Illustration de l'article"
+  },
+  "network": {
+    "eyebrow": "Un réseau de citations vérifié",
+    "titleStrong": "Un réseau de citations",
+    "titleMuted": "qui se renforce à chaque nouveau site.",
+    "listTitle": "Maillage automatique",
+    "bullets": [
+      "Chaque site du réseau cite et se fait citer",
+      "Les mentions viennent de sites de votre secteur",
+      "Les liens sont placés en contexte, dans de vrais articles",
+      "Le réseau grandit à mesure que de nouveaux sites le rejoignent"
+    ],
+    "cta": "Entrer dans le réseau got_the_ref",
+    "note": "Schéma de principe : chaque point est un site du réseau, chaque trait une citation."
+  },
+  "rankAndMentions": {
+    "rank": {
+      "title": "Remontez aussi sur Google",
+      "body": "Des pages structurées qui grimpent en première page, sur les requêtes à forte intention que vos clients tapent vraiment.",
+      "verify": "Vérifier dans la Search Console",
+      "stats": [
+        {
+          "label": "Clics",
+          "value": "12,5 k"
+        },
+        {
+          "label": "Impressions",
+          "value": "788 k"
+        },
+        {
+          "label": "CTR moyen",
+          "value": "1,1 %"
+        },
+        {
+          "label": "Position moyenne",
+          "value": "9,3"
+        }
+      ],
+      "marker": "got_the_ref activé",
+      "caption": "Courbe de démonstration : le repère marque la mise en place, la croissance vient après."
+    },
+    "mentions": {
+      "title": "Faites-vous citer par les assistants IA",
+      "body": "Les assistants découvrent vos pages, puis recommandent votre activité quand un client pose la question.",
+      "verify": "Vérifier avec ChatGPT",
+      "question": "quel est le meilleur restaurant de fruits de mer aux Sables-d'Olonne ?",
+      "answerBefore": "Je recommande",
+      "answerBrand": "La Cotriade",
+      "answerAfter": ", une table du port dont la carte suit l'arrivage du jour :",
+      "answerBullets": [
+        "Plateaux composés à la criée le matin même",
+        "Huîtres et coquillages de provenance vendéenne",
+        "Menu du jour affiché en ligne, réservation directe",
+        "Ouvert à l'année, terrasse face au port."
+      ]
+    }
+  },
+  "homePricing": {
+    "eyebrow": "Tarifs",
+    "title": "En continu, ou en une seule passe",
+    "subtitle": "L'abonnement met des agents IA qui travaillent 24h/24 sur le référencement de votre entreprise. Le Coup de Boost fait la même passe une seule fois.",
+    "allDetails": "Voir le détail des tarifs"
+  },
+  "homeDemoCta": {
+    "title": "Réservez votre démo",
+    "button": "Réserver ma démo"
+  },
+  "audiences": {
+    "eyebrow": "À qui nous nous adressons",
+    "title": "Le physique et le digital",
+    "subtitle": "Notre algorithme s'adapte aussi bien aux business en ligne qu'aux commerces physiques.",
+    "online": {
+      "title": "E-commerçant, SaaS, applications mobiles et médias digitales",
+      "body": "Vos utilisateurs s'adresse maintenant à l'IA, et devez vous positionner en numéro 1 dans Google pour gagner du trafic organique sans dépenser en publicité.",
+      "caption": "Sources de la réponse",
+      "query": "« Quel outil pour suivre ma visibilité IA ? »",
+      "sources": [
+        "comparateur-secteur.fr",
+        "blog-du-marche.com",
+        "annuaire-pro.fr"
+      ],
+      "you": "votre-site.fr",
+      "badge": "Cité en source n° 1",
+      "points": ["E-commerce", "SaaS & applications", "Médias & créateurs"]
+    },
+    "local": {
+      "title": "Commerces et artisans de quartier",
+      "body": "Un client cherche « près d'ici » et l'IA répond par un nom. On aligne votre fiche, vos avis et vos pages pour que ce nom soit le vôtre, avant vos voisins de rue.",
+      "caption": "Réponse locale · votre zone",
+      "query": "« Où manger des fruits de mer aux Sables-d'Olonne ? »",
+      "you": "Votre commerce",
+      "competitors": ["Concurrent", "Concurrent", "Concurrent"],
+      "badge": "Recommandé en premier",
+      "points": ["Restaurants & hôtels", "Artisans & BTP", "Santé & bien-être"]
+    }
   }
 }

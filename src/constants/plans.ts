@@ -29,11 +29,62 @@ export const PLAN_PRICING: Record<PlanKey, { amount: number | null; recurring: b
 export const SUBSCRIPTION_PRICE = PLAN_PRICING.pro.amount as number;
 
 /**
- * Essai : accès complet quelques jours contre des frais d'activation.
- * Le montant est facturé immédiatement (prix ponctuel joint au checkout), la
- * facturation récurrente ne démarre qu'à la fin de l'essai.
+ * « Coup de Boost » : l'offre ponctuelle, posée à côté de l'abonnement. Une
+ * seule passe des agents — mesure, corrections, articles — payée une fois, puis
+ * plus rien. Aucune remesure dans la durée : c'est la frontière avec
+ * l'abonnement, et elle est annoncée sur la carte.
  */
-export const TRIAL = { days: 3, activationPrice: 1 } as const;
+export const BOOST = {
+  /** Prix public, en euros, débité une seule fois. */
+  price: 49,
+  /** Articles rédigés pendant la passe — le seul volume promis. */
+  articles: 10,
+  /**
+   * Variable d'environnement portant le tarif Stripe de l'offre. Ce tarif doit
+   * être **ponctuel** : le checkout s'ouvre en `mode: "payment"`, qui refuse un
+   * tarif récurrent.
+   */
+  env: "STRIPE_PRICE_BOOST",
+} as const;
+
+/**
+ * Essai : accès complet quelques jours, **gratuit**. Rien n'est débité à
+ * l'ouverture du checkout (`todayPrice` à 0) ; la facturation récurrente ne
+ * démarre qu'à la fin de l'essai, et seulement si l'abonnement n'est pas résilié.
+ *
+ * `todayPrice` reste une donnée plutôt qu'un littéral : c'est le montant affiché
+ * en grand sur la carte tarif, face au tarif plein barré.
+ */
+export const TRIAL = { days: 3, todayPrice: 0 } as const;
+
+/**
+ * Tarif mensuel de l'abonnement engagé à l'année. Toujours affiché **par mois**
+ * (jamais le total annuel) : c'est la seule unité que le visiteur compare d'un
+ * onglet à l'autre.
+ *
+ * Le price Stripe correspondant est facturé une seule fois par an
+ * (`YEARLY_TOTAL_PRICE`) : les deux montants doivent rester cohérents.
+ */
+export const YEARLY_MONTHLY_PRICE = 59;
+
+/** Montant réellement débité, une fois par an, pour l'engagement annuel. */
+export const YEARLY_TOTAL_PRICE = YEARLY_MONTHLY_PRICE * 12;
+
+/** Remise de l'engagement annuel, arrondie à l'entier (badge de l'onglet). */
+export const YEARLY_DISCOUNT_PCT = Math.round(
+  (1 - YEARLY_MONTHLY_PRICE / SUBSCRIPTION_PRICE) * 100,
+);
+
+/** Cycles de facturation proposés par la carte d'abonnement. */
+export type BillingCycle = "monthly" | "yearly";
+
+export const BILLING_CYCLES: readonly BillingCycle[] = ["monthly", "yearly"] as const;
+
+/** Cycle retenu quand l'appelant n'en précise aucun (anciens liens, API). */
+export const DEFAULT_BILLING_CYCLE: BillingCycle = "monthly";
+
+/** Durée de la garantie « visibilité en progrès ou remboursé », en jours. */
+export const GUARANTEE_DAYS = 90;
 
 /**
  * Budget annuel d'une agence SEO / référencement IA classique.
@@ -68,16 +119,42 @@ export const ANALYSIS_QUOTAS = {
 export type BillingMode = "payment" | "subscription";
 
 /**
- * Facturation par offre payante : mode Stripe + variable d'environnement.
- * La variable peut contenir un Price ID (`price_…`) **ou** un Product ID (`prod_…`) —
+ * Facturation par offre payante : mode Stripe + variables d'environnement.
+ * Une variable peut contenir un Price ID (`price_…`) **ou** un Product ID (`prod_…`) —
  * dans ce dernier cas, on résout le `default_price` du produit (cf. `resolvePriceId`).
+ *
+ * `envByCycle` donne un price par cycle de facturation : c'est ce qui permet aux
+ * onglets mensuel / annuel de la carte tarif de partir sur deux prices distincts.
+ * Une offre sans déclinaison annuelle retombe sur `env`.
+ *
+ * ⚠️ Ces prices doivent être **récurrents** côté Stripe : le checkout s'ouvre en
+ * `mode: "subscription"`, qui refuse un tarif ponctuel.
  */
-export const PLAN_BILLING: Record<PaidPlanKey, { mode: BillingMode; env: string }> = {
-  /** Abonnement got_the_ref : accès total, mensuel (produit/price « UNIT »). */
-  pro: { mode: "subscription", env: "STRIPE_PRICE_UNIT" },
+export const PLAN_BILLING: Record<
+  PaidPlanKey,
+  { mode: BillingMode; env: string; envByCycle?: Record<BillingCycle, string> }
+> = {
+  /** Abonnement got_the_ref : accès total, au mois ou à l'année. */
+  pro: {
+    mode: "subscription",
+    env: "STRIPE_PRICE_PRO_MONTHLY",
+    envByCycle: {
+      monthly: "STRIPE_PRICE_PRO_MONTHLY",
+      yearly: "STRIPE_PRICE_PRO_YEARLY",
+    },
+  },
   /** Ancien plan agence : conservé pour les abonnements déjà en cours. */
   agency: { mode: "subscription", env: "STRIPE_PRICE_AGENCY" },
 } as const;
+
+/** Nom de la variable d'environnement portant le price d'une offre, par cycle. */
+export function stripePriceEnvName(
+  plan: PaidPlanKey,
+  cycle: BillingCycle = DEFAULT_BILLING_CYCLE,
+): string {
+  const billing = PLAN_BILLING[plan];
+  return billing.envByCycle?.[cycle] ?? billing.env;
+}
 
 /** Rétro-compat : noms des variables d'environnement Stripe par offre payante. */
 export const STRIPE_PRICE_ENV: Record<PaidPlanKey, string> = {
@@ -86,8 +163,11 @@ export const STRIPE_PRICE_ENV: Record<PaidPlanKey, string> = {
 } as const;
 
 /** Valeur brute de l'env d'une offre (Price ID ou Product ID), côté serveur. */
-export function stripePriceEnvValue(plan: PaidPlanKey): string | undefined {
-  return process.env[PLAN_BILLING[plan].env];
+export function stripePriceEnvValue(
+  plan: PaidPlanKey,
+  cycle: BillingCycle = DEFAULT_BILLING_CYCLE,
+): string | undefined {
+  return process.env[stripePriceEnvName(plan, cycle)];
 }
 
 /** Statuts d'abonnement Stripe considérés comme actifs. */

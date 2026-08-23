@@ -5,8 +5,8 @@
 
 export const ROUTES = {
   home: "/",
-  agency: "/agence",
-  services: "/services",
+  demo: "/demo",
+  contact: "/contact",
   pricing: "/tarifs",
   signIn: "/connexion",
   signUp: "/inscription",

@@ -31,6 +31,10 @@
   --color-accent: #09090b;       /* emphase = sombre (pas d'accent chromatique UI) */
   --color-cta: #09090b;          /* action principale : pilule noire */
   --color-cta-hover: #18181b;
+  /* Surlignage d'un passage clé, à la manière d'un texte sélectionné dans un
+     aperçu IA. Teinte de la palette (obsidian dilué) : lisible sans introduire
+     une couleur étrangère au système. */
+  --color-highlight: #dfe0e4;
   --color-danger: #dc2626;
   --color-warning: #d97706;
 
@@ -231,6 +235,24 @@ h1, h2, h3, h4, h5 {
   animation: spin-slow 8s linear infinite;
 }
 
+/* Traits du réseau de citations : le pointillé défile, le maillage paraît vivant. */
+@keyframes dash-flow {
+  to { stroke-dashoffset: -32; }
+}
+.net-edge {
+  stroke-dasharray: 2 6;
+  animation: dash-flow 3.2s linear infinite;
+}
+
+/* Carrousel orbital des plateformes : l'anneau tourne, chaque logo tourne en
+   sens inverse à la même vitesse — il reste donc droit tout du long. */
+.orbit-ring {
+  animation: spin-slow 44s linear infinite;
+}
+.orbit-badge {
+  animation: spin-slow 44s linear infinite reverse;
+}
+
 /* ── Ruban de preuves ────────────────────────────────────────────────────────
    Défilement continu : la piste porte deux copies de la liste et se translate
    d'exactement la moitié de sa largeur, si bien que la seconde copie occupe la
@@ -255,6 +277,15 @@ h1, h2, h3, h4, h5 {
   margin: 0;
   list-style: none;
 }
+/* Variantes de ruban : quand plusieurs rangées se superposent, des vitesses et
+   des sens différents évitent l'effet « bloc unique qui glisse ». */
+.marquee-track--fast {
+  animation-duration: 42s;
+}
+.marquee-track--reverse {
+  animation-direction: reverse;
+}
+
 .marquee:hover .marquee-track {
   animation-play-state: paused;
 }
@@ -262,8 +293,49 @@ h1, h2, h3, h4, h5 {
   to { transform: translateX(-50%); }
 }
 
+/* ── Verrou de scroll (overlay d'analyse, modales, tiroir mobile) ─────────────
+   Piloté par `lockScroll()` (src/lib/scroll-lock.ts), qui pose la classe sur
+   <html>. `overflow: hidden` seul laisse iOS Safari faire défiler la page au
+   doigt : on coupe donc aussi le pan tactile et le rebond de fin de course. */
+html.scroll-locked,
+html.scroll-locked body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* ── Anneau de score ────────────────────────────────────────────────────────
+   Diamètre porté par deux variables posées en style inline par le composant :
+   `--ring` (défaut) et `--ring-sm` (sous le point de rupture sm). Le tracé étant
+   en viewBox, il suit la largeur — un seul rendu sert les deux tailles, sans
+   mesurer la fenêtre en JavaScript. */
+.score-ring {
+  width: var(--ring);
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+}
+@media (max-width: 639px) {
+  .score-ring {
+    width: var(--ring-sm);
+  }
+}
+
+/* ── Pas de zoom automatique à la saisie sur mobile ──────────────────────────
+   iOS Safari zoome sur tout champ dont la police descend sous 16px. Les champs
+   du site sont dessinés en 13–15px : on les remonte à 16px sous le point de
+   rupture `sm`, plutôt que de neutraliser le zoom via la balise viewport, ce qui
+   priverait aussi l'utilisateur du zoom manuel. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .thinking-dot, .shimmer, .caret::after, .animate-spin-slow, .sweep::before {
+  .thinking-dot, .shimmer, .caret::after, .animate-spin-slow, .sweep::before,
+  .orbit-ring, .orbit-badge, .net-edge {
     animation: none !important;
   }
   .card-cal { transition: none !important; }

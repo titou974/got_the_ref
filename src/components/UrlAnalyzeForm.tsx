@@ -19,7 +19,23 @@ function extractDomain(input: string): string {
   }
 }
 
-export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
+/** Où l'on retient l'e-mail déjà laissé, pour ne pas le redemander à chaque analyse. */
+const LEAD_EMAIL_KEY = "geo:lead-email";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+export function UrlAnalyzeForm({
+  size = "lg",
+  askEmail = false,
+}: {
+  size?: "lg" | "md";
+  /**
+   * Version gratuite (visiteur non connecté) : une petite modale réclame
+   * l'e-mail avant de lancer l'analyse. Un visiteur connecté a déjà son adresse
+   * en base — on ne la lui redemande pas.
+   */
+  askEmail?: boolean;
+}) {
   const router = useRouter();
   const t = useTranslations("analyzeForm");
   const [url, setUrl] = useState("");
@@ -27,14 +43,29 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
   const [mapsUrl, setMapsUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [confirmNoMaps, setConfirmNoMaps] = useState(false);
+  const [askingEmail, setAskingEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mapsInputRef = useRef<HTMLInputElement>(null);
+  // E-mail du visiteur non connecté : mémorisé le temps de la session de
+  // navigation, transmis à l'API pour être attaché à l'analyse créée.
+  const leadEmailRef = useRef<string | null>(null);
 
   // Coordination : on ne redirige que lorsque l'API a répondu ET que
   // l'animation a parcouru toutes ses étapes (faux temps).
   const resultIdRef = useRef<string | null>(null);
   const animDoneRef = useRef(false);
   const navigatedRef = useRef(false);
+
+  // E-mail déjà laissé lors d'une visite précédente : on ne le redemande pas.
+  useEffect(() => {
+    if (!askEmail) return;
+    try {
+      const saved = window.localStorage.getItem(LEAD_EMAIL_KEY);
+      if (saved && EMAIL_RE.test(saved)) leadEmailRef.current = saved;
+    } catch {
+      /* stockage indisponible (navigation privée) : on demandera l'e-mail */
+    }
+  }, [askEmail]);
 
   function maybeNavigate() {
     if (navigatedRef.current) return;
@@ -61,6 +92,7 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
           url: trimmed,
           mode,
           mapsUrl: mode === "physical" ? mapsUrl.trim() || null : null,
+          email: leadEmailRef.current,
         }),
       });
 
@@ -88,6 +120,16 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
     }
   }
 
+  /** Étape suivante une fois l'e-mail réglé : confirmation Maps, puis analyse. */
+  function continueAfterEmail() {
+    // Commerce physique sans fiche Maps : on propose d'en ajouter une avant de lancer.
+    if (mode === "physical" && !mapsUrl.trim()) {
+      setConfirmNoMaps(true);
+      return;
+    }
+    runAnalysis();
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmed = url.trim();
@@ -95,12 +137,24 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
       setError(t("errorEmpty"));
       return;
     }
-    // Commerce physique sans fiche Maps : on propose d'en ajouter une avant de lancer.
-    if (mode === "physical" && !mapsUrl.trim()) {
-      setConfirmNoMaps(true);
+    // Analyse gratuite d'un visiteur non connecté : l'e-mail d'abord.
+    if (askEmail && !leadEmailRef.current) {
+      setAskingEmail(true);
       return;
     }
-    runAnalysis();
+    continueAfterEmail();
+  }
+
+  /** E-mail validé dans la modale : on le retient, puis on enchaîne. */
+  function handleEmailSubmit(email: string) {
+    leadEmailRef.current = email;
+    try {
+      window.localStorage.setItem(LEAD_EMAIL_KEY, email);
+    } catch {
+      /* stockage indisponible : l'e-mail reste valable pour cette analyse */
+    }
+    setAskingEmail(false);
+    continueAfterEmail();
   }
 
   const big = size === "lg";
@@ -237,8 +291,31 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
         )}
       </form>
 
+      {/* Modale : e-mail du visiteur avant l'analyse gratuite. */}
+      <Portal>
+        <AnimatePresence>
+          {askingEmail && (
+            <EmailGateDialog
+              labels={{
+                title: t("emailTitle"),
+                body: t("emailBody"),
+                label: t("emailLabel"),
+                placeholder: t("emailPlaceholder"),
+                submit: t("emailSubmit"),
+                invalid: t("emailInvalid"),
+                note: t("emailNote"),
+                close: t("emailClose"),
+              }}
+              onSubmit={handleEmailSubmit}
+              onClose={() => setAskingEmail(false)}
+            />
+          )}
+        </AnimatePresence>
+      </Portal>
+
       {/* Modale : confirme le lancement sans fiche Google Maps. */}
-      <AnimatePresence>
+      <Portal>
+        <AnimatePresence>
         {confirmNoMaps && (
           <ConfirmNoMapsDialog
             labels={{
@@ -259,20 +336,158 @@ export function UrlAnalyzeForm({ size = "lg" }: { size?: "lg" | "md" }) {
             onClose={() => setConfirmNoMaps(false)}
           />
         )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </Portal>
 
-      <AnimatePresence>
-        {analyzing && (
-          <AnalyzingOverlay
-            domain={extractDomain(url)}
-            onComplete={() => {
-              animDoneRef.current = true;
-              maybeNavigate();
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {/* L'overlay d'analyse est plein écran : il doit sortir de la carte, dont
+          le survol (`.card-cal:hover`) crée un bloc conteneur et le rognerait. */}
+      <Portal>
+        <AnimatePresence>
+          {analyzing && (
+            <AnalyzingOverlay
+              domain={extractDomain(url)}
+              onComplete={() => {
+                animDoneRef.current = true;
+                maybeNavigate();
+              }}
+            />
+          )}
+        </AnimatePresence>
+      </Portal>
     </>
+  );
+}
+
+/* ------------------------- Modale « votre e-mail » ------------------------- */
+
+function EmailGateDialog({
+  labels,
+  onSubmit,
+  onClose,
+}: {
+  labels: {
+    title: string;
+    body: string;
+    label: string;
+    placeholder: string;
+    submit: string;
+    invalid: string;
+    note: string;
+    close: string;
+  };
+  onSubmit: (email: string) => void;
+  onClose: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [invalid, setInvalid] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const release = lockScroll();
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      release();
+    };
+  }, [onClose]);
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    const value = email.trim();
+    if (!EMAIL_RE.test(value)) {
+      setInvalid(true);
+      return;
+    }
+    onSubmit(value);
+  }
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[110] flex items-center justify-center px-5"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div
+        className="absolute inset-0 bg-obsidian/40 backdrop-blur-[2px]"
+        onClick={onClose}
+        aria-hidden
+      />
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="email-gate-title"
+        className="relative w-full max-w-sm rounded-[28px] border border-fog bg-snow p-6 shadow-[var(--shadow-md)] sm:p-7"
+        initial={{ opacity: 0, y: 16, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.96 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={labels.close}
+          className="absolute right-4 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-muted transition-colors duration-200 hover:bg-mist hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-mist text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" strokeWidth="1.6" />
+            <path d="m4 8 7.1 4.7a2 2 0 0 0 2.2 0L20 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </span>
+
+        <h2 id="email-gate-title" className="mt-4 text-lg font-bold text-text sm:text-xl">
+          {labels.title}
+        </h2>
+        <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">{labels.body}</p>
+
+        <form onSubmit={submit} className="mt-5">
+          <label htmlFor="lead-email" className="sr-only">
+            {labels.label}
+          </label>
+          <div className="flex items-center gap-2 rounded-full border border-fog bg-white p-1.5 transition-[border-color] duration-200 focus-within:border-pebble">
+            <input
+              id="lead-email"
+              autoFocus
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (invalid) setInvalid(false);
+              }}
+              placeholder={labels.placeholder}
+              aria-invalid={invalid}
+              className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-text placeholder:text-muted/70 focus:outline-none"
+            />
+          </div>
+
+          {invalid && (
+            <p className="mt-2 pl-2 text-xs text-danger" role="alert">
+              {labels.invalid}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="mt-4 w-full cursor-pointer rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+          >
+            {labels.submit}
+          </button>
+        </form>
+
+        <p className="mt-3 text-center text-[0.7rem] leading-relaxed text-muted/80">{labels.note}</p>
+      </motion.div>
+    </motion.div>
   );
 }
 

@@ -29,10 +29,10 @@ export default function ConfidentialitePage() {
 
       <h2>3. Finalités et bases légales</h2>
       <ul>
-        <li>Fourniture du Service et gestion du compte — <em>exécution du contrat</em>.</li>
-        <li>Facturation et gestion des abonnements — <em>exécution du contrat / obligation légale</em>.</li>
-        <li>Amélioration et sécurité du Service — <em>intérêt légitime</em>.</li>
-        <li>Envoi d'informations commerciales — <em>consentement</em>, révocable à tout moment.</li>
+        <li>Fourniture du Service et gestion du compte : <em>exécution du contrat</em>.</li>
+        <li>Facturation et gestion des abonnements : <em>exécution du contrat / obligation légale</em>.</li>
+        <li>Amélioration et sécurité du Service : <em>intérêt légitime</em>.</li>
+        <li>Envoi d'informations commerciales : <em>consentement</em>, révocable à tout moment.</li>
       </ul>
 
       <h2>4. Destinataires</h2>
@@ -40,9 +40,9 @@ export default function ConfidentialitePage() {
         Vos données sont accessibles à notre personnel habilité et à nos sous-traitants techniques :
       </p>
       <ul>
-        <li><strong>Stripe</strong> — traitement des paiements ;</li>
-        <li><strong>Anthropic</strong> — fourniture du modèle d'IA utilisé pour générer les analyses ;</li>
-        <li>notre hébergeur — stockage des données.</li>
+        <li><strong>Stripe</strong> : traitement des paiements ;</li>
+        <li><strong>Anthropic</strong> : fourniture du modèle d'IA utilisé pour générer les analyses ;</li>
+        <li>notre hébergeur : stockage des données.</li>
       </ul>
       <p>
         Certains prestataires peuvent traiter des données hors de l'Union européenne ; dans ce cas,

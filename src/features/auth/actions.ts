@@ -84,8 +84,10 @@ export const createAccountAfterCheckoutAction = actionClient
     }
 
     const email = session.customer_details?.email;
+    // L'analyse est facultative : l'essai peut aussi être souscrit depuis la
+    // carte tarif, sans rapport à rattacher.
     const analysisId = session.metadata?.analysisId;
-    if (!email || !analysisId) {
+    if (!email) {
       returnValidationErrors(postCheckoutSignUpSchema, {
         _errors: ["Impossible de retrouver votre paiement. Contactez-nous."],
       });
@@ -93,11 +95,12 @@ export const createAccountAfterCheckoutAction = actionClient
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      // Le compte existe déjà : on rattache l'analyse et on invite à se connecter.
+      // Le compte existe déjà : on rattache l'analyse, s'il y en a une, et on
+      // invite à se connecter.
       await unlockAnalysisFromSession(session);
       returnValidationErrors(postCheckoutSignUpSchema, {
         _errors: [
-          "Un compte existe déjà avec cet e-mail. Connectez-vous pour retrouver votre analyse.",
+          "Un compte existe déjà avec cet e-mail. Connectez-vous pour retrouver votre abonnement.",
         ],
       });
     }
@@ -117,12 +120,14 @@ export const createAccountAfterCheckoutAction = actionClient
       });
     }
 
-    // Rattache l'analyse payée au compte fraîchement créé.
+    // Rattache l'analyse payée au compte fraîchement créé, s'il y en a une.
     await unlockAnalysisFromSession(session);
     // Jeton à usage unique : il ne doit pas resservir.
     await clearClaim();
 
-    redirect(ROUTES.analysis(analysisId));
+    // Souscription depuis un rapport : on y retourne. Depuis la carte tarif :
+    // rien à ouvrir, l'espace client prend le relais.
+    redirect(analysisId ? ROUTES.analysis(analysisId) : ROUTES.account);
   });
 
 export const signOutAction = actionClient.action(async () => {
