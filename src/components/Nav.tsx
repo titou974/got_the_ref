@@ -21,6 +21,15 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
         { href: ROUTES.pricing, label: t("pricing") },
       ];
 
+  // Identifié, on ramène au compte ; sinon on propose l'essai plutôt que la
+  // connexion. Un visiteur qui découvre le site n'a pas de compte à retrouver :
+  // lui tendre « Connexion » lui demandait de se souvenir d'un mot de passe
+  // qu'il n'a jamais créé. La connexion reste à un geste — depuis le tiroir
+  // mobile, et depuis la page d'inscription qui l'annonce en tête.
+  //
+  // Bouton secondaire, pas primaire : la barre suit le visiteur sur toute la
+  // page, une pilule noire pleine y entrerait en concurrence avec le CTA du
+  // haut de page et avec la barre basse.
   const accountLink = user ? (
     <Link
       href={ROUTES.account}
@@ -30,10 +39,10 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
     </Link>
   ) : (
     <Link
-      href={ROUTES.signIn}
-      className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text"
+      href={ROUTES.signUp}
+      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-graphite bg-snow px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
     >
-      {t("signIn")}
+      {t("freeTrial")}
     </Link>
   );
 

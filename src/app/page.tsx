@@ -2,8 +2,8 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ProofSection } from "@/components/ProofSection";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
-import { ScrollTopCta } from "@/components/ScrollTopCta";
-import { HomeHero } from "@/components/home/HomeHero";
+import { HomeHero, HERO_ID } from "@/components/home/HomeHero";
+import { TrialBottomBar } from "@/components/home/TrialBottomBar";
 import { SectorsMarquee } from "@/components/home/SectorsMarquee";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { FeatureCards } from "@/components/home/FeatureCards";
@@ -13,10 +13,10 @@ import { FreeAuditSection } from "@/components/home/FreeAuditSection";
 import { ExamplesSection } from "@/components/home/ExamplesSection";
 import { CitationNetwork } from "@/components/home/CitationNetwork";
 import { RankAndMentions } from "@/components/home/RankAndMentions";
-import { HomePricing } from "@/components/home/HomePricing";
 import { PricingComparison } from "@/components/pricing/PricingComparison";
 import { DemoCtaSection } from "@/components/home/DemoCtaSection";
 import { Faq } from "@/components/home/Faq";
+import { TRIAL } from "@/constants/plans";
 import { getTranslations } from "next-intl/server";
 
 /**
@@ -71,8 +71,8 @@ export default async function Home() {
       <CitationNetwork />
       <RankAndMentions />
 
-      {/* Le tarif d'abord, ce qu'il évite ensuite, la démo pour finir. */}
-      <HomePricing />
+      {/* Ce que l'abonnement évite, sans annoncer de montant : le prix se
+          découvre sur /tarifs, une fois le visiteur identifié. */}
       <div className="mx-auto w-full max-w-5xl px-5 pb-4">
         <PricingComparison />
       </div>
@@ -80,8 +80,10 @@ export default async function Home() {
 
       <Faq />
       <Footer />
-      {/* 
-      <ScrollTopCta label={t("scrollHint")} /> */}
+
+      {/* Le CTA d'essai revient par le bas dès que le hero est dépassé, pour que
+          l'entrée reste à portée sur toute la longueur de la page. */}
+      <TrialBottomBar label={t("trialBarCta", { days: TRIAL.days })} heroId={HERO_ID} />
     </main>
   );
 }
