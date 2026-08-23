@@ -238,6 +238,11 @@ function StrategyDemo() {
 
 /* ---------------------------- 3 · Publication ----------------------------- */
 
+/** Arrondi au centième — cf. la note sur l'hydratation de l'anneau de logos. */
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 function PublishDemo() {
   const reduce = useReducedMotion();
   const radius = 86;
@@ -289,10 +294,15 @@ function PublishDemo() {
             <div
               key={p.name}
               className="absolute left-1/2 top-1/2 h-9 w-9"
+              // Coordonnées arrondies au centième : `Math.cos` rend des valeurs
+              // comme `-43.000000000000036`, que le navigateur renormalise en
+              // `-43px` à la lecture. React comparait alors sa chaîne au style
+              // relu du DOM et signalait un écart d'hydratation à chaque visite
+              // de la home. Deux décimales suffisent au placement.
               style={{
-                transform: `translate(-50%, -50%) translate(${Math.cos(angle) * radius}px, ${
-                  Math.sin(angle) * radius
-                }px)`,
+                transform: `translate(-50%, -50%) translate(${round2(
+                  Math.cos(angle) * radius,
+                )}px, ${round2(Math.sin(angle) * radius)}px)`,
               }}
             >
               <div

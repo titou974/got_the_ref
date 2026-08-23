@@ -21,10 +21,50 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
         { href: ROUTES.pricing, label: t("pricing") },
       ];
 
+  const accountLink = user ? (
+    <Link
+      href={ROUTES.account}
+      className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text"
+    >
+      {t("account")}
+    </Link>
+  ) : (
+    <Link
+      href={ROUTES.signIn}
+      className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text"
+    >
+      {t("signIn")}
+    </Link>
+  );
+
   return (
-    <header className="relative z-20 w-full">
-      <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4">
-        <Logo />
+    // Barre collante sur tout le site : le logo et le compte restent à portée
+    // quelle que soit la profondeur de la page. `sticky` plutôt que `fixed` —
+    // l'en-tête garde sa place dans le flux, donc aucune page n'a à réserver
+    // l'espace sous la barre.
+    //
+    // `z-50` la met au-dessus du contenu et de la pilule flottante (`z-30`),
+    // mais sous les calques modaux (`z-[90]` et plus) : le tiroir mobile et
+    // l'overlay d'analyse continuent de la recouvrir.
+    <header className="sticky top-0 z-50 w-full border-b border-fog/60 bg-bg/85 backdrop-blur-md">
+      <nav className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 py-4">
+        {/* Le déclencheur du tiroir se place à gauche du logo — c'est le premier
+            geste attendu sur mobile, il vient donc avant la marque. */}
+        <div className="flex items-center gap-3">
+          {!minimal && (
+            <MobileMenu
+              links={links}
+              isAuthenticated={!!user}
+              labels={{
+                menu: t("menu"),
+                closeMenu: t("closeMenu"),
+                account: t("account"),
+                signIn: t("signIn"),
+              }}
+            />
+          )}
+          <Logo />
+        </div>
 
         {/* Barre desktop */}
         <div className="hidden items-center gap-5 sm:flex">
@@ -39,51 +79,18 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
           ))}
           {user ? (
             <>
-              <Link
-                href={ROUTES.account}
-                className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text"
-              >
-                {t("account")}
-              </Link>
+              {accountLink}
               <SignOutButton />
             </>
           ) : (
-            <Link
-              href={ROUTES.signIn}
-              className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text"
-            >
-              {t("signIn")}
-            </Link>
+            accountLink
           )}
           {!minimal && <NavCta label={t("analyzeMyBusiness")} />}
         </div>
 
-        {/* Mobile : réduit, le lien compte suffit ; complet, la sidebar habituelle. */}
-        {minimal ? (
-          <div className="flex items-center gap-4 sm:hidden">
-            {user ? (
-              <Link href={ROUTES.account} className="cursor-pointer text-sm text-muted hover:text-text">
-                {t("account")}
-              </Link>
-            ) : (
-              <Link href={ROUTES.signIn} className="cursor-pointer text-sm text-muted hover:text-text">
-                {t("signIn")}
-              </Link>
-            )}
-          </div>
-        ) : (
-          <MobileMenu
-            links={links}
-            isAuthenticated={!!user}
-            labels={{
-              menu: t("menu"),
-              closeMenu: t("closeMenu"),
-              account: t("account"),
-              signIn: t("signIn"),
-              analyzeMyBusiness: t("analyzeMyBusiness"),
-            }}
-          />
-        )}
+        {/* Mobile : le tiroir porte déjà la navigation là où il existe, mais le
+            compte reste accessible en un geste partout. */}
+        <div className="flex items-center gap-4 sm:hidden">{accountLink}</div>
       </nav>
     </header>
   );
