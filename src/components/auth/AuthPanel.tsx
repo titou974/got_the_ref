@@ -46,7 +46,7 @@ export function AuthPanel({
         {isSignup ? t("haveAccount") : t("noAccount")}{" "}
         <Link
           href={switchHref}
-          className="cursor-pointer font-semibold text-ember transition-colors duration-200 hover:text-text"
+          className="cursor-pointer font-semibold text-text underline underline-offset-4 transition-opacity duration-200 hover:opacity-70"
         >
           {isSignup ? t("goSignin") : t("goSignup")}
         </Link>

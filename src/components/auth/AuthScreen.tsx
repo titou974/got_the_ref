@@ -27,14 +27,16 @@ export function AuthScreen({
       <Nav minimal />
 
       {/* Le bandeau animé, à la place de la carte du monde piquetée. Il suit la
-          largeur du panneau : étalé sur toute la page, il écraserait le titre. */}
-      <AuthHeroAnimation className="mx-auto max-w-lg px-5" />
+          largeur du panneau : étalé sur toute la page, il écraserait le titre.
+          Les repères remontent par-dessus son dernier quart — celui-ci ne porte
+          que le sol de la scène, et l'écran d'inscription tient ainsi en une
+          hauteur de plus sans rien amputer du dessin. */}
+      <div className="mx-auto w-full max-w-lg">
+        <AuthHeroAnimation className="px-5" />
+        <AuthStats className="-mt-[7%] w-full px-5" />
+      </div>
 
-      {/* Les trois repères se calent sur la même largeur que le bandeau : ils en
-          prolongent le bloc plutôt que d'ouvrir une section à part. */}
-      <AuthStats className="mx-auto w-full max-w-lg px-5 pb-2" />
-
-      <section className="mx-auto w-full max-w-md flex-1 px-5 pb-16 pt-8 sm:pt-10">
+      <section className="mx-auto w-full max-w-md flex-1 px-5 pb-10 pt-6">
         <AuthPanel
           mode={mode}
           callbackURL={callbackURL}

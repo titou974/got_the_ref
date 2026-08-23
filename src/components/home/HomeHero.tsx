@@ -7,6 +7,12 @@ import { AiSearchSimulation } from "@/components/AiSearchSimulation";
 import { ROUTES } from "@/constants/routes";
 import { TRIAL } from "@/constants/plans";
 
+/**
+ * Ancre du haut de page, partagée avec `TrialBottomBar` : la barre d'essai
+ * n'apparaît qu'une fois ce bloc dépassé.
+ */
+export const HERO_ID = "hero";
+
 /** Les moteurs dont on parle en haut de page — logos servis depuis /public. */
 const ENGINES = [
   { src: "/chatgpt.png", altKey: "logoOpenaiAlt" },
@@ -46,7 +52,12 @@ export async function HomeHero() {
   const th = await getTranslations("home");
 
   return (
-    <section className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 px-5 pb-8 pt-6 lg:grid-cols-2 lg:gap-14 lg:pt-10">
+    // `id` lu par `TrialBottomBar` : c'est le passage sous ce bloc qui déclenche
+    // l'apparition de la barre d'essai.
+    <section
+      id={HERO_ID}
+      className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 px-5 pb-8 pt-6 lg:grid-cols-2 lg:gap-14 lg:pt-10"
+    >
       <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
         <div className="flex items-center gap-3">
           {ENGINES.map((engine) => (
@@ -80,11 +91,13 @@ export async function HomeHero() {
           {t("subtitle")}
         </p>
 
-        {/* CTA unique. Le tunnel d'essai vit sur /tarifs, où le débit est
-            expliqué. Aucune inscription ne s'intercale : le prix se voit sans
-            ouvrir de compte — le verrou vit sur `worktree-auth-gate`. */}
+        {/* CTA unique. L'inscription précède de nouveau les tarifs : avec Google
+            branché, ouvrir un compte tient en un geste — le coût pour le
+            visiteur est devenu négligeable, et l'on sait qui l'on accueille
+            avant d'annoncer un montant. Le compte créé reste au plan `free` :
+            aucune analyse complète tant que la carte n'est pas enregistrée. */}
         <Link
-          href={ROUTES.pricing}
+          href={ROUTES.signUp}
           className="mt-8 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-7 py-4 text-base font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
           {t("cta", { days: TRIAL.days })}
