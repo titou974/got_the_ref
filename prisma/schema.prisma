@@ -25,6 +25,147 @@ model User {
   subscription Subscription?
   sessions     Session[]
   accounts     Account[]
+  onboarding   OnboardingProfile?
+  gscConnection GscConnection?
+}
+
+/// Le questionnaire d'accueil, rempli juste après le paiement ou l'ouverture de
+/// l'essai. Une ligne par compte : c'est la fiche d'identité du client, celle
+/// que les agents relisent avant chaque passe (marché, villes, ton, niche).
+///
+/// Chaque étape écrit son propre bloc de champs et avance `step`. On garde donc
+/// une reprise exacte : quitter au milieu et revenir plus tard rouvre l'étape
+/// laissée en plan, sans jamais reperdre ce qui était déjà répondu.
+model OnboardingProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// « physical » (boutique, artisan, agence) · « online » · « both ».
+  businessKind String?
+
+  /// Étape 2 — le site, et la fiche Google Maps si le commerce a une adresse.
+  siteUrl String?
+  domain  String?
+  mapsUrl String?
+
+  /// Déduits du crawl par l'analyse IA, puis confirmés à l'étape 3.
+  detectedLanguage String?
+  detectedCountry  String?
+  detectedCities   String[] @default([])
+  siteSummary      String?
+
+  /// Étape 3 — marché visé et villes réellement couvertes par le commerce.
+  targetMarket String?
+  cities       String[] @default([])
+
+  /// Étape 4 — ce que le client raconte lui-même de son activité.
+  description String?
+  audience    String?
+  niche       String?
+
+  /// Étape 6 — la charte et le ton, facultatifs.
+  brandColor    String?
+  toneSampleUrl String?
+  toneSummary   String?
+
+  /// Étape courante (slug) et date d'achèvement. `completedAt` non nul = le
+  /// tunnel est derrière nous, on n'y ramène plus personne.
+  step        String    @default("activite")
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  competitors Competitor[]
+}
+
+/// Un concurrent direct proposé à l'étape 5. La liste vient d'un seul appel au
+/// modèle ; `selected` retient ceux que le client garde — les autres restent en
+/// base, ils documentent ce qui lui a été proposé et pourquoi il a écarté.
+model Competitor {
+  id        String            @id @default(cuid())
+  profileId String
+  profile   OnboardingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  name        String
+  url         String?
+  domain      String?
+  reason      String?
+  /// Rang proposé par le modèle (1 = concurrent le plus direct).
+  rank        Int     @default(0)
+  selected    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, name])
+  @@index([profileId])
+}
+
+/// Un site crawlé, avec toutes ses pages conservées telles quelles.
+///
+/// La table est indexée par domaine et non par compte : deux clients qui
+/// analysent le même domaine partagent le crawl plutôt que d'en relancer un.
+/// `lastCrawledAt` sert de fraîcheur — au-delà du délai, on recrawle.
+model CrawledSite {
+  id     String @id @default(cuid())
+  domain String @unique
+  url    String
+
+  /// Ce que l'analyse du crawl a conclu, sérialisé en JSON (langue, pays,
+  /// villes, résumé, offre). Gardé brut pour ne pas figer un schéma qui bouge.
+  analysis String?
+
+  pageCount     Int      @default(0)
+  lastCrawledAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pages CrawledPage[]
+}
+
+/// Une page crawlée et son contenu. Le Markdown est ce que lisent les modèles ;
+/// le HTML brut n'est gardé que si `CRAWL_KEEP_HTML` est activé, sinon la table
+/// gonflerait pour un contenu qu'on ne relit jamais.
+model CrawledPage {
+  id     String      @id @default(cuid())
+  siteId String
+  site   CrawledSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  url        String
+  title      String?
+  statusCode Int?
+  /// Profondeur depuis la page d'accueil (0 = accueil).
+  depth      Int     @default(0)
+  markdown   String  @default("")
+  html       String?
+  wordCount  Int     @default(0)
+
+  crawledAt DateTime @default(now())
+
+  @@unique([siteId, url])
+  @@index([siteId])
+}
+
+/// Le rattachement Google Search Console d'un compte. Les jetons sont ceux de
+/// l'API Google : `refreshToken` est le seul durable, l'access token est
+/// renouvelé à la demande.
+model GscConnection {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  scope        String?
+  /// Propriété retenue (ex. « sc-domain:exemple.fr »).
+  siteUrl      String?
+  /// Toutes les propriétés visibles au moment de la connexion, en JSON.
+  properties   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Analysis {

@@ -37,6 +37,47 @@ npm run dev                 # http://localhost:3000
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Clé publique Stripe |
 | `STRIPE_PRICE_PRO` / `STRIPE_PRICE_AGENCY` | IDs de prix (abonnements mensuels) |
 | `NEXT_PUBLIC_APP_URL` | URL publique de l'app |
+| `AI_PROVIDER` | `deepseek` (défaut) ou `moonshot` : qui mène sur le tunnel d'accueil |
+| `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` | DeepSeek V4 Flash (`deepseek-v4-flash` par défaut) |
+| `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | Kimi (`kimi-k2.6` par défaut), fournisseur de secours |
+| `CRAWL4AI_URL` / `CRAWL4AI_TOKEN` | Service de crawl (`http://localhost:11235` par défaut) |
+| `CRAWL_KEEP_HTML` | `true` pour conserver aussi le HTML brut de chaque page |
+| `CRAWL_MAX_AGE_HOURS` | Fraîcheur d'un crawl avant de le relancer (168 h par défaut) |
+
+## Tunnel d'accueil et crawl
+
+Après un paiement ou l'ouverture d'un essai, le client passe par sept questions
+(`/accueil`) avant d'atteindre son tableau de bord : type de commerce, site et
+fiche Google Maps, marché et villes, activité, concurrents, tonalité, Search
+Console. Les trois dernières se passent d'un clic.
+
+Le crawler est un service à part. Sans lui, l'application retombe sur un parcours
+interne réduit (une page, ses liens de même origine) : le tunnel reste
+traversable, la matière est simplement plus maigre.
+
+```bash
+docker compose -f docker-compose.crawl4ai.yml up -d
+curl http://localhost:11235/health
+```
+
+Chaque page crawlée est conservée en base (`CrawledSite` / `CrawledPage`),
+indexée par domaine : deux clients sur le même domaine partagent le crawl, et un
+recrawl remplace le jeu de pages plutôt que de le compléter.
+
+Deux modèles lisent ensuite ce contenu, tous deux en API compatible OpenAI :
+DeepSeek V4 Flash mène (le moins cher au token), Kimi prend le relais si le
+premier échoue. Sans aucune clé, les étapes qui dépendent d'un modèle
+(détection de la langue et des villes, liste des concurrents, lecture de la
+tonalité) restent vides sans interrompre le parcours.
+
+### Étape Search Console
+
+Le rattachement Search Console réutilise les identifiants OAuth de la connexion
+Google, avec son propre consentement (`webmasters.readonly`, lecture seule).
+Ajoutez la seconde URI de redirection dans Google Cloud :
+
+- `http://localhost:3000/api/gsc/callback` (développement)
+- `https://votre-domaine.fr/api/gsc/callback` (production)
 
 ## Connexion Google (facultative)
 

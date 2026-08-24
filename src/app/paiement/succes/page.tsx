@@ -14,6 +14,7 @@ import {
 } from "@/features/billing/unlock";
 import { ensurePaidAnalysis } from "@/features/analysis/service";
 import { CLAIM_METADATA_KEY, claimMatches } from "@/features/billing/claim";
+import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { ROUTES } from "@/constants/routes";
 
 type Props = { searchParams: Promise<{ session_id?: string }> };
@@ -99,10 +100,14 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
     );
   }
 
-  // Déjà connecté : rien à créer, on l'emmène droit sur son rapport complet —
-  // ou sur son espace client, si l'essai a été pris sans analyse.
+  // Déjà connecté : rien à créer. Reste à savoir où l'emmener — le
+  // questionnaire d'accueil tant qu'il n'a pas été rempli, puisque c'est lui qui
+  // arme les agents ; son rapport ou son espace client une fois répondu.
   const user = await getCurrentUser();
-  if (user) redirect(unlocked ? ROUTES.analysis(unlocked.analysisId) : ROUTES.account);
+  if (user) {
+    if (!(await isOnboardingComplete(user.id))) redirect(ROUTES.onboarding);
+    redirect(unlocked ? ROUTES.analysis(unlocked.analysisId) : ROUTES.account);
+  }
 
   // Un compte existe déjà pour cet e-mail : on propose la connexion.
   const existing = payerEmail
