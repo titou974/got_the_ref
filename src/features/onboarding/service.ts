@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { askJson } from "@/lib/ai/client";
 import { buildCorpus, getOrCrawlSite, saveSiteAnalysis } from "@/lib/crawl/store";
-import { crawlSite } from "@/lib/crawl/crawl4ai";
+import { crawlSite } from "@/lib/crawl/firecrawl";
 import { hasPhysicalPresence } from "./steps";
 
 /**

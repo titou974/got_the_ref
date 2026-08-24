@@ -40,7 +40,8 @@ npm run dev                 # http://localhost:3000
 | `AI_PROVIDER` | `deepseek` (défaut) ou `moonshot` : qui mène sur le tunnel d'accueil |
 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` | DeepSeek V4 Flash (`deepseek-v4-flash` par défaut) |
 | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | Kimi (`kimi-k2.6` par défaut), fournisseur de secours |
-| `CRAWL4AI_URL` / `CRAWL4AI_TOKEN` | Service de crawl (`http://localhost:11235` par défaut) |
+| `FIRECRAWL_API_KEY` | Clé Firecrawl (sans elle, repli sur le parcours interne) |
+| `FIRECRAWL_URL` | Instance Firecrawl auto-hébergée (`https://api.firecrawl.dev` par défaut) |
 | `CRAWL_KEEP_HTML` | `true` pour conserver aussi le HTML brut de chaque page |
 | `CRAWL_MAX_AGE_HOURS` | Fraîcheur d'un crawl avant de le relancer (168 h par défaut) |
 
@@ -51,14 +52,14 @@ Après un paiement ou l'ouverture d'un essai, le client passe par sept questions
 fiche Google Maps, marché et villes, activité, concurrents, tonalité, Search
 Console. Les trois dernières se passent d'un clic.
 
-Le crawler est un service à part. Sans lui, l'application retombe sur un parcours
-interne réduit (une page, ses liens de même origine) : le tunnel reste
-traversable, la matière est simplement plus maigre.
+Le crawl passe par Firecrawl, un service hébergé appelé en HTTP : rien à faire
+tourner à côté de l'application, qui reste déployable telle quelle sur une
+plateforme sans conteneurs. Une page crawlée coûte un crédit, et l'étape « site »
+en consomme jusqu'à 25 par client.
 
-```bash
-docker compose -f docker-compose.crawl4ai.yml up -d
-curl http://localhost:11235/health
-```
+Renseignez `FIRECRAWL_API_KEY` et c'est tout. Sans clé, l'application retombe sur
+un parcours interne (fetch + cheerio, liens de même origine) : le tunnel reste
+traversable, mais les sites qui s'affichent en JavaScript ressortent vides.
 
 Chaque page crawlée est conservée en base (`CrawledSite` / `CrawledPage`),
 indexée par domaine : deux clients sur le même domaine partagent le crawl, et un

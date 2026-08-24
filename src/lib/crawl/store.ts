@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { crawlSite, type CrawledPageData } from "./crawl4ai";
+import { crawlSite, type CrawledPageData } from "./firecrawl";
 
 /**
  * La mémoire des crawls. Chaque page et son contenu sont conservés : c'est la

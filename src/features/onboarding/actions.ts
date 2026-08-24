@@ -109,8 +109,13 @@ export const saveSiteAction = authActionClient
       });
     } catch (error) {
       if (error instanceof BlockedUrlError) {
+        // Le garde distingue déjà l'adresse introuvable de l'adresse interdite.
+        // Écraser son message par une phrase unique enverrait quelqu'un qui a
+        // simplement fait une faute de frappe chercher un problème de pare-feu.
         throw new AppError(
-          "Ce site n'est pas accessible depuis l'extérieur.",
+          error.message === "URL non autorisée"
+            ? "Ce site n'est pas accessible depuis l'extérieur."
+            : error.message,
           "BLOCKED_URL",
           400,
         );
