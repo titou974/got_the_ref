@@ -633,7 +633,6 @@
     "eyebrow": "Tarifs",
     "headingBefore": "Des agents qui travaillent votre visibilité ",
     "headingHighlight": "en continu",
-    "subtitle": "L'abonnement met des agents IA spécialisés en référencement sur votre site : ils mesurent votre position sur ChatGPT, Gemini et Google, corrigent ce qui vous empêche d'être cité, publient du contenu \"SEO et IA friendly\" tout en gardant votre image de marque, puis remesurent, le tout en automatique. Le Coup de Boost, lui, fait cette passe une seule fois.",
     "quotaNote": "Vous avez atteint la limite d'analyses gratuites. Réessayez plus tard ou parlons-en directement.",
     "perMonth": "/mois",
     "perYear": " par an",
@@ -734,6 +733,27 @@
       "discount": "-{pct} %",
       "monthlyTerms": "Facturé chaque mois · résiliable à tout moment",
       "yearlyTerms": "Facturé à l'année, affiché par mois · engagement de douze mois"
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "items": [
+        {
+          "q": "Quelle est la différence entre l'abonnement et le Coup de Boost ?",
+          "a": "L'abonnement met des agents IA spécialisés en référencement sur votre site : ils mesurent votre position sur ChatGPT, Gemini et Google, corrigent ce qui vous empêche d'être cité, publient du contenu \"SEO et IA friendly\" tout en gardant votre image de marque, puis remesurent, le tout en automatique. Le Coup de Boost, lui, fait cette passe une seule fois."
+        },
+        {
+          "q": "Combien coûte l'abonnement got_the_ref ?",
+          "a": "79 €/mois au tarif mensuel, ou 59 €/mois en engagement annuel, facturé une fois par an. TVA en sus le cas échéant."
+        },
+        {
+          "q": "Combien coûte le Coup de Boost ?",
+          "a": "49 € en un seul paiement, sans abonnement : une analyse complète, les corrections des agents, 10 articles rédigés et publiés, puis un rapport final."
+        },
+        {
+          "q": "Comment fonctionne l'essai gratuit de 3 jours ?",
+          "a": "3 jours d'accès complet et gratuit à l'abonnement, puis le tarif choisi prend le relais. Résiliable avant la fin de l'essai sans être débité."
+        }
+      ]
     }
   },
   "demo": {
@@ -842,6 +862,7 @@
     "engines": ["ChatGPT", "Gemini", "Perplexity", "Google"],
     "subtitle": "On apporte de la visibilité aux commerces français, locaux comme en ligne, en les référençant dans les IA et sur Google. Sans qu’ils aient à payer une agence ni à lever le petit doigt !",
     "cta": "Démarrer {days} jours gratuits",
+    "trialBarCta": "Démarrer l'essai de {days} jours",
     "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
     "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
     "scrollHint": "Analyser mon site",
