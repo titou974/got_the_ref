@@ -10,8 +10,12 @@ import { MarketForm } from "@/components/onboarding/steps/MarketForm";
 import { DescriptionForm } from "@/components/onboarding/steps/DescriptionForm";
 import { CompetitorsForm } from "@/components/onboarding/steps/CompetitorsForm";
 import { ToneForm } from "@/components/onboarding/steps/ToneForm";
-import { SearchConsoleStep } from "@/components/onboarding/steps/SearchConsoleStep";
+import {
+  GoogleConnectStep,
+  type GoogleConnectionState,
+} from "@/components/onboarding/steps/GoogleConnectStep";
 import { ensureOnboardingProfile, resolveStep } from "@/features/onboarding/queries";
+import { grantedScopes } from "@/features/onboarding/google";
 import { hasPhysicalPresence, type OnboardingStep } from "@/features/onboarding/steps";
 
 export const metadata: Metadata = {
@@ -65,7 +69,7 @@ const COPY: Record<OnboardingStep, { title: string; subtitle: string }> = {
       "Votre couleur, et un texte que vous avez écrit. Les contenus que nous produirons vous ressembleront.",
   },
   "search-console": {
-    title: "Connectez Google Search Console",
+    title: "Connectez vos outils Google",
     subtitle:
       "C'est ce qui nous permet de vous montrer, chiffres à l'appui, ce que notre travail vous rapporte.",
   },
@@ -148,24 +152,40 @@ export default async function OnboardingStepPage({ params, searchParams }: Props
       )}
 
       {step === "search-console" && (
-        <SearchConsoleStep
-          {...(await gscState(user.id))}
-          status={readStatus((await searchParams).gsc)}
+        <GoogleConnectStep
+          {...(await googleState(user.id))}
+          status={readStatus((await searchParams).google)}
         />
       )}
     </OnboardingShell>
   );
 }
 
-async function gscState(userId: string) {
-  const connection = await prisma.gscConnection.findUnique({
+/**
+ * L'état des deux rattachements Google.
+ *
+ * Un service compte pour rattaché quand le scope a été accordé *et* qu'une
+ * propriété a été retenue : un consentement sans propriété visible ne nous
+ * donne aucun chiffre, et l'annoncer comme un succès mentirait au client.
+ */
+async function googleState(userId: string): Promise<GoogleConnectionState> {
+  const connection = await prisma.googleConnection.findUnique({
     where: { userId },
-    select: { siteUrl: true, refreshToken: true, accessToken: true },
+    select: {
+      scope: true,
+      siteUrl: true,
+      ga4PropertyId: true,
+      ga4PropertyName: true,
+    },
   });
 
+  const granted = grantedScopes(connection?.scope);
+
   return {
-    connected: Boolean(connection?.refreshToken || connection?.accessToken),
-    siteUrl: connection?.siteUrl ?? null,
+    gscConnected: granted.gsc && Boolean(connection?.siteUrl),
+    gscSiteUrl: connection?.siteUrl ?? null,
+    ga4Connected: granted.ga4 && Boolean(connection?.ga4PropertyId),
+    ga4PropertyName: connection?.ga4PropertyName ?? null,
   };
 }
 

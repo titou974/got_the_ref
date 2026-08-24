@@ -26,7 +26,7 @@ model User {
   sessions     Session[]
   accounts     Account[]
   onboarding   OnboardingProfile?
-  gscConnection GscConnection?
+  googleConnection GoogleConnection?
 }
 
 /// Le questionnaire d'accueil, rempli juste après le paiement ou l'ouverture de
@@ -147,10 +147,18 @@ model CrawledPage {
   @@index([siteId])
 }
 
-/// Le rattachement Google Search Console d'un compte. Les jetons sont ceux de
-/// l'API Google : `refreshToken` est le seul durable, l'access token est
-/// renouvelé à la demande.
-model GscConnection {
+/// Le rattachement Google d'un compte : Search Console et Analytics 4 partagent
+/// un seul jeu de jetons, parce qu'ils sont accordés dans un seul consentement.
+///
+/// `refreshToken` est le seul durable, l'access token est renouvelé à la demande.
+/// `scope` dit lesquels des deux services ont réellement été accordés : Google
+/// laisse décocher l'un sans l'autre sur l'écran de consentement.
+///
+/// La table s'appelle toujours « GscConnection » (@@map) : le schéma est déployé
+/// par `prisma db push`, qui traite un renommage de modèle comme un DROP suivi
+/// d'un CREATE. Garder le nom physique évite de perdre les rattachements déjà
+/// en base pour un simple gain de vocabulaire.
+model GoogleConnection {
   id     String @id @default(cuid())
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -159,13 +167,25 @@ model GscConnection {
   refreshToken String?
   expiresAt    DateTime?
   scope        String?
-  /// Propriété retenue (ex. « sc-domain:exemple.fr »).
-  siteUrl      String?
-  /// Toutes les propriétés visibles au moment de la connexion, en JSON.
-  properties   String?
+
+  /// Côté Search Console — propriété retenue (ex. « sc-domain:exemple.fr ») et
+  /// toutes celles visibles au moment de la connexion, en JSON.
+  siteUrl    String?
+  properties String?
+
+  /// Côté Analytics 4. `ga4PropertyId` est le nom de ressource complet
+  /// (« properties/123456789 »), seul identifiant accepté par la Data API.
+  /// `ga4MeasurementId` (« G-XXXXXXX ») sert à vérifier plus tard que le tag est
+  /// bien posé sur le site que le client nous a déclaré.
+  ga4PropertyId    String?
+  ga4PropertyName  String?
+  ga4MeasurementId String?
+  ga4Properties    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("GscConnection")
 }
 
 model Analysis {
