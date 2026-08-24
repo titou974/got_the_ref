@@ -13,11 +13,10 @@ import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
-import { RefreshRankingsButton } from "@/components/tableau-de-bord/RefreshRankingsButton";
+import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
 import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
 import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
 import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
-import { EngineCard } from "@/components/geo/EngineRankings";
 import { ProfileHeader } from "@/components/geo/SiteProfile";
 import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
 import { Recommendations } from "@/components/geo/Recommendations";
@@ -140,24 +139,7 @@ export default async function DashboardHomePage() {
       <AiTrafficCard report={traffic} />
 
       {/* 3. La place du commerce dans ChatGPT, Gemini et Claude. */}
-      <section>
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold">{ta("results.engineScoresTitle")}</h2>
-            <p className="mt-0.5 max-w-2xl text-sm text-muted">
-              {analysis.liveQuery
-                ? ta("results.testedOn", { query: analysis.liveQuery })
-                : ta("results.engineScoresSubtitle")}
-            </p>
-          </div>
-          <RefreshRankingsButton />
-        </div>
-        <div className="space-y-4">
-          {analysis.engines.map((engine, i) => (
-            <EngineCard key={engine.engine} engine={engine} delay={i * 0.05} />
-          ))}
-        </div>
-      </section>
+      <RankingsSection engines={analysis.engines} liveQuery={analysis.liveQuery ?? null} />
 
       {/* ---- Ce qui explique les chiffres du haut ---- */}
 

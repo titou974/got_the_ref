@@ -24,6 +24,7 @@ import {
 import { Card, CardTitle } from "./Card";
 import { AutoTextarea } from "./AutoTextarea";
 import { BrandToneBar } from "./BrandToneBar";
+import { SearchLoader } from "@/components/SearchLoader";
 
 /**
  * L'atelier d'un article : le ton en tête, le plan à gauche, le texte à droite.
@@ -455,6 +456,10 @@ export function ArticleEditor({
           ) : null}
 
           {error ? <p className="mb-3 text-sm text-danger">{error}</p> : null}
+
+          {write.isPending ? (
+            <SearchLoader kind="writing" compact title={t("writing")} />
+          ) : null}
 
           {/* Barre d'outils : elle agit sur le bloc en cours d'édition. */}
           <div className="sticky top-2 z-10 mb-4 flex flex-wrap items-center gap-1 rounded-2xl border border-border bg-surface/95 p-1.5 backdrop-blur">

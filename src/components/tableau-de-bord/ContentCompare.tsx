@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { rewriteOnPageAction } from "@/features/dashboard/actions";
 import type { OnPageRewrite } from "@/features/dashboard/service";
 import { Card, CardTitle } from "./Card";
+import { SearchLoader } from "@/components/SearchLoader";
 
 /**
  * L'existant et la proposition, côte à côte.
@@ -79,7 +80,9 @@ export function ContentCompare({
           <p className="mb-3 text-sm text-danger">{result.serverError}</p>
         ) : null}
 
-        {proposal ? (
+        {isPending ? (
+          <SearchLoader kind="writing" compact title={t("working")} />
+        ) : proposal ? (
           <>
             <SerpRow
               domain={current.domain}

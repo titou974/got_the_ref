@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { CheckCards } from "@/components/onboarding/RadioCards";
 import { StepFooter } from "@/components/onboarding/StepFooter";
-import {
-  refreshCompetitorsAction,
-  saveCompetitorsAction,
-  skipStepAction,
-} from "@/features/onboarding/actions";
+import { SearchLoader } from "@/components/SearchLoader";
+import { refreshCompetitorsAction, skipStepAction, saveCompetitorsAction } from "@/features/onboarding/actions";
 
 type Competitor = {
   id: string;
@@ -22,37 +20,74 @@ type Competitor = {
 /**
  * Étape 5 — les concurrents proposés.
  *
+ * La recherche part d'ici, à l'arrivée sur l'étape, et non depuis le bouton de
+ * l'étape précédente. Le client voit donc l'écran qu'il attend, avec l'attente
+ * annoncée dessus, au lieu de patienter devant un bouton figé sans savoir ce
+ * qui se passe. Elle n'est lancée qu'une fois, et seulement si rien n'est
+ * enregistré : revenir en arrière ne redéclenche pas un appel payant.
+ *
  * Tout est coché en arrivant : le client retire ce qui ne le concerne pas, il
  * n'a pas à reconstituer une liste qu'on vient de lui soumettre. Décocher est
  * un geste, cocher cinq cases en est cinq.
- *
- * La relance existe parce qu'un modèle se trompe de secteur de temps en temps,
- * et qu'un client devant cinq noms inconnus abandonnerait l'étape faute de
- * pouvoir corriger.
  */
 export function CompetitorsForm({ competitors }: { competitors: Competitor[] }) {
+  const router = useRouter();
+  const [list, setList] = useState<Competitor[]>(competitors);
   const [selected, setSelected] = useState<string[]>(
     competitors.filter((competitor) => competitor.selected).map((competitor) => competitor.id),
   );
-  const save = useAction(saveCompetitorsAction);
-  const refresh = useAction(refreshCompetitorsAction);
-  const skip = useAction(skipStepAction);
 
-  if (competitors.length === 0) {
+  const save = useAction(saveCompetitorsAction);
+  const skip = useAction(skipStepAction);
+  const refresh = useAction(refreshCompetitorsAction, {
+    onSuccess: ({ data }) => {
+      const found = data?.competitors ?? [];
+      setList(found);
+      setSelected(found.filter((competitor) => competitor.selected).map((c) => c.id));
+      // Remet le rendu serveur d'accord avec ce qui est à l'écran : sans cela,
+      // un retour sur l'étape réafficherait la liste précédente.
+      router.refresh();
+    },
+  });
+
+  // Première visite sans liste enregistrée : on cherche tout de suite. Le
+  // garde-fou évite qu'un double rendu ne lance deux appels.
+  const started = useRef(competitors.length > 0);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    refresh.execute({});
+  }, [refresh]);
+
+  const searching = refresh.isPending;
+  const failed = Boolean(refresh.result.serverError) && !searching;
+
+  if (searching) {
+    return (
+      <div className="space-y-5">
+        <SearchLoader kind="competitors" title="Nous cherchons vos concurrents" />
+        <p className="text-center text-sm text-muted">
+          Gardez cet onglet ouvert, la liste s&apos;affiche ici dès qu&apos;elle est prête.
+        </p>
+      </div>
+    );
+  }
+
+  if (list.length === 0) {
     return (
       <div className="space-y-5">
         <p className="rounded-[24px] border border-fog bg-snow px-5 py-6 text-sm leading-relaxed text-muted">
-          Nous n&apos;avons pas réussi à établir cette liste. Ce n&apos;est pas bloquant : vos
-          concurrents seront repérés au fil des analyses.
+          {failed
+            ? refresh.result.serverError
+            : "Nous n'avons pas réussi à établir cette liste. Ce n'est pas bloquant : vos concurrents seront repérés au fil des analyses."}
         </p>
 
         <button
           type="button"
           onClick={() => refresh.execute({})}
-          disabled={refresh.isPending}
-          className="w-full cursor-pointer rounded-pill border border-obsidian/20 bg-snow px-6 py-3.5 text-sm font-medium transition-colors duration-200 hover:border-obsidian disabled:cursor-not-allowed disabled:text-ash"
+          className="w-full cursor-pointer rounded-pill border border-obsidian/20 bg-snow px-6 py-3.5 text-sm font-medium transition-colors duration-200 hover:border-obsidian"
         >
-          {refresh.isPending ? "Recherche en cours…" : "Réessayer"}
+          Réessayer
         </button>
 
         {/* Pas de formulaire ici : rien à soumettre, seulement une étape à
@@ -69,7 +104,7 @@ export function CompetitorsForm({ competitors }: { competitors: Competitor[] }) 
     );
   }
 
-  const options = competitors.map((competitor) => ({
+  const options = list.map((competitor) => ({
     value: competitor.id,
     label: competitor.name,
     description: [competitor.domain, competitor.reason].filter(Boolean).join(" · ") || undefined,
@@ -96,10 +131,9 @@ export function CompetitorsForm({ competitors }: { competitors: Competitor[] }) 
       <button
         type="button"
         onClick={() => refresh.execute({})}
-        disabled={refresh.isPending}
-        className="mt-4 w-full cursor-pointer rounded-pill border border-obsidian/20 bg-snow px-6 py-3.5 text-sm font-medium transition-colors duration-200 hover:border-obsidian disabled:cursor-not-allowed disabled:text-ash"
+        className="mt-4 w-full cursor-pointer rounded-pill border border-obsidian/20 bg-snow px-6 py-3.5 text-sm font-medium transition-colors duration-200 hover:border-obsidian"
       >
-        {refresh.isPending ? "Recherche en cours…" : "Proposer une autre liste"}
+        Proposer une autre liste
       </button>
 
       {(save.result.serverError || refresh.result.serverError) && (

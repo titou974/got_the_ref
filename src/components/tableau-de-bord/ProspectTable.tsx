@@ -10,6 +10,7 @@ import {
   setProspectStatusAction,
 } from "@/features/dashboard/actions";
 import { Card, CardTitle } from "./Card";
+import { SearchLoader } from "@/components/SearchLoader";
 
 /**
  * Les sites de la niche à démarcher, et l'état de chaque prise de contact.
@@ -72,7 +73,9 @@ export function ProspectTable({ prospects }: { prospects: ProspectRow[] }) {
         <p className="mb-3 text-sm text-danger">{find.result.serverError}</p>
       ) : null}
 
-      {prospects.length === 0 ? (
+      {find.isPending ? (
+        <SearchLoader kind="prospects" compact title={t("searching")} />
+      ) : prospects.length === 0 ? (
         <p className="rounded-2xl bg-mist px-4 py-8 text-center text-sm text-muted">{t("empty")}</p>
       ) : (
         <ul className="divide-y divide-border">

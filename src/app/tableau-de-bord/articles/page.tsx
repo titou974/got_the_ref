@@ -32,8 +32,11 @@ export default async function ArticlesPage() {
       <PageHeader
         title={t("pageTitle")}
         subtitle={context.domain ? t("pageSubtitle", { domain: context.domain }) : null}
-        actions={<PlanArticlesButton />}
       />
+
+      {/* La demande de planning est posée sur la page, pas dans l'en-tête : le
+          temps que le modèle réponde, elle laisse place à l'attente annoncée. */}
+      <PlanArticlesButton />
 
       <ArticleMonth
         articles={articles.map((article) => ({

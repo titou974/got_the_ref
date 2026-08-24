@@ -1736,7 +1736,8 @@
       "pageTitle": "Articles",
       "pageSubtitle": "Projet : {domain}",
       "plan": "Ajouter {count} sujets",
-      "planning": "Recherche de sujets…"
+      "planning": "Recherche de sujets…",
+      "planHint": "Les agents choisissent les sujets à partir des requêtes de votre niche."
     },
     "voice": {
       "title": "Voix de la marque",
