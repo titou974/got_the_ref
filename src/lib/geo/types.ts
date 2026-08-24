@@ -119,7 +119,7 @@ export type Backlinks = {
   measured: boolean; // true si issu d'une recherche web réelle
 };
 
-export type AiEngine = "ChatGPT" | "Gemini";
+export type AiEngine = "ChatGPT" | "Gemini" | "Claude";
 
 /**
  * Classement d'un commerce pour UN moteur sur UNE requête.

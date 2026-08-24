@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
 import { SITE } from "@/constants/site";
 import {
+  consumeGoogleReturn,
   consumeGoogleState,
   exchangeGoogleCode,
   grantedScopes,
@@ -12,12 +13,14 @@ import {
   saveGoogleConnection,
 } from "@/features/onboarding/google";
 
-/** Retour de Google : on ramène toujours sur l'étape 7, avec le verdict en clair. */
-const back = (status: string) =>
-  NextResponse.redirect(`${SITE.url}${ROUTES.onboardingStep("search-console")}?google=${status}`);
-
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
+
+  // Là d'où le rattachement est parti : l'étape 7 du tunnel, ou le tableau de
+  // bord. Le verdict repart avec, en clair, dans la query string.
+  const returnTo = (await consumeGoogleReturn()) ?? ROUTES.onboardingStep("search-console");
+  const back = (status: string) =>
+    NextResponse.redirect(`${SITE.url}${returnTo}?google=${status}`);
 
   // Le `state` est consommé quoi qu'il arrive — un refus de Google ne doit pas
   // laisser traîner un cookie encore valable pour un second essai.

@@ -156,62 +156,40 @@ export const saveMarketAction = authActionClient
     });
   });
 
-// ── Étape 4 : l'activité, puis les concurrents ───────────────────────────────
+// ── Étape 4 : l'activité ─────────────────────────────────────────────────────
 
 /**
- * L'étape 4 fait d'une pierre deux coups : elle enregistre la description et,
- * dans la foulée, demande au modèle les cinq concurrents directs.
+ * L'étape 4 n'enregistre que la description, et rend la main aussitôt.
  *
- * Les chercher ici plutôt qu'au chargement de l'étape 5 évite un écran d'attente
- * de plus : le client vient d'écrire trois champs, l'appel se glisse dans le
- * temps qu'il met à relire ce qu'il a tapé.
+ * La recherche de concurrents tenait auparavant dans ce même appel : le client
+ * cliquait « Continuer » et attendait, bouton figé, qu'un modèle réponde. Deux
+ * défauts. L'attente n'était annoncée nulle part, et le moindre échec — la
+ * seconde de trop, un JSON de travers — était avalé ici même : l'étape 5
+ * s'ouvrait vide sans que rien ne l'explique. La recherche part maintenant
+ * depuis l'étape 5 elle-même, à l'arrivée, écran d'attente à l'appui.
  */
 export const saveDescriptionAction = authActionClient
   .inputSchema(descriptionSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const profile = await ensureOnboardingProfile(ctx.auth.user.id);
+    await ensureOnboardingProfile(ctx.auth.user.id);
 
     await prisma.onboardingProfile.update({
       where: { userId: ctx.auth.user.id },
       data: parsedInput,
     });
 
-    try {
-      const competitors = await suggestCompetitors({
-        siteUrl: profile.siteUrl,
-        description: parsedInput.description,
-        audience: parsedInput.audience,
-        niche: parsedInput.niche,
-        targetMarket: profile.targetMarket,
-        cities: profile.cities,
-        businessKind: profile.businessKind,
-      });
-
-      await prisma.$transaction([
-        prisma.competitor.deleteMany({ where: { profileId: profile.id } }),
-        prisma.competitor.createMany({
-          data: competitors.map((competitor) => ({
-            profileId: profile.id,
-            name: competitor.name,
-            url: competitor.url,
-            domain: competitor.domain,
-            reason: competitor.reason,
-            rank: competitor.rank,
-            // Tous cochés par défaut : le client retire, il n'a pas à
-            // reconstituer une liste qu'on vient de lui proposer.
-            selected: true,
-          })),
-          skipDuplicates: true,
-        }),
-      ]);
-    } catch (error) {
-      console.error("[onboarding] concurrents introuvables", error);
-    }
-
     await advance(ctx.auth.user.id, "description", {});
   });
 
-/** Relance la recherche de concurrents depuis l'étape 5, si la liste déçoit. */
+/**
+ * Cherche les concurrents et rend la liste obtenue.
+ *
+ * Appelée à l'ouverture de l'étape 5 quand rien n'est encore enregistré, et
+ * rappelée par le bouton « Proposer une autre liste ». Elle renvoie les
+ * concurrents plutôt qu'un simple compte : le formulaire les affiche alors sans
+ * attendre un second aller-retour, `revalidatePath` ne servant qu'à remettre
+ * d'accord le rendu serveur pour les visites suivantes.
+ */
 export const refreshCompetitorsAction = authActionClient
   .inputSchema(z.object({}))
   .action(async ({ ctx }) => {
@@ -237,14 +215,24 @@ export const refreshCompetitorsAction = authActionClient
           domain: competitor.domain,
           reason: competitor.reason,
           rank: competitor.rank,
+          // Tous cochés par défaut : le client retire, il n'a pas à
+          // reconstituer une liste qu'on vient de lui proposer.
           selected: true,
         })),
         skipDuplicates: true,
       }),
     ]);
 
+    // Les identifiants viennent d'être créés : on les relit pour que le
+    // formulaire coche et enregistre les bonnes lignes.
+    const saved = await prisma.competitor.findMany({
+      where: { profileId: profile.id },
+      orderBy: { rank: "asc" },
+      select: { id: true, name: true, url: true, domain: true, reason: true, selected: true },
+    });
+
     revalidatePath(ROUTES.onboardingStep("concurrents"));
-    return { count: competitors.length };
+    return { competitors: saved };
   });
 
 // ── Étape 5 : sélection des concurrents ──────────────────────────────────────

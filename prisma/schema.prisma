@@ -27,6 +27,11 @@ model User {
   accounts     Account[]
   onboarding   OnboardingProfile?
   googleConnection GoogleConnection?
+  siteConnection   SiteConnection?
+  brandVoice       BrandVoice?
+  articles         Article[]
+  prospects        OutreachProspect[]
+  googlePosts      GooglePost[]
 }
 
 /// Le questionnaire d'accueil, rempli juste après le paiement ou l'ouverture de
@@ -303,4 +308,162 @@ model Verification {
 
   @@map("verification")
   @@index([identifier])
+}
+
+// ── Tableau de bord ───────────────────────────────────────────────────────────
+
+/// Le rattachement au site du client : c'est par là que les agents écrivent.
+///
+/// Une ligne par compte. La plateforme est reconnue au crawl (`lib/geo/stack`)
+/// puis confirmée ici avec les identifiants qui vont avec, car chaque stack a sa
+/// porte d'entrée : jeton d'application côté Shopify, mot de passe d'application
+/// côté WordPress, clé d'API côté Wix ou Webflow. Le reste du produit ne regarde
+/// que `status` et `capabilities` : savoir publier un article et savoir corriger
+/// une balise ne vont pas ensemble sur toutes les plateformes.
+model SiteConnection {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Clé du registre `constants/site-platforms` : « shopify », « wordpress »…
+  platform String
+  siteUrl  String?
+
+  /// « pending » tant que rien n'a été vérifié, « connected » après un appel
+  /// d'essai réussi, « error » quand la plateforme a refusé les identifiants.
+  status    String  @default("pending")
+  lastError String?
+
+  /// Identifiants de la plateforme, chiffrés au repos (`lib/crypto`). Jamais
+  /// renvoyés au navigateur : seul le serveur les relit pour appeler l'API.
+  credentials String?
+
+  /// Ce que le lien permet réellement, décidé à la connexion : « publish »
+  /// (déposer un article), « edit » (réécrire une balise ou un bloc).
+  capabilities String[] @default([])
+
+  connectedAt DateTime?
+  lastSyncAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+/// La voix de la marque, telle que le client la corrige au fil des articles.
+///
+/// Séparée du ton relevé pendant l'accueil (`OnboardingProfile.toneSummary`,
+/// déduit d'une page qu'il nous a montrée) : celui-ci décrit ce que le site dit
+/// déjà, celle-là ce que le client veut lire. Les deux nourrissent le prompt de
+/// rédaction, et c'est la consigne explicite qui l'emporte.
+model BrandVoice {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Consigne de ton en clair, écrite par le client (« tutoiement, phrases
+  /// courtes, aucun superlatif »).
+  instructions String @default("")
+  /// Termes à bannir : noms de concurrents, mots interdits par la marque.
+  banned       String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Un article du planning éditorial, de l'idée jusqu'à la publication.
+///
+/// Le calendrier n'est pas une table à part : `scheduledFor` suffit, et une
+/// ligne sans corps est simplement un sujet retenu qu'aucun agent n'a encore
+/// rédigé. `externalUrl` est rempli après dépôt sur le site du client.
+model Article {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title   String
+  slug    String?
+  /// Mot-clé visé, repris de la page Contenu.
+  keyword String?
+  /// Plan proposé (liste de titres), sérialisé en JSON.
+  outline String?
+  /// Corps rédigé, en Markdown. Vide tant que l'article n'est qu'un sujet.
+  body    String  @default("")
+  excerpt String?
+
+  /// « planned » (sujet retenu) · « drafted » (rédigé) · « approved » (validé
+  /// par le client) · « published » (déposé sur le site) · « rejected ».
+  status       String    @default("planned")
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+  externalUrl  String?
+  externalId   String?
+
+  /// Nombre de régénérations demandées : de quoi repérer un sujet qui ne prend pas.
+  revisions Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, scheduledFor])
+  @@index([userId, status])
+}
+
+/// Un site de la niche qui publie des articles, et le contact qui va avec.
+///
+/// La liste est constituée par recherche : sites qui traitent déjà le sujet du
+/// client et acceptent des contributions. On garde l'adresse trouvée et l'état
+/// de la prise de contact, pour ne pas réécrire deux fois au même éditeur.
+model OutreachProspect {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  domain       String
+  name         String
+  /// Pourquoi ce site : angle éditorial, audience, proximité avec la niche.
+  reason       String?
+  contactEmail String?
+  contactUrl   String?
+  /// Autorité estimée (0-100) : sert au tri, pas à une promesse de résultat.
+  authority    Int     @default(0)
+
+  /// « found » · « drafted » (message préparé) · « contacted » · « replied » ·
+  /// « published » · « declined ».
+  status  String  @default("found")
+  /// Message prêt à envoyer, relu et modifiable par le client.
+  message String?
+
+  contactedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, domain])
+  @@index([userId, status])
+}
+
+/// Un post Google Business prévu pour la fiche du commerce.
+///
+/// Réservé aux commerces qui ont une adresse : la fiche est le premier endroit
+/// où une recherche locale les trouve, et un post par semaine y pèse plus qu'une
+/// page de plus sur le site.
+model GooglePost {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title   String
+  body    String
+  /// Bouton de la fiche : « CALL » · « BOOK » · « ORDER » · « LEARN_MORE »…
+  cta     String?
+  ctaUrl  String?
+  keyword String?
+
+  /// « planned » · « approved » · « published ».
+  status       String    @default("planned")
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, scheduledFor])
 }

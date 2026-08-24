@@ -371,11 +371,128 @@ async function queryGemini(query: string): Promise<LiveEngineResult> {
   }
 }
 
+/* --------------------------------- Claude --------------------------------- */
+/**
+ * Reproduit Claude « grand public » avec recherche web : modele Sonnet, outil
+ * web_search, requete utilisateur seule. Meme contrat que GPT et Gemini : le
+ * classement se lit dans le texte de la reponse, les sources dans les blocs
+ * `web_search_tool_result`.
+ *
+ * Claude est le troisieme moteur du classement. C'est un assistant que les
+ * clients interrogent comme les deux autres, et son avis differe souvent du
+ * leur : il cite plus volontiers les pages qui repondent a la question posee.
+ */
+async function queryClaude(query: string): Promise<LiveEngineResult> {
+  const engine: AiEngine = "Claude";
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    geoLog("Claude - ignore (pas de cle ANTHROPIC_API_KEY)");
+    return {
+      engine,
+      available: false,
+      answered: false,
+      answerText: "",
+      rankedItems: [],
+      citations: [],
+    };
+  }
+
+  const model = process.env.ANTHROPIC_RANKING_MODEL || "claude-sonnet-4-6";
+  const startedAt = Date.now();
+  geoLog(`Claude - appel (${model}, web_search)...`, {
+    requete: query.slice(0, 200),
+    budgetTimeoutMs: FETCH_TIMEOUT_MS,
+  });
+  try {
+    const data = (await postJson(
+      "https://api.anthropic.com/v1/messages",
+      {
+        method: "POST",
+        headers: {
+          "x-api-key": key,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 2000,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
+          messages: [{ role: "user", content: query }],
+        }),
+      },
+      "Claude",
+    )) as Record<string, unknown>;
+
+    const blocks = (data.content as Array<Record<string, unknown>>) ?? [];
+    const texts: string[] = [];
+    const citations: EngineCitation[] = [];
+    for (const block of blocks) {
+      if (block.type === "text" && typeof block.text === "string") {
+        texts.push(block.text);
+      }
+      // Sources rapportees par l'outil de recherche : un bloc par appel, chacun
+      // portant la liste des resultats retenus.
+      if (block.type === "web_search_tool_result") {
+        const results = (block.content as Array<Record<string, unknown>>) ?? [];
+        for (const r of results) {
+          const url = typeof r.url === "string" ? r.url : "";
+          if (!url) continue;
+          citations.push({
+            rank: citations.length + 1,
+            title: typeof r.title === "string" ? r.title : null,
+            url,
+            domain: domainOf(url),
+          });
+        }
+      }
+    }
+
+    const answerText = texts.join("\n");
+    const rankedItems = parseRankedItems(answerText);
+    geoLog("Claude - resultat", {
+      tempsTotalMs: Date.now() - startedAt,
+      classement: rankedItems,
+      sourcesCitees: citations.length,
+      apercuReponse: answerText.slice(0, 400),
+    });
+    return {
+      engine,
+      available: true,
+      answered: !!answerText || rankedItems.length > 0,
+      answerText,
+      rankedItems,
+      citations: dedupeCitations(citations),
+    };
+  } catch (err) {
+    const ms = Date.now() - startedAt;
+    if (isAbortError(err)) {
+      geoLog(
+        `Claude - ABANDON (AbortError) apres ${ms} ms : timeout de ${FETCH_TIMEOUT_MS} ms depasse.`,
+      );
+    } else {
+      geoLog(`Claude - echec apres ${ms} ms`, String(err));
+    }
+    return {
+      engine,
+      available: true,
+      answered: false,
+      answerText: "",
+      rankedItems: [],
+      citations: [],
+      error: String(err),
+    };
+  }
+}
+
 /* ------------------------------ Orchestration ----------------------------- */
 
 /** Y a-t-il au moins une clé moteur configurée ? */
 export function hasAnyEngineKey(): boolean {
-  return !!(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+  return !!(
+    process.env.OPENAI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY
+  );
 }
 
 /** Interroge en parallèle les moteurs configurés sur la requête cible. */
@@ -385,8 +502,9 @@ export async function gatherLiveEngines(
   const results = await Promise.allSettled([
     queryOpenAI(query),
     queryGemini(query),
+    queryClaude(query),
   ]);
-  const fallback: AiEngine[] = ["ChatGPT", "Gemini"];
+  const fallback: AiEngine[] = ["ChatGPT", "Gemini", "Claude"];
   return results.map((r, i) =>
     r.status === "fulfilled"
       ? r.value

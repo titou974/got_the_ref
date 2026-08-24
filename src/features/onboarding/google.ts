@@ -32,6 +32,13 @@ const GSC_SCOPE = SCOPES[0];
 const GA4_SCOPE = SCOPES[1];
 
 const STATE_COOKIE = "gottheref_google_state";
+/**
+ * Où ramener le client au retour de Google. Le tunnel d'accueil et le tableau
+ * de bord ouvrent le même consentement ; sans cette trace, un rattachement
+ * lancé depuis le tableau de bord renverrait le client à l'étape 7 du tunnel
+ * qu'il a déjà terminée.
+ */
+const RETURN_COOKIE = "gottheref_google_return";
 const STATE_MAX_AGE = 60 * 15;
 
 /**
@@ -55,16 +62,26 @@ export const googleRedirectUri = (): string => `${SITE.url}/api/google/callback`
  * n'importe quel lien pourrait rattacher les propriétés d'un tiers au compte
  * ouvert dans ce navigateur (CSRF sur le flux OAuth).
  */
-export async function buildGoogleAuthUrl(): Promise<string> {
+export async function buildGoogleAuthUrl(returnTo?: string | null): Promise<string> {
   const state = randomBytes(24).toString("hex");
   const store = await cookies();
-  store.set(STATE_COOKIE, state, {
+  const cookieOptions = {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: STATE_MAX_AGE,
-  });
+  };
+
+  store.set(STATE_COOKIE, state, cookieOptions);
+
+  // Un chemin interne uniquement : la valeur finit dans un en-tête `Location`,
+  // et une URL absolue en ferait une redirection ouverte.
+  if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    store.set(RETURN_COOKIE, returnTo, cookieOptions);
+  } else {
+    store.delete(RETURN_COOKIE);
+  }
 
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID as string,
@@ -80,6 +97,14 @@ export async function buildGoogleAuthUrl(): Promise<string> {
   });
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+/** Le chemin de retour déposé au départ, consommé lui aussi une seule fois. */
+export async function consumeGoogleReturn(): Promise<string | null> {
+  const store = await cookies();
+  const value = store.get(RETURN_COOKIE)?.value ?? null;
+  store.delete(RETURN_COOKIE);
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : null;
 }
 
 /** Vérifie le `state` du retour, puis brûle le cookie — il ne sert qu'une fois. */

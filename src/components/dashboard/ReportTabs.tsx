@@ -1,26 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
-import type {
-  GeoAnalysisResult,
-  EngineScore,
-  EngineRanking,
-  OnPageCheck,
-  DetectedStack,
-} from "@/lib/geo/types";
+import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { CATEGORY_META } from "@/lib/geo/types";
-import type {
-  AnalysisDiagnostic,
-  DiagnosticCheck,
-  DiagnosticSection,
-  DiagnosticStatus,
-} from "@/lib/geo/diagnostic";
+import type { AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
-import { decoyRanking } from "@/lib/geo/decoy-ranking";
-import { scoreColor, visibilityColor, priorityColor } from "@/lib/score";
+import { scoreColor } from "@/lib/score";
 import { AnimatedScoreRing } from "./AnimatedScoreRing";
 import { AnimatedCard } from "./AnimatedCard";
 import { CategoryRadar } from "./CategoryRadar";
@@ -28,7 +15,11 @@ import { SolutionBlock } from "./SolutionBlock";
 import { SiteScreenshot } from "./SiteScreenshot";
 import { TrendingKeywords } from "./TrendingKeywords";
 import { ArticleCalendar } from "./ArticleCalendar";
-import { StackMark } from "@/components/StackMark";
+import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
+import { EngineCard } from "@/components/geo/EngineRankings";
+import { OnPageElement, OpeningHoursBlock } from "@/components/geo/OnPageElement";
+import { CrawlerGrid, ProfileHeader, StackCard } from "@/components/geo/SiteProfile";
+import { Recommendations } from "@/components/geo/Recommendations";
 import {
   AnalysisIdProvider,
   LockedBlock,
@@ -38,7 +29,6 @@ import {
   SectionHeader,
   UnlockBar,
   Veil,
-  useLocked,
   type PaywallVariant,
 } from "./LockedContent";
 
@@ -70,21 +60,6 @@ function Gated({
   );
 }
 
-/** Logos des moteurs IA (chemins dans /public), indexés par nom de moteur. */
-const ENGINE_LOGOS: Record<string, string> = {
-  ChatGPT: "/chatgpt.png",
-  Gemini: "/gemini.webp",
-};
-
-const STATUS_COLOR: Record<DiagnosticStatus, string> = {
-  ok: "#11b48c",
-  warn: "#f59e0b",
-  ko: "#e5484d",
-  unknown: "#94a3b8",
-};
-
-const SCORE_KEYS = new Set(["editorialQuality", "citability", "mapsCoherence"]);
-
 const TAB_ICONS: Record<TabKey, React.ReactNode> = {
   results: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -114,91 +89,6 @@ const TAB_ICONS: Record<TabKey, React.ReactNode> = {
     </svg>
   ),
 };
-
-function StatusPill({ status }: { status: DiagnosticStatus }) {
-  const t = useTranslations("analysisReport.status");
-  const locked = useLocked();
-  // Sur l'aperçu gratuit, aucun contrôle ne s'affiche en vert : le statut reste
-  // exact, mais rien n'y est présenté comme acquis tant que l'audit complet n'a
-  // pas tourné. Le « ok » passe donc en neutre, pas en validation.
-  const color = locked && status === "ok" ? "#71717a" : STATUS_COLOR[status];
-  return (
-    <span
-      className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-      style={{ background: `${color}22`, color }}
-    >
-      {t(status)}
-    </span>
-  );
-}
-
-function CheckRow({
-  check,
-  labelNs,
-  veiled = false,
-}: {
-  check: DiagnosticCheck;
-  labelNs: "architecture" | "content";
-  /** Contrôle issu de l'audit payant : on montre ce qui est examiné, pas le résultat. */
-  veiled?: boolean;
-}) {
-  const t = useTranslations("analysisReport");
-  const label = t(`${labelNs}.checks.${check.key}`);
-
-  let detail: string | null = null;
-  if (check.value != null) {
-    if (check.key === "schema") detail = check.value;
-    else if (check.key === "wordCount") detail = t("content.units.words", { value: check.value });
-    else if (check.key === "mapsReviews") detail = t("content.units.reviews", { value: check.value });
-    else if (SCORE_KEYS.has(check.key)) detail = t("content.units.score", { value: check.value });
-    else if (check.key === "h1") detail = t("architecture.h1Count", { value: check.value });
-    else if (check.key === "llmsTxt") detail = t("architecture.llmsTxtMisconfigured");
-    else if (check.key === "aiCrawlers" && check.status !== "ok")
-      detail = t("architecture.blockedCrawlers", { value: check.value });
-  }
-
-  return (
-    <li className="flex items-center justify-between gap-3 border-b border-fog py-2.5 last:border-0">
-      <div className="min-w-0">
-        {/* Le libellé du contrôle est constant : il ne révèle aucun résultat. */}
-        <p className="truncate text-sm text-text">{label}</p>
-        {detail &&
-          (veiled ? (
-            <Veil>
-              <span className="text-xs text-muted">{detail}</span>
-            </Veil>
-          ) : (
-            <p className="truncate text-xs text-muted">{detail}</p>
-          ))}
-      </div>
-      {veiled ? (
-        <Veil>
-          <StatusPill status={check.status} />
-        </Veil>
-      ) : (
-        <StatusPill status={check.status} />
-      )}
-    </li>
-  );
-}
-
-function DiagnosticGrid({
-  section,
-  labelNs,
-  veiled = false,
-}: {
-  section: DiagnosticSection;
-  labelNs: "architecture" | "content";
-  veiled?: boolean;
-}) {
-  return (
-    <ul className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-      {section.checks.map((c) => (
-        <CheckRow key={c.key} check={c} labelNs={labelNs} veiled={veiled} />
-      ))}
-    </ul>
-  );
-}
 
 export function ReportTabs({
   result,
@@ -289,278 +179,6 @@ export function ReportTabs({
   );
 }
 
-/* --------------------------- Plateforme du site --------------------------- */
-
-/**
- * Plateforme qui sert le site (WordPress, Shopify, Next.js…). Elle a sa place
- * dans l'architecture : c'est elle qui décide où se posent les correctifs —
- * un llms.txt ne s'ajoute pas de la même façon sur Wix et sur Next.js.
- */
-function StackCard({ stack }: { stack: DetectedStack | null }) {
-  const t = useTranslations("analysisReport.stack");
-
-  return (
-    <AnimatedCard delay={0.12} className="lg:col-span-3">
-      <h4 className="font-semibold">{t("title")}</h4>
-      {stack ? (
-        <div className="mt-3 flex flex-wrap items-center gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-mist text-obsidian">
-            <StackMark id={stack.id} size={24} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-              <span className="text-lg font-bold">{stack.name}</span>
-              <span
-                className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                style={
-                  stack.confidence === "sure"
-                    ? { background: "rgba(17,180,140,0.18)", color: "#0a8f6e" }
-                    : { background: "rgba(148,163,184,0.18)", color: "#52525b" }
-                }
-              >
-                {stack.confidence === "sure" ? t("sure") : t("probable")}
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-muted">{stack.evidence}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-3">
-          <p className="font-semibold text-text">{t("unknownTitle")}</p>
-          <p className="mt-1 text-sm text-muted">{t("unknownBody")}</p>
-        </div>
-      )}
-      <p className="mt-3 border-t border-fog pt-3 text-sm text-muted">{t("note")}</p>
-    </AnimatedCard>
-  );
-}
-
-/* ----------------------------- Profil détecté ----------------------------- */
-
-function ProfileHeader({ result }: { result: GeoAnalysisResult }) {
-  const t = useTranslations("analysisReport.profile");
-  const { niche, generalCategory, location, isPhysical } = result.profile;
-
-  return (
-    <AnimatedCard className="overflow-hidden">
-      <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("eyebrow")}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h3 className="text-xl font-bold sm:text-2xl">{niche}</h3>
-        {generalCategory && generalCategory.toLowerCase() !== niche.toLowerCase() && (
-          <span className="rounded-full border border-fog bg-mist px-2.5 py-0.5 text-xs text-muted">
-            {generalCategory}
-          </span>
-        )}
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
-        {isPhysical ? (
-          <span className="inline-flex items-center gap-1.5 text-text">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-accent" aria-hidden>
-              <path d="M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-              <circle cx="12" cy="10" r="2.3" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
-            {location ?? t("physical")}
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M3 12h18M12 3c2.2 2.4 2.2 15.6 0 18M12 3c-2.2 2.4-2.2 15.6 0 18" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
-            {t("online")}
-          </span>
-        )}
-      </div>
-    </AnimatedCard>
-  );
-}
-
-/* ----------------------------- Carte moteur IA ---------------------------- */
-
-/**
- * Un classement (direct ou indirect) d'un moteur, avec le commerce surligné.
- * Verrouillé, les vraies lignes cèdent la place à des bandes fictives : on doit
- * voir qu'un classement existe, sans pouvoir y repérer sa propre position.
- */
-function RankingList({ ranking, locked = false }: { ranking: EngineRanking; locked?: boolean }) {
-  const t = useTranslations("analysisReport.results");
-  const scopeLabel = ranking.scope === "direct" ? t("directScope") : t("indirectScope");
-  const isDirect = ranking.scope === "direct";
-
-  return (
-    <div className="rounded-2xl border border-fog bg-mist p-3.5">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-            style={
-              isDirect
-                ? { background: "rgba(9,9,11,0.08)", color: "var(--color-obsidian)" }
-                : { background: "rgba(113,113,122,0.12)", color: "#52525b" }
-            }
-          >
-            {scopeLabel}
-          </span>
-          <p className="mt-1 truncate text-xs text-muted">{ranking.label}</p>
-        </div>
-        {locked ? (
-          // Même « non classé » est une information : on n'en dit rien.
-          <span className="shrink-0 rounded-lg bg-fog px-2 py-0.5 text-sm font-bold text-ash">
-            #?
-          </span>
-        ) : ranking.targetRank != null ? (
-          <span className="shrink-0 rounded-lg bg-obsidian/10 px-2 py-0.5 text-sm font-bold text-obsidian">
-            #{ranking.targetRank}
-          </span>
-        ) : (
-          <span className="shrink-0 rounded-lg bg-fog px-2 py-0.5 text-[11px] font-medium text-muted">
-            {t("notRanked")}
-          </span>
-        )}
-      </div>
-      {locked ? (
-        <DecoyBands seedKey={`${ranking.label}|${ranking.scope}`} />
-      ) : ranking.competitors.length > 0 ? (
-        <ol className="space-y-0.5">
-          {ranking.competitors.map((c) => (
-            <li
-              key={`${c.rank}-${c.name}`}
-              className={`flex items-center gap-2 rounded-md px-2 py-1 ${
-                c.isTarget ? "bg-obsidian/[0.06] ring-1 ring-inset ring-obsidian/20" : ""
-              }`}
-            >
-              <span
-                className={`w-5 shrink-0 text-center text-xs font-bold tabular-nums ${
-                  c.isTarget ? "text-obsidian" : "text-muted"
-                }`}
-              >
-                {c.rank}
-              </span>
-              <span
-                className={`min-w-0 flex-1 truncate text-xs ${
-                  c.isTarget ? "font-semibold text-text" : "text-text"
-                }`}
-              >
-                {c.name}
-                {c.isTarget && (
-                  <span className="ml-1.5 text-[10px] font-semibold text-obsidian">{t("you")}</span>
-                )}
-              </span>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="text-xs text-muted">{t("noRankingData")}</p>
-      )}
-    </div>
-  );
-}
-
-/**
- * Bandes de classement fictives : des rangs, des noms, aucune ligne « vous ».
- * C'est ce qui remplace le classement réel sur l'aperçu gratuit.
- */
-function DecoyBands({ seedKey }: { seedKey: string }) {
-  const entries = decoyRanking(seedKey);
-  return (
-    <ol className="space-y-0.5">
-      {entries.map((e) => (
-        <li
-          key={e.rank}
-          className="flex items-center gap-2 rounded-md px-2 py-1 odd:bg-obsidian/[0.03]"
-        >
-          <span className="w-5 shrink-0 text-center text-xs font-bold tabular-nums text-muted">
-            {e.rank}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-xs text-text">{e.name}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function EngineCard({
-  engine,
-  delay,
-  locked = false,
-}: {
-  engine: EngineScore;
-  delay: number;
-  /** Verrouillé : le moteur et son nom restent lisibles, la mesure est floutée. */
-  locked?: boolean;
-}) {
-  const t = useTranslations("analysisReport.results");
-  const vis = visibilityColor(engine.visibility);
-
-  // Tout ce qui constitue la mesure elle-même : c'est cette part qui se floute.
-  const body = (
-    <div className="space-y-3">
-      <p className="text-xs text-muted">{engine.summary}</p>
-      {engine.rankings.length > 0 && (
-        <div className={`grid grid-cols-1 gap-3 ${engine.rankings.length > 1 ? "lg:grid-cols-2" : ""}`}>
-          {engine.rankings.map((r) => (
-            <RankingList key={r.scope} ranking={r} locked={locked} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <AnimatedCard delay={delay} className="space-y-3">
-      {/* En-tête : toujours net — on doit voir QUEL moteur a été interrogé. */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          {ENGINE_LOGOS[engine.engine] && (
-            <Image
-              src={ENGINE_LOGOS[engine.engine]}
-              alt={engine.engine}
-              width={24}
-              height={24}
-              className="h-5 w-5 shrink-0 rounded"
-            />
-          )}
-          <span className="text-base font-semibold">{engine.engine}</span>
-          {locked ? (
-            <LockedPill />
-          ) : (
-            <>
-              <span
-                className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                style={
-                  engine.measured
-                    ? { background: "rgba(17,180,140,0.18)", color: "#11b48c" }
-                    : { background: "rgba(148,163,184,0.15)", color: "#94a3b8" }
-                }
-                title={engine.measured ? t("measuredHint") : t("estimatedHint")}
-              >
-                {engine.measured ? t("measured") : t("estimated")}
-              </span>
-              <span
-                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize"
-                style={{ background: `${vis}22`, color: vis }}
-              >
-                {engine.visibility}
-              </span>
-            </>
-          )}
-        </div>
-        {locked ? (
-          <span className="shrink-0 text-lg font-bold text-pebble" aria-hidden>
-            ••
-          </span>
-        ) : (
-          <span className="shrink-0 text-lg font-bold" style={{ color: scoreColor(engine.score) }}>
-            {engine.score}
-          </span>
-        )}
-      </div>
-
-      {locked ? <Obscured strength="sm">{body}</Obscured> : body}
-    </AnimatedCard>
-  );
-}
-
 /* ------------------------------- Panneaux --------------------------------- */
 
 function ResultsPanel({
@@ -577,7 +195,7 @@ function ResultsPanel({
   return (
     <div className="space-y-4">
       {/* 1. Profil : niche + localisation (en tout premier) */}
-      <ProfileHeader result={result} />
+      <ProfileHeader profile={result.profile} />
 
       {/* 2. Diagnostic d'architecture (synthèse) — gratuit, toujours visible en premier */}
       <AnimatedCard delay={0.05} className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -629,32 +247,10 @@ function ResultsPanel({
               <p className="text-sm text-muted">{t("results.recommendationsSubtitle")}</p>
             </div>
           )}
-          {result.recommendations.length ? (
-            <div className="space-y-3">
-              {result.recommendations.map((r, i) => (
-                <AnimatedCard key={i} delay={i * 0.03} className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                  <span
-                    className="inline-flex h-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
-                    style={{ background: `${priorityColor(r.priority)}22`, color: priorityColor(r.priority) }}
-                  >
-                    {r.priority}
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <h4 className="font-semibold">{r.title}</h4>
-                      <span className="shrink-0 text-xs text-muted">{t("results.impact", { value: r.impact })}</span>
-                    </div>
-                    <p className="mt-1 text-sm text-muted">{r.description}</p>
-                    <span className="mt-2 inline-block text-xs text-steel">{CATEGORY_META[r.category].label}</span>
-                  </div>
-                </AnimatedCard>
-              ))}
-            </div>
-          ) : (
-            <AnimatedCard>
-              <p className="text-sm text-muted">{t("results.noRecommendations")}</p>
-            </AnimatedCard>
-          )}
+          <Recommendations
+            recommendations={result.recommendations}
+            emptyLabel={t("results.noRecommendations")}
+          />
         </div>
       </Gated>
 
@@ -700,21 +296,7 @@ function ArchitecturePanel({
 
         <StackCard stack={result.signals.stack ?? null} />
 
-        <AnimatedCard delay={0.15} className="lg:col-span-3">
-          <h4 className="mb-3 font-semibold">{t("architecture.checks.aiCrawlers")}</h4>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            {result.signals.crawlers.map((c) => (
-              <div key={c.name} className="flex items-center justify-between rounded-lg border border-fog bg-mist px-3 py-2 text-sm">
-                <span className="truncate text-muted">{c.name}</span>
-                <span
-                  className="ml-2 h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: c.allowed ? "#11b48c" : "#e5484d" }}
-                  aria-label={c.allowed ? "Autorisé" : "Bloqué"}
-                />
-              </div>
-            ))}
-          </div>
-        </AnimatedCard>
+        <CrawlerGrid crawlers={result.signals.crawlers} />
       </div>
 
       <SolutionBlock
@@ -722,85 +304,6 @@ function ArchitecturePanel({
         locked={locked}
       />
       {locked && <UnlockBar variant="prompt" />}
-    </div>
-  );
-}
-
-/* --------------------------- Éléments on-page ----------------------------- */
-
-const ON_PAGE_STATUS_COLOR: Record<OnPageCheck["status"], string> = {
-  ok: "#11b48c",
-  warn: "#f59e0b",
-  ko: "#e5484d",
-};
-
-/** Une carte par élément on-page : texte réel + critères vérifiés + conseil. */
-function OnPageElement({ label, check }: { label: string; check: OnPageCheck }) {
-  const t = useTranslations("analysisReport.content.onPage");
-  const color = ON_PAGE_STATUS_COLOR[check.status];
-
-  return (
-    <div className="flex flex-col rounded-2xl border border-fog bg-mist p-4">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-steel">{label}</span>
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
-      </div>
-
-      {check.text ? (
-        <p className="mt-2 text-sm leading-relaxed text-text">{check.text}</p>
-      ) : (
-        <p className="mt-2 text-sm italic text-muted">{t("empty")}</p>
-      )}
-
-      {check.signals.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {check.signals.map((s) => (
-            <span
-              key={s.label}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-              style={
-                s.present
-                  ? { background: "rgba(17,180,140,0.15)", color: "#0a8f6e" }
-                  : { background: "rgba(229,72,77,0.12)", color: "#c2363b" }
-              }
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden>
-                {s.present ? (
-                  <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                ) : (
-                  <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-                )}
-              </svg>
-              {s.label}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {check.note && <p className="mt-2 text-xs leading-relaxed text-muted">{check.note}</p>}
-    </div>
-  );
-}
-
-/** Horaires d'ouverture extraits du site (ou état vide explicite). */
-function OpeningHoursBlock({ value }: { value: string | null }) {
-  const t = useTranslations("analysisReport.content.onPage");
-  return (
-    <div className="mt-3 flex items-start gap-3 rounded-2xl border border-fog bg-snow p-4">
-      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-mist text-accent">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M12 7.5V12l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("openingHoursTitle")}</p>
-        {value ? (
-          <p className="mt-1 text-sm text-text">{value}</p>
-        ) : (
-          <p className="mt-1 text-sm italic text-muted">{t("openingHoursEmpty")}</p>
-        )}
-      </div>
     </div>
   );
 }

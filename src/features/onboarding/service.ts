@@ -90,17 +90,26 @@ export async function analyzeSite({
 
 // ── Étape 5 : les concurrents ────────────────────────────────────────────────
 
+/**
+ * Au moins un concurrent, sinon la réponse est refusée.
+ *
+ * Le `.catch([])` d'origine transformait toute réponse hors-format en liste
+ * vide : le schéma passait, aucun fournisseur de secours n'était tenté, et
+ * l'étape s'ouvrait sur « nous n'avons pas réussi » sans qu'une seule erreur
+ * soit remontée. Exiger une entrée rend l'échec visible et laisse `askJson`
+ * rejouer l'appel sur le second modèle.
+ */
 const competitorsSchema = z.object({
   competitors: z
     .array(
       z.object({
-        name: z.string(),
+        name: z.string().min(1),
         url: z.string().nullable().catch(null),
         reason: z.string().nullable().catch(null),
       }),
     )
-    .max(10)
-    .catch([]),
+    .min(1)
+    .max(10),
 });
 
 export type SuggestedCompetitor = {
