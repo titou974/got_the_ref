@@ -11,6 +11,9 @@ export const ROUTES = {
   signIn: "/connexion",
   signUp: "/inscription",
   account: "/compte",
+  /** Le tunnel d'accueil, ouvert juste après le paiement ou l'essai. */
+  onboarding: "/accueil",
+  onboardingStep: (step: string) => `/accueil/${step}`,
   analysis: (id: string) => `/analyse/${id}`,
   /** Retour de Stripe après paiement d'une analyse (création de compte). */
   checkoutSuccess: "/paiement/succes",

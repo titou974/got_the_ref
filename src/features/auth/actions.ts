@@ -88,9 +88,6 @@ export const createAccountAfterCheckoutAction = actionClient
     }
 
     const email = session.customer_details?.email;
-    // L'analyse est facultative : l'essai peut aussi être souscrit depuis la
-    // carte tarif, sans rapport à rattacher.
-    const analysisId = session.metadata?.analysisId;
     if (!email) {
       returnValidationErrors(postCheckoutSignUpSchema, {
         _errors: ["Impossible de retrouver votre paiement. Contactez-nous."],
@@ -129,9 +126,12 @@ export const createAccountAfterCheckoutAction = actionClient
     // Jeton à usage unique : il ne doit pas resservir.
     await clearClaim();
 
-    // Souscription depuis un rapport : on y retourne. Depuis la carte tarif :
-    // rien à ouvrir, l'espace client prend le relais.
-    redirect(analysisId ? ROUTES.analysis(analysisId) : ROUTES.account);
+    // Le compte est ouvert : place au questionnaire d'accueil. C'est le moment
+    // où le client est le plus disposé à répondre — il vient de payer, il
+    // attend que quelque chose commence. Le rapport qu'il vient de débloquer
+    // reste à sa place, retrouvable depuis son espace client une fois les sept
+    // questions passées.
+    redirect(ROUTES.onboarding);
   });
 
 export const signOutAction = actionClient.action(async () => {

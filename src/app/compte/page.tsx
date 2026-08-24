@@ -8,8 +8,9 @@ import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { scoreColor } from "@/lib/score";
+import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { ROUTES } from "@/constants/routes";
-import type { PlanKey } from "@/constants/plans";
+import { ACTIVE_SUBSCRIPTION_STATUSES, type PlanKey } from "@/constants/plans";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("account");
@@ -25,6 +26,15 @@ const PLAN_LABEL_KEY: Record<PlanKey, "planLabelFree" | "planLabelPro" | "planLa
 export default async function ComptePage() {
   const user = await getCurrentUser();
   if (!user) redirect(ROUTES.signIn);
+
+  // Un abonnement en cours mais aucune fiche d'accueil remplie : les agents
+  // n'ont ni marché, ni villes, ni concurrents à se mettre sous la dent. On
+  // ramène au questionnaire, une seule fois — `completedAt` referme la porte,
+  // et les étapes facultatives se passent d'un clic.
+  const subscribed =
+    user.subscription !== null &&
+    (ACTIVE_SUBSCRIPTION_STATUSES as readonly string[]).includes(user.subscription.status);
+  if (subscribed && !(await isOnboardingComplete(user.id))) redirect(ROUTES.onboarding);
 
   const t = await getTranslations("account");
 
