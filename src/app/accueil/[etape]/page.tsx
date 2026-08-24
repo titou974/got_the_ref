@@ -19,6 +19,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/**
+ * Les actions de ce segment héritent de cette durée. L'étape 2 crawle un site
+ * entier puis le fait relire par un modèle : sous les dix secondes par défaut
+ * de Vercel, elle finirait systématiquement en 504. Cinq minutes est le plafond
+ * de l'offre Hobby sur Fluid Compute, et couvre largement un site de vitrine.
+ */
+export const maxDuration = 300;
+
 type Props = {
   params: Promise<{ etape: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
