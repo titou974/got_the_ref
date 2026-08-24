@@ -14,6 +14,14 @@ export const ROUTES = {
   /** Le tunnel d'accueil, ouvert juste après le paiement ou l'essai. */
   onboarding: "/accueil",
   onboardingStep: (step: string) => `/accueil/${step}`,
+  /** Le tableau de bord et ses sections. */
+  dashboard: "/tableau-de-bord",
+  dashboardContent: "/tableau-de-bord/contenu",
+  dashboardArchitecture: "/tableau-de-bord/architecture",
+  dashboardArticles: "/tableau-de-bord/articles",
+  dashboardArticle: (id: string) => `/tableau-de-bord/articles/${id}`,
+  dashboardPresence: "/tableau-de-bord/presence",
+  dashboardMaps: "/tableau-de-bord/google-maps",
   analysis: (id: string) => `/analyse/${id}`,
   /** Retour de Stripe après paiement d'une analyse (création de compte). */
   checkoutSuccess: "/paiement/succes",

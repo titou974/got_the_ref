@@ -37,6 +37,9 @@
   --color-highlight: #dfe0e4;
   --color-danger: #dc2626;
   --color-warning: #d97706;
+  /* Vert de validation : celui de la console des agents, remonté en token pour
+     que le tableau de bord marque « corrigé » de la même couleur. */
+  --color-success: #11b48c;
 
   /* Typographie — Cosmica (substitut : Plus Jakarta Sans) sur tout le système */
   --font-cosmica: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -342,4 +345,18 @@ html.scroll-locked body {
   /* Sans mouvement, le ruban devient une bande qu'on fait défiler à la main. */
   .marquee-track { animation: none !important; }
   .marquee { overflow-x: auto; }
+}
+
+/* Barre d'attente du tableau de bord : un segment qui traverse, faute de savoir
+   où en est vraiment l'audit. */
+@keyframes loading {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[loading_1\.4s_ease-in-out_infinite\] {
+    animation: none !important;
+    width: 100%;
+  }
 }

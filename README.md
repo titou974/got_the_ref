@@ -44,6 +44,8 @@ npm run dev                 # http://localhost:3000
 | `FIRECRAWL_URL` | Instance Firecrawl auto-hébergée (`https://api.firecrawl.dev` par défaut) |
 | `CRAWL_KEEP_HTML` | `true` pour conserver aussi le HTML brut de chaque page |
 | `CRAWL_MAX_AGE_HOURS` | Fraîcheur d'un crawl avant de le relancer (168 h par défaut) |
+| `CREDENTIALS_KEY` | Phrase secrète (32 caractères minimum) qui chiffre les identifiants de plateforme du tableau de bord. Sans elle, le rattachement d'un site est refusé. |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | Mots-clés tendances relevés avec la recherche Google (`gemini-flash-latest` par défaut) |
 
 ## Tunnel d'accueil et crawl
 
@@ -77,8 +79,8 @@ Le rattachement Search Console réutilise les identifiants OAuth de la connexion
 Google, avec son propre consentement (`webmasters.readonly`, lecture seule).
 Ajoutez la seconde URI de redirection dans Google Cloud :
 
-- `http://localhost:3000/api/gsc/callback` (développement)
-- `https://votre-domaine.fr/api/gsc/callback` (production)
+- `http://localhost:3000/api/google/callback` (développement)
+- `https://votre-domaine.fr/api/google/callback` (production)
 
 ## Connexion Google (facultative)
 
@@ -97,6 +99,50 @@ e-mail. Pour l'activer :
 L'URL de rappel est dérivée de `baseURL` (soit `NEXT_PUBLIC_APP_URL`) : si elle
 ne correspond pas à l'URI déclarée chez Google, l'échange échoue en
 `redirect_uri_mismatch`.
+
+## Tableau de bord
+
+`/tableau-de-bord`, ouvert une fois le tunnel d'accueil terminé. Six sections
+partagent la même fiche client et la même analyse, chargées une seule fois par
+requête (`features/dashboard/queries.ts`).
+
+| Section | Ce qu'elle montre |
+|---------|-------------------|
+| Accueil | Place du commerce dans chaque IA, trafic amené par les assistants, note de visibilité, prochains articles |
+| Contenu | Mots-clés tendances de la niche, éléments on-page actuels face à leur réécriture |
+| Architecture | Contrôles techniques du dernier crawl, accès des robots d'IA, volume lu |
+| Articles | Calendrier éditorial, rédaction, validation, publication, voix de la marque |
+| Présence web | Mentions relevées, liens entrants, sites de la niche à contacter |
+| Google Maps | Cohérence fiche ↔ site, posts préparés d'avance (commerces avec adresse) |
+
+À la première ouverture, le compte n'a pas encore d'audit complet : la page lance
+l'analyse elle-même (`prepareDashboardAction`) et se recharge quand elle est prête.
+
+### Trafic venu des IA
+
+Lu dans Google Analytics 4, à partir de la source de session, jamais d'un
+paramètre d'URL :
+
+- ChatGPT ajoute `?utm_source=chatgpt.com` à ses liens, GA4 range donc la visite
+  sous `chatgpt.com` ;
+- Perplexity n'ajoute pas d'`utm_source` (ses liens portent `?ct-referrer=perplexity`,
+  qu'Analytics ignore) : la visite se reconnaît à son référent `perplexity.ai` ;
+- Gemini n'ajoute rien : seul le référent `gemini.google.com` reste, et il ne
+  couvre que les clics depuis l'application. Les liens des aperçus IA de Google
+  partent de `google.com` et restent mêlés au référencement classique. L'interface
+  le dit plutôt que de gonfler le chiffre.
+
+### Rattachement du site
+
+`constants/site-platforms.ts` décrit la porte d'entrée de chaque plateforme et ce
+qu'elle permet vraiment : déposer un article (`publish`), corriger une page
+(`edit`). WordPress, WooCommerce, Shopify et Ghost ouvrent les deux ; Wix,
+Webflow, Squarespace, PrestaShop et Framer n'ouvrent pas leur rédaction à une API
+tierce et n'accordent donc que la correction. Un site fait main passe par
+« Autre site » avec un webhook.
+
+Les identifiants sont chiffrés en AES-256-GCM (`lib/crypto.ts`, clé dérivée de
+`CREDENTIALS_KEY`) avant d'être écrits, et ne repartent jamais vers le navigateur.
 
 ## Configuration Stripe
 
