@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { askJson } from "@/lib/ai/client";
 import type { DashboardContext } from "./queries";
+import { outlineForPrompt, type OutlineSection } from "./outline";
 
 /**
  * Ce que les agents produisent pour le tableau de bord : sujets d'articles,
@@ -28,6 +29,10 @@ function brief(context: DashboardContext, voice?: { instructions: string; banned
     analysis?.signals.firstParagraph ? `Introduction actuelle : ${analysis.signals.firstParagraph}` : null,
   ].filter(Boolean);
 
+  // Le ton relevé pendant l'accueil vient d'abord : c'est la manière d'écrire du
+  // client, constatée sur son propre texte. La voix de marque passe après, parce
+  // qu'elle corrige ce constat plutôt qu'elle ne le remplace.
+  if (context.tone?.summary) lines.push(`Ton de la marque (relevé à l'accueil) : ${context.tone.summary}`);
   if (voice?.instructions) lines.push(`Consigne de ton du client : ${voice.instructions}`);
   if (voice?.banned.length) lines.push(`Termes interdits : ${voice.banned.join(", ")}`);
 
@@ -93,7 +98,8 @@ export async function planArticleTopics(
       trendingLine,
       "",
       `Propose ${count} sujets d'articles, du plus utile au moins urgent.`,
-      "Chaque sujet : un titre, le mot-clé visé, l'angle en une phrase, et un plan de 3 à 8 titres de sections.",
+      "Chaque sujet : un titre, le mot-clé visé, l'angle en une phrase, et un plan de 3 à 8 titres de sections",
+      "formulés comme des questions ou des promesses précises, dans l'ordre de lecture.",
       "Réponds en JSON : { \"articles\": [{ \"title\", \"keyword\", \"angle\", \"outline\": [] }] }",
     ].join("\n"),
   });
@@ -113,7 +119,7 @@ export type ArticleDraft = z.infer<typeof draftSchema>;
 
 export async function writeArticle(
   context: DashboardContext,
-  topic: { title: string; keyword: string | null; outline: string[] },
+  topic: { title: string; keyword: string | null; outline: OutlineSection[] },
   instruction?: string | null,
 ): Promise<ArticleDraft> {
   return askJson(draftSchema, {
@@ -127,9 +133,13 @@ export async function writeArticle(
       "",
       `Titre de travail : ${topic.title}`,
       topic.keyword ? `Mot-clé visé : ${topic.keyword}` : "",
-      topic.outline.length ? `Plan retenu :\n- ${topic.outline.join("\n- ")}` : "",
+      topic.outline.length
+        ? `Plan retenu, avec la consigne de chaque section :\n${outlineForPrompt(topic.outline)}`
+        : "",
       instruction ? `Demande de reprise du client : ${instruction}` : "",
       "",
+      "Respecte le plan section par section : un titre de niveau 2 ou 3 par entrée, dans l'ordre donné,",
+      "et traite la consigne de la section quand elle est précisée.",
       "Rédige l'article complet en Markdown (titres de niveau 2 et 3, listes quand c'est utile),",
       "entre 700 et 1200 mots, plus un chapô de deux phrases.",
       "Réponds en JSON : { \"title\", \"excerpt\", \"body\" }",

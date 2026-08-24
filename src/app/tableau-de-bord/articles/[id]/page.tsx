@@ -4,21 +4,11 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 import { getArticle, getDashboardContext } from "@/features/dashboard/queries";
+import { parseOutline } from "@/features/dashboard/outline";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
-import { ArticleWorkbench } from "@/components/tableau-de-bord/ArticleWorkbench";
+import { ArticleEditor } from "@/components/tableau-de-bord/ArticleEditor";
 
 export const maxDuration = 300;
-
-/** Relit le plan stocké. Une valeur illisible vaut un plan vide. */
-function parseOutline(raw: string | null): string[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -57,7 +47,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
         }
       />
 
-      <ArticleWorkbench
+      <ArticleEditor
         article={{
           id: article.id,
           title: article.title,
@@ -70,6 +60,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
           scheduledFor: article.scheduledFor?.toISOString() ?? null,
           externalUrl: article.externalUrl,
         }}
+        tone={context.tone}
+        voice={context.brandVoice}
         canPublish={
           context.site?.status === "connected" && context.site.capabilities.includes("publish")
         }

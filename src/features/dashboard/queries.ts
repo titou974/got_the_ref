@@ -48,6 +48,11 @@ export type DashboardContext = {
   google: GoogleLinkState;
   site: SiteLink | null;
   brandVoice: { instructions: string; banned: string[] } | null;
+  /**
+   * Le ton relevé pendant l'accueil, à partir de l'article donné en exemple.
+   * Il précède la voix de marque : celle-ci le corrige, elle ne le remplace pas.
+   */
+  tone: { summary: string | null; color: string | null; sampleUrl: string | null };
 };
 
 /** Relit l'analyse stockée. Une ligne illisible vaut une absence d'analyse. */
@@ -117,6 +122,11 @@ export const getDashboardContext = cache(async function getDashboardContext(
         }
       : null,
     brandVoice: voice ? { instructions: voice.instructions, banned: voice.banned } : null,
+    tone: {
+      summary: profile?.toneSummary ?? null,
+      color: profile?.brandColor ?? null,
+      sampleUrl: profile?.toneSampleUrl ?? null,
+    },
   };
 });
 

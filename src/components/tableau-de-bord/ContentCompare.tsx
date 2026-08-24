@@ -12,7 +12,10 @@ import { Card, CardTitle } from "./Card";
  *
  * À gauche, ce que le site affiche aujourd'hui, présenté comme un résultat
  * Google : c'est sous cette forme que le client l'a déjà vu passer, et le
- * décalage avec ce qu'il croyait écrire saute aux yeux tout seul.
+ * décalage avec ce qu'il croyait écrire saute aux yeux tout seul. La balise
+ * title et la meta description s'arrêtent là : le H1 et le premier paragraphe
+ * sont audités juste en dessous, sous forme de cartes, parce qu'eux se jugent
+ * sur leur contenu et non sur leur allure dans un résultat de recherche.
  *
  * À droite, la réécriture. Elle arrive déjà remplie quand l'analyse en a
  * produit une ; le bouton en redemande une autre, à jour des mots-clés du mois.
@@ -21,8 +24,6 @@ import { Card, CardTitle } from "./Card";
 type Current = {
   title: string | null;
   metaDescription: string | null;
-  h1: string | null;
-  firstParagraph: string | null;
   url: string;
   domain: string;
 };
@@ -56,23 +57,6 @@ export function ContentCompare({
           missingTitle={t("missing.title")}
           missingDescription={t("missing.description")}
         />
-
-        <dl className="mt-5 space-y-4 border-t border-border pt-5">
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-steel">
-              {t("h1")}
-            </dt>
-            <dd className="mt-1 text-sm">{current.h1 ?? t("missing.h1")}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-steel">
-              {t("intro")}
-            </dt>
-            <dd className="mt-1 text-sm text-muted">
-              {current.firstParagraph ?? t("missing.intro")}
-            </dd>
-          </div>
-        </dl>
       </Card>
 
       <Card>

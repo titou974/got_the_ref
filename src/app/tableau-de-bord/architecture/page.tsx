@@ -3,18 +3,28 @@ import { requireUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
+import { CATEGORY_META } from "@/lib/geo/types";
 import { connectorForStack } from "@/constants/site-platforms";
-import { Card, CardTitle, PageHeader, StatusDot } from "@/components/tableau-de-bord/Card";
-import { ChecksList } from "@/components/tableau-de-bord/ChecksList";
+import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { PromptCard } from "@/components/tableau-de-bord/PromptCard";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
+import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
+import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
+import { CategoryRadar } from "@/components/dashboard/CategoryRadar";
+import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
+import { CrawlerGrid, StackCard } from "@/components/geo/SiteProfile";
 
 export const maxDuration = 300;
 
 /**
  * Architecture : ce que le crawl a trouvé, contrôle par contrôle, plus l'état
- * des robots d'IA. La liste est celle du rapport, rejouée sur le dernier passage.
+ * des robots d'IA.
+ *
+ * L'écran reprend l'onglet Architecture du rapport d'analyse : même anneau,
+ * même radar, mêmes contrôles, même carte de plateforme. Le client retrouve
+ * donc à l'identique la page qu'il a lue en achetant, rejouée sur le dernier
+ * passage — avec, en plus, ce que le crawl a compté.
  */
 export default async function ArchitecturePage() {
   const user = await requireUser();
@@ -28,6 +38,10 @@ export default async function ArchitecturePage() {
   const diagnostic = buildDiagnostic(analysis);
   const crawl = analysis.signals.crawl;
 
+  const radarData = analysis.categories
+    .filter((c) => ["technical", "structuredData", "platform"].includes(c.key))
+    .map((c) => ({ label: CATEGORY_META[c.key].short, score: c.score }));
+
   return (
     <>
       <PageHeader
@@ -35,61 +49,51 @@ export default async function ArchitecturePage() {
         subtitle={context.domain ? t("pageSubtitle", { domain: context.domain }) : null}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ChecksList
-          section={diagnostic.architecture}
-          namespace="architecture"
-          title={ta("architecture.title")}
-          hint={ta("architecture.subtitle")}
-        />
-        <ChecksList
-          section={diagnostic.content}
-          namespace="content"
-          title={ta("content.title")}
-          hint={ta("content.subtitle")}
-        />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <AnimatedCard className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left lg:col-span-2">
+          <AnimatedScoreRing
+            score={diagnostic.architecture.score}
+            size={140}
+            stroke={12}
+            label={ta("architecture.scoreLabel")}
+          />
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">{ta("architecture.title")}</h2>
+            <p className="mt-2 text-pretty text-sm text-muted">{ta("architecture.subtitle")}</p>
+          </div>
+        </AnimatedCard>
+
+        <AnimatedCard delay={0.05}>
+          <h3 className="mb-2 font-semibold">{CATEGORY_META.technical.short}</h3>
+          <CategoryRadar data={radarData} />
+        </AnimatedCard>
+
+        <AnimatedCard delay={0.1} className="lg:col-span-3">
+          <DiagnosticGrid section={diagnostic.architecture} labelNs="architecture" />
+        </AnimatedCard>
+
+        <AnimatedCard delay={0.12} className="lg:col-span-3">
+          <h3 className="mb-3 font-semibold">{ta("content.title")}</h3>
+          <DiagnosticGrid section={diagnostic.content} labelNs="content" />
+        </AnimatedCard>
+
+        <StackCard stack={analysis.signals.stack ?? null} />
+
+        <CrawlerGrid crawlers={analysis.signals.crawlers} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardTitle title={t("crawlers")} hint={t("crawlersHint")} />
-          <ul className="divide-y divide-border">
-            {analysis.signals.crawlers.map((crawler) => (
-              <li key={crawler.name} className="flex items-center justify-between gap-3 py-3">
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <StatusDot status={crawler.allowed ? "ok" : "ko"} />
-                  <span className="truncate text-sm">{crawler.name}</span>
-                </span>
-                <span className="shrink-0 text-sm text-muted">
-                  {crawler.allowed ? t("allowed") : t("blocked")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-
-        <Card>
-          <CardTitle title={t("crawl")} hint={t("crawlHint")} />
-          <dl className="grid grid-cols-2 gap-4">
-            <Metric label={t("pages")} value={String(crawl.pagesCrawled)} />
-            <Metric label={t("words")} value={crawl.totalWordCount.toLocaleString("fr-FR")} />
-            <Metric label={t("internalLinks")} value={String(crawl.internalLinks)} />
-            <Metric
-              label={t("schemas")}
-              value={crawl.schemaTypes.length ? crawl.schemaTypes.join(", ") : t("noSchema")}
-            />
-          </dl>
-
-          {analysis.signals.stack ? (
-            <p className="mt-4 border-t border-border pt-4 text-sm text-muted">
-              {t("stack", {
-                name: analysis.signals.stack.name,
-                evidence: analysis.signals.stack.evidence,
-              })}
-            </p>
-          ) : null}
-        </Card>
-      </div>
+      <Card>
+        <CardTitle title={t("crawl")} hint={t("crawlHint")} />
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Metric label={t("pages")} value={String(crawl.pagesCrawled)} />
+          <Metric label={t("words")} value={crawl.totalWordCount.toLocaleString("fr-FR")} />
+          <Metric label={t("internalLinks")} value={String(crawl.internalLinks)} />
+          <Metric
+            label={t("schemas")}
+            value={crawl.schemaTypes.length ? crawl.schemaTypes.join(", ") : t("noSchema")}
+          />
+        </dl>
+      </Card>
 
       <ConnectStrip
         analyticsConnected={context.google.analytics}

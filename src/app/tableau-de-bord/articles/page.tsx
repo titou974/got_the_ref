@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { getDashboardContext, listArticles } from "@/features/dashboard/queries";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
+import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 import { PlanArticlesButton } from "@/components/tableau-de-bord/PlanArticlesButton";
 import { BrandVoicePanel } from "@/components/tableau-de-bord/BrandVoicePanel";
 
@@ -32,6 +33,15 @@ export default async function ArticlesPage() {
         title={t("pageTitle")}
         subtitle={context.domain ? t("pageSubtitle", { domain: context.domain }) : null}
         actions={<PlanArticlesButton />}
+      />
+
+      <ArticleMonth
+        articles={articles.map((article) => ({
+          id: article.id,
+          title: article.title,
+          status: article.status,
+          scheduledFor: article.scheduledFor,
+        }))}
       />
 
       <ArticleAgenda articles={upcoming} />

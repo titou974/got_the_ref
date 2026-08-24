@@ -7,23 +7,40 @@ import { fetchAiTraffic } from "@/features/dashboard/ga4";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import { connectorForStack } from "@/constants/site-platforms";
-import { Card, CardTitle } from "@/components/tableau-de-bord/Card";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
-import { Gauge } from "@/components/tableau-de-bord/Charts";
 import { HomeStats } from "@/components/tableau-de-bord/HomeStats";
 import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
-import { AiPositions } from "@/components/tableau-de-bord/AiPositions";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
+import { RefreshRankingsButton } from "@/components/tableau-de-bord/RefreshRankingsButton";
+import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
+import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
+import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
+import { EngineCard } from "@/components/geo/EngineRankings";
+import { ProfileHeader } from "@/components/geo/SiteProfile";
+import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
+import { Recommendations } from "@/components/geo/Recommendations";
 
 /** L'audit d'entrée peut durer plusieurs minutes sur un gros site. */
 export const maxDuration = 300;
 
+/**
+ * L'accueil du tableau de bord, dans l'ordre où le client se pose ses questions.
+ *
+ * En haut, ce qu'il vient vérifier : son site tel qu'on le voit, sa note, ses
+ * visites venues des IA, et sa place dans les trois moteurs. Ce sont exactement
+ * les blocs du rapport d'analyse, repris tels quels : l'écran qu'il a découvert
+ * en achetant doit rester reconnaissable ensuite, semaine après semaine.
+ *
+ * En dessous, ce qui explique ces chiffres : la niche retenue, le diagnostic
+ * d'architecture contrôle par contrôle, le plan d'action, le calendrier.
+ */
 export default async function DashboardHomePage() {
   const user = await requireUser();
   const context = await getDashboardContext(user.id);
   const t = await getTranslations("dashboard.home");
+  const ta = await getTranslations("analysisReport");
 
   if (!context.analysis) return <PreparingAnalysis />;
 
@@ -46,6 +63,12 @@ export default async function DashboardHomePage() {
 
   const upcoming = articles.filter((article) => article.status !== "published");
 
+  const date = new Date(analysis.createdAt).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
   return (
     <>
       <PageHeader
@@ -63,6 +86,81 @@ export default async function DashboardHomePage() {
         }
       />
 
+      {/* 1. La fenêtre du site, assombrie, avec la note posée dessus. */}
+      <SiteScreenshot
+        url={analysis.url}
+        domain={analysis.domain}
+        variant="site"
+        stack={analysis.signals.stack ?? null}
+      >
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
+          {ta("heroEyebrow")}
+        </p>
+        <AnimatedScoreRing
+          score={analysis.overallScore}
+          sizeSm={124}
+          label={scoreLabel(analysis.overallScore)}
+          trackColor="rgba(255,255,255,0.18)"
+          labelClassName="text-white/80"
+        />
+        <div>
+          <h2 className="text-balance text-xl font-bold text-white sm:text-3xl">
+            {analysis.businessName}
+          </h2>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[13px] text-white/80 sm:text-sm">
+            <a
+              href={analysis.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cursor-pointer font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white"
+            >
+              {analysis.domain}
+            </a>
+            <span aria-hidden>·</span>
+            <span>{analysis.profile.niche}</span>
+            <span aria-hidden>·</span>
+            <span>{date}</span>
+          </div>
+          <p className="mx-auto mt-3 max-w-xl text-pretty text-sm text-white/90 sm:text-base">
+            {analysis.verdict}
+          </p>
+        </div>
+      </SiteScreenshot>
+
+      {/* 2. Les chiffres, puis la courbe du trafic amené par les IA. */}
+      <HomeStats
+        score={analysis.overallScore}
+        scoreLabel={scoreLabel(analysis.overallScore)}
+        sessions={traffic?.totalSessions ?? null}
+        sessionsDelta={sessionsDelta}
+        series={traffic?.series.map((point) => ({ date: point.date, value: point.sessions })) ?? []}
+        pendingFixes={pendingFixes}
+      />
+
+      <AiTrafficCard report={traffic} />
+
+      {/* 3. La place du commerce dans ChatGPT, Gemini et Claude. */}
+      <section>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold">{ta("results.engineScoresTitle")}</h2>
+            <p className="mt-0.5 max-w-2xl text-sm text-muted">
+              {analysis.liveQuery
+                ? ta("results.testedOn", { query: analysis.liveQuery })
+                : ta("results.engineScoresSubtitle")}
+            </p>
+          </div>
+          <RefreshRankingsButton />
+        </div>
+        <div className="space-y-4">
+          {analysis.engines.map((engine, i) => (
+            <EngineCard key={engine.engine} engine={engine} delay={i * 0.05} />
+          ))}
+        </div>
+      </section>
+
+      {/* ---- Ce qui explique les chiffres du haut ---- */}
+
       <ConnectStrip
         analyticsConnected={context.google.analytics}
         propertyName={context.google.propertyName}
@@ -70,60 +168,40 @@ export default async function DashboardHomePage() {
         suggestedPlatform={connectorForStack(analysis.signals.stack?.id).id}
       />
 
-      <HomeStats
-        score={analysis.overallScore}
-        scoreLabel={scoreLabel(analysis.overallScore)}
-        sessions={traffic?.totalSessions ?? null}
-        sessionsDelta={sessionsDelta}
-        series={
-          traffic?.series.map((point) => ({ date: point.date, value: point.sessions })) ?? []
-        }
-        pendingFixes={pendingFixes}
-      />
+      <ProfileHeader profile={analysis.profile} />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <AiTrafficCard report={traffic} />
-          <AiPositions engines={analysis.engines} />
+      <AnimatedCard delay={0.05} className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="flex flex-col items-center justify-center gap-3 text-center lg:border-r lg:border-fog">
+          <AnimatedScoreRing
+            score={diagnostic.architecture.score}
+            size={120}
+            stroke={10}
+            label={ta("results.scoreLabel")}
+          />
+          <div>
+            <h3 className="font-semibold">{ta("results.diagnosisTitle")}</h3>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-muted">
+              {ta("results.diagnosisSubtitle")}
+            </p>
+          </div>
         </div>
-
-        <div className="space-y-4">
-          <Card>
-            <CardTitle title={t("health")} />
-            <Gauge
-              value={analysis.overallScore}
-              label={scoreLabel(analysis.overallScore)}
-              caption={analysis.verdict}
-            />
-          </Card>
-
-          <Card>
-            <CardTitle title={t("priorities")} hint={t("prioritiesHint")} />
-            <ul className="space-y-2.5">
-              {analysis.recommendations.slice(0, 5).map((recommendation) => (
-                <li key={recommendation.title} className="flex items-start gap-2.5">
-                  <span
-                    aria-hidden
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                      recommendation.priority === "critique"
-                        ? "bg-danger"
-                        : recommendation.priority === "haute"
-                          ? "bg-warning"
-                          : "bg-pebble"
-                    }`}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium">{recommendation.title}</span>
-                    <span className="block text-xs text-muted">{recommendation.description}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-
-          <ArticleAgenda articles={upcoming} limit={4} />
+        <div className="lg:col-span-2">
+          <DiagnosticGrid section={diagnostic.architecture} labelNs="architecture" />
         </div>
-      </div>
+      </AnimatedCard>
+
+      <section>
+        <div className="mb-3">
+          <h2 className="text-lg font-bold">{t("priorities")}</h2>
+          <p className="text-sm text-muted">{t("prioritiesHint")}</p>
+        </div>
+        <Recommendations
+          recommendations={analysis.recommendations}
+          emptyLabel={ta("results.noRecommendations")}
+        />
+      </section>
+
+      <ArticleAgenda articles={upcoming} limit={4} />
     </>
   );
 }

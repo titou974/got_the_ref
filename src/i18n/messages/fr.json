@@ -164,7 +164,7 @@
       "diagnosisTitle": "Diagnostic d'architecture",
       "diagnosisSubtitle": "L'ossature technique que les IA lisent en premier.",
       "engineScoresTitle": "Score et position par moteur IA",
-      "engineScoresSubtitle": "Ce que ChatGPT et Gemini répondent quand on cherche votre activité.",
+      "engineScoresSubtitle": "Ce que ChatGPT, Gemini et Claude répondent quand on cherche votre activité.",
       "testedOn": "Position mesurée sur la requête « {query} »",
       "measured": "Mesuré",
       "estimated": "Estimé",
@@ -1626,18 +1626,9 @@
       "noAnalytics": "Rattachez Google Analytics pour voir ces visites. Sans lui, personne ne peut les compter : elles n'apparaissent pas dans Search Console.",
       "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique."
     },
-    "positions": {
-      "title": "Votre place dans les IA",
-      "hint": "Sur la requête qui compte pour votre activité.",
-      "unranked": "Hors classement",
-      "estimated": "estimation",
-      "indirect": "Catégorie large : {label}, {rank}",
-      "visibility": {
-        "forte": "Bien visible",
-        "moyenne": "Visible par moments",
-        "faible": "Peu visible",
-        "absente": "Jamais cité"
-      }
+    "rankings": {
+      "refresh": "Reprendre le relevé",
+      "refreshing": "Interrogation des trois moteurs…"
     },
     "agenda": {
       "title": "Prochains articles",
@@ -1655,6 +1646,12 @@
         "published": "Publié",
         "rejected": "Écarté"
       }
+    },
+    "calendar": {
+      "title": "Calendrier des publications",
+      "hint": "Ce que les agents déposent sur votre site, jour par jour.",
+      "count": "{count} au planning",
+      "empty": "Aucune date de publication sur ce mois. Demandez un planning depuis la page Articles."
     },
     "checks": {
       "allGood": "Tous les contrôles passent.",
@@ -1786,7 +1783,56 @@
         "approved": "Validé",
         "published": "Publié",
         "rejected": "Écarté"
-      }
+      },
+      "tone": {
+        "title": "Ton de la marque",
+        "hint": "Relevé sur le texte que vous nous avez donné à l'accueil.",
+        "edit": "Modifier le ton",
+        "detected": "Votre manière d'écrire",
+        "detectedEmpty": "Aucun texte donné à l'accueil : les agents écrivent dans un ton neutre.",
+        "sample": "Voir le texte de référence",
+        "instructions": "Vos consignes",
+        "instructionsEmpty": "Aucune consigne ajoutée. Les agents s'en tiennent au ton relevé."
+      },
+      "tabs": {
+        "plan": "Plan",
+        "instructions": "Consignes"
+      },
+      "toolbar": {
+        "p": "Paragraphe",
+        "h2": "Titre de section",
+        "h3": "Sous-titre",
+        "ul": "Liste à puces",
+        "ol": "Liste numérotée",
+        "quote": "Citation",
+        "code": "Bloc de code",
+        "bold": "Gras",
+        "italic": "Italique",
+        "link": "Lien"
+      },
+      "placeholders": {
+        "p": "Écrivez ce paragraphe. Une réponse par paragraphe, dès la première phrase.",
+        "h2": "Titre de section",
+        "h3": "Sous-titre",
+        "ul": "Une entrée par ligne",
+        "ol": "Une étape par ligne",
+        "quote": "La citation, sans les guillemets",
+        "code": "Le code, tel quel"
+      },
+      "headingPlaceholder": "Titre de la section",
+      "sectionInstructionPlaceholder": "Ce que vous voulez lire ici : un exemple, un tarif, une objection à lever.",
+      "addSection": "Ajouter une section",
+      "removeSection": "Retirer",
+      "toggleLevel": "Changer le niveau de titre",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "syncFromBody": "Reprendre le plan du texte",
+      "titlePlaceholder": "Le titre de l'article",
+      "addBlock": "Ajouter un bloc",
+      "removeBlock": "Supprimer ce bloc",
+      "words": "{count} mots",
+      "unsaved": "Modifications non enregistrées",
+      "savedState": "Enregistré"
     },
     "presence": {
       "pageTitle": "Présence web",

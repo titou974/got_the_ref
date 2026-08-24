@@ -8,9 +8,11 @@ import { AppError } from "@/lib/errors";
 import { encryptJson, isCredentialsKeySet } from "@/lib/crypto";
 import { connectorFor } from "@/constants/site-platforms";
 import { collectSignals } from "@/lib/geo/fetcher";
-import { analyzeSite } from "@/lib/geo/analyzer";
+import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
+import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
 import { getDashboardContext, readSiteCredentials } from "./queries";
+import { parseOutline, serializeOutline } from "./outline";
 import {
   draftOutreachMessage,
   findProspects,
@@ -106,6 +108,55 @@ export const prepareDashboardAction = authActionClient
     return { id: record.id };
   });
 
+/**
+ * Relève à nouveau la place du commerce dans ChatGPT, Gemini et Claude.
+ *
+ * Le classement est la seule partie de l'audit qui bouge d'une semaine à
+ * l'autre sans que le site change : on la reprend seule, auprès des trois API,
+ * plutôt que de relancer l'audit complet. Le reste de l'analyse enregistrée est
+ * conservé tel quel.
+ */
+export const refreshRankingsAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => {
+    const userId = ctx.auth.user.id;
+    const profile = await prisma.onboardingProfile.findUnique({
+      where: { userId },
+      select: { domain: true },
+    });
+
+    const record = await prisma.analysis.findFirst({
+      where: { userId, ...(profile?.domain ? { domain: profile.domain } : {}) },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, data: true },
+    });
+    if (!record) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
+
+    let stored: GeoAnalysisResult & { tier?: string };
+    try {
+      stored = JSON.parse(record.data) as GeoAnalysisResult & { tier?: string };
+    } catch {
+      throw new AppError("Analyse illisible.", "BAD_ANALYSIS", 500);
+    }
+
+    const { engines, liveQuery } = await refreshEngineRankings(stored);
+
+    await prisma.analysis.update({
+      where: { id: record.id },
+      data: {
+        data: JSON.stringify({
+          ...stored,
+          engines,
+          liveQuery,
+          rankingsCheckedAt: new Date().toISOString(),
+        }),
+      },
+    });
+
+    revalidateDashboard();
+    return { measured: engines.filter((engine) => engine.measured).length };
+  });
+
 // ── Rattachement du site ─────────────────────────────────────────────────────
 
 export const connectSiteAction = authActionClient
@@ -199,7 +250,9 @@ export const planArticlesAction = authActionClient
         userId,
         title: topic.title,
         keyword: topic.keyword,
-        outline: JSON.stringify(topic.outline),
+        outline: serializeOutline(
+          topic.outline.map((heading) => ({ heading, level: 2 as const, instruction: "" })),
+        ),
         excerpt: topic.angle,
         scheduledFor: new Date(start.getTime() + step * (index + 1)),
         status: "planned",
@@ -218,7 +271,7 @@ export const writeArticleAction = authActionClient
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
 
     const context = await getDashboardContext(userId);
-    const outline = article.outline ? (JSON.parse(article.outline) as string[]) : [];
+    const outline = parseOutline(article.outline);
     const draft = await writeArticle(
       context,
       { title: article.title, keyword: article.keyword, outline },
@@ -238,7 +291,10 @@ export const writeArticleAction = authActionClient
 
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(article.id));
-    return { ok: true };
+    // L'atelier affiche la version rendue sans attendre le rechargement : sans
+    // ce retour, le client verrait son ancien texte pendant la revalidation et
+    // croirait la demande perdue.
+    return { title: draft.title, body: draft.body, excerpt: draft.excerpt };
   });
 
 export const updateArticleAction = authActionClient
@@ -251,6 +307,9 @@ export const updateArticleAction = authActionClient
         body: parsedInput.body,
         excerpt: parsedInput.excerpt,
         scheduledFor: parsedInput.scheduledFor ? new Date(parsedInput.scheduledFor) : undefined,
+        // Plan absent de l'envoi = plan inchangé. Une liste vide, elle, efface
+        // volontairement le plan : c'est un geste du client, pas un oubli.
+        outline: parsedInput.outline ? serializeOutline(parsedInput.outline) : undefined,
       },
     });
     if (!count) throw new AppError("Article introuvable.", "NOT_FOUND", 404);

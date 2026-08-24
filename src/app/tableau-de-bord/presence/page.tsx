@@ -1,24 +1,31 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext, listProspects } from "@/features/dashboard/queries";
+import { getDashboardContext, listArticles, listProspects } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { ProspectTable } from "@/components/tableau-de-bord/ProspectTable";
 import { PromptCard } from "@/components/tableau-de-bord/PromptCard";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
+import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 
 export const maxDuration = 300;
 
 /**
  * Présence web : ce que le web dit déjà du commerce, et à qui écrire pour qu'il
  * en dise davantage.
+ *
+ * Le calendrier éditorial est posé au milieu, entre la réputation constatée et
+ * les sites à démarcher. C'est sa place : publier est justement le moyen par
+ * lequel cette notoriété grandit, et le client voit d'un écran ce qui est dit
+ * de lui aujourd'hui et ce qui va être publié demain.
  */
 export default async function PresencePage() {
   const user = await requireUser();
-  const [context, prospects] = await Promise.all([
+  const [context, prospects, articles] = await Promise.all([
     getDashboardContext(user.id),
     listProspects(user.id),
+    listArticles(user.id),
   ]);
   const t = await getTranslations("dashboard.presence");
 
@@ -91,6 +98,15 @@ export default async function PresencePage() {
           )}
         </Card>
       </div>
+
+      <ArticleMonth
+        articles={articles.map((article) => ({
+          id: article.id,
+          title: article.title,
+          status: article.status,
+          scheduledFor: article.scheduledFor,
+        }))}
+      />
 
       <ProspectTable
         prospects={prospects.map((prospect) => ({

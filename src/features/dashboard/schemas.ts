@@ -34,6 +34,21 @@ export const updateArticleSchema = z.object({
   body: z.string().min(1).max(80_000),
   excerpt: z.string().max(600).optional(),
   scheduledFor: z.string().datetime().optional(),
+  /**
+   * Le plan et la consigne de chaque section, tels que l'atelier les affiche.
+   * Ils voyagent avec le texte : le client corrige souvent les deux du même
+   * geste, et deux enregistrements séparés laisseraient l'un des deux en retard.
+   */
+  outline: z
+    .array(
+      z.object({
+        heading: z.string().min(1).max(160),
+        level: z.union([z.literal(2), z.literal(3)]),
+        instruction: z.string().max(600).default(""),
+      }),
+    )
+    .max(20)
+    .optional(),
 });
 
 export const brandVoiceSchema = z.object({
