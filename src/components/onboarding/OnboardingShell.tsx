@@ -40,20 +40,25 @@ export function OnboardingShell({
     <main className="flex min-h-dvh flex-col bg-bg">
       <Nav minimal />
 
-      <AuthHeroAnimation className="mx-auto max-w-lg px-5" />
+      {/* Même montage que l'écran d'inscription, dont le client sort à l'instant :
+          la barre remonte sur le dernier quart du bandeau, qui ne porte que le
+          sol de la scène. On récupère une hauteur d'écran sur mobile sans rien
+          amputer du dessin. La progression se lit d'une ligne pleine, sans
+          pourcentage — le compteur chiffré dit déjà où l'on en est. */}
+      <div className="mx-auto w-full max-w-lg">
+        <AuthHeroAnimation className="px-5" />
 
-      {/* La barre de progression prolonge le bandeau : une ligne pleine sur fond
-          sourd, sans pourcentage — le compteur chiffré dit déjà où l'on est. */}
-      <div className="mx-auto w-full max-w-lg px-5">
-        <div className="h-1 w-full overflow-hidden rounded-pill bg-fog">
-          <div
-            className="h-full rounded-pill bg-obsidian transition-[width] duration-500 ease-out"
-            style={{ width: `${(index / total) * 100}%` }}
-          />
+        <div className="-mt-[7%] px-5">
+          <div className="h-1 w-full overflow-hidden rounded-pill bg-fog">
+            <div
+              className="h-full rounded-pill bg-obsidian transition-[width] duration-500 ease-out"
+              style={{ width: `${(index / total) * 100}%` }}
+            />
+          </div>
         </div>
       </div>
 
-      <section className="mx-auto w-full max-w-lg flex-1 px-5 pb-40 pt-8 sm:pt-10">
+      <section className="mx-auto w-full max-w-lg flex-1 px-5 pb-40 pt-6">
         <div className="flex items-center gap-3">
           <p className="text-sm font-bold uppercase tracking-[0.14em]">
             Étape {String(index).padStart(2, "0")}
