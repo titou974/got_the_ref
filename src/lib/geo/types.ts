@@ -157,6 +157,15 @@ export type BusinessProfile = {
   location: string | null; // ville / zone si commerce physique, sinon null
 };
 
+/**
+ * Les moteurs dont le tableau de bord relève et affiche le classement.
+ *
+ * Claude n'y figure pas : son classement n'est pas montré pour le moment, et
+ * l'interroger reviendrait à payer un appel pour une réponse que personne ne
+ * lit. L'audit complet, lui, continue d'évaluer les trois moteurs.
+ */
+export const DASHBOARD_ENGINES: AiEngine[] = ["ChatGPT", "Gemini"];
+
 export type BusinessMode = "physical" | "online";
 
 /** Un commerce dans un classement local (estimé par l'IA). */

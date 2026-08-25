@@ -41,6 +41,14 @@ import { geoLog } from "./log";
 export type AnalysisContext = {
   mode: BusinessMode;
   mapsUrl: string | null;
+  /**
+   * Niche et ville saisies pendant le tunnel d'accueil. Le client sait mieux que
+   * la détection automatique dans quel créneau il travaille : quand elles sont
+   * là, elles priment sur ce que le modèle déduit du site, car ce sont elles qui
+   * formulent la requête « top 10 » envoyée aux moteurs.
+   */
+  declaredNiche?: string | null;
+  declaredLocation?: string | null;
 };
 
 /**
@@ -688,7 +696,7 @@ async function detectProfile(
   const prompt = `Tu détectes le profil commercial d'un site, à partir de ses signaux. C'est l'étape qui sert ENSUITE à chercher les concurrents : sois précis sur la niche.
 
 Type déclaré par l'utilisateur : ${modeLabel}
-URL : ${signals.url}
+${ctx.declaredNiche?.trim() ? `Niche déclarée par le commerçant : ${ctx.declaredNiche.trim()}\n` : ""}${ctx.declaredLocation?.trim() ? `Ville déclarée par le commerçant : ${ctx.declaredLocation.trim()}\n` : ""}URL : ${signals.url}
 Domaine : ${signals.domain}
 Titre : ${signals.title ?? "(absent)"}
 Meta description : ${signals.metaDescription ?? "(absente)"}
@@ -718,9 +726,9 @@ Renvoie UNIQUEMENT un objet JSON, sans texte ni markdown autour :
   });
   const profile = normalizeProfile(
     {
-      niche: parsed.niche ?? "",
+      niche: ctx.declaredNiche?.trim() || parsed.niche || "",
       generalCategory: parsed.generalCategory ?? "",
-      location: parsed.location ?? null,
+      location: ctx.declaredLocation?.trim() || parsed.location || null,
       isPhysical: ctx.mode === "physical",
     },
     ctx,
@@ -731,13 +739,16 @@ Renvoie UNIQUEMENT un objet JSON, sans texte ni markdown autour :
 
 /** Profil de repli (sans clé de modèle, ou si la détection échoue). */
 function fallbackProfile(signals: SiteSignals, ctx: AnalysisContext): BusinessProfile {
+  // Sans niche déclarée, le nom du site sert de repli — il ne veut rien dire pour
+  // un moteur (« les 10 meilleurs Reliance »), d'où la déclaration en priorité.
   const name = signals.title?.split(/[|\-–—]/)[0].trim() || signals.domain;
+  const niche = cleanNicheLabel(ctx.declaredNiche ?? undefined) || name;
   return {
     mode: ctx.mode,
     isPhysical: ctx.mode === "physical",
-    niche: name,
-    generalCategory: "Commerce",
-    location: null,
+    niche,
+    generalCategory: cleanNicheLabel(ctx.declaredNiche ?? undefined) || "Commerce",
+    location: ctx.mode === "physical" ? ctx.declaredLocation?.trim() || null : null,
   };
 }
 
@@ -1290,6 +1301,55 @@ function combineEngines(
 }
 
 /**
+ * Ce que le commerce a déclaré lui-même pendant le tunnel d'accueil.
+ *
+ * Le profil enregistré dans l'analyse vient d'une détection automatique, qui
+ * retombe sur le NOM du site quand la niche n'a pas pu être déduite — d'où des
+ * requêtes du genre « les 10 meilleurs Reliance », qui ne veulent rien dire pour
+ * un moteur. La fiche d'accueil, elle, contient la niche et les villes saisies
+ * par le client : elle prime.
+ */
+export type DeclaredRankingProfile = {
+  niche?: string | null;
+  /** Ville / zone du commerce physique. Ignorée pour un commerce en ligne. */
+  location?: string | null;
+  /** `false` force un classement sans lieu (commerce en ligne). */
+  isPhysical?: boolean;
+};
+
+export type RefreshRankingsOptions = {
+  declared?: DeclaredRankingProfile;
+  /** Moteurs à interroger. Par défaut les trois. */
+  engines?: AiEngine[];
+};
+
+/**
+ * Le profil qui sert à formuler la requête moteur : celui de l'analyse, corrigé
+ * par ce que le client a déclaré. La niche déclarée remplace aussi la catégorie
+ * générale détectée quand celle-ci n'est qu'un repli (« Commerce »), pour ne pas
+ * demander « les 10 meilleurs Commerce » aux moteurs.
+ */
+function rankingProfile(
+  profile: BusinessProfile,
+  declared: DeclaredRankingProfile | undefined,
+): BusinessProfile {
+  if (!declared) return profile;
+  const niche = cleanNicheLabel(declared.niche ?? undefined) || profile.niche;
+  const isPhysical = declared.isPhysical ?? profile.isPhysical;
+  const generic = /^(commerce|commerces|activité non déterminée)$/i;
+  const general = generic.test(profile.generalCategory.trim())
+    ? niche
+    : profile.generalCategory;
+  return {
+    ...profile,
+    isPhysical,
+    niche,
+    generalCategory: general,
+    location: isPhysical ? (declared.location?.trim() || profile.location) : null,
+  };
+}
+
+/**
  * Reprend UNIQUEMENT les classements, sur une analyse déjà faite.
  *
  * C'est ce que le tableau de bord relance semaine après semaine : la place du
@@ -1302,6 +1362,7 @@ function combineEngines(
  */
 export async function refreshEngineRankings(
   result: GeoAnalysisResult,
+  options: RefreshRankingsOptions = {},
 ): Promise<{ engines: EngineScore[]; liveQuery: string | null }> {
   const unchanged = { engines: result.engines, liveQuery: result.liveQuery ?? null };
   if (!hasAnyEngineKey()) {
@@ -1309,7 +1370,8 @@ export async function refreshEngineRankings(
     return unchanged;
   }
 
-  const profile = result.profile;
+  const engineList = options.engines?.length ? options.engines : ALL_ENGINES;
+  const profile = rankingProfile(result.profile, options.declared);
   const matchName = result.businessName || result.domain;
   const directQuery = buildEngineQuery(profile, "direct");
   const indirectQuery = wantsIndirect(profile) ? buildEngineQuery(profile, "indirect") : null;
@@ -1325,18 +1387,19 @@ export async function refreshEngineRankings(
     Claude: [],
   };
 
-  geoLog("Classements — relevé des trois moteurs", {
+  geoLog("Classements — relevé des moteurs", {
+    moteurs: engineList.join(", "),
     direct: directQuery,
     indirect: indirectQuery ?? "(non — commerce non physique ou sans niche distincte)",
   });
 
   const [directLives, indirectLives] = await Promise.all([
-    gatherLiveEngines(directQuery).catch((err) => {
+    gatherLiveEngines(directQuery, engineList).catch((err) => {
       console.error("Appels moteurs (direct) échoués :", err);
       return [] as LiveEngineResult[];
     }),
     indirectQuery
-      ? gatherLiveEngines(indirectQuery).catch((err) => {
+      ? gatherLiveEngines(indirectQuery, engineList).catch((err) => {
           console.error("Appels moteurs (indirect) échoués :", err);
           return [] as LiveEngineResult[];
         })
