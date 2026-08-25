@@ -2,6 +2,7 @@ import "server-only";
 
 import type { ZodType } from "zod";
 import { AppError } from "@/lib/errors";
+import { aiLog } from "./log";
 
 /**
  * Les modèles qui font tourner l'accueil client.
@@ -102,19 +103,57 @@ type ChatOptions = {
   temperature?: number;
 };
 
+/** Ce que l'API nous renvoie, une fois les champs qui nous intéressent nommés. */
+type ChatPayload = {
+  choices?: {
+    message?: { content?: string; reasoning_content?: string };
+    finish_reason?: string;
+  }[];
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    completion_tokens_details?: { reasoning_tokens?: number };
+  };
+  error?: { message?: string; type?: string; code?: string };
+};
+
 /**
  * Un aller-retour vers un fournisseur, en mode JSON.
  *
  * `response_format: json_object` est honoré par les deux API et nous épargne
  * les préambules du genre « Voici le JSON demandé » — mais un modèle peut
  * encore l'entourer d'un bloc de code, d'où le nettoyage au retour.
+ *
+ * Chaque étape est tracée : sans la raison d'arrêt ni les tokens consommés,
+ * une réponse vide reste une énigme. Le cas fréquent sur un modèle qui
+ * raisonne (`deepseek-v4-pro`) est `finish_reason: "length"` — le budget
+ * `max_tokens` part dans le raisonnement, il ne reste rien pour la réponse.
+ * Le log le dit alors explicitement.
  */
 async function callProvider(name: AiProvider, options: ChatOptions): Promise<string> {
   const config = PROVIDERS[name];
   const tier = options.tier ?? "fast";
   const model = modelFor(config, tier);
+  const maxTokens = options.maxTokens ?? 4000;
+  const timeoutMs = TIMEOUT_MS[tier];
+  const label = `${name}/${model}`;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS[tier]);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const startedAt = Date.now();
+
+  aiLog(`${label} (${tier}) — appel…`, {
+    systemeCaracteres: options.system.length,
+    promptCaracteres: options.prompt.length,
+    maxTokens,
+    temperature: options.temperature ?? 0.2,
+    budgetTimeoutMs: timeoutMs,
+    urlBase: config.baseUrl,
+  });
 
   try {
     const response = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -131,23 +170,91 @@ async function callProvider(name: AiProvider, options: ChatOptions): Promise<str
         ],
         response_format: { type: "json_object" },
         temperature: options.temperature ?? 0.2,
-        max_tokens: options.maxTokens ?? 4000,
+        max_tokens: maxTokens,
         stream: false,
       }),
       signal: controller.signal,
     });
 
+    const ms = Date.now() - startedAt;
+
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      throw new Error(`${name}/${model} ${response.status} ${detail.slice(0, 300)}`);
+      aiLog(`${label} — ❌ HTTP ${response.status} après ${ms} ms`, {
+        statut: response.status,
+        corps: detail.slice(0, 500),
+        piste:
+          response.status === 401
+            ? "clé API refusée (DEEPSEEK_API_KEY)"
+            : response.status === 402
+              ? "crédit épuisé côté fournisseur"
+              : response.status === 429
+                ? "quota ou débit dépassé — réessayer plus tard"
+                : response.status >= 500
+                  ? "panne côté fournisseur"
+                  : "requête refusée (modèle inconnu ? paramètre invalide ?)",
+      });
+      throw new Error(`${label} ${response.status} ${detail.slice(0, 300)}`);
     }
 
-    const payload = (await response.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const content = payload.choices?.[0]?.message?.content;
-    if (!content) throw new Error(`${name}/${model} : réponse vide`);
+    const payload = (await response.json()) as ChatPayload;
+    const choice = payload.choices?.[0];
+    const content = choice?.message?.content;
+    const reasoning = choice?.message?.reasoning_content;
+    const finish = choice?.finish_reason;
+    const usage = payload.usage;
+
+    aiLog(`${label} — ← réponse en ${ms} ms (HTTP ${response.status})`, {
+      finishReason: finish ?? "(absent)",
+      contenuCaracteres: content?.length ?? 0,
+      raisonnementCaracteres: reasoning?.length ?? 0,
+      tokens: {
+        prompt: usage?.prompt_tokens ?? null,
+        reponse: usage?.completion_tokens ?? null,
+        raisonnement: usage?.completion_tokens_details?.reasoning_tokens ?? null,
+        total: usage?.total_tokens ?? null,
+        plafond: maxTokens,
+      },
+      apercu: content ? content.slice(0, 240) : "(vide)",
+    });
+
+    if (!content) {
+      const cause =
+        finish === "length"
+          ? `plafond max_tokens (${maxTokens}) atteint${
+              reasoning ? " — le raisonnement a tout consommé" : ""
+            } : relever maxTokens pour cet appel`
+          : finish === "content_filter"
+            ? "réponse bloquée par le filtre de contenu du fournisseur"
+            : payload.error?.message
+              ? `erreur API : ${payload.error.message}`
+              : "le fournisseur a renvoyé un choix sans contenu";
+      aiLog(`${label} — ❌ réponse vide`, { cause, finishReason: finish ?? "(absent)" });
+      throw new Error(`${label} : réponse vide (${cause})`);
+    }
+
+    if (finish === "length") {
+      aiLog(`${label} — ⚠️ réponse tronquée (finish_reason=length)`, {
+        consequence: "le JSON est probablement incomplet — parse impossible",
+        piste: `relever maxTokens (actuel ${maxTokens})`,
+      });
+    }
+
     return content;
+  } catch (error) {
+    const ms = Date.now() - startedAt;
+    if (timedOut || (error as Error)?.name === "AbortError") {
+      aiLog(`${label} — ⏱️ TIMEOUT après ${ms} ms`, {
+        budgetMs: timeoutMs,
+        piste:
+          "modèle qui raisonne + gros prompt : relever TIMEOUT_MS[tier] ou raccourcir le prompt",
+      });
+      throw new Error(`${label} : timeout après ${timeoutMs} ms`);
+    }
+    if (!(error as Error)?.message?.startsWith(label)) {
+      aiLog(`${label} — ❌ échec réseau après ${ms} ms`, String(error));
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }
@@ -163,6 +270,33 @@ function extractJson(raw: string): string {
   return body.slice(start, end + 1);
 }
 
+/** `JSON.parse`, mais qui dit ce qu'on a reçu à la place du JSON attendu. */
+function parseJson(label: string, raw: string): unknown {
+  const body = extractJson(raw);
+  if (!body) {
+    aiLog(`${label} — ❌ rien à parser`, {
+      brutCaracteres: raw.length,
+      apercuBrut: raw.slice(0, 240) || "(chaîne vide)",
+    });
+    throw new Error(`${label} : réponse sans JSON exploitable`);
+  }
+  try {
+    return JSON.parse(body);
+  } catch (error) {
+    aiLog(`${label} — ❌ JSON illisible`, {
+      erreur: String(error),
+      brutCaracteres: raw.length,
+      jsonCaracteres: body.length,
+      debut: body.slice(0, 200),
+      fin: body.slice(-200),
+      piste: body.trimEnd().endsWith("}")
+        ? "JSON complet mais mal formé"
+        : "JSON coupé net — réponse tronquée, relever maxTokens",
+    });
+    throw new Error(`${label} : JSON illisible — ${String(error)}`);
+  }
+}
+
 /**
  * Interroge le modèle et valide sa réponse contre un schéma Zod.
  *
@@ -176,6 +310,9 @@ export async function askJson<T>(
 ): Promise<T> {
   const order = providerOrder(options.provider);
   if (order.length === 0) {
+    aiLog("❌ aucun fournisseur configuré", {
+      piste: "renseigner DEEPSEEK_API_KEY ou MOONSHOT_API_KEY",
+    });
     throw new AppError(
       "L'analyse automatique est momentanément indisponible.",
       "AI_NOT_CONFIGURED",
@@ -183,19 +320,41 @@ export async function askJson<T>(
     );
   }
 
+  if (order.length === 1) {
+    aiLog(`ordre d'essai : ${order.join(" → ")} (aucun secours)`, {
+      piste:
+        "un seul fournisseur a sa clé : le moindre timeout fait échouer l'appel. Ajouter MOONSHOT_API_KEY pour un vrai secours.",
+    });
+  } else {
+    aiLog(`ordre d'essai : ${order.join(" → ")}`);
+  }
+
   let lastError: unknown = null;
 
-  for (const name of order) {
+  for (const [index, name] of order.entries()) {
+    const label = `${name}/${modelFor(PROVIDERS[name], options.tier ?? "fast")}`;
     try {
       const raw = await callProvider(name, options);
-      const parsed = schema.safeParse(JSON.parse(extractJson(raw)));
+      const parsed = schema.safeParse(parseJson(label, raw));
       if (parsed.success) return parsed.data;
+      aiLog(`${label} — ❌ réponse hors schéma`, {
+        champs: parsed.error.issues
+          .slice(0, 5)
+          .map((issue) => `${issue.path.join(".") || "(racine)"} : ${issue.message}`),
+      });
       lastError = new Error(`${name} : réponse hors schéma — ${parsed.error.message}`);
     } catch (error) {
       lastError = error;
     }
+    if (index < order.length - 1) {
+      aiLog(`bascule sur le fournisseur de secours après l'échec de ${name}`);
+    }
   }
 
+  aiLog("❌ tous les fournisseurs ont échoué", {
+    essayes: order,
+    derniereErreur: String(lastError),
+  });
   console.error("[ai] tous les fournisseurs ont échoué", lastError);
   throw new AppError(
     "L'analyse automatique n'a rien pu produire. Réessayez dans un instant.",
