@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
@@ -10,12 +9,7 @@ import { MarketForm } from "@/components/onboarding/steps/MarketForm";
 import { DescriptionForm } from "@/components/onboarding/steps/DescriptionForm";
 import { CompetitorsForm } from "@/components/onboarding/steps/CompetitorsForm";
 import { ToneForm } from "@/components/onboarding/steps/ToneForm";
-import {
-  GoogleConnectStep,
-  type GoogleConnectionState,
-} from "@/components/onboarding/steps/GoogleConnectStep";
 import { ensureOnboardingProfile, resolveStep } from "@/features/onboarding/queries";
-import { grantedScopes } from "@/features/onboarding/google";
 import { hasPhysicalPresence, type OnboardingStep } from "@/features/onboarding/steps";
 
 export const metadata: Metadata = {
@@ -33,7 +27,6 @@ export const maxDuration = 300;
 
 type Props = {
   params: Promise<{ etape: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 /** Le titre et la phrase d'appui de chaque étape. */
@@ -68,18 +61,13 @@ const COPY: Record<OnboardingStep, { title: string; subtitle: string }> = {
     subtitle:
       "Votre couleur, et un texte que vous avez écrit. Les contenus que nous produirons vous ressembleront.",
   },
-  "search-console": {
-    title: "Connectez vos outils Google",
-    subtitle:
-      "C'est ce qui nous permet de vous montrer, chiffres à l'appui, ce que notre travail vous rapporte.",
-  },
 };
 
-export default async function OnboardingStepPage({ params, searchParams }: Props) {
+export default async function OnboardingStepPage({ params }: Props) {
   const user = await requireUser();
   const profile = await ensureOnboardingProfile(user.id);
 
-  if (profile.completedAt) redirect(ROUTES.account);
+  if (profile.completedAt) redirect(ROUTES.dashboard);
 
   const requested = (await params).etape;
   const step = resolveStep(profile, requested);
@@ -150,44 +138,6 @@ export default async function OnboardingStepPage({ params, searchParams }: Props
           initialSampleUrl={profile.toneSampleUrl}
         />
       )}
-
-      {step === "search-console" && (
-        <GoogleConnectStep
-          {...(await googleState(user.id))}
-          status={readStatus((await searchParams).google)}
-        />
-      )}
     </OnboardingShell>
   );
 }
-
-/**
- * L'état des deux rattachements Google.
- *
- * Un service compte pour rattaché quand le scope a été accordé *et* qu'une
- * propriété a été retenue : un consentement sans propriété visible ne nous
- * donne aucun chiffre, et l'annoncer comme un succès mentirait au client.
- */
-async function googleState(userId: string): Promise<GoogleConnectionState> {
-  const connection = await prisma.googleConnection.findUnique({
-    where: { userId },
-    select: {
-      scope: true,
-      siteUrl: true,
-      ga4PropertyId: true,
-      ga4PropertyName: true,
-    },
-  });
-
-  const granted = grantedScopes(connection?.scope);
-
-  return {
-    gscConnected: granted.gsc && Boolean(connection?.siteUrl),
-    gscSiteUrl: connection?.siteUrl ?? null,
-    ga4Connected: granted.ga4 && Boolean(connection?.ga4PropertyId),
-    ga4PropertyName: connection?.ga4PropertyName ?? null,
-  };
-}
-
-const readStatus = (value: string | string[] | undefined): string | undefined =>
-  typeof value === "string" ? value : undefined;

@@ -11,8 +11,9 @@ import { buildGoogleAuthUrl, isGoogleConfigured } from "@/features/onboarding/go
  * navigateur vers un domaine tiers, et il faut poser le cookie `state` sur cette
  * même réponse.
  *
- * `?suite=` dit où revenir : l'étape 7 du tunnel par défaut, le tableau de bord
- * quand le rattachement est lancé depuis lui.
+ * `?suite=` dit où revenir. Le rattachement ne se propose plus dans le tunnel
+ * d'accueil : le tableau de bord est le seul point de départ, et donc le retour
+ * par défaut.
  */
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
@@ -20,10 +21,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${SITE.url}${ROUTES.signIn}`);
   }
 
-  const returnTo = safeNextPath(
-    request.nextUrl.searchParams.get("suite"),
-    ROUTES.onboardingStep("search-console"),
-  );
+  const returnTo = safeNextPath(request.nextUrl.searchParams.get("suite"), ROUTES.dashboard);
 
   if (!isGoogleConfigured()) {
     return NextResponse.redirect(`${SITE.url}${returnTo}?google=indisponible`);
