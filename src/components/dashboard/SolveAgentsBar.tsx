@@ -31,11 +31,14 @@ export function SolveAgentsBar({
   domain,
   stack,
   issues,
+  solutionPrompt,
 }: {
   domain: string;
   stack: DetectedStack | null;
   /** Manques relevés dans le rapport, rejoués dans la modale (3 au plus). */
   issues: string[];
+  /** Le prompt de correction, servi tant que le rattachement n'est pas ouvert. */
+  solutionPrompt: string;
 }) {
   const t = useTranslations("analysisReport.solve");
   const [open, setOpen] = useState(false);
@@ -136,6 +139,7 @@ export function SolveAgentsBar({
             domain={domain}
             stack={stack}
             issues={issues}
+            solutionPrompt={solutionPrompt}
             onClose={() => setOpen(false)}
           />
         )}

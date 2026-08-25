@@ -4,7 +4,6 @@ import { getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
 import { CATEGORY_META } from "@/lib/geo/types";
-import { connectorForStack } from "@/constants/site-platforms";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { PromptCard } from "@/components/tableau-de-bord/PromptCard";
@@ -95,12 +94,7 @@ export default async function ArchitecturePage() {
         </dl>
       </Card>
 
-      <ConnectStrip
-        analyticsConnected={context.google.analytics}
-        propertyName={context.google.propertyName}
-        site={context.site}
-        suggestedPlatform={connectorForStack(analysis.signals.stack?.id).id}
-      />
+      <ConnectStrip />
 
       <PromptCard prompt={buildSolutionPrompt("architecture", analysis, diagnostic)} />
     </>

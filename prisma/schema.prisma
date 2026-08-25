@@ -1,6 +1,6 @@
 generator client {
-  provider     = "prisma-client"
-  output       = "./generated/prisma"
+  provider = "prisma-client"
+  output   = "./generated/prisma"
 }
 
 datasource db {
@@ -21,17 +21,18 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  analyses     Analysis[]
-  subscription Subscription?
-  sessions     Session[]
-  accounts     Account[]
-  onboarding   OnboardingProfile?
-  googleConnection GoogleConnection?
-  siteConnection   SiteConnection?
-  brandVoice       BrandVoice?
-  articles         Article[]
-  prospects        OutreachProspect[]
-  googlePosts      GooglePost[]
+  analyses           Analysis[]
+  subscription       Subscription?
+  sessions           Session[]
+  accounts           Account[]
+  onboarding         OnboardingProfile?
+  googleConnection   GoogleConnection?
+  siteConnection     SiteConnection?
+  brandVoice         BrandVoice?
+  articles           Article[]
+  articleGenerations ArticleGeneration[]
+  prospects          OutreachProspect[]
+  googlePosts        GooglePost[]
 }
 
 /// Le questionnaire d'accueil, rempli juste après le paiement ou l'ouverture de
@@ -93,13 +94,13 @@ model Competitor {
   profileId String
   profile   OnboardingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  name        String
-  url         String?
-  domain      String?
-  reason      String?
+  name     String
+  url      String?
+  domain   String?
+  reason   String?
   /// Rang proposé par le modèle (1 = concurrent le plus direct).
-  rank        Int     @default(0)
-  selected    Boolean @default(false)
+  rank     Int     @default(0)
+  selected Boolean @default(false)
 
   createdAt DateTime @default(now())
 
@@ -199,9 +200,9 @@ model Analysis {
   domain       String
   businessName String?
   businessType String?
-  mapsUrl      String?  // Lien Google Maps fourni par l'utilisateur (facultatif)
+  mapsUrl      String? // Lien Google Maps fourni par l'utilisateur (facultatif)
   overallScore Int
-  data         String   // JSON sérialisé du résultat complet
+  data         String // JSON sérialisé du résultat complet
   createdAt    DateTime @default(now())
 
   // Déverrouillage : une analyse est gratuite (aperçu partiel) tant qu'elle n'a
@@ -212,8 +213,8 @@ model Analysis {
   stripeSessionId String?   @unique
   guestEmail      String? // E-mail saisi au paiement Stripe, avant création du compte
 
-  userId       String?
-  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -227,7 +228,7 @@ model Lead {
   email String @unique
 
   /// D'où vient l'adresse — pour l'instant « free_analysis ».
-  source String @default("free_analysis")
+  source         String   @default("free_analysis")
   /// Dernier domaine analysé : de quoi personnaliser un envoi Resend.
   domain         String?
   lastAnalysisId String?
@@ -273,9 +274,9 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("session")
   @@index([userId])
   @@index([token])
+  @@map("session")
 }
 
 model Account {
@@ -294,8 +295,8 @@ model Account {
   createdAt             DateTime
   updatedAt             DateTime
 
-  @@map("account")
   @@index([userId])
+  @@map("account")
 }
 
 model Verification {
@@ -306,8 +307,8 @@ model Verification {
   createdAt  DateTime?
   updatedAt  DateTime?
 
-  @@map("verification")
   @@index([identifier])
+  @@map("verification")
 }
 
 // ── Tableau de bord ───────────────────────────────────────────────────────────
@@ -361,7 +362,7 @@ model BrandVoice {
 
   /// Consigne de ton en clair, écrite par le client (« tutoiement, phrases
   /// courtes, aucun superlatif »).
-  instructions String @default("")
+  instructions String   @default("")
   /// Termes à bannir : noms de concurrents, mots interdits par la marque.
   banned       String[] @default([])
 
@@ -405,6 +406,26 @@ model Article {
 
   @@index([userId, scheduledFor])
   @@index([userId, status])
+}
+
+/// Une passe de rédaction facturée au quota hebdomadaire.
+///
+/// Le compteur ne peut pas se déduire de la table `Article` : une reprise
+/// réécrit une ligne existante sans en créer de nouvelle, et coûte pourtant le
+/// même appel au grand modèle. On garde donc une ligne par appel, avec sa date,
+/// et la fenêtre glissante se lit d'un `count` sur les sept derniers jours.
+///
+/// `articleId` reste une simple référence textuelle, sans relation : un article
+/// supprimé ne doit pas effacer la trace de la rédaction qu'il a consommée.
+model ArticleGeneration {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  articleId String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 /// Un site de la niche qui publie des articles, et le contact qui va avec.

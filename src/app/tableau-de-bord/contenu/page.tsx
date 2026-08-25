@@ -3,7 +3,6 @@ import { requireUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
-import { connectorForStack } from "@/constants/site-platforms";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
@@ -64,12 +63,7 @@ export default async function ContenuPage() {
         <OpeningHoursBlock value={onPage.openingHours} />
       </Card>
 
-      <ConnectStrip
-        analyticsConnected={context.google.analytics}
-        propertyName={context.google.propertyName}
-        site={context.site}
-        suggestedPlatform={connectorForStack(analysis.signals.stack?.id).id}
-      />
+      <ConnectStrip />
 
       <PromptCard prompt={buildSolutionPrompt("content", analysis, diagnostic)} />
     </>

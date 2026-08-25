@@ -371,22 +371,26 @@ async function queryGemini(query: string): Promise<LiveEngineResult> {
   }
 }
 
-/* --------------------------------- Claude --------------------------------- */
+/* -------------------------- Troisième assistant --------------------------- */
 /**
- * Reproduit Claude « grand public » avec recherche web : modele Sonnet, outil
- * web_search, requete utilisateur seule. Meme contrat que GPT et Gemini : le
- * classement se lit dans le texte de la reponse, les sources dans les blocs
- * `web_search_tool_result`.
+ * Le troisième assistant du classement, servi par le grand modèle DeepSeek.
  *
- * Claude est le troisieme moteur du classement. C'est un assistant que les
- * clients interrogent comme les deux autres, et son avis differe souvent du
- * leur : il cite plus volontiers les pages qui repondent a la question posee.
+ * L'API Anthropic ne fait plus partie du produit : ce moteur passe désormais
+ * par `deepseek-v4-pro`, le même modèle de jugement que le reste de l'audit,
+ * via le dialecte OpenAI que DeepSeek expose.
+ *
+ * Une conséquence à connaître, et elle est assumée : DeepSeek n'a pas d'outil
+ * de recherche web. Il répond de mémoire, donc il ne rapporte AUCUNE citation
+ * (`citations` reste vide) et son classement vaut ce que vaut sa connaissance
+ * du marché, là où ChatGPT et Gemini vont lire l'index avant de répondre. On
+ * lui demande explicitement de ne citer que des enseignes dont il est sûr, et
+ * de rendre une liste courte plutôt qu'un top 10 complété au hasard.
  */
-async function queryClaude(query: string): Promise<LiveEngineResult> {
+async function queryDeepSeekAssistant(query: string): Promise<LiveEngineResult> {
   const engine: AiEngine = "Claude";
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = process.env.DEEPSEEK_API_KEY;
   if (!key) {
-    geoLog("Claude - ignore (pas de cle ANTHROPIC_API_KEY)");
+    geoLog("Troisieme assistant - ignore (pas de cle DEEPSEEK_API_KEY)");
     return {
       engine,
       available: false,
@@ -397,62 +401,49 @@ async function queryClaude(query: string): Promise<LiveEngineResult> {
     };
   }
 
-  const model = process.env.ANTHROPIC_RANKING_MODEL || "claude-sonnet-4-6";
+  const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1";
+  const model = process.env.DEEPSEEK_STRONG_MODEL || "deepseek-v4-pro";
   const startedAt = Date.now();
-  geoLog(`Claude - appel (${model}, web_search)...`, {
+  geoLog(`Troisieme assistant - appel (${model})...`, {
     requete: query.slice(0, 200),
     budgetTimeoutMs: FETCH_TIMEOUT_MS,
   });
   try {
     const data = (await postJson(
-      "https://api.anthropic.com/v1/messages",
+      `${baseUrl}/chat/completions`,
       {
         method: "POST",
         headers: {
-          "x-api-key": key,
-          "anthropic-version": "2023-06-01",
+          Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           model,
           max_tokens: 2000,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
-          messages: [{ role: "user", content: query }],
+          temperature: 0.2,
+          stream: false,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Tu réponds comme un assistant grand public à qui l'on demande une recommandation. " +
+                "Tu n'as pas accès au web : ne cite que des établissements dont tu es sûr qu'ils existent " +
+                "et qu'ils sont en activité. Mieux vaut une liste de trois noms sûrs qu'un top 10 complété " +
+                "au hasard : n'invente jamais une enseigne pour remplir un rang. " +
+                "Présente ta réponse en liste numérotée, un établissement par ligne, le nom en premier.",
+            },
+            { role: "user", content: query },
+          ],
         }),
       },
-      "Claude",
-    )) as Record<string, unknown>;
+      "Troisieme assistant",
+    )) as { choices?: { message?: { content?: string } }[] };
 
-    const blocks = (data.content as Array<Record<string, unknown>>) ?? [];
-    const texts: string[] = [];
-    const citations: EngineCitation[] = [];
-    for (const block of blocks) {
-      if (block.type === "text" && typeof block.text === "string") {
-        texts.push(block.text);
-      }
-      // Sources rapportees par l'outil de recherche : un bloc par appel, chacun
-      // portant la liste des resultats retenus.
-      if (block.type === "web_search_tool_result") {
-        const results = (block.content as Array<Record<string, unknown>>) ?? [];
-        for (const r of results) {
-          const url = typeof r.url === "string" ? r.url : "";
-          if (!url) continue;
-          citations.push({
-            rank: citations.length + 1,
-            title: typeof r.title === "string" ? r.title : null,
-            url,
-            domain: domainOf(url),
-          });
-        }
-      }
-    }
-
-    const answerText = texts.join("\n");
+    const answerText = data.choices?.[0]?.message?.content?.trim() ?? "";
     const rankedItems = parseRankedItems(answerText);
-    geoLog("Claude - resultat", {
+    geoLog("Troisieme assistant - resultat", {
       tempsTotalMs: Date.now() - startedAt,
       classement: rankedItems,
-      sourcesCitees: citations.length,
       apercuReponse: answerText.slice(0, 400),
     });
     return {
@@ -461,16 +452,17 @@ async function queryClaude(query: string): Promise<LiveEngineResult> {
       answered: !!answerText || rankedItems.length > 0,
       answerText,
       rankedItems,
-      citations: dedupeCitations(citations),
+      // Aucune recherche web derrière cette réponse : pas de source à citer.
+      citations: [],
     };
   } catch (err) {
     const ms = Date.now() - startedAt;
     if (isAbortError(err)) {
       geoLog(
-        `Claude - ABANDON (AbortError) apres ${ms} ms : timeout de ${FETCH_TIMEOUT_MS} ms depasse.`,
+        `Troisieme assistant - ABANDON (AbortError) apres ${ms} ms : timeout de ${FETCH_TIMEOUT_MS} ms depasse.`,
       );
     } else {
-      geoLog(`Claude - echec apres ${ms} ms`, String(err));
+      geoLog(`Troisieme assistant - echec apres ${ms} ms`, String(err));
     }
     return {
       engine,
@@ -491,7 +483,7 @@ export function hasAnyEngineKey(): boolean {
   return !!(
     process.env.OPENAI_API_KEY ||
     process.env.GEMINI_API_KEY ||
-    process.env.ANTHROPIC_API_KEY
+    process.env.DEEPSEEK_API_KEY
   );
 }
 
@@ -509,7 +501,7 @@ export async function gatherLiveEngines(
   const callers: Record<AiEngine, (q: string) => Promise<LiveEngineResult>> = {
     ChatGPT: queryOpenAI,
     Gemini: queryGemini,
-    Claude: queryClaude,
+    Claude: queryDeepSeekAssistant,
   };
   const wanted = engines.filter((e, i) => engines.indexOf(e) === i);
   const results = await Promise.allSettled(wanted.map((e) => callers[e](query)));

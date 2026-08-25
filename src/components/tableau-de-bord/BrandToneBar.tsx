@@ -7,8 +7,9 @@ import { ROUTES } from "@/constants/routes";
 /**
  * Le ton de la marque, posé au-dessus de l'atelier.
  *
- * Il vient du tunnel d'accueil : le client y a donné un de ses textes, et c'est
- * de cette lecture qu'est tirée la manière d'écrire annoncée ici. Il est en tête
+ * Il vient du tunnel d'accueil, où il est relevé sur les textes du client :
+ * l'article qu'il a désigné, un article trouvé dans le crawl de son site, ou à
+ * défaut sa page d'accueil. Il est en tête
  * de l'écran, avant le plan et avant le texte, parce que c'est la contrainte qui
  * s'applique à tout ce qui suit — la relire avant de corriger un paragraphe
  * évite de demander trois fois la même reprise.

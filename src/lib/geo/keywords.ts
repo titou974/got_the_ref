@@ -128,6 +128,7 @@ export function fallbackTrendingKeywords(
       title: `${name} : ${profile.niche}${cityLabel} | Avis & réservation`,
       metaDescription: `${profile.niche}${cityLabel} : ${name} vous accueille. Avis clients, horaires, adresse et réservation en ligne.`,
       h1: `${profile.niche}${cityLabel}`,
+      firstParagraph: `${name}, ${profile.niche.toLowerCase()}${cityLabel}. Cette page réunit l'adresse, les horaires, ce qui est proposé et la marche à suivre pour réserver.`,
     },
     notes: [
       "Mots-clés déduits de la niche et de la zone : l'audit complet les remplace par les requêtes réellement en hausse, relevées sur Google.",
@@ -145,6 +146,7 @@ function buildPrompt(profile: BusinessProfile, signals: SiteSignals): string {
     `Title actuel : ${signals.title ?? "(absent)"}`,
     `Meta description actuelle : ${signals.metaDescription ?? "(absente)"}`,
     `H1 actuel : ${signals.h1[0] ?? "(absent)"}`,
+    `Premier paragraphe actuel : ${signals.firstParagraph ?? "(absent)"}`,
     "",
     "Avec la recherche Google, identifie les requêtes RÉELLEMENT tendances de cette niche ce mois-ci (volume en hausse, formulations employées aujourd'hui, y compris les questions posées aux assistants IA).",
     "",
@@ -152,11 +154,13 @@ function buildPrompt(profile: BusinessProfile, signals: SiteSignals): string {
     "{",
     '  "period": "mois année",',
     '  "keywords": [{ "keyword": "…", "intent": "…", "trend": "montant|stable|émergent", "placements": ["title","metaDescription","h1"] }],',
-    '  "suggested": { "title": "≤ 60 caractères", "metaDescription": "≤ 155 caractères", "h1": "≤ 70 caractères" },',
+    '  "suggested": { "title": "≤ 60 caractères", "metaDescription": "≤ 155 caractères", "h1": "≤ 70 caractères", "firstParagraph": "40 à 60 mots" },',
     '  "notes": ["…"]',
     "}",
     "",
-    `Contraintes : 6 à ${MAX_KEYWORDS} mots-clés, du plus porteur au moins porteur ; les trois réécritures doivent intégrer les mots-clés les plus porteurs sans bourrage et rester lisibles par un humain.`,
+    `Contraintes : 6 à ${MAX_KEYWORDS} mots-clés, du plus porteur au moins porteur ; les quatre réécritures doivent intégrer les mots-clés les plus porteurs sans bourrage et rester lisibles par un humain.`,
+    "",
+    "Pour « firstParagraph » : réécris le premier paragraphe de la page d'accueil de sorte qu'un assistant IA puisse le citer tel quel. Il dit en une première phrase qui est ce commerce, ce qu'il fait et où ; les phrases suivantes ajoutent un fait vérifiable (spécialité, ancienneté, zone desservie, horaires). Aucun superlatif publicitaire, aucune formule d'ouverture creuse, aucun tiret cadratin, aucun chiffre ni nom propre absent des éléments ci-dessus.",
   ].join("\n");
 }
 
@@ -218,6 +222,7 @@ export async function fetchTrendingKeywords(
         title: clean(suggested.title, 120) || fb.suggested.title,
         metaDescription: clean(suggested.metaDescription, 220) || fb.suggested.metaDescription,
         h1: clean(suggested.h1, 120) || fb.suggested.h1,
+        firstParagraph: clean(suggested.firstParagraph, 700) || fb.suggested.firstParagraph,
       },
       notes: Array.isArray(json.notes)
         ? json.notes.map((n) => clean(n, 240)).filter(Boolean).slice(0, 4)

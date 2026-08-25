@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
-import { getArticle, getDashboardContext } from "@/features/dashboard/queries";
+import { getArticle, getArticleQuota, getDashboardContext } from "@/features/dashboard/queries";
 import { parseOutline } from "@/features/dashboard/outline";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ArticleEditor } from "@/components/tableau-de-bord/ArticleEditor";
@@ -14,9 +14,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const user = await requireUser();
 
-  const [article, context] = await Promise.all([
+  const [article, context, quota] = await Promise.all([
     getArticle(user.id, id),
     getDashboardContext(user.id),
+    getArticleQuota(user.id),
   ]);
   if (!article) notFound();
 
@@ -65,6 +66,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
         canPublish={
           context.site?.status === "connected" && context.site.capabilities.includes("publish")
         }
+        quotaRemaining={quota.remaining}
       />
     </>
   );

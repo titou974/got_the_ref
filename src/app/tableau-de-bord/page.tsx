@@ -5,13 +5,14 @@ import { ROUTES } from "@/constants/routes";
 import { getDashboardContext, listArticles } from "@/features/dashboard/queries";
 import { fetchAiTraffic } from "@/features/dashboard/ga4";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
+import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
 import { scoreLabel } from "@/lib/score";
-import { connectorForStack } from "@/constants/site-platforms";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { HomeStats } from "@/components/tableau-de-bord/HomeStats";
 import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
+import { PromptCard } from "@/components/tableau-de-bord/PromptCard";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
 import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
@@ -143,12 +144,7 @@ export default async function DashboardHomePage() {
 
       {/* ---- Ce qui explique les chiffres du haut ---- */}
 
-      <ConnectStrip
-        analyticsConnected={context.google.analytics}
-        propertyName={context.google.propertyName}
-        site={context.site}
-        suggestedPlatform={connectorForStack(analysis.signals.stack?.id).id}
-      />
+      <ConnectStrip />
 
       <ProfileHeader profile={analysis.profile} />
 
@@ -184,6 +180,12 @@ export default async function DashboardHomePage() {
       </section>
 
       <ArticleAgenda articles={upcoming} limit={4} />
+
+      {/* Tant que le rattachement du site n'est pas ouvert, le prompt est la
+          voie d'exécution : il vit au bas de l'accueil comme des autres pages,
+          pour que le client n'ait pas à deviner où appliquer les priorités
+          qu'il vient de lire. */}
+      <PromptCard prompt={buildSolutionPrompt("results", analysis, diagnostic)} />
     </>
   );
 }

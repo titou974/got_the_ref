@@ -212,6 +212,15 @@ export type OnPageCheck = {
   status: "ok" | "warn" | "ko";
   signals: OnPageSignal[]; // critères attendus et leur présence
   note: string; // diagnostic court + conseil
+  /**
+   * Le correctif : l'élément réécrit, prêt à coller sur la page.
+   *
+   * Un diagnostic sans réécriture laisse le client devant la même page et le
+   * même problème. `note` dit ce qui manque, `suggestion` donne le texte à
+   * mettre à la place. `null` quand l'élément est déjà bon, ou quand le modèle
+   * n'a rien produit d'exploitable.
+   */
+  suggestion: string | null;
 };
 
 /** Audit des éléments on-page clés + horaires d'ouverture extraits du site. */
@@ -250,8 +259,19 @@ export type TrendingKeywordsInsight = {
   /** Fenêtre de tendance annoncée, ex. « août 2026 ». */
   period: string;
   keywords: TrendingKeyword[];
-  /** Titre, meta description et H1 réécrits avec les mots-clés retenus. */
-  suggested: { title: string; metaDescription: string; h1: string };
+  /**
+   * Les quatre éléments on-page réécrits avec les mots-clés retenus.
+   *
+   * `firstParagraph` complète le trio historique : c'est le passage qu'une IA
+   * cite en premier quand elle résume une page d'accueil, et le laisser de côté
+   * revenait à corriger la vitrine sans toucher à la phrase qui est reprise.
+   */
+  suggested: {
+    title: string;
+    metaDescription: string;
+    h1: string;
+    firstParagraph: string;
+  };
   notes: string[];
 };
 

@@ -41,7 +41,8 @@ export default function ConfidentialitePage() {
       </p>
       <ul>
         <li><strong>Stripe</strong> : traitement des paiements ;</li>
-        <li><strong>Anthropic</strong> : fourniture du modèle d'IA utilisé pour générer les analyses ;</li>
+        <li><strong>DeepSeek</strong> : fourniture du modèle d'IA utilisé pour générer les analyses et les textes ;</li>
+        <li><strong>Google</strong> et <strong>OpenAI</strong> : interrogation des moteurs de réponse pour mesurer votre visibilité ;</li>
         <li>notre hébergeur : stockage des données.</li>
       </ul>
       <p>

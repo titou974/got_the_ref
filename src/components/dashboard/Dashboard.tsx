@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
+import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
 import { scoreLabel } from "@/lib/score";
 import { AnimatedScoreRing } from "./AnimatedScoreRing";
 import { SiteScreenshot } from "./SiteScreenshot";
@@ -159,6 +160,10 @@ export async function Dashboard({
           domain={result.domain}
           stack={result.signals.stack ?? null}
           issues={issues}
+          // Le rattachement automatique du site n'est pas encore ouvert : en
+          // attendant, la modale remet le prompt de correction, qui produit le
+          // même résultat à la main.
+          solutionPrompt={buildSolutionPrompt("results", result, diagnostic)}
         />
       )}
     </div>

@@ -330,10 +330,10 @@ function ContentPanel({
         <h3 className="text-lg font-bold">{t("content.onPage.title")}</h3>
         <p className="mt-1 text-sm text-muted">{t("content.onPage.subtitle")}</p>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <OnPageElement label={t("content.onPage.elements.title")} check={result.onPageContent.title} />
-          <OnPageElement label={t("content.onPage.elements.metaDescription")} check={result.onPageContent.metaDescription} />
-          <OnPageElement label={t("content.onPage.elements.h1")} check={result.onPageContent.h1} />
-          <OnPageElement label={t("content.onPage.elements.firstSentence")} check={result.onPageContent.firstSentence} />
+          <OnPageElement label={t("content.onPage.elements.title")} check={result.onPageContent.title} locked={locked} />
+          <OnPageElement label={t("content.onPage.elements.metaDescription")} check={result.onPageContent.metaDescription} locked={locked} />
+          <OnPageElement label={t("content.onPage.elements.h1")} check={result.onPageContent.h1} locked={locked} />
+          <OnPageElement label={t("content.onPage.elements.firstSentence")} check={result.onPageContent.firstSentence} locked={locked} />
         </div>
         <OpeningHoursBlock value={result.onPageContent.openingHours} />
       </AnimatedCard>

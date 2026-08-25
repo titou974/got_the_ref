@@ -11,7 +11,8 @@ import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
-import { getDashboardContext, readSiteCredentials } from "./queries";
+import { getArticleQuota, getDashboardContext, readSiteCredentials } from "./queries";
+import { ARTICLE_QUOTAS } from "@/constants/plans";
 import { parseOutline, serializeOutline } from "./outline";
 import {
   draftOutreachMessage,
@@ -43,6 +44,21 @@ import {
  * repassent systématiquement par `userId` dans le `where`, faute de quoi un
  * identifiant d'article deviné ouvrirait le brouillon d'un autre client.
  */
+
+/**
+ * « mardi 2 septembre » : la date à laquelle une rédaction se libère.
+ *
+ * Un délai en heures (« dans 61 h ») obligerait le client à faire le calcul.
+ * Une date, il la lit et il sait s'il attend ou s'il écrit lui-même.
+ */
+function formatRenewal(renewsAt: Date | null): string {
+  if (!renewsAt) return "sous peu";
+  return `le ${renewsAt.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  })}`;
+}
 
 const revalidateDashboard = () => {
   revalidatePath(ROUTES.dashboard);
@@ -297,6 +313,17 @@ export const writeArticleAction = authActionClient
     const article = await prisma.article.findFirst({ where: { id: parsedInput.id, userId } });
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
 
+    // Le quota se vérifie avant l'appel au modèle, pas après : une rédaction
+    // refusée ne doit rien coûter.
+    const quota = await getArticleQuota(userId);
+    if (quota.remaining <= 0) {
+      throw new AppError(
+        `Vous avez utilisé vos ${ARTICLE_QUOTAS.weekly} rédactions de la semaine. La prochaine se libère ${formatRenewal(quota.renewsAt)}.`,
+        "ARTICLE_QUOTA",
+        429,
+      );
+    }
+
     const context = await getDashboardContext(userId);
     const outline = parseOutline(article.outline);
     const draft = await writeArticle(
@@ -305,23 +332,33 @@ export const writeArticleAction = authActionClient
       parsedInput.instruction ?? null,
     );
 
-    await prisma.article.update({
-      where: { id: article.id },
-      data: {
-        title: draft.title,
-        excerpt: draft.excerpt,
-        body: draft.body,
-        status: "drafted",
-        revisions: article.body ? article.revisions + 1 : article.revisions,
-      },
-    });
+    await prisma.$transaction([
+      prisma.article.update({
+        where: { id: article.id },
+        data: {
+          title: draft.title,
+          excerpt: draft.excerpt,
+          body: draft.body,
+          status: "drafted",
+          revisions: article.body ? article.revisions + 1 : article.revisions,
+        },
+      }),
+      // La passe n'est décomptée qu'une fois le texte obtenu : un modèle qui
+      // échoue ne doit pas consommer la semaine du client.
+      prisma.articleGeneration.create({ data: { userId, articleId: article.id } }),
+    ]);
 
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(article.id));
     // L'atelier affiche la version rendue sans attendre le rechargement : sans
     // ce retour, le client verrait son ancien texte pendant la revalidation et
     // croirait la demande perdue.
-    return { title: draft.title, body: draft.body, excerpt: draft.excerpt };
+    return {
+      title: draft.title,
+      body: draft.body,
+      excerpt: draft.excerpt,
+      remaining: quota.remaining - 1,
+    };
   });
 
 export const updateArticleAction = authActionClient

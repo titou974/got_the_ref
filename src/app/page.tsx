@@ -18,6 +18,9 @@ import { DemoCtaSection } from "@/components/home/DemoCtaSection";
 import { Faq } from "@/components/home/Faq";
 import { TRIAL } from "@/constants/plans";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
+import { ROUTES } from "@/constants/routes";
 
 /**
  * La home suit une progression volontaire : promesse → secteurs → méthode →
@@ -35,8 +38,14 @@ import { getTranslations } from "next-intl/server";
  * proposé (démarrer l'essai) à côté de la conversation IA qui se joue seule.
  * L'analyse arrive une fois la démonstration faite, là où coller son adresse a
  * un sens — l'ancre `#analyser` reste valable pour tous les liens du site.
+ *
+ * Un client déjà identifié ne voit pas cette page : elle argumente pour une
+ * décision qu'il a déjà prise. On l'emmène directement sur son tableau de bord,
+ * qui renvoie lui-même vers le tunnel d'accueil s'il ne l'a pas terminé.
  */
 export default async function Home() {
+  if (await getSession()) redirect(ROUTES.dashboard);
+
   const t = await getTranslations("homeHero");
 
   return (

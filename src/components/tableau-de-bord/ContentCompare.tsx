@@ -35,7 +35,12 @@ export function ContentCompare({
 }: {
   current: Current;
   /** Réécriture livrée par l'analyse, avant toute demande du client. */
-  suggested: { title: string; metaDescription: string; h1: string } | null;
+  suggested: {
+    title: string;
+    metaDescription: string;
+    h1: string;
+    firstParagraph: string;
+  } | null;
 }) {
   const t = useTranslations("dashboard.content");
   const [rewrite, setRewrite] = useState<OnPageRewrite | null>(null);
@@ -43,7 +48,19 @@ export function ContentCompare({
     onSuccess: ({ data }) => setRewrite(data ?? null),
   });
 
-  const proposal = rewrite ?? (suggested ? { ...suggested, intro: null, reasons: [] } : null);
+  // Le H1 et le premier paragraphe réécrits arrivent avec l'analyse : ils sont
+  // affichés d'emblée, sans attendre que le client demande une réécriture.
+  const proposal =
+    rewrite ??
+    (suggested
+      ? {
+          title: suggested.title,
+          metaDescription: suggested.metaDescription,
+          h1: suggested.h1,
+          intro: suggested.firstParagraph,
+          reasons: [] as string[],
+        }
+      : null);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
