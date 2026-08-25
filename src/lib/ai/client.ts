@@ -15,35 +15,70 @@ import { AppError } from "@/lib/errors";
  * L'ordre se règle par `AI_PROVIDER` ; le fournisseur restant sert de secours,
  * mais seulement s'il a une clé. Sans clé nulle part, on échoue franchement
  * plutôt que d'inventer une réponse : l'accueil client repose sur ces retours.
+ *
+ * Chaque fournisseur expose deux modèles, et le choix se fait par appel : le
+ * rapide pour ce qui relève de l'extraction — lire un site, en tirer une niche,
+ * reformuler un titre —, le puissant pour ce qui relève du jugement. L'audit
+ * complet est du second genre : ses notes et ses constats sont ce que le client
+ * paie, et un raisonnement court s'y voit tout de suite.
  */
 export type AiProvider = "deepseek" | "moonshot";
+
+/** Rapide et bon marché, ou lent et plus fin. Le défaut reste le rapide. */
+export type AiTier = "fast" | "strong";
 
 type ProviderConfig = {
   baseUrl: string;
   defaultModel: string;
+  /** Le grand modèle du même fournisseur, pour les appels de jugement. */
+  defaultStrongModel: string;
   apiKey?: string;
   model?: string;
+  strongModel?: string;
 };
 
 const PROVIDERS: Record<AiProvider, ProviderConfig> = {
   deepseek: {
     baseUrl: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1",
     defaultModel: "deepseek-v4-flash",
+    defaultStrongModel: "deepseek-v4-pro",
     apiKey: process.env.DEEPSEEK_API_KEY,
     model: process.env.DEEPSEEK_MODEL,
+    strongModel: process.env.DEEPSEEK_STRONG_MODEL,
   },
   moonshot: {
     baseUrl: process.env.MOONSHOT_BASE_URL ?? "https://api.moonshot.ai/v1",
     defaultModel: "kimi-k2.6",
+    defaultStrongModel: "kimi-k2.6-thinking",
     apiKey: process.env.MOONSHOT_API_KEY,
     model: process.env.MOONSHOT_MODEL,
+    strongModel: process.env.MOONSHOT_STRONG_MODEL,
   },
 };
+
+/** Le modèle à employer pour ce fournisseur et ce niveau d'exigence. */
+function modelFor(config: ProviderConfig, tier: AiTier): string {
+  return tier === "strong"
+    ? config.strongModel || config.defaultStrongModel
+    : config.model || config.defaultModel;
+}
 
 const DEFAULT_PROVIDER: AiProvider =
   process.env.AI_PROVIDER === "moonshot" ? "moonshot" : "deepseek";
 
-const TIMEOUT_MS = 120_000;
+/**
+ * Le budget d'un appel, par palier.
+ *
+ * Le grand modèle raisonne avant de répondre et rend jusqu'à seize mille tokens
+ * d'audit : les cent vingt secondes taillées pour le Flash le coupaient en
+ * plein milieu. Le plafond reste sous les trois cents secondes des routes
+ * concernées, secours compris — un premier fournisseur qui dépasse son budget
+ * doit laisser au second de quoi répondre.
+ */
+const TIMEOUT_MS: Record<AiTier, number> = {
+  fast: 120_000,
+  strong: 145_000,
+};
 
 /** Vrai dès qu'au moins un fournisseur a sa clé : sinon, rien à tenter. */
 export const isAiConfigured = (): boolean =>
@@ -61,6 +96,8 @@ type ChatOptions = {
   prompt: string;
   /** Fournisseur imposé pour cet appel (sinon `AI_PROVIDER`). */
   provider?: AiProvider;
+  /** Niveau de modèle attendu pour cet appel (sinon le rapide). */
+  tier?: AiTier;
   maxTokens?: number;
   temperature?: number;
 };
@@ -74,8 +111,10 @@ type ChatOptions = {
  */
 async function callProvider(name: AiProvider, options: ChatOptions): Promise<string> {
   const config = PROVIDERS[name];
+  const tier = options.tier ?? "fast";
+  const model = modelFor(config, tier);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS[tier]);
 
   try {
     const response = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -85,7 +124,7 @@ async function callProvider(name: AiProvider, options: ChatOptions): Promise<str
         Authorization: `Bearer ${config.apiKey}`,
       },
       body: JSON.stringify({
-        model: config.model || config.defaultModel,
+        model,
         messages: [
           { role: "system", content: options.system },
           { role: "user", content: options.prompt },
@@ -100,14 +139,14 @@ async function callProvider(name: AiProvider, options: ChatOptions): Promise<str
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      throw new Error(`${name} ${response.status} ${detail.slice(0, 300)}`);
+      throw new Error(`${name}/${model} ${response.status} ${detail.slice(0, 300)}`);
     }
 
     const payload = (await response.json()) as {
       choices?: { message?: { content?: string } }[];
     };
     const content = payload.choices?.[0]?.message?.content;
-    if (!content) throw new Error(`${name} : réponse vide`);
+    if (!content) throw new Error(`${name}/${model} : réponse vide`);
     return content;
   } finally {
     clearTimeout(timer);

@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { askJson } from "@/lib/ai/client";
+import { askGeminiGrounded } from "@/lib/ai/gemini";
 import { buildCorpus, getOrCrawlSite, saveSiteAnalysis } from "@/lib/crawl/store";
 import { crawlSite } from "@/lib/crawl/firecrawl";
 import { hasPhysicalPresence } from "./steps";
@@ -13,6 +14,11 @@ import { hasPhysicalPresence } from "./steps";
  * traverse en quelques minutes, chaque aller-retour se voit, et le coût par
  * client doit rester de l'ordre du centime — d'où DeepSeek V4 Flash en tête et
  * des sorties JSON courtes plutôt que des dissertations à retailler ensuite.
+ *
+ * Une exception : les concurrents. Les nommer suppose de savoir qui existe
+ * aujourd'hui, à cette adresse et dans cette ville — une question d'index, pas
+ * de mémoire. Cette étape part donc sur Gemini avec la recherche Google, et ne
+ * retombe sur DeepSeek que si l'appel n'aboutit pas.
  */
 
 const SYSTEM = [
@@ -109,8 +115,11 @@ const competitorsSchema = z.object({
       }),
     )
     .min(1)
-    .max(10),
+    .max(12),
 });
+
+/** Le plafond affiché : au-delà, la liste se coche plus qu'elle ne se lit. */
+const MAX_COMPETITORS = 8;
 
 export type SuggestedCompetitor = {
   name: string;
@@ -120,12 +129,112 @@ export type SuggestedCompetitor = {
   rank: number;
 };
 
+/** Le domaine d'une adresse écrite à la main, ou null si elle est illisible. */
+function toDomain(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    return new URL(normalized).hostname.replace(/^www\./i, "").toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Cinq concurrents directs, en un seul appel.
+ * La fiche du commerce, telle qu'elle est donnée au modèle.
  *
- * « Direct » vaut ici au sens commercial : même offre, même clientèle, et pour
- * un commerce de quartier la même ville — un concurrent national ne dispute pas
- * les mêmes réponses IA qu'un artisan à trois rues de là.
+ * Gemini et le modèle de repli lisent exactement le même brief : si l'un tombe,
+ * l'autre travaille sur les mêmes faits, et la liste ne change pas de nature
+ * selon le fournisseur qui a répondu.
+ */
+function competitorBrief({
+  siteUrl,
+  description,
+  audience,
+  niche,
+  targetMarket,
+  cities,
+  physical,
+}: {
+  siteUrl: string | null;
+  description: string | null;
+  audience: string | null;
+  niche: string | null;
+  targetMarket: string | null;
+  cities: string[];
+  physical: boolean;
+}): string {
+  return [
+    siteUrl ? `Site : ${siteUrl}` : "",
+    niche ? `Niche : ${niche}` : "",
+    description ? `Activité : ${description}` : "",
+    audience ? `Clientèle visée : ${audience}` : "",
+    targetMarket ? `Marché visé : ${targetMarket}` : "",
+    physical && cities.length > 0 ? `Villes du commerce : ${cities.join(", ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** La consigne commune : ce qui compte pour qu'un concurrent soit « direct ». */
+function competitorRules(physical: boolean): string[] {
+  return [
+    physical
+      ? "Ne retiens que des concurrents établis dans ces villes ou leur agglomération immédiate : un acteur national ne dispute pas les mêmes réponses IA qu'un artisan à trois rues de là."
+      : "Ne retiens que des concurrents qui visent le même marché en ligne.",
+    "N'inclus jamais le commerce lui-même, ni un annuaire, un comparateur, une place de marché ou un article de blog : on cherche des entreprises concurrentes, pas des pages qui les listent.",
+  ];
+}
+
+/**
+ * Met la liste en forme : dédoublonnage, retrait du commerce lui-même, rang.
+ *
+ * Le dédoublonnage se fait sur le domaine quand il existe, sur le nom sinon —
+ * un même concurrent revient volontiers deux fois sous deux orthographes quand
+ * le modèle a lu plusieurs pages à son sujet.
+ */
+function normalizeCompetitors(
+  found: { name: string; url: string | null; reason: string | null }[],
+  ownDomain: string | null,
+): SuggestedCompetitor[] {
+  const seen = new Set<string>();
+  const out: SuggestedCompetitor[] = [];
+
+  for (const competitor of found) {
+    const name = competitor.name.trim();
+    if (!name) continue;
+
+    const domain = toDomain(competitor.url);
+    if (domain && ownDomain && domain === ownDomain) continue;
+
+    const key = domain ?? name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    out.push({
+      name,
+      url: competitor.url,
+      domain,
+      reason: competitor.reason,
+      rank: out.length + 1,
+    });
+    if (out.length === MAX_COMPETITORS) break;
+  }
+
+  return out;
+}
+
+/**
+ * Les concurrents directs du commerce, cherchés sur le web.
+ *
+ * Gemini avec la recherche Google passe en premier, et ce n'est pas un détail
+ * de fournisseur : un modèle qui répond de mémoire propose des enseignes
+ * vraisemblables — parfois fermées, parfois inventées, souvent nationales alors
+ * qu'on cherche la rue d'à côté. Aller voir l'index règle la question à la
+ * source, et le client reçoit des noms qu'il reconnaît.
+ *
+ * DeepSeek reste branché derrière, sans recherche : si la clé Gemini manque ou
+ * si l'appel tombe, mieux vaut une liste à corriger qu'une étape vide.
  */
 export async function suggestCompetitors({
   siteUrl,
@@ -145,52 +254,60 @@ export async function suggestCompetitors({
   businessKind: string | null;
 }): Promise<SuggestedCompetitor[]> {
   const physical = hasPhysicalPresence(businessKind);
+  const brief = competitorBrief({
+    siteUrl,
+    description,
+    audience,
+    niche,
+    targetMarket,
+    cities,
+    physical,
+  });
+  const rules = competitorRules(physical);
+  const ownDomain = toDomain(siteUrl);
+
+  const grounded = await askGeminiGrounded(competitorsSchema, {
+    label: "Concurrents",
+    maxOutputTokens: 2200,
+    prompt: [
+      `Avec la recherche Google, trouve les concurrents directs les plus sérieux du commerce décrit ci-dessous. Vise ${MAX_COMPETITORS} entreprises, et n'en garde aucune dont tu ne sois sûr.`,
+      "",
+      brief,
+      "",
+      ...rules,
+      "Vérifie chaque entreprise sur le web avant de la citer : elle doit être en activité aujourd'hui, et l'adresse indiquée doit être son site officiel.",
+      "",
+      "Réponds UNIQUEMENT par un objet JSON de cette forme, en français, sans commentaire autour :",
+      "{",
+      '  "competitors": [{ "name": "…", "url": "https://…" ou null, "reason": "une phrase disant en quoi il dispute la même clientèle" }]',
+      "}",
+      "",
+      "Classe du concurrent le plus direct au moins direct.",
+    ].join("\n"),
+  });
+
+  if (grounded) {
+    const list = normalizeCompetitors(grounded.data.competitors, ownDomain);
+    if (list.length > 0) return list;
+  }
 
   const { competitors } = await askJson(competitorsSchema, {
     system: SYSTEM,
     prompt: [
-      "Identifie les 5 concurrents les plus directs du commerce décrit ci-dessous.",
+      `Identifie les ${MAX_COMPETITORS} concurrents les plus directs du commerce décrit ci-dessous.`,
       "",
-      siteUrl ? `Site : ${siteUrl}` : "",
-      niche ? `Niche : ${niche}` : "",
-      description ? `Activité : ${description}` : "",
-      audience ? `Clientèle visée : ${audience}` : "",
-      targetMarket ? `Marché visé : ${targetMarket}` : "",
-      physical && cities.length > 0 ? `Villes du commerce : ${cities.join(", ")}` : "",
+      brief,
       "",
-      physical
-        ? "Privilégie des concurrents établis dans ces villes ou leur agglomération immédiate."
-        : "Privilégie des concurrents qui visent le même marché en ligne.",
-      "N'inclus jamais le commerce lui-même. Ne propose que des entreprises dont tu es sûr de l'existence.",
+      ...rules,
+      "Ne propose que des entreprises dont tu es sûr de l'existence.",
       "",
       'Réponds en JSON : { "competitors": [ { "name": …, "url": … ou null, "reason": une phrase expliquant en quoi il est direct } ] },',
       "classés du plus direct au moins direct.",
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    maxTokens: 1200,
+    ].join("\n"),
+    maxTokens: 1600,
   });
 
-  return competitors.slice(0, 5).map((competitor, index) => {
-    let domain: string | null = null;
-    if (competitor.url) {
-      try {
-        const normalized = /^https?:\/\//i.test(competitor.url)
-          ? competitor.url
-          : `https://${competitor.url}`;
-        domain = new URL(normalized).hostname.replace(/^www\./i, "").toLowerCase();
-      } catch {
-        domain = null;
-      }
-    }
-    return {
-      name: competitor.name.trim(),
-      url: competitor.url,
-      domain,
-      reason: competitor.reason,
-      rank: index + 1,
-    };
-  });
+  return normalizeCompetitors(competitors, ownDomain);
 }
 
 // ── Étape 6 : la tonalité ────────────────────────────────────────────────────

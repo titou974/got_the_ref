@@ -104,10 +104,15 @@ export function CompetitorsForm({ competitors }: { competitors: Competitor[] }) 
     );
   }
 
+  // Le domaine passe à côté du nom, la raison en dessous. Collés par un « · »
+  // sur une seule ligne, les deux se lisaient comme une même phrase et le
+  // domaine — le seul élément qui permet de reconnaître l'enseigne — se perdait
+  // au milieu.
   const options = list.map((competitor) => ({
     value: competitor.id,
     label: competitor.name,
-    description: [competitor.domain, competitor.reason].filter(Boolean).join(" · ") || undefined,
+    hint: competitor.domain ?? undefined,
+    description: competitor.reason ?? undefined,
   }));
 
   return (
@@ -117,6 +122,15 @@ export function CompetitorsForm({ competitors }: { competitors: Competitor[] }) 
         save.execute({ selected });
       }}
     >
+      {/* Le compte, dit avant la liste : la recherche en rend cinq comme huit
+          selon ce qu'elle a trouvé, et un client qui en attendait un nombre
+          fixe doit voir que la liste est courte parce qu'elle est vraie. */}
+      <p className="mb-4 text-sm text-muted">
+        {list.length === 1
+          ? "1 concurrent trouvé sur le web."
+          : `${list.length} concurrents trouvés sur le web.`}
+      </p>
+
       <CheckCards
         name="competitors"
         options={options}
