@@ -2,7 +2,7 @@ import "server-only";
 
 import type { ZodType } from "zod";
 import { AppError } from "@/lib/errors";
-import { aiLog } from "./log";
+import { aiLog, aiLogPrompt } from "./log";
 
 /**
  * Les modèles qui font tourner l'accueil client.
@@ -81,6 +81,32 @@ const TIMEOUT_MS: Record<AiTier, number> = {
   strong: 145_000,
 };
 
+/**
+ * La marge de raisonnement du grand modèle.
+ *
+ * `max_tokens` borne TOUT ce que le modèle produit, raisonnement compris. Sur
+ * `deepseek-v4-pro`, la réflexion consomme couramment trois cents à deux mille
+ * tokens avant le premier caractère de réponse : un appel réglé sur neuf cents
+ * tokens rendait un contenu vide avec `finish_reason: "length"`, la réflexion
+ * ayant tout mangé. Les appelants dimensionnent leur budget pour la réponse
+ * qu'ils attendent ; la marge est ajoutée ici, une bonne fois, plutôt que
+ * dupliquée dans chaque prompt.
+ */
+const REASONING_HEADROOM = 3_000;
+
+/**
+ * Le plafond de sortie que l'API accepte. La marge de raisonnement ne doit pas
+ * pousser un gros appel au-delà : l'audit complet demande déjà seize mille
+ * tokens, et une valeur refusée vaudrait une erreur 400 sur tous les audits.
+ */
+const MAX_OUTPUT_TOKENS = 16_000;
+
+/** Le `max_tokens` réellement envoyé : la réponse attendue, plus la réflexion. */
+function budgetFor(tier: AiTier, maxTokens: number): number {
+  if (tier !== "strong") return maxTokens;
+  return Math.min(maxTokens + REASONING_HEADROOM, Math.max(maxTokens, MAX_OUTPUT_TOKENS));
+}
+
 /** Vrai dès qu'au moins un fournisseur a sa clé : sinon, rien à tenter. */
 export const isAiConfigured = (): boolean =>
   Object.values(PROVIDERS).some((p) => Boolean(p.apiKey));
@@ -131,11 +157,16 @@ type ChatPayload = {
  * `max_tokens` part dans le raisonnement, il ne reste rien pour la réponse.
  * Le log le dit alors explicitement.
  */
-async function callProvider(name: AiProvider, options: ChatOptions): Promise<string> {
+async function callProvider(
+  name: AiProvider,
+  options: ChatOptions,
+  tierOverride?: AiTier,
+): Promise<string> {
   const config = PROVIDERS[name];
-  const tier = options.tier ?? "fast";
+  const tier = tierOverride ?? options.tier ?? "fast";
   const model = modelFor(config, tier);
-  const maxTokens = options.maxTokens ?? 4000;
+  const wanted = options.maxTokens ?? 4000;
+  const maxTokens = budgetFor(tier, wanted);
   const timeoutMs = TIMEOUT_MS[tier];
   const label = `${name}/${model}`;
   const controller = new AbortController();
@@ -149,11 +180,14 @@ async function callProvider(name: AiProvider, options: ChatOptions): Promise<str
   aiLog(`${label} (${tier}) — appel…`, {
     systemeCaracteres: options.system.length,
     promptCaracteres: options.prompt.length,
-    maxTokens,
+    reponseAttendueTokens: wanted,
+    maxTokensEnvoye: maxTokens,
+    margeRaisonnement: maxTokens - wanted,
     temperature: options.temperature ?? 0.2,
     budgetTimeoutMs: timeoutMs,
     urlBase: config.baseUrl,
   });
+  aiLogPrompt(label, options.system, options.prompt);
 
   try {
     const response = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -320,39 +354,67 @@ export async function askJson<T>(
     );
   }
 
-  if (order.length === 1) {
-    aiLog(`ordre d'essai : ${order.join(" → ")} (aucun secours)`, {
-      piste:
-        "un seul fournisseur a sa clé : le moindre timeout fait échouer l'appel. Ajouter MOONSHOT_API_KEY pour un vrai secours.",
-    });
-  } else {
-    aiLog(`ordre d'essai : ${order.join(" → ")}`);
-  }
+  // Un essai par (fournisseur, palier). Quand un appel de jugement échoue, le
+  // modèle rapide du même fournisseur reprend la question avant qu'on change de
+  // fournisseur : il ne raisonne pas, donc il ne dépasse ni son budget de
+  // tokens ni celui de temps. Une réponse un peu moins fine vaut mieux qu'une
+  // carte vide dans le tableau de bord.
+  const tier = options.tier ?? "fast";
+  const attempts = order.flatMap((name) =>
+    tier === "strong"
+      ? [
+          { name, tier: "strong" as AiTier },
+          { name, tier: "fast" as AiTier },
+        ]
+      : [{ name, tier }],
+  );
+
+  aiLog(
+    `plan d'essai : ${attempts.map((a) => `${a.name}/${modelFor(PROVIDERS[a.name], a.tier)}`).join(" → ")}`,
+    order.length === 1
+      ? {
+          piste:
+            "un seul fournisseur a sa clé : après le repli sur le modèle rapide, il n'y a plus rien. Ajouter MOONSHOT_API_KEY pour un vrai secours.",
+        }
+      : undefined,
+  );
 
   let lastError: unknown = null;
 
-  for (const [index, name] of order.entries()) {
-    const label = `${name}/${modelFor(PROVIDERS[name], options.tier ?? "fast")}`;
+  for (const [index, attempt] of attempts.entries()) {
+    const label = `${attempt.name}/${modelFor(PROVIDERS[attempt.name], attempt.tier)}`;
     try {
-      const raw = await callProvider(name, options);
+      const raw = await callProvider(attempt.name, options, attempt.tier);
       const parsed = schema.safeParse(parseJson(label, raw));
-      if (parsed.success) return parsed.data;
+      if (parsed.success) {
+        if (attempt.tier !== tier) {
+          aiLog(`${label} — ✅ réponse obtenue par repli sur le modèle rapide`);
+        }
+        return parsed.data;
+      }
       aiLog(`${label} — ❌ réponse hors schéma`, {
         champs: parsed.error.issues
           .slice(0, 5)
           .map((issue) => `${issue.path.join(".") || "(racine)"} : ${issue.message}`),
       });
-      lastError = new Error(`${name} : réponse hors schéma — ${parsed.error.message}`);
+      lastError = new Error(
+        `${attempt.name} : réponse hors schéma — ${parsed.error.message}`,
+      );
     } catch (error) {
       lastError = error;
     }
-    if (index < order.length - 1) {
-      aiLog(`bascule sur le fournisseur de secours après l'échec de ${name}`);
+    const next = attempts[index + 1];
+    if (next) {
+      aiLog(
+        next.name === attempt.name
+          ? `repli sur le modèle rapide de ${attempt.name} après l'échec de ${label}`
+          : `bascule sur le fournisseur ${next.name} après l'échec de ${label}`,
+      );
     }
   }
 
-  aiLog("❌ tous les fournisseurs ont échoué", {
-    essayes: order,
+  aiLog("❌ tous les essais ont échoué", {
+    essayes: attempts.map((a) => `${a.name}/${modelFor(PROVIDERS[a.name], a.tier)}`),
     derniereErreur: String(lastError),
   });
   console.error("[ai] tous les fournisseurs ont échoué", lastError);

@@ -55,6 +55,24 @@ const WRITING_RULES = [
   "Répondre à la question posée dès la première phrase du paragraphe, avant toute mise en contexte.",
   "Chaque paragraphe doit rester compréhensible sorti de son article : c'est ainsi qu'un assistant le cite.",
   "Jamais de conclusion qui résume ce qui vient d'être dit ni d'appel à l'action générique.",
+  // Les marques d'un texte écrit par un modèle, relevées par le projet de
+  // nettoyage IA de Wikipédia. Un client les repère sans savoir les nommer :
+  // il dit « ça ne me ressemble pas », et le texte finit non publié.
+  "Aucune phrase qui gonfle l'importance d'un fait ordinaire (« témoigne de », « joue un rôle clé », « marque un tournant », « s'inscrit dans une dynamique »).",
+  "Aucun participe présent d'analyse creuse en fin de phrase (« soulignant… », « reflétant… », « garantissant… », « permettant ainsi… »).",
+  "Aucune source vague : « les experts s'accordent », « selon plusieurs études », « il est reconnu que ». Nommer la source ou supprimer la phrase.",
+  "Employer « est », « a », « fait » plutôt que « se positionne comme », « constitue », « propose une offre de », « dispose de ».",
+  "Aucune tournure « non seulement… mais aussi », « ce n'est pas X, c'est Y », ni fin de phrase amputée en guise d'effet.",
+  "Pas d'énumération systématique par trois : lister ce qu'il y a à lister, deux éléments ou quatre si c'est le compte.",
+  "Pas de « de X à Y » quand X et Y ne forment pas un vrai intervalle.",
+  "Pas de gras décoratif, pas de liste dont chaque puce commence par une étiquette en gras suivie de deux points, pas d'emoji.",
+  "Titres de section en minuscules sauf le premier mot et les noms propres ; une section ne commence jamais par une phrase qui répète son titre.",
+  "Guillemets français, jamais de guillemets courbes anglais.",
+  "Pas d'annonce de ce qui suit (« voyons maintenant », « décryptons », « voici ce qu'il faut retenir ») : dire la chose directement.",
+  "Pas de fausse confidence en ouverture (« soyons honnêtes », « la vérité, c'est que ») ni de formule qui prétend révéler le fond (« au fond », « la vraie question est »).",
+  "Ne pas répondre à une objection que personne n'a formulée, ni écarter une option que personne n'envisagerait.",
+  "Pas de chute dramatique en fragments successifs, pas de fin sur une note d'optimisme vague : le texte s'arrête sur le dernier fait utile.",
+  "Varier la longueur des phrases : un texte dont toutes les phrases font la même taille se lit comme une réponse de chatbot.",
 ].join(" ");
 
 /**
@@ -161,6 +179,9 @@ export async function writeArticle(
       "entre 700 et 1200 mots, plus un chapô de deux phrases.",
       "Écris dans la tonalité relevée sur les textes du client : c'est sa manière de parler qui doit se reconnaître,",
       "pas celle d'un article de blog interchangeable.",
+      "Avant de rendre, relis chaque paragraphe et supprime ce qui trahit un texte de modèle : phrases qui gonflent",
+      "l'importance d'un fait, participes présents d'analyse, sources vagues, énumérations par trois, gras décoratif,",
+      "annonces de ce qui suit, fin sur une note d'optimisme. Une phrase supprimée vaut mieux qu'une phrase de remplissage.",
       "Réponds en JSON : { \"title\", \"excerpt\", \"body\" }",
     ]
       .filter(Boolean)
@@ -218,6 +239,14 @@ export async function rewriteOnPage(context: DashboardContext): Promise<OnPageRe
       "- intro : le premier paragraphe réécrit, 40 à 60 mots en 2 ou 3 phrases. La première phrase",
       "  répond seule à « qui, quoi, où » et doit pouvoir être citée hors contexte par un assistant ;",
       "  les suivantes ajoutent un fait vérifiable tiré du brief.",
+      "",
+      "Le H1 et l'intro sont les deux phrases que le client relit en premier : ils doivent sonner comme lui,",
+      "pas comme un texte de modèle. Concrètement, pour ces deux éléments :",
+      "- verbes simples (est, propose, ouvre, répare) plutôt que « se positionne comme » ou « constitue » ;",
+      "- pas de « votre partenaire de confiance », « au cœur de », « depuis toujours », « l'excellence au service de » ;",
+      "- pas de triade décorative (« qualité, proximité et savoir-faire ») : deux faits valent mieux que trois adjectifs ;",
+      "- pas d'emoji, pas de gras, pas de tiret cadratin, pas de majuscule à chaque mot ;",
+      "- l'intro ne répète pas le H1 : elle ajoute le fait que le H1 n'a pas la place de porter.",
       "",
       "Puis, dans \"reasons\", dis élément par élément ce que le correctif change pour la citation par une IA.",
       "Réponds en JSON : { \"title\", \"metaDescription\", \"h1\", \"intro\", \"reasons\": [] }",

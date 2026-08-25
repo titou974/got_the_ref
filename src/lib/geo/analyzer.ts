@@ -451,6 +451,7 @@ CONSIGNES :
 12. mapsCoherence : SI une fiche Google Maps a été fournie (« ${ctx.mapsUrl ?? "(non fournie)"} »), évalue la cohérence entre la fiche et le site (nom, catégorie, localisation, NAP, positionnement). score (0-100), summary, listingName (ou null), reviewCount et rating à null si tu ne peux pas les connaître de façon fiable, matches = points vérifiés (label, consistent, detail), findings. SI aucune fiche n'a été fournie : renvoie null.
 13. onPageContent : audite les ÉLÉMENTS ON-PAGE RÉELS ci-dessus. Pour chaque élément, "text" = le contenu RÉEL repris tel quel (ou null s'il est absent), "status" (ok/warn/ko), "signals" = critères attendus avec present (true/false), "note" = un diagnostic court avec un conseil concret, "suggestion" = LE CORRECTIF, c'est-à-dire l'élément RÉÉCRIT prêt à coller sur la page (null uniquement si le status est "ok" et qu'il n'y a rien à améliorer).
    Règles du correctif, valables pour les quatre éléments : il est rédigé en français, dans la langue du site, sans superlatif publicitaire (« incontournable », « véritable », « niché au cœur de »), sans formule d'ouverture creuse (« dans un monde où », « de nos jours »), sans tiret cadratin, et sans le moindre chiffre, prix, date, distinction ou nom propre qui ne figure pas déjà dans les éléments fournis ci-dessus. Il reprend les mots que les clients emploient pour chercher ce commerce, pas le vocabulaire interne de l'entreprise.
+   Le correctif doit se lire comme une phrase écrite par le commerçant, jamais comme un texte de modèle : verbes simples (« est », « propose », « ouvre », « répare ») plutôt que « se positionne comme » ou « constitue » ; aucune promesse creuse (« votre partenaire de confiance », « l'excellence au service de », « depuis toujours ») ; aucune triade décorative (« qualité, proximité et savoir-faire ») ; aucun participe présent d'analyse en fin de phrase (« soulignant… », « garantissant… ») ; aucun emoji, aucun gras, aucune majuscule à chaque mot. Le premier paragraphe ne reprend pas le H1 : il ajoute le fait que le H1 n'a pas la place de porter.
    - suggestion du title : au plus 60 caractères, marque + niche + ville.
    - suggestion de la metaDescription : 140 à 155 caractères, avec la niche, la ville et une raison de cliquer.
    - suggestion du h1 : au plus 70 caractères, une seule idée, les mots-clés de la niche (« ${profile.niche} ») en tête, jamais un slogan.
@@ -583,14 +584,29 @@ function normalizeCheck(c: OnPageCheck | undefined, fallbackText: string | null)
   };
 }
 
+/**
+ * Pourquoi l'audit se rabat sur les seuls signaux on-page.
+ *
+ * La distinction compte pour le client : une clé absente se règle en une
+ * minute dans la configuration, un modèle qui n'a pas répondu se règle en
+ * relançant l'analyse. Écrire « clé API non configurée » dans les deux cas
+ * envoyait chercher une panne qui n'existait pas.
+ */
+type FallbackReason = "no-key" | "model-failed";
+
+const fallbackNote = (reason: FallbackReason): string =>
+  reason === "no-key"
+    ? "clé API IA non configurée"
+    : "le modèle d'analyse n'a pas répondu à temps";
+
 /** Audit on-page déterministe (sans IA) : présence brute des éléments clés. */
-function heuristicOnPage(signals: SiteSignals): OnPageContent {
+function heuristicOnPage(signals: SiteSignals, reason: FallbackReason): OnPageContent {
   const present = (text: string | null): OnPageCheck => ({
     text: text || null,
     status: text ? "warn" : "ko",
     signals: [],
     note: text
-      ? "Analyse approfondie indisponible (clé API IA non configurée)."
+      ? `Analyse approfondie indisponible (${fallbackNote(reason)}).`
       : "Élément absent de la page d'accueil.",
     // Sans modèle, aucun correctif à proposer : la carte reste au diagnostic.
     suggestion: null,
@@ -944,6 +960,7 @@ function heuristicAnalysis(
   signals: SiteSignals,
   ctx: AnalysisContext,
   profile: BusinessProfile,
+  reason: FallbackReason,
 ): EngineCore {
   const s = signals;
   const technical = clamp(
@@ -1109,7 +1126,7 @@ function heuristicAnalysis(
     positioning:
       googleScore >= 70 ? "Page 1 (top 5) potentielle" : googleScore >= 45 ? "Page 2-3 estimée" : "Faiblement positionné",
     summary:
-      "Estimation SEO automatique basée sur les signaux on-page (clé API IA non configurée pour une analyse approfondie).",
+      `Estimation SEO automatique basée sur les signaux on-page (${fallbackNote(reason)}).`,
     findings: [
       s.title ? `Balise title : « ${s.title} »` : "Balise title manquante.",
       s.metaDescription ? "Meta description présente." : "Meta description manquante.",
@@ -1123,13 +1140,13 @@ function heuristicAnalysis(
     url: s.url,
     domain: s.domain,
     businessName,
-    businessType: profile.niche || "Estimation automatique (clé API IA non configurée)",
+    businessType: profile.niche || `Estimation automatique (${fallbackNote(reason)})`,
     profile,
     localRankings: [],
     webPresence: {
       score: clamp(brandAuthority * 0.6),
       summary:
-        "Notoriété éditoriale non analysée (clé API IA non configurée) : seuls les signaux on-page sont pris en compte.",
+        `Notoriété éditoriale non analysée (${fallbackNote(reason)}) : seuls les signaux on-page sont pris en compte.`,
       qualifications: [],
       articles: [],
       findings: [
@@ -1139,7 +1156,7 @@ function heuristicAnalysis(
       ],
     },
     mapsCoherence: null,
-    onPageContent: heuristicOnPage(s),
+    onPageContent: heuristicOnPage(s, reason),
     engines,
     googleSeo,
     verdict:
@@ -1639,12 +1656,12 @@ export async function analyzeSite(
   geoLog("Étape 2b — Audit + backlinks + mots-clés tendances en parallèle");
   const [core, backlinks, liveKeywords] = await Promise.all([
     (async (): Promise<EngineCore> => {
-      if (!hasKey) return heuristicAnalysis(signals, ctx, profile);
+      if (!hasKey) return heuristicAnalysis(signals, ctx, profile, "no-key");
       try {
         return await analyzeWithModel(signals, ctx, profile, mapsListing, measuredDirect);
       } catch (err) {
         console.error("Audit modèle échoué, fallback heuristique :", err);
-        return heuristicAnalysis(signals, ctx, profile);
+        return heuristicAnalysis(signals, ctx, profile, "model-failed");
       }
     })(),
     hasKey
