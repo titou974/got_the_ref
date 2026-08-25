@@ -83,11 +83,14 @@ export function ArticleEditor({
   tone,
   voice,
   canPublish,
+  quotaRemaining,
 }: {
   article: EditorArticle;
   tone: { summary: string | null; color: string | null; sampleUrl: string | null };
   voice: { instructions: string; banned: string[] } | null;
   canPublish: boolean;
+  /** Rédactions encore disponibles cette semaine, lues à l'ouverture de la page. */
+  quotaRemaining: number;
 }) {
   const t = useTranslations("dashboard.article");
   const router = useRouter();
@@ -115,8 +118,13 @@ export function ArticleEditor({
   const approve = useAction(approveArticleAction, { onSuccess: () => router.refresh() });
   const publish = useAction(publishArticleAction, { onSuccess: () => router.refresh() });
   const reject = useAction(rejectArticleAction, { onSuccess: () => router.refresh() });
+  // Le budget de rédaction, recalculé à chaque passe : l'action rend ce qu'il
+  // reste, faute de quoi le compteur mentirait jusqu'au rechargement de page.
+  const [remaining, setRemaining] = useState(quotaRemaining);
+
   const write = useAction(writeArticleAction, {
     onSuccess: ({ data }) => {
+      if (typeof data?.remaining === "number") setRemaining(data.remaining);
       // La version rédigée remplace ce qui est à l'écran sans attendre un aller
       // -retour serveur : sinon le client verrait son ancien texte pendant que
       // la page se recharge, et croirait la demande perdue.
@@ -360,14 +368,25 @@ export function ArticleEditor({
             />
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || remaining <= 0}
               onClick={() =>
                 write.execute({ id: article.id, instruction: instruction.trim() || undefined })
               }
-              className="mt-3 w-full cursor-pointer rounded-pill bg-obsidian px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
+              className="mt-3 w-full cursor-pointer rounded-pill bg-obsidian px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
             >
               {write.isPending ? t("writing") : blocks.length ? t("rewriteCta") : t("writeCta")}
             </button>
+
+            {/* Le budget de la semaine, sous le bouton qui le consomme : c'est
+                là qu'il pèse dans la décision de relancer une reprise. */}
+            <p className="mt-2 text-xs text-muted">
+              {remaining > 0
+                ? `${remaining} rédaction${remaining > 1 ? "s" : ""} restante${
+                    remaining > 1 ? "s" : ""
+                  } cette semaine. Une reprise en consomme une.`
+                : "Rédactions de la semaine épuisées. Votre brouillon reste modifiable à la main."}
+            </p>
+
             {article.revisions > 0 ? (
               <p className="mt-2 text-xs text-muted">
                 {t("revisions")} : {article.revisions}

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { decryptJson } from "@/lib/crypto";
 import type { SiteCapability } from "@/constants/site-platforms";
+import { ARTICLE_QUOTAS } from "@/constants/plans";
 
 /**
  * Tout ce que le tableau de bord relit avant d'afficher quoi que ce soit.
@@ -164,4 +165,51 @@ export async function listGooglePosts(userId: string) {
     where: { userId },
     orderBy: [{ scheduledFor: "asc" }, { createdAt: "desc" }],
   });
+}
+
+/** Où en est le client de ses rédactions de la semaine. */
+export type ArticleQuota = {
+  /** Rédactions déjà consommées dans la fenêtre glissante. */
+  used: number;
+  /** Rédactions encore disponibles (jamais négatif). */
+  remaining: number;
+  /** Le plafond, repris des constantes pour l'affichage. */
+  limit: number;
+  /**
+   * Quand la prochaine se libère : la plus ancienne passe de la fenêtre, plus
+   * sept jours. `null` quand il reste des rédactions — il n'y a alors rien à
+   * attendre.
+   */
+  renewsAt: Date | null;
+};
+
+/**
+ * Le quota de rédaction sur les sept derniers jours.
+ *
+ * La fenêtre glisse : on ne remet pas un compteur à zéro le lundi, on regarde
+ * ce qui a été consommé depuis sept jours. La date de renouvellement se déduit
+ * donc de la plus ancienne passe encore dans la fenêtre — c'est elle qui en
+ * sortira la première.
+ */
+export async function getArticleQuota(userId: string): Promise<ArticleQuota> {
+  const since = new Date(Date.now() - ARTICLE_QUOTAS.windowMs);
+  const [used, oldest] = await Promise.all([
+    prisma.articleGeneration.count({ where: { userId, createdAt: { gte: since } } }),
+    prisma.articleGeneration.findFirst({
+      where: { userId, createdAt: { gte: since } },
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true },
+    }),
+  ]);
+
+  const remaining = Math.max(0, ARTICLE_QUOTAS.weekly - used);
+  return {
+    used,
+    remaining,
+    limit: ARTICLE_QUOTAS.weekly,
+    renewsAt:
+      remaining > 0 || !oldest
+        ? null
+        : new Date(oldest.createdAt.getTime() + ARTICLE_QUOTAS.windowMs),
+  };
 }

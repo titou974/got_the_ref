@@ -67,7 +67,7 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
 
   const unlocked = session ? await unlockAnalysisFromSession(session) : null;
 
-  // Lance l'audit complet (Claude + moteurs live) dès maintenant : le visiteur
+  // Lance l'audit complet (DeepSeek + moteurs live) dès maintenant : le visiteur
   // patiente ici de toute façon, autant qu'il découvre le vrai rapport tout de
   // suite plutôt qu'au prochain chargement de la page d'analyse.
   if (unlocked) await ensurePaidAnalysis(unlocked.analysisId);

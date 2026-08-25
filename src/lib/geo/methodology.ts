@@ -1,7 +1,7 @@
 /**
  * Méthodologie GEO prête pour le prompt — vendorisée depuis les skills Claude
  * Code `geo-audit` et `geo` (voir ./methodology/*.md), adaptée à la structure du
- * dashboard got_the_ref. Injectée dans l'appel Claude Opus 4.8 pour que l'audit en
+ * dashboard got_the_ref. Injectée dans l'appel au modèle d'audit pour que la
  * production suive exactement la même grille que le skill.
  *
  * NE PAS reformuler à la légère : c'est la source de vérité de la notation.

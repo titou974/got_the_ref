@@ -64,7 +64,7 @@ export default async function AnalysePage({ params }: Props) {
   const user = await getCurrentUser();
   const locked = !isReportUnlocked(analysis, user);
 
-  // Débloqué mais l'audit complet (Claude + moteurs live) n'a encore jamais
+  // Débloqué mais l'audit complet (DeepSeek + moteurs live) n'a encore jamais
   // tourné pour cette analyse (paiement reçu sans passer par /paiement/succes) :
   // on le lance maintenant, une seule fois.
   if (!locked) {

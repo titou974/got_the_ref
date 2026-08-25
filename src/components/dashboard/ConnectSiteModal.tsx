@@ -122,15 +122,29 @@ export function ConnectSiteModal({
   domain,
   stack,
   issues,
+  solutionPrompt,
   onClose,
 }: {
   domain: string;
   stack: DetectedStack | null;
   /** Manques relevés dans le rapport, rejoués dans l'en-tête (3 au plus). */
   issues: string[];
+  /** Le prompt de correction, seule action réellement disponible aujourd'hui. */
+  solutionPrompt: string;
   onClose: () => void;
 }) {
   const t = useTranslations("analysisReport.solve.modal");
+  const [copied, setCopied] = useState(false);
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(solutionPrompt);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* presse-papiers indisponible : rien à signaler, le bouton ne change pas */
+    }
+  }
 
   // Échap ferme la modale ; verrou du scroll tant qu'elle est ouverte.
   useEffect(() => {
@@ -185,15 +199,21 @@ export function ConnectSiteModal({
             </p>
           )}
 
-          <div className="mt-6 flex flex-col gap-2.5">
-            {/* TODO : branchement de la connexion (OAuth / clé d'accès) et
-                lancement des agents — traité dans un second temps. */}
+          {/* Le rattachement automatique arrive ; d'ici là, le prompt fait le
+              travail. Un bouton qui promet la connexion sans la faire coûte
+              plus cher en confiance que l'aveu du calendrier. */}
+          <p className="mt-4 rounded-2xl border border-fog bg-mist px-4 py-3 text-xs leading-relaxed text-muted">
+            {t("soonNote")}
+          </p>
+
+          <div className="mt-5 flex flex-col gap-2.5">
             <button
               type="button"
               autoFocus
+              onClick={copyPrompt}
               className="cursor-pointer rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
             >
-              {t("cta")}
+              {copied ? t("promptCopied") : t("promptCta")}
             </button>
             <button
               type="button"

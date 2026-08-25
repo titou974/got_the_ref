@@ -17,7 +17,7 @@ import {
   siteSchema,
   toneSchema,
 } from "./schemas";
-import { analyzeSite, readTone, suggestCompetitors } from "./service";
+import { analyzeSite, detectBrandTone, suggestCompetitors } from "./service";
 import { ensureOnboardingProfile } from "./queries";
 import { hasPhysicalPresence, LAST_STEP, nextStep, type OnboardingStep } from "./steps";
 
@@ -271,25 +271,51 @@ export const saveCompetitorsAction = authActionClient
 
 // ── Étape 6 : la tonalité ────────────────────────────────────────────────────
 
+/**
+ * Relève la tonalité du client et rend les champs à enregistrer.
+ *
+ * L'étape reste facultative, mais elle ne repart plus les mains vides quand le
+ * client n'a pas de lien à donner : on va chercher un de ses articles dans le
+ * crawl déjà en base, et à défaut on lit sa page d'accueil. Un échec n'arrête
+ * rien — sans consigne de ton, les agents écrivent comme avant.
+ */
+async function readToneFor(
+  userId: string,
+  sampleUrl: string | null,
+): Promise<{ toneSampleUrl: string | null; toneSummary: string | null }> {
+  const profile = await prisma.onboardingProfile.findUnique({
+    where: { userId },
+    select: { siteUrl: true },
+  });
+
+  try {
+    const reading = await detectBrandTone({
+      siteUrl: profile?.siteUrl ?? null,
+      sampleUrl,
+    });
+    return {
+      // On garde l'adresse réellement lue : c'est elle que l'écran de
+      // tonalité réaffiche, et le client doit pouvoir la corriger s'il n'est
+      // pas d'accord avec la page choisie.
+      toneSampleUrl: sampleUrl || reading.sourceUrl,
+      toneSummary: reading.tone,
+    };
+  } catch (error) {
+    console.error("[onboarding] lecture de la tonalité impossible", error);
+    return { toneSampleUrl: sampleUrl, toneSummary: null };
+  }
+}
+
 export const saveToneAction = authActionClient
   .inputSchema(toneSchema)
   .action(async ({ parsedInput, ctx }) => {
     await ensureOnboardingProfile(ctx.auth.user.id);
 
-    let toneSummary: string | null = null;
-    if (parsedInput.toneSampleUrl) {
-      try {
-        toneSummary = await readTone(parsedInput.toneSampleUrl);
-      } catch (error) {
-        // Étape facultative : un lien illisible ne bloque pas le tunnel.
-        console.error("[onboarding] lecture de la tonalité impossible", error);
-      }
-    }
+    const tone = await readToneFor(ctx.auth.user.id, parsedInput.toneSampleUrl || null);
 
     await advance(ctx.auth.user.id, "tonalite", {
       brandColor: parsedInput.brandColor || null,
-      toneSampleUrl: parsedInput.toneSampleUrl || null,
-      toneSummary,
+      ...tone,
     });
   });
 
@@ -299,12 +325,24 @@ const skipSchema = z.object({
   step: z.enum(["concurrents", "tonalite"]),
 });
 
-/** Passe une étape facultative sans rien enregistrer. */
+/**
+ * Passe une étape facultative.
+ *
+ * La tonalité fait exception : passer l'étape ne veut pas dire renoncer à la
+ * voix du client, seulement qu'il n'a pas de lien à fournir. On la relève quand
+ * même sur son site, puisque c'est justement ce qu'on sait faire sans lui.
+ */
 export const skipStepAction = authActionClient
   .inputSchema(skipSchema)
   .action(async ({ parsedInput, ctx }) => {
     await ensureOnboardingProfile(ctx.auth.user.id);
-    await advance(ctx.auth.user.id, parsedInput.step, {});
+
+    const data =
+      parsedInput.step === "tonalite"
+        ? await readToneFor(ctx.auth.user.id, null)
+        : {};
+
+    await advance(ctx.auth.user.id, parsedInput.step, data);
   });
 
 /**

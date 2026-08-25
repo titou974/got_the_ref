@@ -105,6 +105,21 @@ export function UrlAnalyzeForm({
         router.push(pricingWithReason("quota"));
         return;
       }
+
+      // Analyse gratuite déjà consommée. On ne renvoie pas le visiteur les
+      // mains vides : son rapport existe, on le rouvre. C'est aussi le meilleur
+      // endroit pour lui montrer ce que l'abonnement débloquerait dessus.
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}));
+        setAnalyzing(false);
+        if (data.analysisId) {
+          router.push(ROUTES.analysis(String(data.analysisId)));
+          return;
+        }
+        setError(data.error ?? t("errorFailed"));
+        return;
+      }
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? t("errorFailed"));

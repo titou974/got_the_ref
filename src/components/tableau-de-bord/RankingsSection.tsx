@@ -16,8 +16,10 @@ import { DASHBOARD_ENGINES, type EngineScore } from "@/lib/geo/types";
  * pendant ce temps les cartes cèdent la place à l'attente. Laisser les anciens
  * classements à l'écran pendant le relevé laisserait croire qu'ils sont à jour.
  *
- * Seuls les moteurs de `DASHBOARD_ENGINES` sont montrés : Claude reste dans
- * l'analyse enregistrée, mais son classement n'est pas affiché ici.
+ * Seuls les moteurs de `DASHBOARD_ENGINES` sont montrés. Le top 10 direct et
+ * indirect qu'ils portent vient de leur propre réponse : ChatGPT par son outil
+ * de recherche, Gemini par le grounding Google Search. Aucun modèle de service
+ * ne fabrique un classement à leur place.
  */
 export function RankingsSection({
   engines,

@@ -104,16 +104,61 @@ export const AGENCY_BENCHMARK_YEARLY = { min: 20000, max: 24000 } as const;
 export const FREE_SCORE_CAP = 49;
 
 /** Quotas d'analyses **gratuites** (l'aperçu partiel). `null` = illimité. */
+/**
+ * Ce que l'analyse gratuite ouvre, et où elle s'arrête.
+ *
+ * Une seule analyse gratuite, une seule fois, sur un seul site. C'est une
+ * démonstration, pas un outil : un visiteur qui peut la relancer indéfiniment
+ * n'a aucune raison d'ouvrir un compte, et chaque passe coûte un crawl complet
+ * plus une série d'appels de modèle.
+ *
+ * Le comptage anonyme tient sur deux garde-fous complémentaires. Le cookie posé
+ * après l'analyse est le vrai verrou : il survit au redémarrage du serveur et
+ * suit le navigateur. Le quota par IP, lui, est en mémoire et disparaît au
+ * redéploiement — il ne sert qu'à contenir une rafale depuis une même adresse
+ * (cookie effacé, navigation privée), pas à décompter sur la durée.
+ */
 export const ANALYSIS_QUOTAS = {
-  /** Visiteur anonyme : quota par IP sur une fenêtre glissante. */
-  anon: { limit: 3, windowMs: 24 * 60 * 60 * 1000 },
-  /** Compte gratuit : quota glissant sur 30 jours. */
-  free: { monthly: 10 },
+  /** Visiteur anonyme : une analyse, puis plus rien sur cette adresse IP. */
+  anon: { limit: 1, windowMs: 30 * 24 * 60 * 60 * 1000 },
+  /** Compte gratuit : une analyse à vie, l'abonnement ouvre le reste. */
+  free: { lifetime: 1 },
   /** Abonné : illimité. */
-  pro: { monthly: null },
+  pro: { lifetime: null },
   /** Ancien plan agence : illimité. */
-  agency: { monthly: null },
+  agency: { lifetime: null },
 } as const;
+
+/**
+ * Le rythme de rédaction : combien d'articles les agents écrivent par semaine.
+ *
+ * Une limite hebdomadaire, pas mensuelle. Publier dix articles le premier jour
+ * puis plus rien pendant trois semaines ne sert personne : ni le client, dont
+ * le site paraît abandonné, ni les moteurs de réponse, qui reviennent lire un
+ * domaine qui bouge. La fenêtre est glissante — sept jours en arrière, pas un
+ * compteur remis à zéro le lundi, qui inviterait à tout consommer le dimanche.
+ *
+ * Une reprise compte comme une rédaction : c'est le même appel au grand modèle,
+ * au même coût. Un client qui régénère cinq fois le même article a bien occupé
+ * l'atelier cinq fois.
+ */
+export const ARTICLE_QUOTAS = {
+  /** Rédactions (première passe ou reprise) par fenêtre de sept jours. */
+  weekly: 3,
+  /** La fenêtre, en millisecondes. */
+  windowMs: 7 * 24 * 60 * 60 * 1000,
+} as const;
+
+/**
+ * Le nom du cookie qui retient l'analyse gratuite déjà consommée.
+ *
+ * Il porte l'identifiant de l'analyse, pas un simple drapeau : le visiteur qui
+ * revient est ainsi renvoyé sur SON rapport plutôt que sur un refus sec.
+ */
+export const FREE_ANALYSIS_COOKIE = "visia_free_audit";
+
+/** Durée de vie du cookie d'analyse gratuite, en secondes (un an). */
+export const FREE_ANALYSIS_COOKIE_MAX_AGE = 365 * 24 * 60 * 60;
 
 /** Mode de facturation Stripe d'une offre. */
 export type BillingMode = "payment" | "subscription";

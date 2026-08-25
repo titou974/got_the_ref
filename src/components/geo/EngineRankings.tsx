@@ -21,8 +21,42 @@ import { LockedPill, Obscured } from "@/components/dashboard/LockedContent";
 const ENGINE_LOGOS: Record<string, string> = {
   ChatGPT: "/chatgpt.png",
   Gemini: "/gemini.webp",
-  Claude: "/claude.svg",
 };
+
+/**
+ * D'où vient ce top 10, dit en une ligne sous le classement.
+ *
+ * Trois états, et ils ne se valent pas. Un relevé du jour est ce que le moteur
+ * répond maintenant. Un relevé plus ancien reste un relevé — il est gardé tel
+ * quel quand l'API n'a pas répondu, plutôt que remplacé par autre chose — mais
+ * le client doit lire sa date pour ne pas le prendre pour une position
+ * d'aujourd'hui. Une estimation, enfin, n'est pas un classement : elle vient de
+ * la connaissance du marché par le modèle d'audit, et le dire est la seule
+ * façon de garder la confiance sur les deux premiers cas.
+ */
+function RankingSource({ ranking }: { ranking: EngineRanking }) {
+  if (!ranking.measured) {
+    return (
+      <p className="mt-2 text-[11px] leading-relaxed text-muted">
+        Estimation de marché, pas un relevé : aucun moteur n&apos;a répondu sur cette requête.
+      </p>
+    );
+  }
+
+  const measuredAt = ranking.measuredAt ? new Date(ranking.measuredAt) : null;
+  if (!measuredAt || Number.isNaN(measuredAt.getTime())) return null;
+
+  const sameDay = new Date().toDateString() === measuredAt.toDateString();
+  if (sameDay) return null;
+
+  return (
+    <p className="mt-2 text-[11px] leading-relaxed text-muted">
+      Relevé du{" "}
+      {measuredAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}{" "}
+      : le moteur n&apos;a pas répondu depuis, ce classement est conservé tel quel.
+    </p>
+  );
+}
 
 /**
  * Un classement (direct ou indirect) d'un moteur, avec le commerce surligné.
@@ -105,6 +139,10 @@ export function RankingList({
       ) : (
         <p className="text-xs text-muted">{t("noRankingData")}</p>
       )}
+
+      {/* Verrouillé, les lignes sont fictives : annoncer leur provenance n'aurait
+          aucun sens, et daterait un classement que le visiteur ne voit pas. */}
+      {!locked && <RankingSource ranking={ranking} />}
     </div>
   );
 }

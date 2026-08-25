@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { OnPageCheck } from "@/lib/geo/types";
 
@@ -19,7 +20,23 @@ const ON_PAGE_STATUS_COLOR: Record<OnPageCheck["status"], string> = {
   ko: "#e5484d",
 };
 
-export function OnPageElement({ label, check }: { label: string; check: OnPageCheck }) {
+export function OnPageElement({
+  label,
+  check,
+  locked = false,
+}: {
+  label: string;
+  check: OnPageCheck;
+  /**
+   * Aperçu gratuit : le diagnostic reste ouvert, le correctif non.
+   *
+   * Le texte réel du site et ce qui lui manque sont des constats, et un constat
+   * se donne — c'est ce qui rend l'aperçu crédible. La réécriture, elle, est la
+   * livraison : l'afficher gratuitement reviendrait à vendre l'abonnement pour
+   * ce qu'on aurait déjà donné.
+   */
+  locked?: boolean;
+}) {
   const t = useTranslations("analysisReport.content.onPage");
   const color = ON_PAGE_STATUS_COLOR[check.status];
 
@@ -68,6 +85,48 @@ export function OnPageElement({ label, check }: { label: string; check: OnPageCh
       )}
 
       {check.note && <p className="mt-2 text-xs leading-relaxed text-muted">{check.note}</p>}
+
+      {check.suggestion && !locked && <SuggestionBlock text={check.suggestion} />}
+    </div>
+  );
+}
+
+/**
+ * Le correctif, sous le diagnostic : le texte réécrit, prêt à coller.
+ *
+ * Un bouton de copie plutôt qu'une sélection à la main : ce bloc n'existe que
+ * pour finir dans le CMS du client, et la moitié des H1 tiennent sur deux
+ * lignes qu'on sélectionne mal au doigt.
+ */
+function SuggestionBlock({ text }: { text: string }) {
+  const t = useTranslations("analysisReport.content.onPage");
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* presse-papiers indisponible : le texte reste sélectionnable à la main */
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-2xl border border-fog bg-snow p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-steel">
+          {t("suggestionLabel")}
+        </span>
+        <button
+          type="button"
+          onClick={copy}
+          className="cursor-pointer rounded-pill border border-fog px-2.5 py-1 text-[11px] font-medium text-steel transition-colors duration-200 hover:bg-mist"
+        >
+          {copied ? t("copied") : t("copy")}
+        </button>
+      </div>
+      <p className="mt-1.5 text-sm leading-relaxed text-text">{text}</p>
     </div>
   );
 }

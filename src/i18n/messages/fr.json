@@ -208,6 +208,9 @@
         "body": "Les agents appliquent les correctifs directement sur votre site : fichiers, balises et données structurées. Vous validez chaque changement avant publication.",
         "detected": "Plateforme détectée : {name}",
         "cta": "Connecter le site",
+        "soonNote": "Le rattachement automatique de votre site ouvre dans les prochains jours. En attendant, copiez le prompt ci-dessous : il reprend tous les manques relevés sur votre site et donne le code exact à appliquer.",
+        "promptCta": "Copier le prompt de correction",
+        "promptCopied": "Prompt copié",
         "later": "Plus tard",
         "reassurance": "Accès révocable à tout moment. Aucune publication sans votre validation.",
         "fixedCount": "{count}/{total} corrigés",
@@ -261,8 +264,11 @@
           "title": "Balise title",
           "metaDescription": "Méta description",
           "h1": "Titre H1",
-          "firstSentence": "Première phrase d'introduction"
+          "firstSentence": "Premier paragraphe"
         },
+        "suggestionLabel": "Correctif proposé",
+        "copy": "Copier",
+        "copied": "Copié",
         "openingHoursTitle": "Horaires d'ouverture",
         "openingHoursEmpty": "Aucun horaire détecté sur le site."
       }
@@ -390,7 +396,8 @@
     "invalidUrl": "URL invalide. Saisissez une adresse comme exemple.fr.",
     "invalidMapsUrl": "Lien Google Maps invalide. Collez l'adresse de votre fiche Google Maps.",
     "anonQuota": "Limite d'analyses gratuites atteinte. Créez un compte pour continuer.",
-    "quotaFree": "Limite d'analyses gratuites atteinte pour ce mois-ci.",
+    "alreadyUsed": "Vous avez déjà utilisé votre analyse gratuite. Ouvrez votre rapport, ou démarrez l'essai pour analyser un autre site.",
+    "quotaFree": "Votre analyse gratuite a déjà été utilisée. L'abonnement ouvre les analyses suivantes.",
     "quotaPro": "Limite mensuelle d'analyses atteinte.",
     "failed": "L'analyse a échoué. Vérifiez l'URL et réessayez."
   },
@@ -1573,9 +1580,11 @@
     "connect": {
       "connected": "Rattaché",
       "notConnected": "À rattacher",
+      "soon": "À venir",
       "analytics": {
         "title": "Google Analytics",
         "body": "Pour compter les visites que ChatGPT, Perplexity et Gemini vous envoient.",
+        "soonDetail": "Le rattachement ouvre dans les prochains jours. En attendant, le prompt de correction en bas de page reprend tous les constats de votre site : collez-le dans votre IA pour appliquer les corrections tout de suite.",
         "detail": "Lecture seule. Nous relevons vos statistiques, nous n'écrivons jamais dedans.",
         "cta": "Rattacher Analytics",
         "again": "Refaire le rattachement",
@@ -1585,6 +1594,7 @@
       "site": {
         "title": "Votre site",
         "body": "Pour que les agents corrigent vos pages et publient vos articles.",
+        "soonDetail": "Shopify, WordPress, Wix, Webflow : le rattachement ouvre dans les prochains jours. En attendant, chaque page vous donne le correctif prêt à coller et le prompt à passer à votre IA.",
         "detail": "Shopify, WordPress, Wix, Webflow et les autres. Vos identifiants sont chiffrés avant d'être enregistrés.",
         "cta": "Rattacher mon site",
         "again": "Modifier le rattachement",
@@ -1787,10 +1797,10 @@
       },
       "tone": {
         "title": "Ton de la marque",
-        "hint": "Relevé sur le texte que vous nous avez donné à l'accueil.",
+        "hint": "Relevé sur vos propres textes : un de vos articles, ou votre page d'accueil.",
         "edit": "Modifier le ton",
         "detected": "Votre manière d'écrire",
-        "detectedEmpty": "Aucun texte donné à l'accueil : les agents écrivent dans un ton neutre.",
+        "detectedEmpty": "Aucun texte exploitable n'a pu être lu : les agents écrivent dans un ton neutre.",
         "sample": "Voir le texte de référence",
         "instructions": "Vos consignes",
         "instructionsEmpty": "Aucune consigne ajoutée. Les agents s'en tiennent au ton relevé."

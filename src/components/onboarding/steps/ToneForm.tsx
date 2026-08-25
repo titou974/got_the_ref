@@ -7,12 +7,16 @@ import { StepFooter } from "@/components/onboarding/StepFooter";
 import { saveToneAction, skipStepAction } from "@/features/onboarding/actions";
 
 /**
- * Étape 6, la dernière — la couleur de marque et un article donné en exemple.
+ * Étape 6, la dernière — la couleur de marque et, si le client en a un sous la
+ * main, un article donné en exemple.
  *
- * L'article compte plus que la couleur : c'est lui qui apprend aux agents à
- * écrire comme le client écrit — quelle personne il emploie, s'il tutoie, s'il
- * plaisante. Sans ce repère, les textes produits sonnent comme ceux de tout le
- * monde, et c'est exactement ce qu'un moteur de réponse ne cite pas.
+ * Le lien n'est plus nécessaire. Le site a été crawlé à l'étape 2 : s'il publie
+ * des articles, on en lit un ; sinon on lit sa page d'accueil. C'est de là que
+ * les agents tirent la manière d'écrire du client — quelle personne il emploie,
+ * s'il tutoie, s'il plaisante. Sans ce repère, les textes produits sonnent
+ * comme ceux de tout le monde, et c'est exactement ce qu'un moteur de réponse
+ * ne cite pas. Le champ reste offert parce que le client sait mieux que nous
+ * quel texte le représente.
  */
 export function ToneForm({
   initialColor,
@@ -72,12 +76,12 @@ export function ToneForm({
 
       <PillField
         name="toneSampleUrl"
-        label="Un texte qui vous ressemble"
+        label="Un texte qui vous ressemble (facultatif)"
         placeholder="Lien vers un de vos articles ou une page « à propos »"
         value={sampleUrl}
         onChange={(event) => setSampleUrl(event.target.value)}
         error={save.result.validationErrors?.toneSampleUrl?._errors?.[0]}
-        hint="Nous le lisons pour retrouver votre manière d'écrire. Le texte n'est pas conservé."
+        hint="Sans lien, nous lisons un de vos articles ou, à défaut, votre page d'accueil pour retrouver votre manière d'écrire. Le texte n'est pas conservé."
       />
 
       {save.result.serverError && <p className="text-sm text-danger">{save.result.serverError}</p>}
@@ -86,7 +90,7 @@ export function ToneForm({
           qu'un « Continuer » qui laisserait croire qu'il en reste. */}
       <StepFooter
         label="Ouvrir mon tableau de bord"
-        pendingLabel={sampleUrl ? "Lecture de votre texte…" : "Un instant…"}
+        pendingLabel="Lecture de vos textes…"
         pending={save.isPending || skip.isPending}
         onSkip={() => skip.execute({ step: "tonalite" })}
         skipLabel="Passer et ouvrir mon tableau de bord"

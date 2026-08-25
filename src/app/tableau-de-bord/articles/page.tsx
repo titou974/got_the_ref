@@ -1,10 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext, listArticles } from "@/features/dashboard/queries";
+import { getArticleQuota, getDashboardContext, listArticles } from "@/features/dashboard/queries";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
 import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 import { PlanArticlesButton } from "@/components/tableau-de-bord/PlanArticlesButton";
+import { ArticleQuotaBar } from "@/components/tableau-de-bord/ArticleQuotaBar";
 import { BrandVoicePanel } from "@/components/tableau-de-bord/BrandVoicePanel";
 
 export const maxDuration = 300;
@@ -18,9 +19,10 @@ export const maxDuration = 300;
  */
 export default async function ArticlesPage() {
   const user = await requireUser();
-  const [context, articles] = await Promise.all([
+  const [context, articles, quota] = await Promise.all([
     getDashboardContext(user.id),
     listArticles(user.id),
+    getArticleQuota(user.id),
   ]);
   const t = await getTranslations("dashboard.articles");
 
@@ -37,6 +39,8 @@ export default async function ArticlesPage() {
       {/* La demande de planning est posée sur la page, pas dans l'en-tête : le
           temps que le modèle réponde, elle laisse place à l'attente annoncée. */}
       <PlanArticlesButton />
+
+      <ArticleQuotaBar quota={quota} />
 
       <ArticleMonth
         articles={articles.map((article) => ({

@@ -316,32 +316,151 @@ const toneSchema = z.object({
   tone: z.string().nullable().catch(null),
 });
 
-/**
- * Lit un article donné en exemple et en tire une consigne de ton réutilisable
- * par les agents rédactionnels.
- *
- * On ne garde pas l'article : ce qui compte est la manière, pas le sujet. Un
- * lien illisible n'est pas une erreur bloquante — l'étape est facultative, elle
- * rend simplement `null`.
- */
-export async function readTone(sampleUrl: string): Promise<string | null> {
-  const { pages } = await crawlSite(sampleUrl, { maxPages: 1, maxDepth: 0 });
-  const article = pages[0]?.markdown?.trim();
-  if (!article) return null;
+/** La consigne de ton, et la page qui l'a fournie. */
+export type ToneReading = {
+  tone: string | null;
+  /** URL réellement lue : l'article trouvé, la page d'accueil, ou le lien donné. */
+  sourceUrl: string | null;
+  /** Vrai si la page retenue est un article, faux si c'est la page d'accueil. */
+  fromArticle: boolean;
+};
 
+/** Une page du crawl, réduite à ce qui sert à la choisir. */
+type CandidatePage = { url: string; title: string | null; markdown: string; wordCount: number };
+
+/**
+ * Les segments d'URL qui annoncent un article plutôt qu'une page de service.
+ * Un site français en emploie rarement d'autres, et une correspondance de trop
+ * coûte moins qu'un ton relevé sur une page de mentions légales.
+ */
+const ARTICLE_PATH = /\/(blog|article|articles|actualites?|actus?|news|journal|magazine|conseils?|guides?|dossiers?|posts?|carnet)(\/|$)/i;
+
+/** Les pages qui ne disent rien de la manière d'écrire du client. */
+const NOT_EDITORIAL =
+  /\/(mentions-legales|cgv|cgu|conditions|politique-de-confidentialite|privacy|panier|cart|checkout|compte|account|connexion|login|plan-du-site|sitemap|contact)(\/|$)/i;
+
+/** Un mot-clé d'article dans le titre : le second indice après l'URL. */
+const ARTICLE_TITLE = /\b(comment|pourquoi|guide|conseils?|astuces?|top \d|\d+ (?:façons|raisons|erreurs|étapes))\b/i;
+
+/**
+ * La page la plus représentative de la manière d'écrire du client.
+ *
+ * L'ordre de préférence tient en une phrase : un article s'il y en a un, la
+ * page d'accueil sinon. Un article est du texte que le client a écrit pour être
+ * lu ; une page produit est du texte écrit pour vendre, et une page de mentions
+ * légales n'est pas de lui. Entre deux articles, le plus fourni gagne : trois
+ * cents mots ne suffisent pas à faire apparaître un rythme de phrase.
+ *
+ * Rend `null` quand rien n'atteint le seuil de longueur : mieux vaut aucune
+ * consigne de ton qu'une consigne tirée d'un pied de page.
+ */
+function pickToneSource(pages: CandidatePage[], homeUrl: string): CandidatePage | null {
+  const usable = pages.filter((page) => page.markdown.trim().length > 400);
+  if (usable.length === 0) return null;
+
+  const isHome = (page: CandidatePage): boolean => {
+    try {
+      return new URL(page.url).pathname.replace(/\/+$/, "") === "";
+    } catch {
+      return page.url === homeUrl;
+    }
+  };
+
+  const articles = usable
+    .filter((page) => !isHome(page) && !NOT_EDITORIAL.test(page.url))
+    .filter(
+      (page) =>
+        ARTICLE_PATH.test(page.url) ||
+        ARTICLE_TITLE.test(page.title ?? "") ||
+        page.wordCount >= 600,
+    )
+    // Un chemin explicite l'emporte sur la seule longueur : une page « à propos »
+    // bavarde ne vaut pas un article, même si elle compte plus de mots.
+    .sort((a, b) => {
+      const pathScore = Number(ARTICLE_PATH.test(b.url)) - Number(ARTICLE_PATH.test(a.url));
+      return pathScore !== 0 ? pathScore : b.wordCount - a.wordCount;
+    });
+
+  return articles[0] ?? usable.find(isHome) ?? usable[0] ?? null;
+}
+
+/** Interroge le grand modèle sur la manière d'écrire d'un texte donné. */
+async function readToneFrom(text: string, fromArticle: boolean): Promise<string | null> {
   const { tone } = await askJson(toneSchema, {
     system: SYSTEM,
     prompt: [
-      "Voici un article que le client donne en exemple de sa manière d'écrire.",
+      fromArticle
+        ? "Voici un article publié par le client. Il sert d'exemple de sa manière d'écrire."
+        : "Voici la page d'accueil du client. Le site ne publie pas d'articles : c'est le seul texte qu'il ait écrit lui-même.",
       "",
-      article.slice(0, 12_000),
+      text.slice(0, 12_000),
       "",
-      'Réponds en JSON : { "tone": … } — trois à quatre phrases décrivant la tonalité à reproduire :',
-      "niveau de langue, personne employée (tu/vous/nous), rythme des phrases, usage de l'humour,",
-      "densité technique, et ce qu'il faut éviter pour ne pas sonner faux.",
+      'Réponds en JSON : { "tone": … } — quatre à six phrases décrivant la tonalité à REPRODUIRE, assez',
+      "précises pour qu'un rédacteur qui n'a jamais vu ce site écrive dans la même voix :",
+      "- le niveau de langue et le vocabulaire de métier réellement employé ;",
+      "- la personne (tu / vous / nous / impersonnel) et la façon de s'adresser au lecteur ;",
+      "- la longueur moyenne des phrases et le rythme (phrases hachées, longues, alternance) ;",
+      "- l'humour, les images, les prises de position : présents ou absents, et sous quelle forme ;",
+      "- la densité technique : chiffres, exemples concrets, jargon expliqué ou non ;",
+      "- deux ou trois tournures caractéristiques, citées entre guillemets ;",
+      "- ce qu'il faut éviter pour ne pas sonner faux dans cette voix.",
+      "",
+      "Décris la MANIÈRE, jamais le sujet : aucune phrase de ta réponse ne doit parler de ce dont le texte parle.",
     ].join("\n"),
-    maxTokens: 500,
+    // La tonalité est un jugement sur un texte, pas une extraction : c'est
+    // exactement ce que le grand modèle fait mieux que le rapide.
+    tier: "strong",
+    maxTokens: 900,
   });
 
-  return tone;
+  return tone?.trim() || null;
+}
+
+/**
+ * La manière d'écrire du client, relevée sur son propre site.
+ *
+ * Le tunnel demandait un lien d'article, et la plupart des clients passaient
+ * l'étape : ils n'ont pas ce lien sous la main, ou ne se relisent pas comme des
+ * exemples de style. Sans ce repère, tous les articles produits sortaient dans
+ * la même voix, celle de personne. On va donc le chercher : le site est déjà
+ * crawlé à l'étape 2, il suffit d'y repérer un article et, à défaut, de lire la
+ * page d'accueil.
+ *
+ * Un lien fourni à la main reste prioritaire : c'est le client qui sait le
+ * mieux quel texte le représente.
+ */
+export async function detectBrandTone({
+  siteUrl,
+  sampleUrl,
+}: {
+  siteUrl: string | null;
+  sampleUrl?: string | null;
+}): Promise<ToneReading> {
+  const empty: ToneReading = { tone: null, sourceUrl: null, fromArticle: false };
+
+  // Le client a désigné un texte : on lit celui-là, sans rien chercher d'autre.
+  if (sampleUrl) {
+    const { pages } = await crawlSite(sampleUrl, { maxPages: 1, maxDepth: 0 });
+    const article = pages[0]?.markdown?.trim();
+    if (!article) return empty;
+    return {
+      tone: await readToneFrom(article, true),
+      sourceUrl: sampleUrl,
+      fromArticle: true,
+    };
+  }
+
+  if (!siteUrl) return empty;
+
+  // Le crawl de l'étape 2 est en base : on le relit, on ne recrawle pas.
+  const site = await getOrCrawlSite(siteUrl, { maxPages: 25, maxDepth: 2 });
+  const page = pickToneSource(site.pages, site.url);
+  if (!page) return empty;
+
+  const fromArticle = page.url !== site.url && ARTICLE_PATH.test(page.url);
+  return {
+    tone: await readToneFrom(page.markdown, fromArticle),
+    sourceUrl: page.url,
+    fromArticle,
+  };
 }

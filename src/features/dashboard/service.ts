@@ -49,11 +49,23 @@ function brief(context: DashboardContext, voice?: { instructions: string; banned
 const WRITING_RULES = [
   "Français courant, phrases courtes, voix active.",
   "Aucun superlatif publicitaire (« incontournable », « niché au cœur de », « véritable »).",
-  "Aucune formule d'ouverture creuse (« dans un monde où », « de nos jours »).",
-  "Pas de tirets cadratins.",
-  "Aucun chiffre, prix, date ou nom propre inventé : seuls ceux du brief.",
-  "Répondre à la question posée dès la première phrase du paragraphe.",
+  "Aucune formule d'ouverture creuse (« dans un monde où », « de nos jours », « que vous soyez… »).",
+  "Pas de tirets cadratins ni de tirets demi-cadratins pour séparer deux idées : une virgule, un deux-points ou un point.",
+  "Aucun chiffre, prix, date, distinction ou nom propre inventé : seuls ceux du brief.",
+  "Répondre à la question posée dès la première phrase du paragraphe, avant toute mise en contexte.",
+  "Chaque paragraphe doit rester compréhensible sorti de son article : c'est ainsi qu'un assistant le cite.",
+  "Jamais de conclusion qui résume ce qui vient d'être dit ni d'appel à l'action générique.",
 ].join(" ");
+
+/**
+ * Le palier de modèle des textes publiés.
+ *
+ * Tout ce qui sort d'ici finit sur le site du client ou dans la boîte mail d'un
+ * éditeur : c'est du jugement, pas de l'extraction. Le grand modèle DeepSeek
+ * tient la longueur d'un article et respecte un plan section par section, là où
+ * le rapide rend trois paragraphes interchangeables.
+ */
+const TIER = "strong" as const;
 
 // ── Sujets d'articles ────────────────────────────────────────────────────────
 
@@ -100,8 +112,11 @@ export async function planArticleTopics(
       `Propose ${count} sujets d'articles, du plus utile au moins urgent.`,
       "Chaque sujet : un titre, le mot-clé visé, l'angle en une phrase, et un plan de 3 à 8 titres de sections",
       "formulés comme des questions ou des promesses précises, dans l'ordre de lecture.",
+      "Deux sujets ne doivent jamais répondre à la même question : varie l'intention (comparer, choisir, entretenir, comprendre un prix, préparer une visite).",
+      "Écarte tout sujet auquel ce commerce ne peut pas répondre depuis son expérience réelle : un article générique n'est cité par aucune IA.",
       "Réponds en JSON : { \"articles\": [{ \"title\", \"keyword\", \"angle\", \"outline\": [] }] }",
     ].join("\n"),
+    tier: TIER,
   });
 
   return result.articles;
@@ -140,12 +155,20 @@ export async function writeArticle(
       "",
       "Respecte le plan section par section : un titre de niveau 2 ou 3 par entrée, dans l'ordre donné,",
       "et traite la consigne de la section quand elle est précisée.",
+      "Ouvre chaque section par une réponse directe de 40 à 60 mots, autonome, citable telle quelle ;",
+      "le développement vient après, jamais avant.",
       "Rédige l'article complet en Markdown (titres de niveau 2 et 3, listes quand c'est utile),",
       "entre 700 et 1200 mots, plus un chapô de deux phrases.",
+      "Écris dans la tonalité relevée sur les textes du client : c'est sa manière de parler qui doit se reconnaître,",
+      "pas celle d'un article de blog interchangeable.",
       "Réponds en JSON : { \"title\", \"excerpt\", \"body\" }",
     ]
       .filter(Boolean)
       .join("\n"),
+    tier: TIER,
+    // Un article de 1200 mots plus son chapô ne tient pas dans le plafond par
+    // défaut : sans ce budget, le corps revient coupé en pleine section.
+    maxTokens: 8000,
   });
 }
 
@@ -172,10 +195,11 @@ export async function rewriteOnPage(context: DashboardContext): Promise<OnPageRe
   return askJson(rewriteSchema, {
     system:
       "Tu réécris les éléments on-page d'une page d'accueil pour la recherche assistée par IA. " +
-      "La balise title fait au plus 60 signes, la meta description au plus 155. " +
+      "Tu rends des correctifs prêts à coller dans le CMS, pas des conseils. " +
+      "La balise title fait au plus 60 signes, la meta description au plus 155, le H1 au plus 70. " +
       WRITING_RULES,
     prompt: [
-      brief(context),
+      brief(context, context.brandVoice),
       "",
       `Balise title actuelle : ${analysis?.signals.title ?? "absente"}`,
       `Meta description actuelle : ${analysis?.signals.metaDescription ?? "absente"}`,
@@ -187,11 +211,20 @@ export async function rewriteOnPage(context: DashboardContext): Promise<OnPageRe
             .join(" · ")}`
         : "",
       "",
-      "Propose une version réécrite de chaque élément, puis dis en quoi elle change la donne.",
+      "Réécris chaque élément, en gardant le nom du commerce et les faits du brief :",
+      "- title : marque, niche et ville, dans cet ordre de lisibilité.",
+      "- metaDescription : la niche, la ville et une raison de cliquer ; 140 à 155 signes.",
+      "- h1 : une seule idée, les mots-clés de la niche en tête, jamais un slogan ni le nom seul.",
+      "- intro : le premier paragraphe réécrit, 40 à 60 mots en 2 ou 3 phrases. La première phrase",
+      "  répond seule à « qui, quoi, où » et doit pouvoir être citée hors contexte par un assistant ;",
+      "  les suivantes ajoutent un fait vérifiable tiré du brief.",
+      "",
+      "Puis, dans \"reasons\", dis élément par élément ce que le correctif change pour la citation par une IA.",
       "Réponds en JSON : { \"title\", \"metaDescription\", \"h1\", \"intro\", \"reasons\": [] }",
     ]
       .filter(Boolean)
       .join("\n"),
+    tier: TIER,
   });
 }
 
@@ -233,8 +266,10 @@ export async function findProspects(context: DashboardContext) {
       "qui publient des articles et pourraient citer ce commerce.",
       "Pour chacun : le nom, le domaine, pourquoi lui, l'e-mail de contact si tu le connais, l'URL de la page contact,",
       "et une autorité estimée de 0 à 100.",
+      "Écarte les sites qui n'acceptent aucune contribution extérieure, et ceux dont tu n'es pas sûr qu'ils existent encore.",
       "Réponds en JSON : { \"sites\": [{ \"name\", \"domain\", \"reason\", \"contactEmail\", \"contactUrl\", \"authority\" }] }",
     ].join("\n"),
+    tier: TIER,
   });
 
   return result.sites;
@@ -264,10 +299,12 @@ export async function draftOutreachMessage(
       "",
       "Écris l'objet et le corps du message, à la première personne, signé par le commerce.",
       "Six à dix lignes, une proposition concrète, une question finale simple.",
+      "L'objet annonce la proposition, jamais une accroche marketing.",
       "Réponds en JSON : { \"subject\", \"body\" }",
     ]
       .filter(Boolean)
       .join("\n"),
+    tier: TIER,
   });
 }
 
@@ -299,10 +336,12 @@ export async function planGooglePosts(context: DashboardContext, count: number) 
       keywords.length ? `Mots-clés tendances : ${keywords.map((k) => k.keyword).join(", ")}` : "",
       "",
       `Propose ${count} posts, un par semaine, en variant les angles (nouveauté, conseil, coulisses, saison).`,
+      "Chaque post annonce une chose précise ; aucun ne doit pouvoir servir tel quel à un autre commerce.",
       "Réponds en JSON : { \"posts\": [{ \"title\", \"body\", \"keyword\", \"cta\" }] }",
     ]
       .filter(Boolean)
       .join("\n"),
+    tier: TIER,
   });
 
   return result.posts;
