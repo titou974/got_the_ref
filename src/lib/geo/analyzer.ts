@@ -45,10 +45,16 @@ export type AnalysisContext = {
 
 /**
  * Tout le raisonnement de l'audit (notes, constats, recommandations, on-page,
- * notoriété, cohérence Maps) passe par le client `lib/ai` — DeepSeek V4 Flash en
- * tête, Kimi en secours. Les trois moteurs (ChatGPT, Gemini, Claude) ne sont
- * appelés que pour une seule chose : le CLASSEMENT réel, qu'aucun autre modèle
- * ne peut produire à leur place puisqu'il s'agit de leur propre réponse.
+ * notoriété, cohérence Maps) passe par le client `lib/ai` au palier `strong` —
+ * DeepSeek V4 Pro en tête, Kimi en secours. Le Flash suffit pour extraire une
+ * niche d'une page ou reformuler un titre ; il ne suffit pas ici. L'audit est ce
+ * que le client paie, il se lit ligne à ligne, et un constat expédié se
+ * reconnaît immédiatement — le surcoût par audit reste sans commune mesure avec
+ * un rapport qui ne tient pas.
+ *
+ * Les trois moteurs (ChatGPT, Gemini, Claude) ne sont appelés que pour une seule
+ * chose : le CLASSEMENT réel, qu'aucun autre modèle ne peut produire à leur
+ * place puisqu'il s'agit de leur propre réponse.
  */
 const AUDIT_MAX_TOKENS = 16000;
 
@@ -707,6 +713,7 @@ Renvoie UNIQUEMENT un objet JSON, sans texte ni markdown autour :
       "Tu qualifies le créneau commercial d'un site à partir de ses signaux. " +
       "Tu réponds uniquement par un objet JSON valide.",
     prompt,
+    tier: "strong",
     maxTokens: 600,
   });
   const profile = normalizeProfile(
@@ -762,6 +769,7 @@ Réponds UNIQUEMENT par un objet JSON, sans texte autour :
       "Tu estimes la notoriété de liens d'un site. Tu n'inventes jamais un domaine " +
       "dont tu ignores l'existence. Tu réponds uniquement par un objet JSON valide.",
     prompt,
+    tier: "strong",
     maxTokens: 1500,
   });
   const notableSources: ReferringSource[] = Array.isArray(parsed.notableSources)
@@ -800,6 +808,7 @@ async function analyzeWithModel(
       "Tu es un expert GEO (Generative Engine Optimization) et SEO. " +
       "Tu rends un audit complet sous forme d'un unique objet JSON valide, sans texte autour.",
     prompt: buildPrompt(signals, ctx, profile, mapsListing, measured),
+    tier: "strong",
     maxTokens: AUDIT_MAX_TOKENS,
   });
   // Le schéma garantit le squelette ; les normaliseurs ci-dessous réparent le
