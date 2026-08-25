@@ -40,8 +40,8 @@ const ANIMATIONS: Record<SearchKind, any> = {
 const STEPS: Record<SearchKind, string[]> = {
   competitors: [
     "Lecture de votre activité…",
-    "Repérage des enseignes du même créneau…",
-    "Vérification de leur existence…",
+    "Recherche Google des enseignes de votre créneau…",
+    "Vérification de leur existence et de leur site…",
     "Classement du plus direct au moins direct…",
   ],
   keywords: [

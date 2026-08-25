@@ -16,6 +16,8 @@ export type RadioOption = {
   value: string;
   label: string;
   description?: string;
+  /** Complément court affiché à côté du titre — un domaine, une adresse. */
+  hint?: string;
   icon?: React.ReactNode;
 };
 
@@ -158,7 +160,16 @@ export function CheckCards({
             </span>
 
             <span className="flex-1">
-              <span className="block text-base font-semibold leading-snug">{option.label}</span>
+              <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="text-base font-semibold leading-snug">{option.label}</span>
+                {/* Le domaine, en retrait du nom : il sert à reconnaître
+                    l'enseigne d'un coup d'œil, pas à être lu ligne à ligne. */}
+                {option.hint && (
+                  <span className="text-xs font-medium tracking-tight text-steel">
+                    {option.hint}
+                  </span>
+                )}
+              </span>
               {option.description && (
                 <span className="mt-1 block text-sm leading-relaxed text-muted">
                   {option.description}
