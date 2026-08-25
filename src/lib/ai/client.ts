@@ -71,15 +71,29 @@ const DEFAULT_PROVIDER: AiProvider =
  * Le budget d'un appel, par palier.
  *
  * Le grand modèle raisonne avant de répondre et rend jusqu'à seize mille tokens
- * d'audit : les cent vingt secondes taillées pour le Flash le coupaient en
- * plein milieu. Le plafond reste sous les trois cents secondes des routes
- * concernées, secours compris — un premier fournisseur qui dépasse son budget
- * doit laisser au second de quoi répondre.
+ * d'audit : cent quarante-cinq secondes le coupaient en pleine rédaction, et le
+ * repli sur le modèle rapide sauvait l'affichage au prix d'un audit moins fin.
+ * Quatre minutes lui laissent finir. Ce plafond ne vaut que si un appel ne peut
+ * pas les dépenser deux fois : c'est le rôle de `TOTAL_BUDGET_MS`.
  */
 const TIMEOUT_MS: Record<AiTier, number> = {
   fast: 120_000,
-  strong: 145_000,
+  strong: 240_000,
 };
+
+/**
+ * Le temps total qu'une question a le droit de prendre, tous essais confondus.
+ *
+ * Les routes concernées déclarent `maxDuration = 300`. Passé ce délai, la
+ * plateforme coupe la requête et le client ne voit rien : mieux vaut rendre un
+ * audit du modèle rapide à la deux-cent-quatre-vingtième seconde qu'une page
+ * blanche à la trois-centième. Chaque essai reçoit donc le plus petit de son
+ * budget de palier et du temps qui reste.
+ */
+const TOTAL_BUDGET_MS = 285_000;
+
+/** En dessous, un essai n'a pas le temps d'aboutir : autant le dire et s'arrêter. */
+const MIN_ATTEMPT_MS = 15_000;
 
 /**
  * La marge de raisonnement du grand modèle.
@@ -161,13 +175,14 @@ async function callProvider(
   name: AiProvider,
   options: ChatOptions,
   tierOverride?: AiTier,
+  budgetMs?: number,
 ): Promise<string> {
   const config = PROVIDERS[name];
   const tier = tierOverride ?? options.tier ?? "fast";
   const model = modelFor(config, tier);
   const wanted = options.maxTokens ?? 4000;
   const maxTokens = budgetFor(tier, wanted);
-  const timeoutMs = TIMEOUT_MS[tier];
+  const timeoutMs = Math.min(TIMEOUT_MS[tier], budgetMs ?? TIMEOUT_MS[tier]);
   const label = `${name}/${model}`;
   const controller = new AbortController();
   let timedOut = false;
@@ -280,8 +295,12 @@ async function callProvider(
     if (timedOut || (error as Error)?.name === "AbortError") {
       aiLog(`${label} — ⏱️ TIMEOUT après ${ms} ms`, {
         budgetMs: timeoutMs,
+        plafondDuPalier: TIMEOUT_MS[tier],
+        borneParLeBudgetGlobal: timeoutMs < TIMEOUT_MS[tier],
         piste:
-          "modèle qui raisonne + gros prompt : relever TIMEOUT_MS[tier] ou raccourcir le prompt",
+          timeoutMs < TIMEOUT_MS[tier]
+            ? "il ne restait plus que ce temps sur les 285 s de la question : c'est l'essai précédent qui a tout consommé"
+            : "modèle qui raisonne + gros prompt : raccourcir le prompt ou réduire la sortie attendue",
       });
       throw new Error(`${label} : timeout après ${timeoutMs} ms`);
     }
@@ -371,20 +390,35 @@ export async function askJson<T>(
 
   aiLog(
     `plan d'essai : ${attempts.map((a) => `${a.name}/${modelFor(PROVIDERS[a.name], a.tier)}`).join(" → ")}`,
-    order.length === 1
-      ? {
-          piste:
-            "un seul fournisseur a sa clé : après le repli sur le modèle rapide, il n'y a plus rien. Ajouter MOONSHOT_API_KEY pour un vrai secours.",
-        }
-      : undefined,
+    {
+      budgetGlobalMs: TOTAL_BUDGET_MS,
+      plafondParEssaiMs: attempts.map((a) => TIMEOUT_MS[a.tier]),
+      ...(order.length === 1
+        ? {
+            piste:
+              "un seul fournisseur a sa clé : après le repli sur le modèle rapide, il n'y a plus rien. Ajouter MOONSHOT_API_KEY pour un vrai secours.",
+          }
+        : {}),
+    },
   );
 
   let lastError: unknown = null;
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
 
   for (const [index, attempt] of attempts.entries()) {
     const label = `${attempt.name}/${modelFor(PROVIDERS[attempt.name], attempt.tier)}`;
+    const remaining = deadline - Date.now();
+    if (remaining < MIN_ATTEMPT_MS) {
+      aiLog(`${label} — essai abandonné, budget global épuisé`, {
+        resteMs: Math.max(0, remaining),
+        budgetGlobalMs: TOTAL_BUDGET_MS,
+        piste:
+          "la route coupe à 300 s : un essai de moins de quinze secondes n'aboutirait pas.",
+      });
+      break;
+    }
     try {
-      const raw = await callProvider(attempt.name, options, attempt.tier);
+      const raw = await callProvider(attempt.name, options, attempt.tier, remaining);
       const parsed = schema.safeParse(parseJson(label, raw));
       if (parsed.success) {
         if (attempt.tier !== tier) {
