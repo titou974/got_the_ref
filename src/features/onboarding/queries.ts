@@ -1,7 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { FIRST_STEP, ONBOARDING_STEPS, isOnboardingStep, type OnboardingStep } from "./steps";
+import {
+  FIRST_STEP,
+  ONBOARDING_STEPS,
+  isOnboardingStep,
+  normalizeStep,
+  type OnboardingStep,
+} from "./steps";
 
 /**
  * L'accès à la fiche d'accueil. Une ligne par compte, créée à la première
@@ -50,7 +56,7 @@ export function resolveStep(
   profile: { step: string },
   requested: unknown,
 ): OnboardingStep {
-  const current = isOnboardingStep(profile.step) ? profile.step : FIRST_STEP;
+  const current = normalizeStep(profile.step) ?? FIRST_STEP;
   if (!isOnboardingStep(requested)) return current;
 
   const requestedIndex = ONBOARDING_STEPS.indexOf(requested);

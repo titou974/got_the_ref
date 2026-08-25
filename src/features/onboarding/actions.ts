@@ -19,7 +19,7 @@ import {
 } from "./schemas";
 import { analyzeSite, readTone, suggestCompetitors } from "./service";
 import { ensureOnboardingProfile } from "./queries";
-import { hasPhysicalPresence, nextStep, type OnboardingStep } from "./steps";
+import { hasPhysicalPresence, LAST_STEP, nextStep, type OnboardingStep } from "./steps";
 
 /**
  * Les actions du tunnel d'accueil. Chacune écrit son bloc de réponses, avance
@@ -36,7 +36,6 @@ const ORDER = [
   "description",
   "concurrents",
   "tonalite",
-  "search-console",
 ] as const;
 
 /** La plus avancée des deux étapes — celle enregistrée, ou celle qu'on quitte. */
@@ -46,7 +45,14 @@ function furthestStep(current: string, candidate: OnboardingStep): string {
   return candidateIndex > currentIndex ? candidate : current;
 }
 
-/** Avance la fiche et emmène sur l'étape suivante. */
+/**
+ * Avance la fiche et emmène sur l'étape suivante.
+ *
+ * Quand il n'y a plus d'étape après celle-ci, c'est que le tunnel se referme :
+ * on pose `completedAt` dans la même écriture et on ouvre le tableau de bord.
+ * Sans cela, la dernière réponse laisserait la fiche éternellement inachevée et
+ * les pages abonnées renverraient le client dans le tunnel qu'il vient de finir.
+ */
 async function advance(userId: string, from: OnboardingStep, data: Record<string, unknown>) {
   const target = nextStep(from);
   const profile = await prisma.onboardingProfile.findUniqueOrThrow({
@@ -56,11 +62,17 @@ async function advance(userId: string, from: OnboardingStep, data: Record<string
 
   await prisma.onboardingProfile.update({
     where: { userId },
-    data: { ...data, step: target ? furthestStep(profile.step, target) : profile.step },
+    data: target
+      ? { ...data, step: furthestStep(profile.step, target) }
+      : { ...data, step: LAST_STEP, completedAt: new Date() },
   });
 
   revalidatePath(ROUTES.onboarding);
-  redirect(target ? ROUTES.onboardingStep(target) : ROUTES.account);
+
+  if (target) redirect(ROUTES.onboardingStep(target));
+
+  revalidatePath(ROUTES.dashboard);
+  redirect(ROUTES.dashboard);
 }
 
 // ── Étape 1 : la forme du commerce ───────────────────────────────────────────
@@ -284,7 +296,7 @@ export const saveToneAction = authActionClient
 // ── Passer une étape · terminer ──────────────────────────────────────────────
 
 const skipSchema = z.object({
-  step: z.enum(["concurrents", "tonalite", "search-console"]),
+  step: z.enum(["concurrents", "tonalite"]),
 });
 
 /** Passe une étape facultative sans rien enregistrer. */
@@ -305,9 +317,9 @@ export const completeOnboardingAction = authActionClient
     await ensureOnboardingProfile(ctx.auth.user.id);
     await prisma.onboardingProfile.update({
       where: { userId: ctx.auth.user.id },
-      data: { completedAt: new Date(), step: "search-console" },
+      data: { completedAt: new Date(), step: LAST_STEP },
     });
 
-    revalidatePath(ROUTES.account);
-    redirect(ROUTES.account);
+    revalidatePath(ROUTES.dashboard);
+    redirect(ROUTES.dashboard);
   });

@@ -7,7 +7,7 @@ import { StepFooter } from "@/components/onboarding/StepFooter";
 import { saveToneAction, skipStepAction } from "@/features/onboarding/actions";
 
 /**
- * Étape 6 — la couleur de marque et un article donné en exemple.
+ * Étape 6, la dernière — la couleur de marque et un article donné en exemple.
  *
  * L'article compte plus que la couleur : c'est lui qui apprend aux agents à
  * écrire comme le client écrit — quelle personne il emploie, s'il tutoie, s'il
@@ -82,10 +82,14 @@ export function ToneForm({
 
       {save.result.serverError && <p className="text-sm text-danger">{save.result.serverError}</p>}
 
+      {/* Dernière étape du tunnel : le bouton annonce la destination plutôt
+          qu'un « Continuer » qui laisserait croire qu'il en reste. */}
       <StepFooter
+        label="Ouvrir mon tableau de bord"
         pendingLabel={sampleUrl ? "Lecture de votre texte…" : "Un instant…"}
         pending={save.isPending || skip.isPending}
         onSkip={() => skip.execute({ step: "tonalite" })}
+        skipLabel="Passer et ouvrir mon tableau de bord"
       />
     </form>
   );

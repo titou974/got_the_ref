@@ -16,9 +16,9 @@ import {
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
 
-  // Là d'où le rattachement est parti : l'étape 7 du tunnel, ou le tableau de
-  // bord. Le verdict repart avec, en clair, dans la query string.
-  const returnTo = (await consumeGoogleReturn()) ?? ROUTES.onboardingStep("search-console");
+  // Là d'où le rattachement est parti — le tableau de bord, sauf `?suite=`.
+  // Le verdict repart avec, en clair, dans la query string.
+  const returnTo = (await consumeGoogleReturn()) ?? ROUTES.dashboard;
   const back = (status: string) =>
     NextResponse.redirect(`${SITE.url}${returnTo}?google=${status}`);
 
