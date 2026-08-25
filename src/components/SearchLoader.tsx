@@ -61,7 +61,7 @@ const STEPS: Record<SearchKind, string[]> = {
   ],
   audit: [
     "Lecture de votre site page par page…",
-    "Interrogation de ChatGPT, Gemini et Claude…",
+    "Interrogation de ChatGPT et de Gemini…",
     "Notation et plan d'action…",
   ],
 };

@@ -371,137 +371,34 @@ async function queryGemini(query: string): Promise<LiveEngineResult> {
   }
 }
 
-/* -------------------------- Troisième assistant --------------------------- */
-/**
- * Le troisième assistant du classement, servi par le grand modèle DeepSeek.
- *
- * L'API Anthropic ne fait plus partie du produit : ce moteur passe désormais
- * par `deepseek-v4-pro`, le même modèle de jugement que le reste de l'audit,
- * via le dialecte OpenAI que DeepSeek expose.
- *
- * Une conséquence à connaître, et elle est assumée : DeepSeek n'a pas d'outil
- * de recherche web. Il répond de mémoire, donc il ne rapporte AUCUNE citation
- * (`citations` reste vide) et son classement vaut ce que vaut sa connaissance
- * du marché, là où ChatGPT et Gemini vont lire l'index avant de répondre. On
- * lui demande explicitement de ne citer que des enseignes dont il est sûr, et
- * de rendre une liste courte plutôt qu'un top 10 complété au hasard.
- */
-async function queryDeepSeekAssistant(query: string): Promise<LiveEngineResult> {
-  const engine: AiEngine = "Claude";
-  const key = process.env.DEEPSEEK_API_KEY;
-  if (!key) {
-    geoLog("Troisieme assistant - ignore (pas de cle DEEPSEEK_API_KEY)");
-    return {
-      engine,
-      available: false,
-      answered: false,
-      answerText: "",
-      rankedItems: [],
-      citations: [],
-    };
-  }
-
-  const baseUrl = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1";
-  const model = process.env.DEEPSEEK_STRONG_MODEL || "deepseek-v4-pro";
-  const startedAt = Date.now();
-  geoLog(`Troisieme assistant - appel (${model})...`, {
-    requete: query.slice(0, 200),
-    budgetTimeoutMs: FETCH_TIMEOUT_MS,
-  });
-  try {
-    const data = (await postJson(
-      `${baseUrl}/chat/completions`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 2000,
-          temperature: 0.2,
-          stream: false,
-          messages: [
-            {
-              role: "system",
-              content:
-                "Tu réponds comme un assistant grand public à qui l'on demande une recommandation. " +
-                "Tu n'as pas accès au web : ne cite que des établissements dont tu es sûr qu'ils existent " +
-                "et qu'ils sont en activité. Mieux vaut une liste de trois noms sûrs qu'un top 10 complété " +
-                "au hasard : n'invente jamais une enseigne pour remplir un rang. " +
-                "Présente ta réponse en liste numérotée, un établissement par ligne, le nom en premier.",
-            },
-            { role: "user", content: query },
-          ],
-        }),
-      },
-      "Troisieme assistant",
-    )) as { choices?: { message?: { content?: string } }[] };
-
-    const answerText = data.choices?.[0]?.message?.content?.trim() ?? "";
-    const rankedItems = parseRankedItems(answerText);
-    geoLog("Troisieme assistant - resultat", {
-      tempsTotalMs: Date.now() - startedAt,
-      classement: rankedItems,
-      apercuReponse: answerText.slice(0, 400),
-    });
-    return {
-      engine,
-      available: true,
-      answered: !!answerText || rankedItems.length > 0,
-      answerText,
-      rankedItems,
-      // Aucune recherche web derrière cette réponse : pas de source à citer.
-      citations: [],
-    };
-  } catch (err) {
-    const ms = Date.now() - startedAt;
-    if (isAbortError(err)) {
-      geoLog(
-        `Troisieme assistant - ABANDON (AbortError) apres ${ms} ms : timeout de ${FETCH_TIMEOUT_MS} ms depasse.`,
-      );
-    } else {
-      geoLog(`Troisieme assistant - echec apres ${ms} ms`, String(err));
-    }
-    return {
-      engine,
-      available: true,
-      answered: false,
-      answerText: "",
-      rankedItems: [],
-      citations: [],
-      error: String(err),
-    };
-  }
-}
-
 /* ------------------------------ Orchestration ----------------------------- */
 
-/** Y a-t-il au moins une clé moteur configurée ? */
+/**
+ * Y a-t-il au moins une clé moteur configurée ?
+ *
+ * Deux clés possibles, et deux seulement : ce sont les seuls assistants qui
+ * lisent le web avant de répondre. Une clé de modèle de service (DeepSeek) n'a
+ * pas sa place ici — elle sert à juger un site, pas à classer un marché.
+ */
 export function hasAnyEngineKey(): boolean {
-  return !!(
-    process.env.OPENAI_API_KEY ||
-    process.env.GEMINI_API_KEY ||
-    process.env.DEEPSEEK_API_KEY
-  );
+  return !!(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
 }
 
 /**
  * Interroge en parallèle les moteurs configurés sur la requête cible.
  *
- * `engines` restreint l'appel : le tableau de bord ne relève aujourd'hui que
- * ChatGPT et Gemini, et interroger Claude pour un classement qui n'est pas
- * affiché serait un appel payant pour rien.
+ * Les deux moteurs vont chercher leur réponse sur le web : ChatGPT par son
+ * outil de recherche, Gemini par le grounding Google Search. Le classement
+ * qu'on en tire est donc un relevé, pas une estimation — c'est la seule raison
+ * pour laquelle on peut l'afficher comme un top 10.
  */
 export async function gatherLiveEngines(
   query: string,
-  engines: AiEngine[] = ["ChatGPT", "Gemini", "Claude"],
+  engines: AiEngine[] = ["ChatGPT", "Gemini"],
 ): Promise<LiveEngineResult[]> {
   const callers: Record<AiEngine, (q: string) => Promise<LiveEngineResult>> = {
     ChatGPT: queryOpenAI,
     Gemini: queryGemini,
-    Claude: queryDeepSeekAssistant,
   };
   const wanted = engines.filter((e, i) => engines.indexOf(e) === i);
   const results = await Promise.allSettled(wanted.map((e) => callers[e](query)));

@@ -110,7 +110,7 @@ export type MapsListing = {
   scraped: boolean; // true si au moins une donnée a été récupérée
 };
 
-/** Backlinks / sources référentes estimées via recherche web (Claude). */
+/** Backlinks / sources référentes estimées par le modèle d'audit. */
 export type ReferringSource = { domain: string; note: string };
 export type Backlinks = {
   estimatedCount: number | null; // estimation (null si inconnu)
@@ -119,7 +119,24 @@ export type Backlinks = {
   measured: boolean; // true si issu d'une recherche web réelle
 };
 
-export type AiEngine = "ChatGPT" | "Gemini" | "Claude";
+/**
+ * Les assistants dont on relève réellement le classement.
+ *
+ * Deux, et deux seulement : ce sont les seuls qui vont lire le web avant de
+ * répondre — ChatGPT par son outil de recherche, Gemini par le grounding Google
+ * Search. Un troisième moteur qui répondrait de mémoire ne produirait pas un
+ * classement mais une liste plausible, indiscernable d'un vrai top 10 une fois
+ * affichée à côté des deux autres. Le classement est ce que le client vient
+ * vérifier chaque semaine : il ne peut pas être inventé.
+ *
+ * « Claude » a existé ici, servi d'abord par l'API Anthropic puis par DeepSeek.
+ * Les deux sont partis, pour deux raisons différentes : la première par choix de
+ * fournisseur, la seconde parce que DeepSeek n'a pas de recherche web.
+ */
+export type AiEngine = "ChatGPT" | "Gemini";
+
+/** Les moteurs disparus, encore présents dans les analyses déjà en base. */
+export const RETIRED_ENGINES = ["Claude"] as const;
 
 /**
  * Classement d'un commerce pour UN moteur sur UNE requête.
@@ -132,6 +149,13 @@ export type EngineRanking = {
   measured: boolean; // true = classement réel (API moteur), false = estimation
   targetRank: number | null; // rang du commerce (null = hors classement)
   competitors: Competitor[]; // établissements classés (top ~10)
+  /**
+   * Date du relevé, en ISO. Un moteur qui ne répond pas garde son dernier
+   * classement réel plutôt que d'en recevoir un estimé : l'interface a besoin
+   * de cette date pour dire que le top 10 affiché date d'avant aujourd'hui.
+   * Absente sur les analyses antérieures à ce champ.
+   */
+  measuredAt?: string | null;
 };
 
 /** Score GEO et classements (direct + indirect) pour un moteur IA donné. */
@@ -147,7 +171,7 @@ export type EngineScore = {
 /**
  * Profil détecté du commerce : pivot de toute l'analyse localisée.
  * `mode` est fourni par l'utilisateur (onglet physique/en ligne) ;
- * la niche, la catégorie et la localisation sont déduites par Claude.
+ * la niche, la catégorie et la localisation sont déduites par le modèle d'audit.
  */
 export type BusinessProfile = {
   mode: BusinessMode; // déclaré par l'utilisateur
@@ -160,9 +184,8 @@ export type BusinessProfile = {
 /**
  * Les moteurs dont le tableau de bord relève et affiche le classement.
  *
- * Claude n'y figure pas : son classement n'est pas montré pour le moment, et
- * l'interroger reviendrait à payer un appel pour une réponse que personne ne
- * lit. L'audit complet, lui, continue d'évaluer les trois moteurs.
+ * Les mêmes que partout ailleurs désormais : il n'y a plus de moteur évalué
+ * dans l'audit mais caché du tableau de bord.
  */
 export const DASHBOARD_ENGINES: AiEngine[] = ["ChatGPT", "Gemini"];
 
