@@ -6,15 +6,18 @@ import { useTranslations } from "next-intl";
 import { refreshRankingsAction } from "@/features/dashboard/actions";
 import { EngineCard } from "@/components/geo/EngineRankings";
 import { SearchLoader } from "@/components/SearchLoader";
-import type { EngineScore } from "@/lib/geo/types";
+import { DASHBOARD_ENGINES, type EngineScore } from "@/lib/geo/types";
 
 /**
- * La place du commerce dans les trois moteurs, et le bouton qui la reprend.
+ * La place du commerce dans les moteurs suivis, et le bouton qui la reprend.
  *
  * Le relevé se fait ici, sur la page, et non derrière un bouton qui mènerait
- * ailleurs : trois API à interroger prennent une trentaine de secondes, et
+ * ailleurs : les API à interroger prennent une trentaine de secondes, et
  * pendant ce temps les cartes cèdent la place à l'attente. Laisser les anciens
  * classements à l'écran pendant le relevé laisserait croire qu'ils sont à jour.
+ *
+ * Seuls les moteurs de `DASHBOARD_ENGINES` sont montrés : Claude reste dans
+ * l'analyse enregistrée, mais son classement n'est pas affiché ici.
  */
 export function RankingsSection({
   engines,
@@ -27,6 +30,8 @@ export function RankingsSection({
   const t = useTranslations("analysisReport.results");
   const tr = useTranslations("dashboard.rankings");
   const router = useRouter();
+
+  const shown = engines.filter((engine) => DASHBOARD_ENGINES.includes(engine.engine));
 
   const { execute, isPending, result } = useAction(refreshRankingsAction, {
     onSuccess: () => router.refresh(),
@@ -60,7 +65,7 @@ export function RankingsSection({
         <SearchLoader kind="audit" title={tr("refreshing")} />
       ) : (
         <div className="space-y-4">
-          {engines.map((engine, i) => (
+          {shown.map((engine, i) => (
             <EngineCard key={engine.engine} engine={engine} delay={i * 0.05} />
           ))}
         </div>

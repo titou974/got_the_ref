@@ -495,21 +495,29 @@ export function hasAnyEngineKey(): boolean {
   );
 }
 
-/** Interroge en parallèle les moteurs configurés sur la requête cible. */
+/**
+ * Interroge en parallèle les moteurs configurés sur la requête cible.
+ *
+ * `engines` restreint l'appel : le tableau de bord ne relève aujourd'hui que
+ * ChatGPT et Gemini, et interroger Claude pour un classement qui n'est pas
+ * affiché serait un appel payant pour rien.
+ */
 export async function gatherLiveEngines(
   query: string,
+  engines: AiEngine[] = ["ChatGPT", "Gemini", "Claude"],
 ): Promise<LiveEngineResult[]> {
-  const results = await Promise.allSettled([
-    queryOpenAI(query),
-    queryGemini(query),
-    queryClaude(query),
-  ]);
-  const fallback: AiEngine[] = ["ChatGPT", "Gemini", "Claude"];
+  const callers: Record<AiEngine, (q: string) => Promise<LiveEngineResult>> = {
+    ChatGPT: queryOpenAI,
+    Gemini: queryGemini,
+    Claude: queryClaude,
+  };
+  const wanted = engines.filter((e, i) => engines.indexOf(e) === i);
+  const results = await Promise.allSettled(wanted.map((e) => callers[e](query)));
   return results.map((r, i) =>
     r.status === "fulfilled"
       ? r.value
       : {
-          engine: fallback[i],
+          engine: wanted[i],
           available: true,
           answered: false,
           answerText: "",

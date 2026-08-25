@@ -138,7 +138,7 @@ export default async function DashboardHomePage() {
 
       <AiTrafficCard report={traffic} />
 
-      {/* 3. La place du commerce dans ChatGPT, Gemini et Claude. */}
+      {/* 3. La place du commerce dans ChatGPT et Gemini. */}
       <RankingsSection engines={analysis.engines} liveQuery={analysis.liveQuery ?? null} />
 
       {/* ---- Ce qui explique les chiffres du haut ---- */}

@@ -9,7 +9,7 @@ import { encryptJson, isCredentialsKeySet } from "@/lib/crypto";
 import { connectorFor } from "@/constants/site-platforms";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
-import type { GeoAnalysisResult } from "@/lib/geo/types";
+import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
 import { getDashboardContext, readSiteCredentials } from "./queries";
 import { parseOutline, serializeOutline } from "./outline";
@@ -68,7 +68,14 @@ export const prepareDashboardAction = authActionClient
     const userId = ctx.auth.user.id;
     const profile = await prisma.onboardingProfile.findUnique({
       where: { userId },
-      select: { siteUrl: true, domain: true, businessKind: true, mapsUrl: true },
+      select: {
+        siteUrl: true,
+        domain: true,
+        businessKind: true,
+        mapsUrl: true,
+        niche: true,
+        cities: true,
+      },
     });
 
     if (!profile?.siteUrl) {
@@ -87,7 +94,16 @@ export const prepareDashboardAction = authActionClient
 
     const mode = profile.businessKind === "online" ? "online" : "physical";
     const signals = await collectSignals(profile.siteUrl);
-    const result = await analyzeSite(signals, { mode, mapsUrl: profile.mapsUrl ?? null }, "paid");
+    const result = await analyzeSite(
+      signals,
+      {
+        mode,
+        mapsUrl: profile.mapsUrl ?? null,
+        declaredNiche: profile.niche,
+        declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
+      },
+      "paid",
+    );
 
     const record = await prisma.analysis.create({
       data: {
@@ -109,12 +125,15 @@ export const prepareDashboardAction = authActionClient
   });
 
 /**
- * Relève à nouveau la place du commerce dans ChatGPT, Gemini et Claude.
+ * Relève à nouveau la place du commerce dans ChatGPT et Gemini.
  *
  * Le classement est la seule partie de l'audit qui bouge d'une semaine à
- * l'autre sans que le site change : on la reprend seule, auprès des trois API,
- * plutôt que de relancer l'audit complet. Le reste de l'analyse enregistrée est
- * conservé tel quel.
+ * l'autre sans que le site change : on la reprend seule, auprès des API des
+ * moteurs, plutôt que de relancer l'audit complet. Le reste de l'analyse
+ * enregistrée est conservé tel quel.
+ *
+ * La requête envoyée est formée sur la niche et la ville déclarées à l'accueil,
+ * comme dans l'analyse de base — pas sur le nom du site.
  */
 export const refreshRankingsAction = authActionClient
   .inputSchema(disconnectSiteSchema)
@@ -122,7 +141,7 @@ export const refreshRankingsAction = authActionClient
     const userId = ctx.auth.user.id;
     const profile = await prisma.onboardingProfile.findUnique({
       where: { userId },
-      select: { domain: true },
+      select: { domain: true, businessKind: true, niche: true, cities: true },
     });
 
     const record = await prisma.analysis.findFirst({
@@ -139,7 +158,15 @@ export const refreshRankingsAction = authActionClient
       throw new AppError("Analyse illisible.", "BAD_ANALYSIS", 500);
     }
 
-    const { engines, liveQuery } = await refreshEngineRankings(stored);
+    const isPhysical = profile?.businessKind !== "online";
+    const { engines, liveQuery } = await refreshEngineRankings(stored, {
+      declared: {
+        niche: profile?.niche ?? null,
+        location: isPhysical ? (profile?.cities[0] ?? null) : null,
+        isPhysical,
+      },
+      engines: DASHBOARD_ENGINES,
+    });
 
     await prisma.analysis.update({
       where: { id: record.id },
