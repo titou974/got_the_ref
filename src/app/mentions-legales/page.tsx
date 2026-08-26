@@ -14,15 +14,18 @@ export default function MentionsLegalesPage() {
 
       <h2>1. Éditeur du site</h2>
       <p>
-        Le site got_the_ref est édité par <strong>[Raison sociale]</strong>, [forme juridique : SAS /
-        SARL / EI] au capital de [montant] €.
+        Le site got_the_ref est édité par <strong>Studio Tropiques</strong>, entrepreneur individuel
+        de droit français.
       </p>
       <ul>
-        <li>Siège social : [adresse complète]</li>
-        <li>RCS / SIREN : [numéro]</li>
-        <li>Numéro de TVA intracommunautaire : [FR-XX-XXXXXXXXX]</li>
-        <li>Adresse e-mail : [contact@boostgeo.fr]</li>
-        <li>Directeur de la publication : [Nom Prénom]</li>
+        <li>Siège social : 98 rue Montmartre, 75002 Paris, France</li>
+        <li>SIRET : 92430624400014</li>
+        <li>
+          Numéro de TVA intracommunautaire : le cas échéant ; à défaut, TVA non applicable
+          (article 293 B du CGI)
+        </li>
+        <li>Adresse e-mail : bobodigitalcorp@gmail.com</li>
+        <li>Directeur de la publication : Titouan Hirsch</li>
       </ul>
 
       <h2>2. Hébergement</h2>
