@@ -5,14 +5,13 @@ import { ROUTES } from "@/constants/routes";
 import { getDashboardContext, listArticles } from "@/features/dashboard/queries";
 import { fetchAiTraffic } from "@/features/dashboard/ga4";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
-import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
 import { scoreLabel } from "@/lib/score";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { HomeStats } from "@/components/tableau-de-bord/HomeStats";
 import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
-import { PromptCard } from "@/components/tableau-de-bord/PromptCard";
+import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
 import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
@@ -185,7 +184,7 @@ export default async function DashboardHomePage() {
           voie d'exécution : il vit au bas de l'accueil comme des autres pages,
           pour que le client n'ait pas à deviner où appliquer les priorités
           qu'il vient de lire. */}
-      <PromptCard prompt={buildSolutionPrompt("results", analysis, diagnostic)} />
+      <SolutionPrompt tab="results" result={analysis} diagnostic={diagnostic} />
     </>
   );
 }
