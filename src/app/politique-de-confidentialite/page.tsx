@@ -7,7 +7,7 @@ export default function ConfidentialitePage() {
   return (
     <LegalLayout title="Politique de confidentialité" updated="13 juin 2026">
       <p>
-        La présente politique décrit la manière dont <strong>[Raison sociale]</strong> (ci-après
+        La présente politique décrit la manière dont <strong>Studio Tropiques</strong> (ci-après
         « nous ») collecte et traite vos données personnelles dans le cadre du service got_the_ref,
         conformément au Règlement Général sur la Protection des Données (RGPD - UE 2016/679) et à la
         loi « Informatique et Libertés ».
@@ -15,8 +15,9 @@ export default function ConfidentialitePage() {
 
       <h2>1. Responsable du traitement</h2>
       <p>
-        Le responsable du traitement est <strong>[Raison sociale]</strong>, [adresse]. Pour toute
-        question relative à vos données : [contact@boostgeo.fr].
+        Le responsable du traitement est <strong>Studio Tropiques</strong>, entrepreneur individuel,
+        SIRET 92430624400014, 98 rue Montmartre, 75002 Paris. Pour toute question relative à vos
+        données : bobodigitalcorp@gmail.com.
       </p>
 
       <h2>2. Données collectées</h2>
@@ -61,7 +62,7 @@ export default function ConfidentialitePage() {
       <p>
         Vous disposez des droits d'accès, de rectification, d'effacement, de limitation, d'opposition
         et de portabilité de vos données, ainsi que du droit de définir des directives relatives à
-        leur sort après votre décès. Pour les exercer, écrivez à [contact@boostgeo.fr]. Vous pouvez
+        leur sort après votre décès. Pour les exercer, écrivez à bobodigitalcorp@gmail.com. Vous pouvez
         introduire une réclamation auprès de la CNIL (<a href="https://www.cnil.fr">www.cnil.fr</a>).
       </p>
 
