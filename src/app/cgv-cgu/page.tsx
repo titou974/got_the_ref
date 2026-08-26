@@ -59,8 +59,9 @@ export default function CgvCguPage() {
         <li>des tableaux de bord de suivi, ainsi que toute fonctionnalité ajoutée par la suite.</li>
       </ul>
       <p>
-        Sous réserve de la garantie prévue à l'article 8 de la Partie II, got_the_ref ne garantit
-        aucune amélioration de classement ni aucun résultat de visibilité. L'Utilisateur demeure
+        Sous réserve de la garantie prévue à l'article 8 de la Partie II, réservée à l'abonnement
+        annuel, got_the_ref ne garantit aucune amélioration de classement ni aucun résultat de
+        visibilité. L'Utilisateur demeure
         seul responsable des décisions et des actions prises sur la base des analyses fournies par
         la plateforme.
       </p>
@@ -217,8 +218,8 @@ export default function CgvCguPage() {
 
       <h3>12. Exonérations de garantie</h3>
       <p>
-        Sous réserve de la garantie prévue à l'article 8 de la Partie II et des garanties légales
-        d'ordre public, la plateforme est fournie « en l'état » et « selon disponibilité ». Nous ne
+        Sous réserve de la garantie prévue à l'article 8 de la Partie II, réservée à l'abonnement
+        annuel, et des garanties légales d'ordre public, la plateforme est fournie « en l'état » et « selon disponibilité ». Nous ne
         garantissons notamment pas l'amélioration d'un classement, l'augmentation du trafic,
         l'exactitude des prédictions, la fiabilité parfaite des données, ni l'obtention de résultats
         commerciaux déterminés. Vous utilisez le Service à vos propres risques.
@@ -271,8 +272,8 @@ export default function CgvCguPage() {
         <li>Forme juridique : entrepreneur individuel (EI), de droit français</li>
         <li>Siège : 98 rue Montmartre, 75002 Paris, France</li>
         <li>SIRET : 92430624400014</li>
-        <li>Directeur de la publication : Thibault Besson Magdelain</li>
-        <li>Responsable de la protection des données : Thibault Besson Magdelain</li>
+        <li>Directeur de la publication : Titouan Hirsch</li>
+        <li>Responsable de la protection des données : Titouan Hirsch</li>
         <li>E-mail de contact et de support : bobodigitalcorp@gmail.com</li>
       </ul>
       <p>Les présentes conditions régissent la vente :</p>
@@ -389,10 +390,15 @@ export default function CgvCguPage() {
 
       <h3>7.2 Politique de remboursement</h3>
       <ul>
-        <li><strong>Abonnement mensuel</strong> : non remboursable.</li>
+        <li>
+          <strong>Abonnement mensuel</strong> : non remboursable, et hors du champ de la garantie de
+          l'article 8. Il reste résiliable à tout moment, la résiliation prenant effet à la fin du
+          mois déjà payé.
+        </li>
         <li>
           <strong>Abonnement annuel</strong> : remboursable dans les 30 jours suivant l'achat,
-          déduction faite d'un mois de service, le premier mois étant réputé consommé.
+          déduction faite d'un mois de service, le premier mois étant réputé consommé. Au-delà de ce
+          délai, il reste couvert par la garantie de l'article 8.
         </li>
         <li>
           <strong>Coup de Boost et passes consommées</strong> : non remboursables dès lors que la
@@ -437,15 +443,17 @@ export default function CgvCguPage() {
         initiale, sauf accord exprès du consommateur pour un autre moyen.
       </p>
 
-      <h3>8. Garantie « visibilité en progrès ou remboursé »</h3>
+      <h3>8. Garantie « visibilité en progrès ou remboursé » (abonnement annuel)</h3>
       <p>
-        Studio Tropiques accorde une garantie commerciale, distincte des garanties légales : si
-        votre visibilité dans les moteurs de réponse ne progresse pas au terme de {GUARANTEE_DAYS}{" "}
-        jours, les sommes versées au titre de l'abonnement sur cette période vous sont remboursées.
-        Cette garantie s'applique sous réserve que, pendant toute la période :
+        Studio Tropiques accorde aux seuls souscripteurs de l'<strong>abonnement annuel</strong> une
+        garantie commerciale, distincte des garanties légales : si votre visibilité dans les moteurs
+        de réponse ne progresse pas au terme de {GUARANTEE_DAYS} jours, les sommes versées au titre
+        de l'abonnement annuel vous sont remboursées. L'abonnement mensuel, non remboursable au
+        titre de l'article 7.2, n'ouvre pas droit à cette garantie.
       </p>
+      <p>Cette garantie s'applique sous réserve que, pendant toute la période :</p>
       <ul>
-        <li>l'abonnement soit resté actif et à jour de paiement, sans interruption ;</li>
+        <li>l'abonnement annuel soit resté actif et à jour de paiement, sans interruption ;</li>
         <li>le site ait été connecté à la plateforme et les accès demeurés fonctionnels ;</li>
         <li>
           les corrections et les contenus produits par les agents aient été effectivement appliqués

@@ -25,7 +25,7 @@ export default function MentionsLegalesPage() {
           (article 293 B du CGI)
         </li>
         <li>Adresse e-mail : bobodigitalcorp@gmail.com</li>
-        <li>Directeur de la publication : Thibault Besson Magdelain</li>
+        <li>Directeur de la publication : Titouan Hirsch</li>
       </ul>
 
       <h2>2. Hébergement</h2>
