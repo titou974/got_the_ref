@@ -11,6 +11,8 @@ import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
+import { applyOnPage, applyStructure } from "./site-sync";
+import { buildStructureFiles } from "@/lib/geo/structure-files";
 import { getArticleQuota, getDashboardContext, readSiteCredentials } from "./queries";
 import { ARTICLE_QUOTAS } from "@/constants/plans";
 import { parseOutline, serializeOutline } from "./outline";
@@ -374,6 +376,122 @@ export const disconnectSiteAction = authActionClient
     await prisma.siteConnection.deleteMany({ where: { userId: ctx.auth.user.id } });
     revalidateDashboard();
     return { ok: true };
+  });
+
+/**
+ * Le rattachement en état de marche, ou une erreur qui dit laquelle.
+ *
+ * Les deux actions d'écriture ci-dessous commencent pareil : un lien vivant,
+ * le droit de corriger, des identifiants lisibles. Autant le dire une fois.
+ */
+async function requireEditableLink(userId: string) {
+  const link = await prisma.siteConnection.findUnique({ where: { userId } });
+  if (!link || link.status !== "connected") {
+    throw new AppError("Aucun site rattaché.", "NO_SITE_CONNECTION", 400);
+  }
+  if (!link.capabilities.includes("edit")) {
+    throw new AppError(
+      "Ce rattachement ne permet pas de corriger les pages.",
+      "EDIT_UNSUPPORTED",
+      400,
+    );
+  }
+
+  const credentials = await readSiteCredentials<Credentials>(userId);
+  if (!credentials) {
+    throw new AppError(
+      "Identifiants illisibles : refaites le rattachement.",
+      "BAD_CREDENTIALS",
+      400,
+    );
+  }
+
+  return { link, credentials };
+}
+
+/**
+ * Pose sur le site les textes on-page réécrits : balise title, méta
+ * description, H1 et premier paragraphe de la page d'accueil.
+ *
+ * Les textes ne sont pas repris de l'écran mais recalculés ici depuis
+ * l'analyse enregistrée : ce qui part sur le site du client est ce que l'audit
+ * a proposé, pas ce qu'un formulaire aurait pu transporter en route.
+ */
+export const applyOnPageAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => {
+    const userId = ctx.auth.user.id;
+    const { link, credentials } = await requireEditableLink(userId);
+
+    const context = await getDashboardContext(userId);
+    const suggested = context.analysis?.trendingKeywords?.suggested;
+    if (!suggested) {
+      throw new AppError(
+        "Aucune réécriture on-page disponible : relancez l'analyse de contenu.",
+        "NO_REWRITE",
+        400,
+      );
+    }
+
+    const steps = await applyOnPage(link.platform, credentials, {
+      title: suggested.title,
+      metaDescription: suggested.metaDescription,
+      h1: suggested.h1,
+      firstParagraph: suggested.firstParagraph,
+    });
+
+    await prisma.siteConnection.update({
+      where: { userId },
+      data: {
+        lastSyncAt: new Date(),
+        lastError: steps.find((step) => step.status === "failed")?.detail ?? null,
+      },
+    });
+
+    revalidateDashboard();
+    return { steps };
+  });
+
+/**
+ * Dépose les fichiers de structure manquants : /llms.txt, /robots.txt, et le
+ * bloc JSON-LD de la page d'accueil.
+ *
+ * Ce que la plateforme refuse d'écrire ressort en « à faire à la main », avec
+ * le contenu exact : c'est le cas de la racine chez Shopify, et des fichiers
+ * de racine chez WordPress.
+ */
+export const applyStructureAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => {
+    const userId = ctx.auth.user.id;
+    const { link, credentials } = await requireEditableLink(userId);
+
+    const context = await getDashboardContext(userId);
+    if (!context.analysis) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
+
+    const files = buildStructureFiles(context.analysis);
+    if (files.length === 0) {
+      return { steps: [], files: [] };
+    }
+
+    const steps = await applyStructure(
+      link.platform,
+      credentials,
+      files.map((file) => ({ kind: file.kind, path: file.path, content: file.content })),
+    );
+
+    await prisma.siteConnection.update({
+      where: { userId },
+      data: {
+        lastSyncAt: new Date(),
+        lastError: steps.find((step) => step.status === "failed")?.detail ?? null,
+      },
+    });
+
+    revalidateDashboard();
+    // Les contenus repartent avec la réponse : ce que la plateforme n'a pas
+    // accepté, le client doit pouvoir le copier sans rouvrir un autre écran.
+    return { steps, files };
   });
 
 // ── Contenu ──────────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ import "server-only";
 
 import { SignJWT } from "jose";
 import { AppError } from "@/lib/errors";
+import { markdownToHtml } from "@/lib/markdown-html";
 import type { SiteCapability } from "@/constants/site-platforms";
 
 /**
@@ -29,6 +30,7 @@ export type VerifyResult = {
 
 export type PublishInput = {
   title: string;
+  /** Le corps de l'article, en Markdown — converti en HTML avant l'envoi. */
   body: string;
   excerpt?: string | null;
   slug?: string | null;
@@ -48,6 +50,48 @@ const shopHost = (value: string) => {
 };
 
 const SHOPIFY_API = "2026-01";
+
+/**
+ * Un appel GraphQL à l'Admin API de Shopify.
+ *
+ * Shopify a fait passer son API REST en héritage : les nouveaux points d'entrée
+ * n'y arrivent plus, et rien ne garantit qu'une version d'API la serve encore
+ * dans deux ans. Tout ce qui écrit dans la boutique passe donc par GraphQL.
+ *
+ * Une erreur GraphQL revient dans un corps en HTTP 200 : sans cette lecture,
+ * un article refusé serait compté comme publié.
+ */
+export async function shopifyGraphql<T>(
+  credentials: Credentials,
+  query: string,
+  variables: Record<string, unknown> = {},
+): Promise<T> {
+  const host = shopHost(credentials.shopDomain ?? "");
+  const response = await fetch(`https://${host}/admin/api/${SHOPIFY_API}/graphql.json`, {
+    method: "POST",
+    headers: {
+      "X-Shopify-Access-Token": credentials.adminAccessToken,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new AppError(await shortError(response), "SHOPIFY_HTTP", 502);
+
+  const payload = (await response.json()) as {
+    data?: T;
+    errors?: { message?: string }[];
+  };
+  if (payload.errors?.length) {
+    throw new AppError(
+      payload.errors.map((error) => error.message ?? "erreur").join(" · "),
+      "SHOPIFY_GRAPHQL",
+      502,
+    );
+  }
+  if (!payload.data) throw new AppError("Réponse Shopify vide.", "SHOPIFY_GRAPHQL", 502);
+  return payload.data;
+}
 
 /** Le jeton d'un instant pour l'Admin API de Ghost, signé depuis la clé du client. */
 async function ghostToken(adminApiKey: string): Promise<string> {
@@ -85,23 +129,17 @@ export async function verifyConnection(
 
       case "shopify": {
         const host = shopHost(credentials.shopDomain ?? "");
-        const response = await fetch(`https://${host}/admin/api/${SHOPIFY_API}/shop.json`, {
-          headers: { "X-Shopify-Access-Token": credentials.adminAccessToken },
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          return {
-            ok: false,
-            capabilities: [],
-            siteUrl: `https://${host}`,
-            error: await shortError(response),
-          };
-        }
-        const payload = (await response.json()) as { shop?: { domain?: string } };
+        // L'appel d'essai passe par GraphQL : c'est la porte que la publication
+        // et les corrections empruntent ensuite. Un jeton qui ouvre l'ancienne
+        // API REST mais pas celle-ci n'est pas un lien utilisable.
+        const { shop } = await shopifyGraphql<{
+          shop: { primaryDomain?: { url?: string } };
+        }>(credentials, `query { shop { primaryDomain { url } } }`);
+
         return {
           ok: true,
           capabilities: ["publish", "edit"],
-          siteUrl: payload.shop?.domain ? `https://${payload.shop.domain}` : `https://${host}`,
+          siteUrl: shop.primaryDomain?.url ?? `https://${host}`,
         };
       }
 
@@ -207,8 +245,13 @@ async function shortError(response: Response): Promise<string> {
 export async function publishArticle(
   platform: string,
   credentials: Credentials,
-  article: PublishInput,
+  input: PublishInput,
 ): Promise<PublishResult> {
+  // Les articles sont stockés en Markdown ; aucun CMS d'ici ne le lit. Déposé
+  // tel quel, le texte s'affichait chez le client avec ses dièses et ses
+  // astérisques : la conversion se fait donc en un seul endroit, à la porte.
+  const article = { ...input, body: markdownToHtml(input.body) };
+
   switch (platform) {
     case "wordpress":
     case "woocommerce": {
@@ -234,47 +277,56 @@ export async function publishArticle(
     }
 
     case "shopify": {
-      const host = shopHost(credentials.shopDomain ?? "");
-      const headers = {
-        "X-Shopify-Access-Token": credentials.adminAccessToken,
-        "Content-Type": "application/json",
-      };
-
       // Shopify range les articles dans un blog, et une boutique en a au moins
       // un (« News ») créé d'office. On écrit dans le premier.
-      const blogs = await fetch(`https://${host}/admin/api/${SHOPIFY_API}/blogs.json?limit=1`, {
-        headers,
-        cache: "no-store",
-      });
-      if (!blogs.ok) throw new AppError(await shortError(blogs), "PUBLISH_FAILED", 502);
-
-      const blogId = ((await blogs.json()) as { blogs?: { id?: number }[] }).blogs?.[0]?.id;
+      const { blogs } = await shopifyGraphql<{ blogs: { nodes: { id: string }[] } }>(
+        credentials,
+        `query { blogs(first: 1) { nodes { id } } }`,
+      );
+      const blogId = blogs.nodes[0]?.id;
       if (!blogId) throw new AppError("Aucun blog sur cette boutique.", "PUBLISH_FAILED", 502);
 
-      const response = await fetch(
-        `https://${host}/admin/api/${SHOPIFY_API}/blogs/${blogId}/articles.json`,
+      const created = await shopifyGraphql<{
+        articleCreate: {
+          article: { id: string; handle: string; blog: { handle: string } } | null;
+          userErrors: { message?: string }[];
+        };
+      }>(
+        credentials,
+        `mutation Publish($article: ArticleCreateInput!) {
+          articleCreate(article: $article) {
+            article { id handle blog { handle } }
+            userErrors { field message }
+          }
+        }`,
         {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            article: {
-              title: article.title,
-              body_html: article.body,
-              summary_html: article.excerpt ?? undefined,
-              handle: article.slug ?? undefined,
-              published: true,
-            },
-          }),
+          article: {
+            blogId,
+            title: article.title,
+            body: article.body,
+            summary: article.excerpt ?? undefined,
+            handle: article.slug ?? undefined,
+            isPublished: true,
+          },
         },
       );
-      if (!response.ok) throw new AppError(await shortError(response), "PUBLISH_FAILED", 502);
 
-      const payload = (await response.json()) as {
-        article?: { id?: number; handle?: string };
-      };
+      const errors = created.articleCreate.userErrors;
+      if (errors.length > 0) {
+        throw new AppError(
+          errors.map((error) => error.message ?? "refusé").join(" · "),
+          "PUBLISH_FAILED",
+          502,
+        );
+      }
+
+      const published = created.articleCreate.article;
+      if (!published) throw new AppError("Shopify n'a rien créé.", "PUBLISH_FAILED", 502);
+
+      const host = shopHost(credentials.shopDomain ?? "");
       return {
-        url: payload.article?.handle ? `https://${host}/blogs/news/${payload.article.handle}` : null,
-        externalId: payload.article?.id ? String(payload.article.id) : null,
+        url: `https://${host}/blogs/${published.blog.handle}/${published.handle}`,
+        externalId: published.id,
       };
     }
 
