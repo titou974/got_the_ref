@@ -19,6 +19,15 @@ export const SITE = {
    * démonstration sur une page d'erreur.
    */
   calUrl: process.env.NEXT_PUBLIC_CAL_URL ?? "https://cal.com/gotheref/30min",
+  /**
+   * Identifiant du site Crisp, qui porte la bulle de discussion.
+   *
+   * Public par nature : Crisp l'expose dans le script client de tous ses
+   * clients, il n'ouvre aucun accès à la boîte de réception. Surchargeable pour
+   * qu'un environnement de test n'envoie pas ses messages dans la vraie file.
+   */
+  crispWebsiteId:
+    process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? "f8f9ed32-6051-4c90-8c84-6ab97f03a07e",
   /** Fondateur — profil public référencé pour l'E-E-A-T et le schema Person. */
   founder: {
     name: "Titouan Hirsch",

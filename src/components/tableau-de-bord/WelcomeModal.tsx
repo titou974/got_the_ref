@@ -72,6 +72,9 @@ export function WelcomeModal() {
     { kind: "paragraph", segments: parseSegments(t("intro")) },
     { kind: "chip", text: t("sourceChip") },
     { kind: "bullet", icon: "dot", segments: parseSegments(t("desktop")) },
+    // La bulle Crisp est montée par le layout du tableau de bord : elle est
+    // donc bien là, en bas à droite, au moment où le client lit cette ligne.
+    { kind: "bullet", icon: "dot", segments: parseSegments(t("chat")) },
     { kind: "paragraph", segments: parseSegments(t("closing")) },
   ];
 
