@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { AuthScreen } from "@/components/auth/AuthScreen";
 import { getSession } from "@/lib/auth";
+import { oauthErrorKey } from "@/features/auth/oauth-errors";
 import { NEXT_PARAM, ROUTES, safeNextPath, signUpWithNext } from "@/constants/routes";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -20,7 +21,8 @@ export default async function ConnexionPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const requested = (await searchParams)[NEXT_PARAM];
+  const params = await searchParams;
+  const requested = params[NEXT_PARAM];
   const next = safeNextPath(requested, ROUTES.account);
 
   if (await getSession()) redirect(next);
@@ -29,5 +31,15 @@ export default async function ConnexionPage({
   // (les tarifs) : lui imposer `/compte` sortirait le visiteur du tunnel.
   const switchHref = requested ? signUpWithNext(next) : ROUTES.signUp;
 
-  return <AuthScreen mode="signin" callbackURL={next} switchHref={switchHref} />;
+  const errorKey = oauthErrorKey(params.error);
+  const t = await getTranslations("auth");
+
+  return (
+    <AuthScreen
+      mode="signin"
+      callbackURL={next}
+      switchHref={switchHref}
+      error={errorKey ? t(errorKey) : null}
+    />
+  );
 }

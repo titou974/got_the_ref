@@ -11,6 +11,12 @@ export const ROUTES = {
   signIn: "/connexion",
   signUp: "/inscription",
   account: "/compte",
+  /**
+   * L'aiguillage d'après-identification. Il n'affiche rien : il regarde l'état
+   * du compte et renvoie au bon endroit. Sert de `callbackURL` à Google, qui
+   * ne sait pas distinguer une inscription d'une reconnexion.
+   */
+  afterAuth: "/bienvenue",
   /** Le tunnel d'accueil, ouvert juste après le paiement ou l'essai. */
   onboarding: "/accueil",
   onboardingStep: (step: string) => `/accueil/${step}`,
@@ -62,6 +68,14 @@ export const signInWithNext = (next: string) =>
 /** `/inscription?suite=…` — inscription qui rend la main à la page visée. */
 export const signUpWithNext = (next: string) =>
   `${ROUTES.signUp}?${NEXT_PARAM}=${encodeURIComponent(next)}`;
+
+/**
+ * `/bienvenue?suite=…` — l'aiguillage d'après-identification, destination
+ * souhaitée en poche. Google ne peut pas rendre la main ailleurs : c'est le
+ * navigateur qui suit `callbackURL`, sans savoir à qui il a affaire.
+ */
+export const afterAuthWithNext = (next: string) =>
+  `${ROUTES.afterAuth}?${NEXT_PARAM}=${encodeURIComponent(next)}`;
 
 /** Raisons de redirection véhiculées en query string. */
 export const REDIRECT_REASONS = {

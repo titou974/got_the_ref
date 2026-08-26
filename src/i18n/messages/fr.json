@@ -437,6 +437,7 @@
     "googleSignup": "S'inscrire avec Google",
     "googleSignin": "Se connecter avec Google",
     "googleError": "La connexion Google n'a pas abouti. Réessayez.",
+    "googleErrorExisting": "Un compte existe déjà avec cette adresse Google. Connectez-vous pour le retrouver.",
     "or": "ou",
     "emailSignup": "S'inscrire avec un e-mail",
     "emailSignin": "Se connecter avec un e-mail",
@@ -1675,9 +1676,10 @@
     },
     "prompt": {
       "title": "Prompt de correction",
-      "hint": "À coller dans Claude, ChatGPT ou l'agent de votre développeur. Il reprend les manques relevés sur votre site.",
+      "hint": "À coller dans Claude, ChatGPT ou l'agent de votre développeur. Il contient les textes, fichiers et articles exacts à appliquer.",
       "copy": "Copier",
-      "copied": "Copié"
+      "copied": "Copié",
+      "writing": "Rédaction du prompt à partir de vos derniers résultats…"
     },
     "preparing": {
       "title": "Analyse de votre site en cours",

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AuthForm } from "@/components/AuthForm";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
-import { ROUTES } from "@/constants/routes";
+import { afterAuthWithNext, ROUTES } from "@/constants/routes";
 
 /**
  * Le panneau d'authentification : Google d'abord, l'e-mail ensuite.
@@ -18,12 +18,17 @@ import { ROUTES } from "@/constants/routes";
  * `googleEnabled` vient du serveur : sans identifiants OAuth configurés, le
  * bouton n'est pas rendu et le formulaire s'ouvre directement, plutôt que de
  * proposer un chemin qui échouerait au retour de Google.
+ *
+ * `error` porte l'échec renvoyé par Google dans l'URL. Sans lui, un retour
+ * refusé ramenait sur un écran d'inscription identique à celui qu'on venait de
+ * quitter, sans un mot d'explication.
  */
 export function AuthPanel({
   mode,
   callbackURL,
   googleEnabled,
   switchHref,
+  error = null,
 }: {
   mode: "signin" | "signup";
   /** Page à rejoindre une fois identifié. */
@@ -31,10 +36,18 @@ export function AuthPanel({
   googleEnabled: boolean;
   /** Bascule inscription ↔ connexion, destination conservée. */
   switchHref: string;
+  /** Message d'échec du retour Google, déjà traduit. */
+  error?: string | null;
 }) {
   const t = useTranslations("auth");
   const isSignup = mode === "signup";
   const [showEmailForm, setShowEmailForm] = useState(!googleEnabled);
+
+  // À l'inscription, Google ne distingue pas un nouveau venu d'un client qui a
+  // déjà un compte : le même clic ouvre une session dans les deux cas.
+  // L'aiguillage de `/bienvenue` tranche au retour, plutôt que d'envoyer un
+  // abonné de longue date sur la grille tarifaire.
+  const googleCallbackURL = isSignup ? afterAuthWithNext(callbackURL) : callbackURL;
 
   return (
     <div className="w-full">
@@ -52,6 +65,15 @@ export function AuthPanel({
         </Link>
       </p>
 
+      {error && (
+        <p
+          className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+
       {showEmailForm ? (
         <div className="mt-8">
           <AuthForm mode={mode} showAccountSwitch={false} next={callbackURL} />
@@ -67,7 +89,7 @@ export function AuthPanel({
         </div>
       ) : (
         <div className="mt-8 space-y-5">
-          <GoogleAuthButton mode={mode} callbackURL={callbackURL} />
+          <GoogleAuthButton mode={mode} callbackURL={googleCallbackURL} />
 
           <div className="flex items-center gap-4">
             <span className="h-px flex-1 bg-fog" />
