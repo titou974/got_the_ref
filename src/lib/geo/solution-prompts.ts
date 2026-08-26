@@ -17,7 +17,9 @@ export type SolutionTab =
   | "content"
   | "articles"
   | "presence"
-  | "maps";
+  | "maps"
+  /** Tout le tableau de bord d'un coup : le prompt de la barre « résoudre ». */
+  | "all";
 
 const ARCH_LABELS: Record<string, string> = {
   llmsTxt: "Fichier llms.txt",
@@ -53,6 +55,25 @@ function header(result: GeoAnalysisResult): string {
   return `Tu es un expert GEO (Generative Engine Optimization). Voici le diagnostic de visibilité IA de mon site ${result.domain}, ${result.profile.niche}${loc}.`;
 }
 
+/** Les onglets repris, dans l'ordre de lecture, par le prompt général. */
+const ALL_TABS: Exclude<SolutionTab, "all">[] = [
+  "results",
+  "architecture",
+  "content",
+  "articles",
+  "presence",
+  "maps",
+];
+
+const TAB_TITLES: Record<Exclude<SolutionTab, "all">, string> = {
+  results: "PLAN D'ACTION",
+  architecture: "ARCHITECTURE TECHNIQUE",
+  content: "CONTENU ET CITABILITÉ",
+  articles: "ARTICLES",
+  presence: "PRÉSENCE ET NOTORIÉTÉ",
+  maps: "FICHE GOOGLE MAPS",
+};
+
 export function buildSolutionPrompt(
   tab: SolutionTab,
   result: GeoAnalysisResult,
@@ -61,6 +82,24 @@ export function buildSolutionPrompt(
   const h = header(result);
 
   switch (tab) {
+    // Le repli du prompt général : les six prompts d'onglet à la suite, sous
+    // un même en-tête. Moins fluide que la version écrite par le modèle, mais
+    // il ne manque aucun élément à corriger — c'est ce qui compte ici.
+    case "all": {
+      const sections = ALL_TABS.map((key) => {
+        const body = buildSolutionPrompt(key, result, diagnostic).slice(h.length).trim();
+        return `----- ${TAB_TITLES[key]} -----\n\n${body}`;
+      });
+
+      return `${h}
+
+Je veux tout corriger d'un coup. Voici, section par section, ce qui a été relevé sur mon site et ce que j'attends de toi.
+
+${sections.join("\n\n")}
+
+Traite les sections dans l'ordre : d'abord ce qui bloque l'accès des IA au site, ensuite le contenu, puis la notoriété. Pour chaque point, donne le fichier à modifier et le code ou le texte exact à poser, jamais un conseil général. Termine par la liste de ce que je dois vérifier moi-même une fois tout appliqué.`;
+    }
+
     case "architecture": {
       const list = issues(diagnostic.architecture.checks, ARCH_LABELS);
       return `${h}

@@ -25,7 +25,16 @@ const FALLBACK_THRESHOLD = 520;
  * aucun ancêtre n'établit de bloc conteneur, et la home en compte plusieurs
  * (cartes qui se soulèvent au survol, calques floutés).
  */
-export function TrialBottomBar({ label, heroId }: { label: string; heroId: string }) {
+export function TrialBottomBar({
+  label,
+  heroId,
+  href = ROUTES.signUp,
+}: {
+  label: string;
+  heroId: string;
+  /** Le tableau de bord pour un abonné ou un essai en cours ; l'inscription sinon. */
+  href?: string;
+}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -60,7 +69,7 @@ export function TrialBottomBar({ label, heroId }: { label: string; heroId: strin
             transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
           >
             <Link
-              href={ROUTES.signUp}
+              href={href}
               className="mx-auto flex w-full max-w-xl cursor-pointer items-center justify-center rounded-full bg-cta px-6 py-4 text-base font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
             >
               {label}

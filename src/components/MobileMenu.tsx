@@ -120,7 +120,7 @@ export function MobileMenu({
                   {isAuthenticated ? (
                     <>
                       <Link
-                        href={ROUTES.account}
+                        href={ROUTES.dashboard}
                         onClick={() => setOpen(false)}
                         className="cursor-pointer rounded-xl px-3 py-3 text-base font-medium text-text transition-colors duration-200 hover:bg-mist"
                       >

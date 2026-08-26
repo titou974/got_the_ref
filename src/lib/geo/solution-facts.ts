@@ -290,6 +290,7 @@ function resultsFacts(result: GeoAnalysisResult): string {
 }
 
 const MISSIONS: Record<SolutionTab, string> = {
+  all: "faire corriger d'un seul passage tout ce que l'audit a relevé sur le site : technique, contenu, articles, notoriété et fiche locale",
   results:
     "faire appliquer le plan d'action GEO priorisé du site, recommandation par recommandation",
   architecture:
@@ -303,21 +304,49 @@ const MISSIONS: Record<SolutionTab, string> = {
   maps: "faire aligner la fiche Google Maps et le site pour la visibilité locale",
 };
 
+/**
+ * Le dossier complet : les six onglets bout à bout, chacun sous son titre.
+ *
+ * C'est la matière du prompt général de la barre « résoudre ». Rien n'y est
+ * résumé : un client qui colle ce prompt doit pouvoir tout appliquer sans
+ * revenir dans l'application, y compris les articles rédigés.
+ */
+function allFacts(input: SolutionFactsInput): string {
+  const { result } = input;
+  const parts: [string, string][] = [
+    ["PLAN D'ACTION", resultsFacts(result)],
+    ["ARCHITECTURE TECHNIQUE", architectureFacts(result)],
+    ["CONTENU ET CITABILITÉ", contentFacts(result)],
+    ["ARTICLES", articlesFacts(input.articles ?? [])],
+    ["PRÉSENCE ET NOTORIÉTÉ", presenceFacts(result)],
+  ];
+
+  // La fiche locale ne concerne qu'un commerce physique : l'annoncer à un site
+  // sans adresse ferait travailler l'agent sur un manque inventé.
+  if (result.profile.isPhysical || result.mapsUrl) {
+    parts.push(["FICHE GOOGLE MAPS", mapsFacts(result)]);
+  }
+
+  return parts.map(([title, body]) => `===== ${title} =====\n\n${body}`).join("\n\n");
+}
+
 export function buildSolutionFacts(input: SolutionFactsInput): SolutionFacts {
   const { tab, result } = input;
 
   const body =
-    tab === "architecture"
-      ? architectureFacts(result)
-      : tab === "content"
-        ? contentFacts(result)
-        : tab === "articles"
-          ? articlesFacts(input.articles ?? [])
-          : tab === "presence"
-            ? presenceFacts(result)
-            : tab === "maps"
-              ? mapsFacts(result)
-              : resultsFacts(result);
+    tab === "all"
+      ? allFacts(input)
+      : tab === "architecture"
+        ? architectureFacts(result)
+        : tab === "content"
+          ? contentFacts(result)
+          : tab === "articles"
+            ? articlesFacts(input.articles ?? [])
+            : tab === "presence"
+              ? presenceFacts(result)
+              : tab === "maps"
+                ? mapsFacts(result)
+                : resultsFacts(result);
 
   return {
     mission: MISSIONS[tab],

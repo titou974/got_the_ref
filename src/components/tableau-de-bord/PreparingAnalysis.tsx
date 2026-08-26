@@ -4,12 +4,20 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
-import { prepareDashboardAction } from "@/features/dashboard/actions";
+import {
+  prepareDashboardAction,
+  seedEditorialMonthAction,
+} from "@/features/dashboard/actions";
 import { Card } from "./Card";
 import { AiKeysAnimation } from "./AiKeysAnimation";
 
 /**
- * L'analyse lancée à la première ouverture du tableau de bord.
+ * L'analyse lancée à la première ouverture du tableau de bord, puis le mois
+ * d'articles posé dans la foulée.
+ *
+ * Deux passes, une seule attente : l'audit GEO, puis douze sujets planifiés
+ * dont les trois de la première semaine sont rédigés. Le client n'arrive donc
+ * jamais sur un calendrier vide — c'est le travail qu'il vient de déléguer.
  *
  * Elle part toute seule : le client vient de finir le tunnel d'accueil, lui
  * demander un clic de plus pour obtenir ce qu'il attend n'apporterait rien. Le
@@ -25,8 +33,16 @@ export function PreparingAnalysis() {
   const router = useRouter();
   const started = useRef(false);
 
+  // Le mois d'articles est posé dans la foulée de l'audit : le client arrive
+  // sur un calendrier rempli, dont la première semaine est déjà rédigée. Si
+  // cette passe échoue, on ouvre quand même le tableau de bord — l'analyse,
+  // elle, est faite, et le planning se relance d'un bouton.
+  const seed = useAction(seedEditorialMonthAction, {
+    onSettled: () => router.refresh(),
+  });
+
   const { execute, result, isPending } = useAction(prepareDashboardAction, {
-    onSuccess: () => router.refresh(),
+    onSuccess: () => seed.execute({}),
   });
 
   useEffect(() => {
@@ -56,8 +72,10 @@ export function PreparingAnalysis() {
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h1 className="text-xl font-bold">{t("title")}</h1>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted">{t("body")}</p>
+        <h1 className="text-xl font-bold">{seed.isPending ? t("articlesTitle") : t("title")}</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+          {seed.isPending ? t("articlesBody") : t("body")}
+        </p>
       </div>
 
       <AiKeysAnimation />

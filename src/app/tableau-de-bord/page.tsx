@@ -7,11 +7,10 @@ import { fetchAiTraffic } from "@/features/dashboard/ga4";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
-import { HomeStats } from "@/components/tableau-de-bord/HomeStats";
 import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
-import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
+import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
 import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
@@ -28,13 +27,19 @@ export const maxDuration = 300;
 /**
  * L'accueil du tableau de bord, dans l'ordre où le client se pose ses questions.
  *
- * En haut, ce qu'il vient vérifier : son site tel qu'on le voit, sa note, ses
- * visites venues des IA, et sa place dans les trois moteurs. Ce sont exactement
- * les blocs du rapport d'analyse, repris tels quels : l'écran qu'il a découvert
- * en achetant doit rester reconnaissable ensuite, semaine après semaine.
+ * En haut, ce qu'il vient vérifier : son site tel qu'on le voit, la note posée
+ * dessus, puis le constat écrit à la frappe. Ce sont les blocs du rapport
+ * d'analyse, repris tels quels : l'écran qu'il a découvert en achetant doit
+ * rester reconnaissable ensuite, semaine après semaine.
+ *
+ * La rangée de chiffres qui suivait (note, visites, corrections en attente) a
+ * disparu : elle répétait la note du hero, une valeur vide tant qu'Analytics
+ * n'est pas rattaché, et un décompte que la barre du bas porte déjà.
  *
  * En dessous, ce qui explique ces chiffres : la niche retenue, le diagnostic
- * d'architecture contrôle par contrôle, le plan d'action, le calendrier.
+ * d'architecture contrôle par contrôle, le plan d'action, le calendrier. Et
+ * l'exécution ne vit plus au bas de la page : elle tient dans la barre fixe
+ * « résoudre avec les agents IA », à portée de pouce d'un bout à l'autre.
  */
 export default async function DashboardHomePage() {
   const user = await requireUser();
@@ -50,16 +55,6 @@ export default async function DashboardHomePage() {
     fetchAiTraffic(user.id, 30),
     listArticles(user.id),
   ]);
-
-  const pendingFixes = [...diagnostic.architecture.checks, ...diagnostic.content.checks].filter(
-    (check) => check.status === "ko" || check.status === "warn",
-  ).length;
-
-  const sessionsDelta =
-    traffic && traffic.previousTotalSessions > 0
-      ? ((traffic.totalSessions - traffic.previousTotalSessions) / traffic.previousTotalSessions) *
-        100
-      : null;
 
   const upcoming = articles.filter((article) => article.status !== "published");
 
@@ -128,18 +123,9 @@ export default async function DashboardHomePage() {
       </SiteScreenshot>
 
       {/* 1bis. Le constat écrit à la frappe, comme sur le rapport d'analyse. */}
-      <PaidReportCard result={analysis} diagnostic={diagnostic} />
+      <PaidReportCard result={analysis} diagnostic={diagnostic} scope="dashboard" />
 
-      {/* 2. Les chiffres, puis la courbe du trafic amené par les IA. */}
-      <HomeStats
-        score={analysis.overallScore}
-        scoreLabel={scoreLabel(analysis.overallScore)}
-        sessions={traffic?.totalSessions ?? null}
-        sessionsDelta={sessionsDelta}
-        series={traffic?.series.map((point) => ({ date: point.date, value: point.sessions })) ?? []}
-        pendingFixes={pendingFixes}
-      />
-
+      {/* 2. La courbe du trafic amené par les IA. */}
       <AiTrafficCard report={traffic} />
 
       {/* 3. La place du commerce dans ChatGPT et Gemini. */}
@@ -185,10 +171,22 @@ export default async function DashboardHomePage() {
       <ArticleAgenda articles={upcoming} limit={4} />
 
       {/* Tant que le rattachement du site n'est pas ouvert, le prompt est la
-          voie d'exécution : il vit au bas de l'accueil comme des autres pages,
-          pour que le client n'ait pas à deviner où appliquer les priorités
-          qu'il vient de lire. */}
-      <SolutionPrompt tab="results" result={analysis} diagnostic={diagnostic} />
+          voie d'exécution. Il ne vit plus au bas de la page : la barre fixe le
+          porte, et il couvre désormais les six sections d'un coup — le client
+          n'a plus à passer d'onglet en onglet pour ramasser ses correctifs. */}
+      <SolveAgentsDock
+        result={analysis}
+        diagnostic={diagnostic}
+        articles={articles.map((article) => ({
+          title: article.title,
+          keyword: article.keyword,
+          status: article.status,
+          scheduledFor: article.scheduledFor,
+          excerpt: article.excerpt,
+          outline: article.outline,
+          body: article.body,
+        }))}
+      />
     </>
   );
 }

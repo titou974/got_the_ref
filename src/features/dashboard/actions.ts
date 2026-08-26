@@ -205,6 +205,120 @@ export const refreshRankingsAction = authActionClient
     return { measured: engines.filter((engine) => engine.measured).length };
   });
 
+// ── Mois éditorial d'accueil ─────────────────────────────────────────────────
+
+/** Trois publications par semaine : lundi, mercredi, vendredi. */
+const SEED_WEEKDAYS = [1, 3, 5] as const;
+/** Quatre semaines : le mois entier est posé avant la première visite. */
+const SEED_WEEKS = 4;
+const SEED_COUNT = SEED_WEEKDAYS.length * SEED_WEEKS;
+/** Publication à 9 h : l'heure où le planning se lit comme un agenda. */
+const SEED_HOUR = 9;
+
+/**
+ * Les douze dates du mois, à partir du lundi qui vient.
+ *
+ * On part toujours d'un lundi, jamais d'« aujourd'hui plus sept jours » : un
+ * planning qui tombe le mardi puis le jeudi puis le samedi ne se lit pas comme
+ * un calendrier éditorial, et le client ne sait plus quel jour il publie.
+ */
+function seedSchedule(from: Date): Date[] {
+  const monday = new Date(from);
+  monday.setHours(SEED_HOUR, 0, 0, 0);
+  // getDay() : 0 = dimanche. Le lundi suivant est à 1..7 jours d'ici, jamais
+  // aujourd'hui — le premier article doit laisser le temps de la relecture.
+  monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7));
+
+  const dates: Date[] = [];
+  for (let week = 0; week < SEED_WEEKS; week += 1) {
+    for (const weekday of SEED_WEEKDAYS) {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + week * 7 + (weekday - 1));
+      dates.push(date);
+    }
+  }
+  return dates;
+}
+
+/**
+ * Le mois d'articles posé avant la première ouverture du tableau de bord.
+ *
+ * Un calendrier vide, à l'arrivée, demande au client de deviner quoi écrire :
+ * c'est exactement le travail qu'il vient de déléguer. Douze sujets sont donc
+ * planifiés d'un coup — trois par semaine sur quatre semaines — et les trois de
+ * la première semaine sont rédigés dans la foulée, pour qu'il ait du texte à
+ * lire, pas seulement des titres.
+ *
+ * Ces trois rédactions ne sont pas décomptées du quota hebdomadaire : elles
+ * sont offertes avec la mise en route, et un client qui arriverait à zéro
+ * passe ne pourrait plus rien reprendre de sa semaine.
+ *
+ * L'action est sans effet si le compte a déjà des articles : elle est appelée
+ * juste après l'analyse d'entrée, qui peut être rejouée.
+ */
+export const seedEditorialMonthAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => {
+    const userId = ctx.auth.user.id;
+
+    const existing = await prisma.article.count({ where: { userId } });
+    if (existing > 0) return { planned: 0, written: 0 };
+
+    const context = await getDashboardContext(userId);
+    const topics = await planArticleTopics(context, SEED_COUNT);
+    const dates = seedSchedule(new Date());
+
+    await prisma.article.createMany({
+      data: topics.slice(0, SEED_COUNT).map((topic, index) => ({
+        userId,
+        title: topic.title,
+        keyword: topic.keyword,
+        outline: serializeOutline(
+          topic.outline.map((heading) => ({ heading, level: 2 as const, instruction: "" })),
+        ),
+        excerpt: topic.angle,
+        scheduledFor: dates[index],
+        status: "planned",
+      })),
+    });
+
+    // Les trois premiers du planning, rédigés ensemble : trois appels en
+    // parallèle tiennent dans le budget de la préparation, trois à la suite
+    // non.
+    const firstWeek = await prisma.article.findMany({
+      where: { userId },
+      orderBy: { scheduledFor: "asc" },
+      take: SEED_WEEKDAYS.length,
+    });
+
+    const drafts = await Promise.allSettled(
+      firstWeek.map(async (article) => {
+        const draft = await writeArticle(context, {
+          title: article.title,
+          keyword: article.keyword,
+          outline: parseOutline(article.outline),
+        });
+        await prisma.article.update({
+          where: { id: article.id },
+          data: {
+            title: draft.title,
+            excerpt: draft.excerpt,
+            body: draft.body,
+            status: "drafted",
+          },
+        });
+      }),
+    );
+
+    revalidateDashboard();
+    return {
+      planned: topics.length,
+      // Un sujet qui n'a pas pu être rédigé reste « planifié » : le client le
+      // relance d'un bouton, il ne perd rien.
+      written: drafts.filter((draft) => draft.status === "fulfilled").length,
+    };
+  });
+
 // ── Rattachement du site ─────────────────────────────────────────────────────
 
 export const connectSiteAction = authActionClient

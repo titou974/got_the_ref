@@ -32,6 +32,7 @@ export function SolveAgentsBar({
   stack,
   issues,
   solutionPrompt,
+  scope = "report",
 }: {
   domain: string;
   stack: DetectedStack | null;
@@ -39,6 +40,8 @@ export function SolveAgentsBar({
   issues: string[];
   /** Le prompt de correction, servi tant que le rattachement n'est pas ouvert. */
   solutionPrompt: string;
+  /** `dashboard` : le prompt couvre les six sections, pas le seul plan d'action. */
+  scope?: "report" | "dashboard";
 }) {
   const t = useTranslations("analysisReport.solve");
   const [open, setOpen] = useState(false);
@@ -140,6 +143,7 @@ export function SolveAgentsBar({
             stack={stack}
             issues={issues}
             solutionPrompt={solutionPrompt}
+            scope={scope}
             onClose={() => setOpen(false)}
           />
         )}
