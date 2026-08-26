@@ -44,7 +44,7 @@ import { ROUTES } from "@/constants/routes";
  * qui renvoie lui-même vers le tunnel d'accueil s'il ne l'a pas terminé.
  */
 export default async function Home() {
-  if (await getSession()) redirect(ROUTES.dashboard);
+  // if (await getSession()) redirect(ROUTES.dashboard);
 
   const t = await getTranslations("homeHero");
 
@@ -92,7 +92,10 @@ export default async function Home() {
 
       {/* Le CTA d'essai revient par le bas dès que le hero est dépassé, pour que
           l'entrée reste à portée sur toute la longueur de la page. */}
-      <TrialBottomBar label={t("trialBarCta", { days: TRIAL.days })} heroId={HERO_ID} />
+      <TrialBottomBar
+        label={t("trialBarCta", { days: TRIAL.days })}
+        heroId={HERO_ID}
+      />
     </main>
   );
 }
