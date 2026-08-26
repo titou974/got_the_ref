@@ -425,10 +425,15 @@ async function readToneFrom(text: string, fromArticle: boolean): Promise<string 
     ].join("\n"),
     // La tonalité est un jugement sur un texte, pas une extraction : c'est
     // exactement ce que le grand modèle fait mieux que le rapide.
-    tier: "strong",
-    // Le budget vaut pour la réponse seule : la marge de raisonnement du grand
-    // modèle est ajoutée par le client IA. Six phrases de description tiennent
-    // largement dans ces neuf cents tokens.
+    // Lire une manière d'écrire dans douze mille caractères est une lecture, pas
+    // un raisonnement : `gpt-5.4-nano` la rend en trois secondes et demie là où
+    // le grand modèle DeepSeek en demandait trente. Le palier rapide vise donc
+    // le nano d'OpenAI, et retombe sur DeepSeek Flash si la clé manque.
+    provider: "openai",
+    tier: "fast",
+    // Le budget vaut pour la réponse seule : la marge de réflexion est ajoutée
+    // par le client IA. Six phrases de description tiennent largement dans ces
+    // neuf cents tokens.
     maxTokens: 900,
   });
 

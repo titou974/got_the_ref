@@ -79,9 +79,10 @@ const WRITING_RULES = [
  * Le palier de modèle des textes publiés.
  *
  * Tout ce qui sort d'ici finit sur le site du client ou dans la boîte mail d'un
- * éditeur : c'est du jugement, pas de l'extraction. Le grand modèle DeepSeek
- * tient la longueur d'un article et respecte un plan section par section, là où
- * le rapide rend trois paragraphes interchangeables.
+ * éditeur : c'est du jugement, pas de l'extraction. Le palier « strong » vise
+ * `gpt-5.4-mini`, qui tient la longueur d'un article et respecte un plan
+ * section par section, en quelques secondes — le grand modèle DeepSeek rendait
+ * la même chose en dizaines de secondes, quand il ne dépassait pas son budget.
  */
 const TIER = "strong" as const;
 
