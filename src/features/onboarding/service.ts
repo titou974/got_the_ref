@@ -87,6 +87,9 @@ export async function analyzeSite({
     ]
       .filter(Boolean)
       .join("\n"),
+    // Lire un corpus déjà crawlé et en extraire langue, villes et niche : de
+    // l'extraction, pas du jugement. DeepSeek Flash, comme le reste du tunnel.
+    role: "default",
     maxTokens: 900,
   });
 
@@ -305,6 +308,8 @@ export async function suggestCompetitors({
       'Réponds en JSON : { "competitors": [ { "name": …, "url": … ou null, "reason": une phrase expliquant en quoi il est direct } ] },',
       "classés du plus direct au moins direct.",
     ].join("\n"),
+    // Repli quand Gemini n'a rien rendu : de mémoire, donc à petit prix.
+    role: "default",
     maxTokens: 1600,
   });
 
@@ -423,14 +428,13 @@ async function readToneFrom(text: string, fromArticle: boolean): Promise<string 
       "",
       "Décris la MANIÈRE, jamais le sujet : aucune phrase de ta réponse ne doit parler de ce dont le texte parle.",
     ].join("\n"),
-    // La tonalité est un jugement sur un texte, pas une extraction : c'est
-    // exactement ce que le grand modèle fait mieux que le rapide.
     // Lire une manière d'écrire dans douze mille caractères est une lecture, pas
     // un raisonnement : `gpt-5.4-nano` la rend en trois secondes et demie là où
-    // le grand modèle DeepSeek en demandait trente. Le palier rapide vise donc
-    // le nano d'OpenAI, et retombe sur DeepSeek Flash si la clé manque.
-    provider: "openai",
-    tier: "fast",
+    // le grand modèle DeepSeek en demandait trente. Le ton relevé ici est
+    // ensuite enregistré et rejoué à chaque rédaction : il vaut son modèle
+    // dédié. Le rôle `tone` vise donc le nano d'OpenAI, et retombe sur DeepSeek
+    // Flash si la clé manque.
+    role: "tone",
     // Le budget vaut pour la réponse seule : la marge de réflexion est ajoutée
     // par le client IA. Six phrases de description tiennent largement dans ces
     // neuf cents tokens.

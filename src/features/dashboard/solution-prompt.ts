@@ -119,9 +119,10 @@ Dossier de l'onglet « ${input.tab} » (source de vérité, ne rien recopier) :
 ${summarizeForModel(dossier)}
 
 Réponds en JSON : {"intro": "…", "instructions": "…"}.`,
-      // Le mini d'OpenAI : c'est lui qui juge et rédige, en deux secondes.
-      provider: "openai",
-      tier: "strong",
+      // Un prompt à recopier dans ChatGPT : le client le relit avant de s'en
+      // servir, et le dossier qui le suit porte déjà tous les faits. DeepSeek
+      // Flash suffit largement pour l'emballer.
+      role: "default",
       maxTokens: 1200,
     });
 

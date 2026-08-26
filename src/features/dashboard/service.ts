@@ -76,15 +76,17 @@ const WRITING_RULES = [
 ].join(" ");
 
 /**
- * Le palier de modèle des textes publiés.
+ * Qui écrit quoi, dans ce fichier.
  *
- * Tout ce qui sort d'ici finit sur le site du client ou dans la boîte mail d'un
- * éditeur : c'est du jugement, pas de l'extraction. Le palier « strong » vise
- * `gpt-5.4-mini`, qui tient la longueur d'un article et respecte un plan
- * section par section, en quelques secondes — le grand modèle DeepSeek rendait
- * la même chose en dizaines de secondes, quand il ne dépassait pas son budget.
+ * Les sujets et le corps des articles partent sur `gpt-5.4-mini` : ce sont les
+ * seuls textes d'ici que le client publie mot pour mot, et le mini tient la
+ * longueur d'un article en respectant son plan section par section, en quelques
+ * secondes.
+ *
+ * Le reste — réécriture on-page, prospects, message de démarchage, posts Google
+ * — est du travail de brouillon, relu avant d'être envoyé : DeepSeek Flash le
+ * rend pour une fraction du prix. C'est le rôle `default` du client IA.
  */
-const TIER = "strong" as const;
 
 // ── Sujets d'articles ────────────────────────────────────────────────────────
 
@@ -135,7 +137,7 @@ export async function planArticleTopics(
       "Écarte tout sujet auquel ce commerce ne peut pas répondre depuis son expérience réelle : un article générique n'est cité par aucune IA.",
       "Réponds en JSON : { \"articles\": [{ \"title\", \"keyword\", \"angle\", \"outline\": [] }] }",
     ].join("\n"),
-    tier: TIER,
+    role: "topics",
   });
 
   return result.articles;
@@ -187,7 +189,7 @@ export async function writeArticle(
     ]
       .filter(Boolean)
       .join("\n"),
-    tier: TIER,
+    role: "article",
     // Un article de 1200 mots plus son chapô ne tient pas dans le plafond par
     // défaut : sans ce budget, le corps revient coupé en pleine section.
     maxTokens: 8000,
@@ -254,7 +256,7 @@ export async function rewriteOnPage(context: DashboardContext): Promise<OnPageRe
     ]
       .filter(Boolean)
       .join("\n"),
-    tier: TIER,
+    role: "default",
   });
 }
 
@@ -299,7 +301,7 @@ export async function findProspects(context: DashboardContext) {
       "Écarte les sites qui n'acceptent aucune contribution extérieure, et ceux dont tu n'es pas sûr qu'ils existent encore.",
       "Réponds en JSON : { \"sites\": [{ \"name\", \"domain\", \"reason\", \"contactEmail\", \"contactUrl\", \"authority\" }] }",
     ].join("\n"),
-    tier: TIER,
+    role: "default",
   });
 
   return result.sites;
@@ -334,7 +336,7 @@ export async function draftOutreachMessage(
     ]
       .filter(Boolean)
       .join("\n"),
-    tier: TIER,
+    role: "default",
   });
 }
 
@@ -371,7 +373,7 @@ export async function planGooglePosts(context: DashboardContext, count: number) 
     ]
       .filter(Boolean)
       .join("\n"),
-    tier: TIER,
+    role: "default",
   });
 
   return result.posts;
