@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { getDashboardContext } from "@/features/dashboard/queries";
+import { CrispChat } from "@/components/CrispChat";
 import { DashboardShell } from "@/components/tableau-de-bord/DashboardShell";
 import { WelcomeModal } from "@/components/tableau-de-bord/WelcomeModal";
 
@@ -27,6 +28,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
+      {/* La bulle de discussion : le client est abonné, quelqu'un lui répond. */}
+      <CrispChat />
+
       {/* Le mot d'accueil, une seule fois, quelle que soit la section où le
           client atterrit. Posé hors de la coque : c'est un calque plein écran,
           et l'espacement vertical du contenu décalerait son ancrage. */}
