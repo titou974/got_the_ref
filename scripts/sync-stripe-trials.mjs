@@ -19,6 +19,10 @@
  *   --apply            écrit vraiment (sans ça : simulation)
  *   --status=<liste>   statuts Stripe à parcourir (défaut : trialing)
  *   --all              parcourt tous les statuts
+ *   --key-env=<NOM>    variable portant la clé Stripe (défaut : STRIPE_SECRET_KEY).
+ *                      Utile quand le `.env` de travail est en mode Test alors
+ *                      que la base est celle de production : la clé Live vit
+ *                      alors dans une variable à part, sans rien écraser.
  */
 
 import "dotenv/config";
@@ -35,10 +39,12 @@ const statuses = args.includes("--all")
       .map((s) => s.trim())
       .filter(Boolean);
 
-const key = process.env.STRIPE_SECRET_KEY;
+const keyEnv =
+  args.find((a) => a.startsWith("--key-env="))?.slice("--key-env=".length) ?? "STRIPE_SECRET_KEY";
+const key = process.env[keyEnv];
 const connectionString = process.env.DATABASE_URL;
 if (!key) {
-  console.error("STRIPE_SECRET_KEY manquant dans l'environnement.");
+  console.error(`${keyEnv} manquant dans l'environnement.`);
   process.exit(1);
 }
 if (!connectionString) {
