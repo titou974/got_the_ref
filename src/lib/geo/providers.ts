@@ -3,7 +3,7 @@ import "server-only";
 import type { AiEngine } from "./types";
 import { geoLog } from "./log";
 
-const FETCH_TIMEOUT_MS = 45000;
+const FETCH_TIMEOUT_MS = 80000;
 
 export type EngineCitation = {
   rank: number;
@@ -401,7 +401,9 @@ export async function gatherLiveEngines(
     Gemini: queryGemini,
   };
   const wanted = engines.filter((e, i) => engines.indexOf(e) === i);
-  const results = await Promise.allSettled(wanted.map((e) => callers[e](query)));
+  const results = await Promise.allSettled(
+    wanted.map((e) => callers[e](query)),
+  );
   return results.map((r, i) =>
     r.status === "fulfilled"
       ? r.value
