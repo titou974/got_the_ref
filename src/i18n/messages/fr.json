@@ -601,8 +601,6 @@
     "measured": {
       "rankings": "**Classement IA** : {detail}. Le détail des concurrents cités devant vous est dans l'onglet Résultats.",
       "content": "**Contenu** : {score}/100 sur la qualité éditoriale et la citabilité de vos pages, ce qu'une IA peut reprendre tel quel.",
-      "presence": "**Notoriété** : {score}/100 sur les signaux d'autorité hors-site, distinctions et mentions presse comprises.",
-      "keywords": "**Mots-clés** : {count} requêtes tendances relevées sur votre niche, avec la balise title, la meta description et le H1 réécrits.",
       "recommendations": "**Plan d'action** : {count} correctifs priorisés par impact, chacun accompagné de son prompt prêt à coller.",
       "recommendationsWithTop": "**Plan d'action** : {count} correctifs priorisés par impact. À traiter d'abord : « {top} ».",
       "maps": "**Fiche Google** : {score}/100 de cohérence entre votre fiche et le site, sur le nom, la catégorie, l'adresse et les horaires."

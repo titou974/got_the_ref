@@ -17,6 +17,7 @@ import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
 import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
 import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
 import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
+import { PaidReportCard } from "@/components/dashboard/PaidReportCard";
 import { ProfileHeader } from "@/components/geo/SiteProfile";
 import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
 import { Recommendations } from "@/components/geo/Recommendations";
@@ -125,6 +126,9 @@ export default async function DashboardHomePage() {
           </p>
         </div>
       </SiteScreenshot>
+
+      {/* 1bis. Le constat écrit à la frappe, comme sur le rapport d'analyse. */}
+      <PaidReportCard result={analysis} diagnostic={diagnostic} />
 
       {/* 2. Les chiffres, puis la courbe du trafic amené par les IA. */}
       <HomeStats

@@ -11,9 +11,12 @@ import { AiOverview, type OverviewBlock } from "./AiOverview";
  * l'analyse gratuite : en-tête signé, passages surlignés, frappe progressive.
  *
  * Le fond diffère : l'aperçu gratuit argumente sur ce qu'il n'a pas mesuré,
- * celui-ci rend compte des relevés — position par moteur, notes éditoriale et de
- * notoriété, mots-clés tendances, plan d'action. Et il ne porte pas d'appel à
- * l'action : il n'y a plus rien à débloquer.
+ * celui-ci rend compte des relevés — position par moteur, note éditoriale,
+ * plan d'action. Et il ne porte pas d'appel à l'action : il n'y a plus rien à
+ * débloquer.
+ *
+ * La présence web/notoriété et les mots-clés tendances (Gemini) ont leurs
+ * propres onglets du rapport ; ce constat ne les répète pas.
  */
 export async function PaidReportCard({
   result,
@@ -70,10 +73,6 @@ export async function PaidReportCard({
     lines.push(t("measured.rankings", { detail: rankDetail }));
   }
   lines.push(t("measured.content", { score: facts.contentScore }));
-  lines.push(t("measured.presence", { score: facts.presenceScore }));
-  if (facts.keywordCount > 0) {
-    lines.push(t("measured.keywords", { count: facts.keywordCount }));
-  }
   if (facts.recommendationCount > 0) {
     lines.push(
       facts.topRecommendation
