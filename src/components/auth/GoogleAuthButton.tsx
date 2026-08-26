@@ -35,8 +35,10 @@ export function GoogleAuthButton({
         provider: "google",
         callbackURL,
         // Un échec côté Google ramène sur la page d'où l'on vient, avec le
-        // message d'erreur en clair plutôt qu'un écran blanc.
-        errorCallbackURL: window.location.pathname,
+        // message d'erreur en clair plutôt qu'un écran blanc. La query part
+        // avec : sans elle, le retour perdrait la destination (`?suite=…`) et
+        // ferait sortir le visiteur de son tunnel.
+        errorCallbackURL: `${window.location.pathname}${window.location.search}`,
       });
     } catch {
       setError(t("googleError"));

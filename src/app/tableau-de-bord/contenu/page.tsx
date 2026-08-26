@@ -2,12 +2,11 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
-import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
 import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
-import { PromptCard } from "@/components/tableau-de-bord/PromptCard";
+import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { OnPageElement, OpeningHoursBlock } from "@/components/geo/OnPageElement";
 
@@ -65,7 +64,7 @@ export default async function ContenuPage() {
 
       <ConnectStrip />
 
-      <PromptCard prompt={buildSolutionPrompt("content", analysis, diagnostic)} />
+      <SolutionPrompt tab="content" result={analysis} diagnostic={diagnostic} />
     </>
   );
 }

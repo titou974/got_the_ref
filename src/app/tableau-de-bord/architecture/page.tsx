@@ -2,11 +2,10 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
-import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
 import { CATEGORY_META } from "@/lib/geo/types";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
-import { PromptCard } from "@/components/tableau-de-bord/PromptCard";
+import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
 import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
@@ -96,7 +95,7 @@ export default async function ArchitecturePage() {
 
       <ConnectStrip />
 
-      <PromptCard prompt={buildSolutionPrompt("architecture", analysis, diagnostic)} />
+      <SolutionPrompt tab="architecture" result={analysis} diagnostic={diagnostic} />
     </>
   );
 }

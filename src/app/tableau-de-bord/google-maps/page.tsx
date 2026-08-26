@@ -3,10 +3,9 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getDashboardContext, listGooglePosts } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
-import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
 import { Card, CardTitle, PageHeader, StatusDot } from "@/components/tableau-de-bord/Card";
 import { GooglePostPlanner } from "@/components/tableau-de-bord/GooglePostPlanner";
-import { PromptCard } from "@/components/tableau-de-bord/PromptCard";
+import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 
 export const maxDuration = 300;
@@ -132,7 +131,7 @@ export default async function GoogleMapsPage() {
         }))}
       />
 
-      <PromptCard prompt={buildSolutionPrompt("maps", analysis, diagnostic)} />
+      <SolutionPrompt tab="maps" result={analysis} diagnostic={diagnostic} />
     </>
   );
 }

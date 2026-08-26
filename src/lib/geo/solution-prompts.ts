@@ -11,7 +11,13 @@ import type { AnalysisDiagnostic, DiagnosticCheck } from "./diagnostic";
  * affichés dans l'UI.
  */
 
-export type SolutionTab = "results" | "architecture" | "content" | "presence" | "maps";
+export type SolutionTab =
+  | "results"
+  | "architecture"
+  | "content"
+  | "articles"
+  | "presence"
+  | "maps";
 
 const ARCH_LABELS: Record<string, string> = {
   llmsTxt: "Fichier llms.txt",
@@ -73,6 +79,16 @@ Côté contenu, voici ce qui limite ma citabilité par les IA :
 ${list.length ? list.join("\n") : "- (contenu globalement solide, renforce la profondeur)"}
 
 Rédige les améliorations prêtes à publier : 3 passages auto-portants de 40 à 160 mots répondant aux questions clés de mon audience (avec des faits et chiffres précis), une FAQ structurée (questions + réponses), et des signaux E-E-A-T (bio d'auteur, sources citées).`;
+    }
+
+    case "articles": {
+      // Le repli ne connaît pas le planning (il vit hors base) : il cadre la
+      // demande, la version écrite par le modèle mini y joint les articles.
+      return `${h}
+
+Des articles ont été rédigés pour mon site et attendent d'être publiés.
+
+Explique-moi comment les mettre en ligne proprement : structure d'URL et de rubrique, balises title et méta description par article, données structurées Article/BlogPosting, maillage interne depuis la page d'accueil, et rythme de publication à tenir.`;
     }
 
     case "presence": {

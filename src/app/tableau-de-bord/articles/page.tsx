@@ -7,6 +7,8 @@ import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 import { PlanArticlesButton } from "@/components/tableau-de-bord/PlanArticlesButton";
 import { ArticleQuotaBar } from "@/components/tableau-de-bord/ArticleQuotaBar";
 import { BrandVoicePanel } from "@/components/tableau-de-bord/BrandVoicePanel";
+import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
+import { buildDiagnostic } from "@/lib/geo/diagnostic";
 
 export const maxDuration = 300;
 
@@ -16,6 +18,11 @@ export const maxDuration = 300;
  * Les articles publiés restent dans la liste, en bas : c'est l'historique de ce
  * que les agents ont déposé, et le seul endroit où le client retrouve le lien
  * public de chacun.
+ *
+ * Le prompt de publication ferme l'écran. C'est le seul de l'application qui
+ * embarque du contenu long : les articles rédigés y partent en entier, pour que
+ * le client — ou son développeur — colle une fois et publie, sans revenir
+ * chercher le texte article par article.
  */
 export default async function ArticlesPage() {
   const user = await requireUser();
@@ -59,6 +66,23 @@ export default async function ArticlesPage() {
         instructions={context.brandVoice?.instructions ?? ""}
         banned={context.brandVoice?.banned ?? []}
       />
+
+      {context.analysis ? (
+        <SolutionPrompt
+          tab="articles"
+          result={context.analysis}
+          diagnostic={buildDiagnostic(context.analysis)}
+          articles={articles.map((article) => ({
+            title: article.title,
+            keyword: article.keyword,
+            status: article.status,
+            scheduledFor: article.scheduledFor,
+            excerpt: article.excerpt,
+            outline: article.outline,
+            body: article.body,
+          }))}
+        />
+      ) : null}
     </>
   );
 }
