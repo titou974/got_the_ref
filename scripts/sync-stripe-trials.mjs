@@ -19,6 +19,11 @@
  *   --apply            écrit vraiment (sans ça : simulation)
  *   --status=<liste>   statuts Stripe à parcourir (défaut : trialing)
  *   --all              parcourt tous les statuts
+ *   --default-plan=<offre>  offre à poser quand le tarif de l'abonnement n'est
+ *                      pas dans le catalogue de l'environnement (typiquement des
+ *                      price IDs Live absents d'un `.env` de développement) et
+ *                      que le compte est encore en « free ». Sans ça, l'offre du
+ *                      compte est laissée telle quelle.
  *   --key-env=<NOM>    variable portant la clé Stripe (défaut : STRIPE_SECRET_KEY).
  *                      Utile quand le `.env` de travail est en mode Test alors
  *                      que la base est celle de production : la clé Live vit
@@ -39,6 +44,8 @@ const statuses = args.includes("--all")
       .map((s) => s.trim())
       .filter(Boolean);
 
+const defaultPlan =
+  args.find((a) => a.startsWith("--default-plan="))?.slice("--default-plan=".length) ?? null;
 const keyEnv =
   args.find((a) => a.startsWith("--key-env="))?.slice("--key-env=".length) ?? "STRIPE_SECRET_KEY";
 const key = process.env[keyEnv];
@@ -182,9 +189,12 @@ try {
 
     // Un tarif hors catalogue (offre sur mesure, ancien produit) ne doit pas
     // faire retomber le compte en « free » : on garde l'offre en place.
-    const nextPlan = active && plan ? plan : user.plan;
+    const fallbackPlan = defaultPlan && user.plan === "free" ? defaultPlan : user.plan;
+    const nextPlan = active ? (plan ?? fallbackPlan) : user.plan;
     if (active && !plan) {
-      console.warn(`⚠ ${user.email} : tarif ${priceId} hors catalogue, offre laissée à « ${user.plan} ».`);
+      console.warn(
+        `⚠ ${user.email} : tarif ${priceId} hors catalogue, offre posée à « ${nextPlan} ».`,
+      );
     }
 
     const changed =
