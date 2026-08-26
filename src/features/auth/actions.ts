@@ -7,10 +7,18 @@ import { actionClient } from "@/lib/safe-action";
 import { auth } from "@/features/auth/better-auth.config";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rate-limit";
 import { unlockAnalysisFromSession } from "@/features/billing/unlock";
 import { CLAIM_METADATA_KEY, claimMatches, clearClaim } from "@/features/billing/claim";
-import { ROUTES, safeNextPath } from "@/constants/routes";
-import { postCheckoutSignUpSchema, signInSchema, signUpSchema } from "./schemas";
+import { PASSWORD_RESET_PARAM, ROUTES, safeNextPath } from "@/constants/routes";
+import { SITE } from "@/constants/site";
+import {
+  postCheckoutSignUpSchema,
+  requestPasswordResetSchema,
+  resetPasswordSchema,
+  signInSchema,
+  signUpSchema,
+} from "./schemas";
 
 export const signUpAction = actionClient
   .inputSchema(signUpSchema)
@@ -132,6 +140,87 @@ export const createAccountAfterCheckoutAction = actionClient
     // reste à sa place, retrouvable depuis son espace client une fois les sept
     // questions passées.
     redirect(ROUTES.onboarding);
+  });
+
+/**
+ * Demande d'un lien de réinitialisation.
+ *
+ * La réponse est la même que l'adresse existe ou non : dire « aucun compte à
+ * cette adresse » transformerait le formulaire en annuaire de clients. Les
+ * échecs de Better Auth sont donc avalés, et l'envoi de l'e-mail est différé
+ * (cf. `sendResetPassword`) pour que la durée de la réponse ne trahisse pas
+ * davantage.
+ *
+ * Le débit est bridé ici et non par Better Auth : son limiteur agit sur son
+ * gestionnaire HTTP, que l'appel direct à `auth.api` court-circuite.
+ */
+export const requestPasswordResetAction = actionClient
+  .inputSchema(requestPasswordResetSchema)
+  .action(async ({ parsedInput }) => {
+    const email = parsedInput.email.trim().toLowerCase();
+    const headerList = await headers();
+    const ip =
+      headerList.get("x-forwarded-for")?.split(",")[0].trim() ??
+      headerList.get("x-real-ip") ??
+      "unknown";
+
+    // Deux verrous : l'un contre le balayage d'adresses depuis un même poste,
+    // l'autre contre le harcèlement d'une boîte précise depuis plusieurs.
+    const perIp = rateLimit(`reset-password:ip:${ip}`, 5, 15 * 60 * 1000);
+    const perEmail = rateLimit(`reset-password:email:${email}`, 3, 60 * 60 * 1000);
+    if (!perIp.ok || !perEmail.ok) {
+      returnValidationErrors(requestPasswordResetSchema, {
+        _errors: [
+          "Trop de demandes en peu de temps. Patientez quelques minutes avant de réessayer.",
+        ],
+      });
+    }
+
+    try {
+      await auth.api.requestPasswordReset({
+        body: {
+          email,
+          redirectTo: `${SITE.url}${ROUTES.resetPassword}`,
+        },
+        headers: headerList,
+      });
+    } catch (e) {
+      // Adresse inconnue, compte Google sans mot de passe, panne de Resend :
+      // rien de tout cela ne doit se lire dans la réponse. On journalise pour
+      // pouvoir enquêter, et on affiche la même confirmation.
+      console.error("[auth] requestPasswordReset :", e);
+    }
+
+    return { sent: true };
+  });
+
+/**
+ * Pose le nouveau mot de passe à partir du jeton reçu par e-mail.
+ *
+ * Pas de connexion automatique dans la foulée : Better Auth ferme au contraire
+ * toutes les sessions (`revokeSessionsOnPasswordReset`). On renvoie donc vers
+ * la connexion, où le nouveau mot de passe sert immédiatement.
+ */
+export const resetPasswordAction = actionClient
+  .inputSchema(resetPasswordSchema)
+  .action(async ({ parsedInput }) => {
+    try {
+      await auth.api.resetPassword({
+        body: {
+          token: parsedInput.token,
+          newPassword: parsedInput.password,
+        },
+        headers: await headers(),
+      });
+    } catch {
+      returnValidationErrors(resetPasswordSchema, {
+        _errors: [
+          "Ce lien n'est plus valable. Demandez-en un nouveau pour changer votre mot de passe.",
+        ],
+      });
+    }
+
+    redirect(`${ROUTES.signIn}?${PASSWORD_RESET_PARAM}=1`);
   });
 
 export const signOutAction = actionClient.action(async () => {

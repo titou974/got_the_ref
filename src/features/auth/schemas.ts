@@ -36,6 +36,22 @@ export const postCheckoutSignUpSchema = z.object({
 });
 export type PostCheckoutSignUpInput = z.infer<typeof postCheckoutSignUpSchema>;
 
+/** Demande d'un lien de réinitialisation : seule l'adresse est saisie. */
+export const requestPasswordResetSchema = z.object({
+  email: z.email("Adresse e-mail invalide."),
+});
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
+
+/**
+ * Choix du nouveau mot de passe. Le jeton vient du lien reçu par e-mail : il
+ * transite par un champ caché, sa validité étant vérifiée par Better Auth.
+ */
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Lien de réinitialisation invalide."),
+  password,
+});
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
 export const signUpSchema = z.object({
   name: z
     .string()

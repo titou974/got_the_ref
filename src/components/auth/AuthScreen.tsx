@@ -16,6 +16,7 @@ export function AuthScreen({
   callbackURL,
   switchHref,
   error = null,
+  notice = null,
 }: {
   mode: "signin" | "signup";
   /** Page à rejoindre une fois identifié. */
@@ -24,6 +25,8 @@ export function AuthScreen({
   switchHref: string;
   /** Échec renvoyé par Google, déjà traduit. */
   error?: string | null;
+  /** Confirmation à afficher en tête — mot de passe réinitialisé, par exemple. */
+  notice?: string | null;
 }) {
   return (
     <main className="flex min-h-dvh flex-col bg-bg">
@@ -46,6 +49,7 @@ export function AuthScreen({
           googleEnabled={isGoogleAuthEnabled}
           switchHref={switchHref}
           error={error}
+          notice={notice}
         />
       </section>
     </main>

@@ -29,6 +29,7 @@ export function AuthPanel({
   googleEnabled,
   switchHref,
   error = null,
+  notice = null,
 }: {
   mode: "signin" | "signup";
   /** Page à rejoindre une fois identifié. */
@@ -38,10 +39,15 @@ export function AuthPanel({
   switchHref: string;
   /** Message d'échec du retour Google, déjà traduit. */
   error?: string | null;
+  /** Confirmation à afficher en tête — mot de passe réinitialisé, par exemple. */
+  notice?: string | null;
 }) {
   const t = useTranslations("auth");
   const isSignup = mode === "signup";
-  const [showEmailForm, setShowEmailForm] = useState(!googleEnabled);
+  // Une confirmation en tête vient d'un mot de passe fraîchement changé : le
+  // visiteur a un mot de passe en tête et une adresse, pas un compte Google à
+  // choisir. On lui ouvre le formulaire plutôt que l'écran de choix.
+  const [showEmailForm, setShowEmailForm] = useState(!googleEnabled || Boolean(notice));
 
   // À l'inscription, Google ne distingue pas un nouveau venu d'un client qui a
   // déjà un compte : le même clic ouvre une session dans les deux cas.
@@ -64,6 +70,12 @@ export function AuthPanel({
           {isSignup ? t("goSignin") : t("goSignup")}
         </Link>
       </p>
+
+      {notice && (
+        <p className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm text-text" role="status">
+          {notice}
+        </p>
+      )}
 
       {error && (
         <p

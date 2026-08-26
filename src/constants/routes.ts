@@ -10,6 +10,10 @@ export const ROUTES = {
   pricing: "/tarifs",
   signIn: "/connexion",
   signUp: "/inscription",
+  /** Demande d'un lien de réinitialisation (saisie de l'e-mail). */
+  forgotPassword: "/mot-de-passe-oublie",
+  /** Choix du nouveau mot de passe — atterrissage du lien reçu par e-mail. */
+  resetPassword: "/nouveau-mot-de-passe",
   account: "/compte",
   /**
    * L'aiguillage d'après-identification. Il n'affiche rien : il regarde l'état
@@ -44,6 +48,13 @@ export const ROUTES = {
  * ressort dans le tunnel d'abonnement, là où le visiteur allait.
  */
 export const NEXT_PARAM = "suite";
+
+/**
+ * `/connexion?motdepasse=1` — le retour d'une réinitialisation réussie. Le mot
+ * de passe vient de changer et toutes les sessions ont été fermées : la page
+ * de connexion doit dire pourquoi elle redemande de s'identifier.
+ */
+export const PASSWORD_RESET_PARAM = "motdepasse";
 
 /**
  * N'accepte qu'un chemin interne à l'application.
