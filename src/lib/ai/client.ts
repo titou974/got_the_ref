@@ -11,13 +11,19 @@ import { aiLog, aiLogPrompt } from "./log";
  * DeepSeek et Moonshot parlent le format « chat completions ». Le client
  * masque la différence : un appel se décrit par un palier, jamais par une URL.
  *
- * Le partage du travail vient d'une mesure, pas d'une préférence. Sur le même
- * prompt de tonalité (12 000 caractères, 2 644 tokens d'entrée) :
- * `deepseek-v4-pro` rend sa réponse en 31 secondes après 2 004 tokens de
- * réflexion, `gpt-5.4-mini` en 2,2 secondes et `gpt-5.4-nano` en 3,6. Sur
- * l'audit complet, DeepSeek dépassait carrément les 145 secondes de budget.
- * Tout ce qui relève du jugement part donc chez OpenAI, et DeepSeek reste en
- * secours et sur les extractions bon marché.
+ * Le partage du travail se décide par rôle (voir `AiRole` plus bas), jamais au
+ * cas par cas dans les prompts. OpenAI n'est gardé que pour les quatre sorties
+ * lues telles quelles par le client : les sujets d'articles, la rédaction des
+ * articles, le résumé « aperçu IA » de l'audit et la détection du ton de
+ * marque. Tout le reste — dont la rédaction des prompts — part chez DeepSeek
+ * Flash. L'estimation des backlinks ne passe pas ici du tout : elle a besoin
+ * d'un index réel et vit dans `lib/ai/gemini`.
+ *
+ * `deepseek-v4-pro` est banni du produit, secours compris : sur le même prompt
+ * de tonalité (12 000 caractères, 2 644 tokens d'entrée) il rend sa réponse en
+ * 31 secondes après 2 004 tokens de réflexion, là où `gpt-5.4-mini` met 2,2
+ * secondes ; sur l'audit complet il dépassait les 145 secondes de budget. Les
+ * deux paliers de DeepSeek pointent donc sur Flash.
  *
  * Sans clé nulle part, on échoue franchement plutôt que d'inventer une
  * réponse : l'accueil client repose sur ces retours.
@@ -47,6 +53,12 @@ type ProviderConfig = {
   reasoningTiers: AiTier[];
   /** Effort de réflexion demandé (API Responses uniquement). */
   effort?: "minimal" | "low" | "medium" | "high";
+  /**
+   * Palier imposé, quoi qu'on demande. DeepSeek s'y tient au rapide : son grand
+   * modèle est interdit dans le produit, y compris quand un appel de jugement
+   * bascule sur lui en secours.
+   */
+  forcedTier?: AiTier;
   /** Le nom de la variable d'environnement, pour un message d'erreur utile. */
   keyName: string;
 };
@@ -69,12 +81,18 @@ const PROVIDERS: Record<AiProvider, ProviderConfig> = {
   deepseek: {
     baseUrl: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1",
     api: "chat",
+    // Flash et rien d'autre. Le palier « strong » pointe sur le même modèle et
+    // `forcedTier` ramène de toute façon chaque appel au rapide : ni un
+    // appelant distrait ni le repli automatique ne peuvent réveiller
+    // `deepseek-v4-pro`, dont les dizaines de secondes de réflexion coupaient
+    // l'audit en pleine rédaction.
     defaultModel: "deepseek-v4-flash",
-    defaultStrongModel: "deepseek-v4-pro",
+    defaultStrongModel: "deepseek-v4-flash",
     apiKey: process.env.DEEPSEEK_API_KEY,
     model: process.env.DEEPSEEK_MODEL,
-    strongModel: process.env.DEEPSEEK_STRONG_MODEL,
-    reasoningTiers: ["strong"],
+    strongModel: process.env.DEEPSEEK_MODEL,
+    reasoningTiers: [],
+    forcedTier: "fast",
     keyName: "DEEPSEEK_API_KEY",
   },
   moonshot: {
@@ -98,14 +116,39 @@ function modelFor(config: ProviderConfig, tier: AiTier): string {
 }
 
 /**
- * Qui répond en premier, selon la nature de l'appel.
+ * Ce qu'un appel produit — pas le modèle qui le produit.
  *
- * L'extraction (lire un site, en tirer une niche) part chez DeepSeek Flash :
- * c'est le moins cher au token et il ne réfléchit pas. Le jugement (audit,
- * tonalité, rédaction) part chez OpenAI, qui rend la même qualité en quelques
- * secondes là où DeepSeek Pro en demandait des dizaines. `AI_PROVIDER` force
- * le premier essai pour les deux, quand on veut comparer.
+ * Un appelant déclare son rôle ; la table ci-dessous décide du fournisseur et
+ * du palier. Changer d'avis sur « qui écrit les articles » se fait donc ici, en
+ * une ligne, sans relire six prompts.
+ *
+ * - `topics`, `article` : ce que le client lit mot pour mot. `gpt-5.4-mini`.
+ * - `overview` : l'audit complet, dont sort le résumé « aperçu IA » affiché sur
+ *   la carte de rapport. Même modèle, pour la même raison : c'est du texte lu
+ *   tel quel, et DeepSeek dépassait le budget de temps sur cet appel-là.
+ * - `tone` : la détection du ton de marque, ensuite enregistrée et rejouée à
+ *   chaque rédaction. `gpt-5.4-nano` suffit : il extrait, il ne juge pas.
+ * - `default` : tout le reste — profil, concurrents, prospects, posts Google,
+ *   réécriture on-page, rédaction des prompts. DeepSeek Flash.
+ *
+ * L'estimation des backlinks ne figure pas ici : elle passe par Gemini Flash,
+ * seul modèle du lot relié à un index de liens (`lib/ai/gemini`). Le rôle
+ * `backlinks` ne sert qu'à son repli, quand Gemini ne répond pas.
  */
+export type AiRole = "topics" | "article" | "overview" | "tone" | "backlinks" | "default";
+
+type Route = { provider: AiProvider; tier: AiTier };
+
+const ROLE_ROUTING: Record<AiRole, Route> = {
+  topics: { provider: "openai", tier: "strong" },
+  article: { provider: "openai", tier: "strong" },
+  overview: { provider: "openai", tier: "strong" },
+  tone: { provider: "openai", tier: "fast" },
+  backlinks: { provider: "deepseek", tier: "fast" },
+  default: { provider: "deepseek", tier: "fast" },
+};
+
+/** `AI_PROVIDER` force le premier essai de tous les rôles, quand on compare. */
 const FORCED_PROVIDER: AiProvider | null =
   process.env.AI_PROVIDER === "moonshot"
     ? "moonshot"
@@ -114,9 +157,6 @@ const FORCED_PROVIDER: AiProvider | null =
       : process.env.AI_PROVIDER === "deepseek"
         ? "deepseek"
         : null;
-
-const EXTRACTION_PROVIDER: AiProvider = "deepseek";
-const JUDGEMENT_PROVIDER: AiProvider = "openai";
 
 /**
  * Le budget d'un appel, par palier.
@@ -147,15 +187,16 @@ const TOTAL_BUDGET_MS = 285_000;
 const MIN_ATTEMPT_MS = 15_000;
 
 /**
- * La marge de raisonnement du grand modèle.
+ * La marge de raisonnement des modèles qui réfléchissent.
  *
- * `max_tokens` borne TOUT ce que le modèle produit, raisonnement compris. Sur
- * `deepseek-v4-pro`, la réflexion consomme couramment trois cents à deux mille
- * tokens avant le premier caractère de réponse : un appel réglé sur neuf cents
- * tokens rendait un contenu vide avec `finish_reason: "length"`, la réflexion
- * ayant tout mangé. Les appelants dimensionnent leur budget pour la réponse
- * qu'ils attendent ; la marge est ajoutée ici, une bonne fois, plutôt que
- * dupliquée dans chaque prompt.
+ * `max_tokens` borne TOUT ce que le modèle produit, raisonnement compris. La
+ * réflexion consomme couramment trois cents à deux mille tokens avant le
+ * premier caractère de réponse : un appel réglé sur neuf cents tokens rendait un
+ * contenu vide avec `finish_reason: "length"`, la réflexion ayant tout mangé.
+ * Les appelants dimensionnent leur budget pour la réponse qu'ils attendent ; la
+ * marge est ajoutée ici, une bonne fois, plutôt que dupliquée dans chaque
+ * prompt. Elle ne concerne plus que les modèles OpenAI et Moonshot : DeepSeek
+ * ne tourne qu'en Flash, qui ne réfléchit pas.
  */
 const REASONING_HEADROOM = 3_000;
 
@@ -176,12 +217,9 @@ function budgetFor(config: ProviderConfig, tier: AiTier, maxTokens: number): num
 export const isAiConfigured = (): boolean =>
   Object.values(PROVIDERS).some((p) => Boolean(p.apiKey));
 
-/** L'ordre d'essai : le fournisseur attendu d'abord, les autres en secours. */
-function providerOrder(tier: AiTier, preferred?: AiProvider): AiProvider[] {
-  const first =
-    preferred ??
-    FORCED_PROVIDER ??
-    (tier === "strong" ? JUDGEMENT_PROVIDER : EXTRACTION_PROVIDER);
+/** L'ordre d'essai : le fournisseur du rôle d'abord, les autres en secours. */
+function providerOrder(preferred: AiProvider): AiProvider[] {
+  const first = FORCED_PROVIDER ?? preferred;
   const rest: AiProvider[] = (["openai", "deepseek", "moonshot"] as AiProvider[]).filter(
     (name) => name !== first,
   );
@@ -191,9 +229,11 @@ function providerOrder(tier: AiTier, preferred?: AiProvider): AiProvider[] {
 type ChatOptions = {
   system: string;
   prompt: string;
-  /** Fournisseur imposé pour cet appel (sinon `AI_PROVIDER`). */
+  /** Ce que l'appel produit. C'est lui qui choisit le modèle. */
+  role?: AiRole;
+  /** Fournisseur imposé, en dernier recours (sinon le rôle décide). */
   provider?: AiProvider;
-  /** Niveau de modèle attendu pour cet appel (sinon le rapide). */
+  /** Palier imposé, en dernier recours (sinon le rôle décide). */
   tier?: AiTier;
   maxTokens?: number;
   temperature?: number;
@@ -307,7 +347,7 @@ async function callProvider(
   budgetMs?: number,
 ): Promise<string> {
   const config = PROVIDERS[name];
-  const tier = tierOverride ?? options.tier ?? "fast";
+  const tier = config.forcedTier ?? tierOverride ?? options.tier ?? "fast";
   const model = modelFor(config, tier);
   const wanted = options.maxTokens ?? 4000;
   const maxTokens = budgetFor(config, tier, wanted);
@@ -514,8 +554,9 @@ export async function askJson<T>(
   schema: ZodType<T>,
   options: ChatOptions,
 ): Promise<T> {
-  const tier = options.tier ?? "fast";
-  const order = providerOrder(tier, options.provider);
+  const route = ROLE_ROUTING[options.role ?? "default"];
+  const tier = options.tier ?? route.tier;
+  const order = providerOrder(options.provider ?? route.provider);
   if (order.length === 0) {
     aiLog("❌ aucun fournisseur configuré", {
       piste: "renseigner OPENAI_API_KEY, DEEPSEEK_API_KEY ou MOONSHOT_API_KEY",
@@ -527,19 +568,27 @@ export async function askJson<T>(
     );
   }
 
-  // Un essai par (fournisseur, palier). Quand un appel de jugement échoue, le
+  // Un essai par (fournisseur, modèle). Quand un appel de jugement échoue, le
   // modèle rapide du même fournisseur reprend la question avant qu'on change de
   // fournisseur : il ne raisonne pas, donc il ne dépasse ni son budget de
   // tokens ni celui de temps. Une réponse un peu moins fine vaut mieux qu'une
   // carte vide dans le tableau de bord.
-  const attempts = order.flatMap((name) =>
-    tier === "strong"
-      ? [
-          { name, tier: "strong" as AiTier },
-          { name, tier: "fast" as AiTier },
-        ]
-      : [{ name, tier }],
-  );
+  //
+  // Chez un fournisseur bridé sur un seul modèle (DeepSeek, cloué sur Flash),
+  // les deux paliers retombent sur le même appel : le doublon est écarté, sans
+  // quoi on rejouerait deux fois le même échec au prix de deux timeouts.
+  const attempts: { name: AiProvider; tier: AiTier }[] = [];
+  const planned = new Set<string>();
+  for (const name of order) {
+    const config = PROVIDERS[name];
+    for (const wanted of tier === "strong" ? (["strong", "fast"] as AiTier[]) : [tier]) {
+      const actual = config.forcedTier ?? wanted;
+      const key = `${name}/${modelFor(config, actual)}`;
+      if (planned.has(key)) continue;
+      planned.add(key);
+      attempts.push({ name, tier: actual });
+    }
+  }
 
   aiLog(
     `plan d'essai : ${attempts.map((a) => `${a.name}/${modelFor(PROVIDERS[a.name], a.tier)}`).join(" → ")}`,

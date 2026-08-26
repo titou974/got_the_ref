@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { askJson, isAiConfigured } from "@/lib/ai/client";
+import { askGeminiGrounded, isGeminiConfigured } from "@/lib/ai/gemini";
 import {
   CATEGORY_META,
   type CategoryKey,
@@ -780,7 +781,7 @@ Renvoie UNIQUEMENT un objet JSON, sans texte ni markdown autour :
       "Tu qualifies le créneau commercial d'un site à partir de ses signaux. " +
       "Tu réponds uniquement par un objet JSON valide.",
     prompt,
-    tier: "strong",
+    role: "default",
     maxTokens: 600,
   });
   const profile = normalizeProfile(
@@ -811,20 +812,62 @@ function fallbackProfile(signals: SiteSignals, ctx: AnalysisContext): BusinessPr
   };
 }
 
+/** Met en forme la réponse « backlinks » d'un modèle, d'où qu'elle vienne. */
+function toBacklinks(
+  parsed: z.infer<typeof BACKLINKS_RESPONSE_SCHEMA>,
+  grounding: { domain: string; title: string | null }[],
+): Backlinks {
+  const notableSources: ReferringSource[] = Array.isArray(parsed.notableSources)
+    ? parsed.notableSources
+        .filter((s) => s?.domain?.trim())
+        .map((s) => ({ domain: s.domain!.trim(), note: s.note?.trim() || "" }))
+    : [];
+
+  // Les pages réellement consultées par le grounding complètent la liste : un
+  // domaine que le modèle a ouvert pour répondre est une source vérifiée, pas
+  // un souvenir. Il vient après celles qu'il a jugées notables.
+  const seen = new Set(notableSources.map((s) => s.domain.toLowerCase()));
+  for (const source of grounding) {
+    const domain = source.domain.trim();
+    if (!domain || seen.has(domain.toLowerCase())) continue;
+    seen.add(domain.toLowerCase());
+    notableSources.push({ domain, note: source.title?.trim() || "page consultée" });
+  }
+
+  return {
+    estimatedCount:
+      typeof parsed.estimatedCount === "number" && parsed.estimatedCount >= 0
+        ? Math.round(parsed.estimatedCount)
+        : null,
+    notableSources: notableSources.slice(0, 8),
+    summary: parsed.summary?.trim() || "Estimation des sources référentes de la niche.",
+    // Le décompte reste un ordre de grandeur, même appuyé sur des pages
+    // consultées : l'interface doit continuer à dire « estimation ».
+    measured: false,
+  };
+}
+
 /**
  * Estimation des backlinks et des sources référentes.
  *
- * Le modèle de service ne dispose pas de recherche web : ce qu'il rend est une
- * ESTIMATION à partir de ce qu'il connaît de la niche, jamais un relevé. C'est
- * pour cela que `measured` reste à false — l'interface annonce alors une
- * estimation, et non un chiffre mesuré.
+ * Gemini Flash mène cet appel, et lui seul dans le produit : c'est le modèle
+ * branché sur la recherche Google, donc le seul à pouvoir aller voir qui cite
+ * vraiment ce domaine aujourd'hui. Les autres répondent de mémoire et rendent
+ * des annuaires plausibles — parfois fermés depuis deux ans.
+ *
+ * Le repli sur le modèle de service ne sert que si la clé Gemini manque ou si
+ * la réponse est inexploitable : mieux vaut une estimation de mémoire qu'une
+ * carte vide. Dans les deux cas `measured` reste à false — c'est un ordre de
+ * grandeur, jamais un relevé.
  */
 async function estimateBacklinks(
   signals: SiteSignals,
   profile: BusinessProfile,
 ): Promise<Backlinks> {
   const loc = profile.location ? ` à ${profile.location}` : "";
-  const prompt = `Estime les sources qui citent ou pointent vers le site « ${signals.domain} » (${profile.niche}${loc}). Identifie les SOURCES RÉFÉRENTES NOTABLES plausibles (annuaires, presse, guides, plateformes d'avis, partenaires) et donne un ORDRE DE GRANDEUR du nombre de domaines référents. Sois honnête : si rien de fiable, estimatedCount = null et notableSources = [].
+  const prompt = `Cherche sur le web les sources qui citent ou pointent vers le site « ${signals.domain} » (${profile.niche}${loc}). Appuie-toi sur des pages que tu as réellement consultées : annuaires, presse, guides, plateformes d'avis, partenaires, associations professionnelles. Donne ensuite un ORDRE DE GRANDEUR du nombre de domaines référents. Sois honnête : si tu ne trouves rien de fiable, estimatedCount = null et notableSources = [].
+
+N'invente jamais un domaine que tu n'as pas vu citer ce site.
 
 Réponds UNIQUEMENT par un objet JSON, sans texte autour :
 {
@@ -833,31 +876,27 @@ Réponds UNIQUEMENT par un objet JSON, sans texte autour :
   "summary": "1-2 phrases de synthèse sur la notoriété de liens"
 }`;
 
+  if (isGeminiConfigured()) {
+    geoLog("Backlinks — relevé par Gemini (recherche Google)…");
+    const grounded = await askGeminiGrounded(BACKLINKS_RESPONSE_SCHEMA, {
+      prompt,
+      label: "Backlinks",
+      maxOutputTokens: 1500,
+    });
+    if (grounded) return toBacklinks(grounded.data, grounded.sources);
+    geoLog("Backlinks — Gemini n'a rien rendu d'exploitable, repli sur le modèle de service.");
+  }
+
   geoLog("Backlinks — estimation par le modèle de service…");
   const parsed = await askJson(BACKLINKS_RESPONSE_SCHEMA, {
     system:
       "Tu estimes la notoriété de liens d'un site. Tu n'inventes jamais un domaine " +
       "dont tu ignores l'existence. Tu réponds uniquement par un objet JSON valide.",
     prompt,
-    tier: "strong",
+    role: "backlinks",
     maxTokens: 1500,
   });
-  const notableSources: ReferringSource[] = Array.isArray(parsed.notableSources)
-    ? parsed.notableSources
-        .filter((s) => s?.domain?.trim())
-        .slice(0, 8)
-        .map((s) => ({ domain: s.domain!.trim(), note: s.note?.trim() || "" }))
-    : [];
-  return {
-    estimatedCount:
-      typeof parsed.estimatedCount === "number" && parsed.estimatedCount >= 0
-        ? Math.round(parsed.estimatedCount)
-        : null,
-    notableSources,
-    summary: parsed.summary?.trim() || "Estimation des sources référentes de la niche.",
-    // Estimation, pas relevé : l'interface doit pouvoir le dire.
-    measured: false,
-  };
+  return toBacklinks(parsed, []);
 }
 
 /**
@@ -878,7 +917,7 @@ async function analyzeWithModel(
       "Tu es un expert GEO (Generative Engine Optimization) et SEO. " +
       "Tu rends un audit complet sous forme d'un unique objet JSON valide, sans texte autour.",
     prompt: buildPrompt(signals, ctx, profile, mapsListing, measured),
-    tier: "strong",
+    role: "overview",
     maxTokens: AUDIT_MAX_TOKENS,
   });
   // Le schéma garantit le squelette ; les normaliseurs ci-dessous réparent le
