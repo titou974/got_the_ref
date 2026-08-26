@@ -49,6 +49,15 @@ export type AnalysisContext = {
    */
   declaredNiche?: string | null;
   declaredLocation?: string | null;
+  /**
+   * La manière d'écrire relevée à l'étape « tonalité » de l'accueil.
+   *
+   * Elle n'entre pas dans la notation — un site ne se note pas sur son style —
+   * mais elle entre dans les CORRECTIFS : le H1 et le premier paragraphe
+   * proposés ici sont collés tels quels dans le CMS du client, et un texte qui
+   * ne lui ressemble pas ne sera pas publié.
+   */
+  brandTone?: string | null;
 };
 
 /**
@@ -451,7 +460,7 @@ CONSIGNES :
 12. mapsCoherence : SI une fiche Google Maps a été fournie (« ${ctx.mapsUrl ?? "(non fournie)"} »), évalue la cohérence entre la fiche et le site (nom, catégorie, localisation, NAP, positionnement). score (0-100), summary, listingName (ou null), reviewCount et rating à null si tu ne peux pas les connaître de façon fiable, matches = points vérifiés (label, consistent, detail), findings. SI aucune fiche n'a été fournie : renvoie null.
 13. onPageContent : audite les ÉLÉMENTS ON-PAGE RÉELS ci-dessus. Pour chaque élément, "text" = le contenu RÉEL repris tel quel (ou null s'il est absent), "status" (ok/warn/ko), "signals" = critères attendus avec present (true/false), "note" = un diagnostic court avec un conseil concret, "suggestion" = LE CORRECTIF, c'est-à-dire l'élément RÉÉCRIT prêt à coller sur la page (null uniquement si le status est "ok" et qu'il n'y a rien à améliorer).
    Règles du correctif, valables pour les quatre éléments : il est rédigé en français, dans la langue du site, sans superlatif publicitaire (« incontournable », « véritable », « niché au cœur de »), sans formule d'ouverture creuse (« dans un monde où », « de nos jours »), sans tiret cadratin, et sans le moindre chiffre, prix, date, distinction ou nom propre qui ne figure pas déjà dans les éléments fournis ci-dessus. Il reprend les mots que les clients emploient pour chercher ce commerce, pas le vocabulaire interne de l'entreprise.
-   Le correctif doit se lire comme une phrase écrite par le commerçant, jamais comme un texte de modèle : verbes simples (« est », « propose », « ouvre », « répare ») plutôt que « se positionne comme » ou « constitue » ; aucune promesse creuse (« votre partenaire de confiance », « l'excellence au service de », « depuis toujours ») ; aucune triade décorative (« qualité, proximité et savoir-faire ») ; aucun participe présent d'analyse en fin de phrase (« soulignant… », « garantissant… ») ; aucun emoji, aucun gras, aucune majuscule à chaque mot. Le premier paragraphe ne reprend pas le H1 : il ajoute le fait que le H1 n'a pas la place de porter.
+${ctx.brandTone ? `   Tonalité relevée sur les textes du client, à reproduire dans les quatre correctifs : ${ctx.brandTone}\n` : ""}   Le correctif doit se lire comme une phrase écrite par le commerçant, jamais comme un texte de modèle : verbes simples (« est », « propose », « ouvre », « répare ») plutôt que « se positionne comme » ou « constitue » ; aucune promesse creuse (« votre partenaire de confiance », « l'excellence au service de », « depuis toujours ») ; aucune triade décorative (« qualité, proximité et savoir-faire ») ; aucun participe présent d'analyse en fin de phrase (« soulignant… », « garantissant… ») ; aucun emoji, aucun gras, aucune majuscule à chaque mot. Le premier paragraphe ne reprend pas le H1 : il ajoute le fait que le H1 n'a pas la place de porter.
    - suggestion du title : au plus 60 caractères, marque + niche + ville.
    - suggestion de la metaDescription : 140 à 155 caractères, avec la niche, la ville et une raison de cliquer.
    - suggestion du h1 : au plus 70 caractères, une seule idée, les mots-clés de la niche (« ${profile.niche} ») en tête, jamais un slogan.
@@ -1672,7 +1681,7 @@ export async function analyzeSite(
       : Promise.resolve(null),
     // Mots-clés tendances : Gemini + recherche Google, payant uniquement.
     useApis
-      ? fetchTrendingKeywords(profile, signals).catch((err) => {
+      ? fetchTrendingKeywords(profile, signals, ctx.brandTone ?? null).catch((err) => {
           console.error("Mots-clés tendances échoués :", err);
           return null;
         })

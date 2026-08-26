@@ -186,7 +186,21 @@ export async function ensurePaidAnalysis(analysisId: string): Promise<void> {
   }
   if (stored.tier === "paid") return;
 
-  const ctx: AnalysisContext = { mode: stored.profile.mode, mapsUrl: stored.mapsUrl ?? null };
+  // Une analyse débloquée après paiement peut appartenir à un client qui a déjà
+  // fait son accueil : sa tonalité sert alors aux correctifs on-page. Pour un
+  // visiteur anonyme il n'y en a pas, et les correctifs restent neutres.
+  const profile = existing.userId
+    ? await prisma.onboardingProfile.findUnique({
+        where: { userId: existing.userId },
+        select: { toneSummary: true },
+      })
+    : null;
+
+  const ctx: AnalysisContext = {
+    mode: stored.profile.mode,
+    mapsUrl: stored.mapsUrl ?? null,
+    brandTone: profile?.toneSummary ?? null,
+  };
 
   try {
     const result = await analyzeSite(stored.signals, ctx, "paid");
