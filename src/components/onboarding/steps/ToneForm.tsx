@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAction } from "next-safe-action/hooks";
 import { PillField } from "@/components/onboarding/Field";
 import { StepFooter } from "@/components/onboarding/StepFooter";
+import { StepPending } from "@/components/onboarding/StepPending";
 import { saveToneAction, skipStepAction } from "@/features/onboarding/actions";
 
 /**
@@ -29,6 +30,10 @@ export function ToneForm({
   const [sampleUrl, setSampleUrl] = useState(initialSampleUrl ?? "");
   const save = useAction(saveToneAction);
   const skip = useAction(skipStepAction);
+
+  if (save.isPending || skip.isPending) {
+    return <StepPending kind="writing" title="Nous lisons votre manière d'écrire" />;
+  }
 
   return (
     <form

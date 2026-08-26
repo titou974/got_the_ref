@@ -6,6 +6,7 @@ import { ROUTES } from "@/constants/routes";
 import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { DashboardShell } from "@/components/tableau-de-bord/DashboardShell";
+import { WelcomeModal } from "@/components/tableau-de-bord/WelcomeModal";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("dashboard");
@@ -25,12 +26,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const context = await getDashboardContext(user.id);
 
   return (
-    <DashboardShell
-      domain={context.domain}
-      showMaps={context.isPhysical}
-      userName={user.name ?? user.email}
-    >
-      {children}
-    </DashboardShell>
+    <>
+      {/* Le mot d'accueil, une seule fois, quelle que soit la section où le
+          client atterrit. Posé hors de la coque : c'est un calque plein écran,
+          et l'espacement vertical du contenu décalerait son ancrage. */}
+      <WelcomeModal />
+
+      <DashboardShell
+        domain={context.domain}
+        showMaps={context.isPhysical}
+        userName={user.name ?? user.email}
+      >
+        {children}
+      </DashboardShell>
+    </>
   );
 }

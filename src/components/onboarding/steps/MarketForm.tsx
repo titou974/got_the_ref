@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAction } from "next-safe-action/hooks";
 import { CityTags, PillField } from "@/components/onboarding/Field";
 import { StepFooter } from "@/components/onboarding/StepFooter";
+import { StepPending } from "@/components/onboarding/StepPending";
 import { saveMarketAction } from "@/features/onboarding/actions";
 
 /**
@@ -31,6 +32,8 @@ export function MarketForm({
   const { execute, isPending, result } = useAction(saveMarketAction);
 
   const marketError = result.validationErrors?.targetMarket?._errors?.[0];
+
+  if (isPending) return <StepPending title="Nous notons votre marché" />;
 
   return (
     <form

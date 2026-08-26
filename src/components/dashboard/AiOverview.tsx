@@ -115,6 +115,9 @@ export function AiOverview({
   blocks,
   cta,
   ctaHref,
+  className = "",
+  footer,
+  reserveSpace = false,
 }: {
   /** Titre du constat : posé d'emblée, il annonce ce que la frappe va dérouler. */
   headline: string;
@@ -122,6 +125,22 @@ export function AiOverview({
   /** Appel à l'action final. Omis sur un rapport déjà ouvert : rien à débloquer. */
   cta?: string;
   ctaHref?: string;
+  /** Ajusté quand la carte sert de contenu à un calque (hauteur, défilement). */
+  className?: string;
+  /**
+   * Bloc d'action propre à l'appelant, rendu sous le texte. La modale d'accueil
+   * s'en sert pour son bouton de fermeture : contrairement au `cta`, il est
+   * cliquable dès la première image — on ne retient personne le temps d'une
+   * animation de frappe.
+   */
+  footer?: React.ReactNode;
+  /**
+   * Réserve d'emblée la hauteur du texte fini. Sur une page, laisser la carte
+   * grandir est l'effet recherché : elle s'écrit sous les yeux. Dans un calque
+   * centré, cette même croissance fait descendre le bouton pendant qu'on tend
+   * le doigt vers lui.
+   */
+  reserveSpace?: boolean;
 }) {
   const lengths = useMemo(() => blocks.map(blockLength), [blocks]);
   const offsets = useMemo(() => {
@@ -164,50 +183,36 @@ export function AiOverview({
   const writingIndex = blocks.findIndex((_, i) => revealed < offsets[i] + lengths[i]);
 
   return (
-    <section className="rounded-[36px] border border-fog bg-snow p-6 shadow-[var(--shadow-md)] sm:p-8">
+    <section
+      className={`rounded-[36px] border border-fog bg-snow p-6 shadow-[var(--shadow-md)] sm:p-8 ${className}`}
+    >
       <OverviewHeader />
 
       <h2 className="mt-5 text-balance text-xl font-bold sm:text-2xl">{headline}</h2>
 
-      {/* Corps animé : décoratif pour l'assistance, doublé en sr-only plus bas. */}
-      <div aria-hidden className="mt-4 space-y-3.5">
-        {blocks.map((b, i) => {
-          const shown = Math.min(lengths[i], Math.max(0, revealed - offsets[i]));
-          // Un bloc pas encore entamé n'occupe pas de place : la carte s'écrit.
-          // Une pastille ne se tape pas : elle apparaît dès que le bloc qui la
-          // précède est écrit (sa longueur étant nulle, `shown` reste à zéro).
-          if (shown <= 0 && !(b.kind === "chip" && revealed >= offsets[i])) return null;
-          const caret = !done && i === writingIndex ? <Caret /> : null;
+      {/* Corps animé : décoratif pour l'assistance, doublé en sr-only plus bas.
+          Avec `reserveSpace`, une copie intégrale invisible occupe la même case
+          de grille et fixe la hauteur dès la première image. */}
+      <div aria-hidden className={`mt-4 ${reserveSpace ? "grid" : ""}`}>
+        {reserveSpace && (
+          <div className="invisible space-y-3.5 [grid-area:1/1]">
+            {blocks.map((b, i) => (
+              <Block key={i} block={b} shown={lengths[i]} caret={null} />
+            ))}
+          </div>
+        )}
 
-          if (b.kind === "heading") {
-            return (
-              <h3 key={i} className="pt-2 text-base font-bold text-text sm:text-lg">
-                {b.text.slice(0, shown)}
-                {caret}
-              </h3>
-            );
-          }
-          if (b.kind === "chip") {
-            return <SourceChip key={i} text={b.text} />;
-          }
-          if (b.kind === "bullet") {
-            return (
-              <div key={i} className="flex items-start gap-2.5 text-sm leading-relaxed text-muted">
-                <BulletMark icon={b.icon} />
-                <p className="min-w-0">
-                  <Segments segments={sliceSegments(b.segments, shown)} />
-                  {caret}
-                </p>
-              </div>
-            );
-          }
-          return (
-            <p key={i} className="max-w-3xl text-pretty text-sm leading-relaxed text-muted">
-              <Segments segments={sliceSegments(b.segments, shown)} />
-              {caret}
-            </p>
-          );
-        })}
+        <div className={`space-y-3.5 ${reserveSpace ? "[grid-area:1/1]" : ""}`}>
+          {blocks.map((b, i) => {
+            const shown = Math.min(lengths[i], Math.max(0, revealed - offsets[i]));
+            // Un bloc pas encore entamé n'occupe pas de place : la carte s'écrit.
+            // Une pastille ne se tape pas : elle apparaît dès que le bloc qui la
+            // précède est écrit (sa longueur étant nulle, `shown` reste à zéro).
+            if (shown <= 0 && !(b.kind === "chip" && revealed >= offsets[i])) return null;
+            const caret = !done && i === writingIndex ? <Caret /> : null;
+            return <Block key={i} block={b} shown={shown} caret={caret} />;
+          })}
+        </div>
       </div>
 
       {/* Version intégrale, hors flux visuel, pour les lecteurs d'écran. */}
@@ -230,7 +235,49 @@ export function AiOverview({
           </svg>
         </Link>
       )}
+
+      {footer}
     </section>
+  );
+}
+
+/** Un bloc du constat, coupé à `shown` caractères. */
+function Block({
+  block,
+  shown,
+  caret,
+}: {
+  block: OverviewBlock;
+  shown: number;
+  caret: React.ReactNode;
+}) {
+  if (block.kind === "heading") {
+    return (
+      <h3 className="pt-2 text-base font-bold text-text sm:text-lg">
+        {block.text.slice(0, shown)}
+        {caret}
+      </h3>
+    );
+  }
+  if (block.kind === "chip") {
+    return <SourceChip text={block.text} />;
+  }
+  if (block.kind === "bullet") {
+    return (
+      <div className="flex items-start gap-2.5 text-sm leading-relaxed text-muted">
+        <BulletMark icon={block.icon} />
+        <p className="min-w-0">
+          <Segments segments={sliceSegments(block.segments, shown)} />
+          {caret}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <p className="max-w-3xl text-pretty text-sm leading-relaxed text-muted">
+      <Segments segments={sliceSegments(block.segments, shown)} />
+      {caret}
+    </p>
   );
 }
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAction } from "next-safe-action/hooks";
 import { RadioCards } from "@/components/onboarding/RadioCards";
 import { StepFooter } from "@/components/onboarding/StepFooter";
+import { StepPending } from "@/components/onboarding/StepPending";
 import { saveBusinessKindAction } from "@/features/onboarding/actions";
 
 /**
@@ -38,6 +39,10 @@ const OPTIONS = [
 export function BusinessKindForm({ initialValue }: { initialValue: string | null }) {
   const [value, setValue] = useState<string | null>(initialValue);
   const { execute, isPending, result } = useAction(saveBusinessKindAction);
+
+  // L'attente prend la place du formulaire, plutôt que de se réduire à un
+  // libellé changé au bas de l'écran.
+  if (isPending) return <StepPending title="Nous notons votre type de commerce" />;
 
   return (
     <form
