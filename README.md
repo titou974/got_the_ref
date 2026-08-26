@@ -46,6 +46,9 @@ npm run dev                 # http://localhost:3000
 | `CRAWL_MAX_AGE_HOURS` | Fraîcheur d'un crawl avant de le relancer (168 h par défaut) |
 | `CREDENTIALS_KEY` | Phrase secrète (32 caractères minimum) qui chiffre les identifiants de plateforme du tableau de bord. Sans elle, le rattachement d'un site est refusé. |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | Mots-clés tendances relevés avec la recherche Google (`gemini-flash-latest` par défaut) |
+| `RESEND_API_KEY` | Clé Resend pour les e-mails transactionnels (sans elle, les envois sont journalisés en console) |
+| `RESEND_FROM` | Expéditeur, ex. `got_the_ref <bonjour@votre-domaine.fr>` (`onboarding@resend.dev` par défaut) |
+| `RESEND_REPLY_TO` | Adresse de réponse (par défaut, le contact du site) |
 
 ## Tunnel d'accueil et crawl
 
@@ -99,6 +102,31 @@ e-mail. Pour l'activer :
 L'URL de rappel est dérivée de `baseURL` (soit `NEXT_PUBLIC_APP_URL`) : si elle
 ne correspond pas à l'URI déclarée chez Google, l'échange échoue en
 `redirect_uri_mismatch`.
+
+## Mot de passe oublié (Resend)
+
+Le parcours tient en deux pages : `/mot-de-passe-oublie` (saisie de l'adresse)
+et `/nouveau-mot-de-passe` (atterrissage du lien reçu, jeton dans l'URL). Better
+Auth émet et vérifie le jeton, valable **une heure** ; l'e-mail part par Resend
+depuis `sendResetPassword`, différé après la réponse via `after()` de Next.
+
+Pour l'activer :
+
+1. Créez une clé sur [resend.com/api-keys](https://resend.com/api-keys) →
+   `RESEND_API_KEY`.
+2. Vérifiez votre domaine sur [resend.com/domains](https://resend.com/domains)
+   (enregistrements DKIM/SPF), puis renseignez `RESEND_FROM` avec une adresse de
+   ce domaine. Sans domaine vérifié, `onboarding@resend.dev` n'expédie qu'à
+   l'adresse du compte Resend — bon pour un essai, pas pour la production.
+
+Sans `RESEND_API_KEY`, rien ne casse : la demande aboutit, l'e-mail est
+journalisé en console (`[email] RESEND_API_KEY absente …`) au lieu d'être
+expédié — et le lien reste lisible dans ce journal pour tester en local.
+
+Deux garde-fous côté serveur : la réponse est identique que l'adresse existe ou
+non (pas d'annuaire de clients), et le débit est bridé à 5 demandes par quart
+d'heure et par IP, 3 par heure et par adresse. Une réinitialisation réussie
+ferme toutes les sessions ouvertes du compte.
 
 ## Tableau de bord
 

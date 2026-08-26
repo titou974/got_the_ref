@@ -4,7 +4,13 @@ import { getTranslations } from "next-intl/server";
 import { AuthScreen } from "@/components/auth/AuthScreen";
 import { getSession } from "@/lib/auth";
 import { oauthErrorKey } from "@/features/auth/oauth-errors";
-import { NEXT_PARAM, ROUTES, safeNextPath, signUpWithNext } from "@/constants/routes";
+import {
+  NEXT_PARAM,
+  PASSWORD_RESET_PARAM,
+  ROUTES,
+  safeNextPath,
+  signUpWithNext,
+} from "@/constants/routes";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("auth");
@@ -40,6 +46,7 @@ export default async function ConnexionPage({
       callbackURL={next}
       switchHref={switchHref}
       error={errorKey ? t(errorKey) : null}
+      notice={params[PASSWORD_RESET_PARAM] ? t("passwordResetDone") : null}
     />
   );
 }

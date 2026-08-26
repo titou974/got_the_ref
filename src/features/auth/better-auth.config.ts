@@ -2,8 +2,11 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/email";
 import { SITE } from "@/constants/site";
+import { RESET_PASSWORD_TOKEN_TTL_SECONDS, resetPasswordEmail } from "./emails";
 
 /**
  * Google n'est branché que si les deux identifiants OAuth sont présents.
@@ -19,8 +22,7 @@ export const isGoogleAuthEnabled = Boolean(googleClientId && googleClientSecret)
 
 /**
  * Configuration Better Auth (email + mot de passe, PostgreSQL via Prisma).
- * Pas d'envoi d'e-mail (pas de Resend) : la réinitialisation par e-mail est
- * désactivée tant qu'un fournisseur n'est pas branché.
+ * Les e-mails transactionnels partent par Resend (cf. `@/lib/email`).
  */
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -30,6 +32,40 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
     autoSignIn: true,
+    resetPasswordTokenExpiresIn: RESET_PASSWORD_TOKEN_TTL_SECONDS,
+    /**
+     * Un mot de passe réinitialisé l'est souvent parce qu'on soupçonne un
+     * accès de trop : on ferme les autres sessions ouvertes, sinon celui qui
+     * était entré y reste.
+     */
+    revokeSessionsOnPasswordReset: true,
+    /**
+     * L'envoi est différé après la réponse (`after`) plutôt qu'attendu :
+     * l'appel à Resend prend le temps qu'il prend, et ce temps se lit dans la
+     * durée de la réponse — de quoi distinguer une adresse connue d'une
+     * inconnue. `after` garantit l'exécution même en serverless, là où un
+     * simple `void` serait coupé avec l'instance.
+     */
+    sendResetPassword: async ({ user, url, token }) => {
+      const { subject, html, text } = resetPasswordEmail({
+        url,
+        userName: user.name,
+      });
+      after(() =>
+        sendEmail({
+          to: user.email,
+          subject,
+          html,
+          text,
+          // Clé adossée au jeton, qui change à chaque demande : un double clic
+          // sur « Recevoir le lien » n'expédie qu'un e-mail, deux demandes
+          // distinctes en expédient bien deux. La fonder sur l'URL ne
+          // marcherait pas — elle se termine par le `callbackURL`, identique
+          // d'une demande à l'autre.
+          idempotencyKey: `reset-password/${token}`,
+        }),
+      );
+    },
   },
   socialProviders: isGoogleAuthEnabled
     ? {
