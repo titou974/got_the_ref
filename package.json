@@ -13,6 +13,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "gen:lottie": "node scripts/gen-lottie.mjs",
+    "recolor:lottie": "node scripts/recolor-lottie.mjs",
     "create:subscriber": "node scripts/create-subscriber.mjs",
     "export:leads": "node scripts/export-leads.mjs"
   },

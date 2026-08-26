@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAction } from "next-safe-action/hooks";
 import { AreaField, PillField } from "@/components/onboarding/Field";
 import { StepFooter } from "@/components/onboarding/StepFooter";
+import { StepPending } from "@/components/onboarding/StepPending";
 import { saveDescriptionAction } from "@/features/onboarding/actions";
 
 /**
@@ -32,6 +33,10 @@ export function DescriptionForm({
   const { execute, isPending, result } = useAction(saveDescriptionAction);
 
   const errors = result.validationErrors;
+
+  // Enregistrer la description enchaîne sur la recherche des concurrents : la
+  // carte annonce ce travail-là, qui est celui qui prend du temps.
+  if (isPending) return <StepPending kind="competitors" title="Nous cherchons vos concurrents" />;
 
   return (
     <form

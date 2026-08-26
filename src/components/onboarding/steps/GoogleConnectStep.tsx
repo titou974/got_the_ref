@@ -3,6 +3,7 @@
 import { useAction } from "next-safe-action/hooks";
 import { GoogleMark } from "@/components/home/GoogleMark";
 import { StepFooter } from "@/components/onboarding/StepFooter";
+import { StepPending } from "@/components/onboarding/StepPending";
 import { completeOnboardingAction } from "@/features/onboarding/actions";
 
 /** Ce que le retour de Google raconte, traduit pour le client. */
@@ -56,6 +57,10 @@ export function GoogleConnectStep({
 
   const both = gscConnected && ga4Connected;
   const some = gscConnected || ga4Connected;
+
+  if (complete.isPending) {
+    return <StepPending kind="audit" title="Nous ouvrons votre tableau de bord" />;
+  }
 
   return (
     <form

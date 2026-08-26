@@ -68,7 +68,7 @@ export function AiKeysAnimation() {
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 animate-[loader-drift_9s_ease-in-out_infinite] bg-[radial-gradient(120%_120%_at_15%_0%,rgba(255,90,0,0.10),transparent_55%),radial-gradient(110%_110%_at_100%_100%,rgba(17,180,140,0.12),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 -z-10 animate-[loader-drift_9s_ease-in-out_infinite] bg-[radial-gradient(120%_120%_at_20%_0%,rgba(9,9,11,0.055),transparent_58%),radial-gradient(110%_110%_at_100%_100%,rgba(9,9,11,0.035),transparent_58%)]"
       />
 
       {/* Les trois moteurs. Celui qu'on interroge se détache, les autres attendent. */}

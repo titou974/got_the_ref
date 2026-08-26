@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { CheckCards } from "@/components/onboarding/RadioCards";
 import { StepFooter } from "@/components/onboarding/StepFooter";
+import { StepPending } from "@/components/onboarding/StepPending";
 import { SearchLoader } from "@/components/SearchLoader";
 import { refreshCompetitorsAction, skipStepAction, saveCompetitorsAction } from "@/features/onboarding/actions";
 
@@ -61,6 +62,10 @@ export function CompetitorsForm({ competitors }: { competitors: Competitor[] }) 
 
   const searching = refresh.isPending;
   const failed = Boolean(refresh.result.serverError) && !searching;
+
+  if (save.isPending || skip.isPending) {
+    return <StepPending title="Nous retenons vos concurrents" />;
+  }
 
   if (searching) {
     return (

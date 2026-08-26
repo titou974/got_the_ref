@@ -1914,6 +1914,15 @@
         "LEARN_MORE": "En savoir plus",
         "SIGN_UP": "S'inscrire"
       }
+    },
+    "welcome": {
+      "headline": "Bienvenue sur votre tableau de bord",
+      "intro": "Vous êtes chez vous. Votre note, votre place dans les réponses de ChatGPT, Perplexity et Gemini, et les articles à écrire pour y grimper : tout est ici.",
+      "sourceChip": "Votre première analyse",
+      "desktop": "**Ouvrez got_the_ref sur ordinateur dès que vous pouvez.** Les classements, les graphiques et l'éditeur d'articles y tiennent en entier.",
+      "closing": "Bonne visite, et bonne montée dans les réponses !",
+      "dismiss": "C'est parti",
+      "dismissAria": "Fermer le mot de bienvenue"
     }
   }
 }
