@@ -138,7 +138,11 @@ export function fallbackTrendingKeywords(
 
 /* --------------------------------- Gemini --------------------------------- */
 
-function buildPrompt(profile: BusinessProfile, signals: SiteSignals): string {
+function buildPrompt(
+  profile: BusinessProfile,
+  signals: SiteSignals,
+  tone: string | null,
+): string {
   const city = profile.location ? `Zone : ${profile.location}.` : "Activité en ligne, sans zone géographique.";
   return [
     `Tu es consultant SEO/GEO. Niche : « ${profile.niche} ». Catégorie large : « ${profile.generalCategory} ». ${city}`,
@@ -161,7 +165,25 @@ function buildPrompt(profile: BusinessProfile, signals: SiteSignals): string {
     `Contraintes : 6 à ${MAX_KEYWORDS} mots-clés, du plus porteur au moins porteur ; les quatre réécritures doivent intégrer les mots-clés les plus porteurs sans bourrage et rester lisibles par un humain.`,
     "",
     "Pour « firstParagraph » : réécris le premier paragraphe de la page d'accueil de sorte qu'un assistant IA puisse le citer tel quel. Il dit en une première phrase qui est ce commerce, ce qu'il fait et où ; les phrases suivantes ajoutent un fait vérifiable (spécialité, ancienneté, zone desservie, horaires). Aucun superlatif publicitaire, aucune formule d'ouverture creuse, aucun tiret cadratin, aucun chiffre ni nom propre absent des éléments ci-dessus.",
-  ].join("\n");
+    "",
+    // Ces deux phrases sont les premières que le client relit dans son tableau
+    // de bord, et les seules qu'il colle telles quelles dans son CMS. Un H1 qui
+    // sonne comme un texte de modèle ne sera pas publié, quelle que soit sa
+    // pertinence en mots-clés.
+    "Le H1 et le premier paragraphe doivent sonner comme le commerçant, jamais comme un texte de modèle :",
+    "- verbes simples (« est », « propose », « ouvre », « répare ») plutôt que « se positionne comme » ou « constitue » ;",
+    "- aucune promesse creuse (« votre partenaire de confiance », « au cœur de », « depuis toujours », « l'excellence au service de ») ;",
+    "- aucune triade décorative (« qualité, proximité et savoir-faire ») : deux faits valent mieux que trois adjectifs ;",
+    "- aucun participe présent d'analyse en fin de phrase (« soulignant… », « garantissant… », « permettant ainsi… ») ;",
+    "- aucune tournure « non seulement… mais aussi » ni « ce n'est pas X, c'est Y » ;",
+    "- aucun emoji, aucun gras, aucune majuscule à chaque mot ;",
+    "- le premier paragraphe ne répète pas le H1 : il ajoute le fait que le H1 n'a pas la place de porter.",
+    tone
+      ? `Écris ces réécritures dans la tonalité relevée sur les textes du client, qui doit se reconnaître dans les deux :\n${tone}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**
@@ -172,6 +194,8 @@ function buildPrompt(profile: BusinessProfile, signals: SiteSignals): string {
 export async function fetchTrendingKeywords(
   profile: BusinessProfile,
   signals: SiteSignals,
+  /** Le ton relevé à l'accueil, quand il existe : les réécritures s'y tiennent. */
+  tone: string | null = null,
 ): Promise<TrendingKeywordsInsight | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
@@ -180,7 +204,9 @@ export async function fetchTrendingKeywords(
   }
 
   const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
-  geoLog(`Mots-clés tendances — appel Gemini (${model}, google_search)…`);
+  geoLog(`Mots-clés tendances — appel Gemini (${model}, google_search)…`, {
+    tonalitéTransmise: Boolean(tone),
+  });
   try {
     const data = (await postJson(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
@@ -188,7 +214,7 @@ export async function fetchTrendingKeywords(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: buildPrompt(profile, signals) }] }],
+          contents: [{ role: "user", parts: [{ text: buildPrompt(profile, signals, tone) }] }],
           tools: [{ google_search: {} }],
         }),
       },

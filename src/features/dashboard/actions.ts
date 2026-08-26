@@ -91,6 +91,7 @@ export const prepareDashboardAction = authActionClient
         mapsUrl: true,
         niche: true,
         cities: true,
+        toneSummary: true,
       },
     });
 
@@ -117,6 +118,10 @@ export const prepareDashboardAction = authActionClient
         mapsUrl: profile.mapsUrl ?? null,
         declaredNiche: profile.niche,
         declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
+        // L'étape « tonalité » précède le tableau de bord : quand elle a
+        // abouti, les correctifs on-page de l'audit sont écrits dans la voix du
+        // client, pas dans celle d'un modèle.
+        brandTone: profile.toneSummary,
       },
       "paid",
     );

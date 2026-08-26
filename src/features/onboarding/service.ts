@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { askJson } from "@/lib/ai/client";
+import { aiLog } from "@/lib/ai/log";
 import { askGeminiGrounded } from "@/lib/ai/gemini";
 import { buildCorpus, getOrCrawlSite, saveSiteAnalysis } from "@/lib/crawl/store";
 import { crawlSite } from "@/lib/crawl/firecrawl";
@@ -384,8 +385,23 @@ function pickToneSource(pages: CandidatePage[], homeUrl: string): CandidatePage 
   return articles[0] ?? usable.find(isHome) ?? usable[0] ?? null;
 }
 
+/**
+ * Ce qu'on soumet au modèle pour relever la tonalité.
+ *
+ * Douze mille caractères, soit trois à quatre mille tokens : de quoi couvrir un
+ * article entier, sans faire porter au prompt la moitié d'un crawl. Au-delà, le
+ * modèle ne lit pas mieux la voix du client, il coûte seulement plus cher et
+ * met plus longtemps à répondre.
+ */
+const TONE_SAMPLE_CHARS = 12_000;
+
 /** Interroge le grand modèle sur la manière d'écrire d'un texte donné. */
 async function readToneFrom(text: string, fromArticle: boolean): Promise<string | null> {
+  aiLog("Tonalité — texte soumis au modèle", {
+    source: fromArticle ? "article du client" : "page d'accueil",
+    caracteresDisponibles: text.length,
+    caracteresEnvoyes: Math.min(text.length, TONE_SAMPLE_CHARS),
+  });
   const { tone } = await askJson(toneSchema, {
     system: SYSTEM,
     prompt: [
@@ -393,7 +409,7 @@ async function readToneFrom(text: string, fromArticle: boolean): Promise<string 
         ? "Voici un article publié par le client. Il sert d'exemple de sa manière d'écrire."
         : "Voici la page d'accueil du client. Le site ne publie pas d'articles : c'est le seul texte qu'il ait écrit lui-même.",
       "",
-      text.slice(0, 12_000),
+      text.slice(0, TONE_SAMPLE_CHARS),
       "",
       'Réponds en JSON : { "tone": … } — quatre à six phrases décrivant la tonalité à REPRODUIRE, assez',
       "précises pour qu'un rédacteur qui n'a jamais vu ce site écrive dans la même voix :",
@@ -409,7 +425,15 @@ async function readToneFrom(text: string, fromArticle: boolean): Promise<string 
     ].join("\n"),
     // La tonalité est un jugement sur un texte, pas une extraction : c'est
     // exactement ce que le grand modèle fait mieux que le rapide.
-    tier: "strong",
+    // Lire une manière d'écrire dans douze mille caractères est une lecture, pas
+    // un raisonnement : `gpt-5.4-nano` la rend en trois secondes et demie là où
+    // le grand modèle DeepSeek en demandait trente. Le palier rapide vise donc
+    // le nano d'OpenAI, et retombe sur DeepSeek Flash si la clé manque.
+    provider: "openai",
+    tier: "fast",
+    // Le budget vaut pour la réponse seule : la marge de réflexion est ajoutée
+    // par le client IA. Six phrases de description tiennent largement dans ces
+    // neuf cents tokens.
     maxTokens: 900,
   });
 
