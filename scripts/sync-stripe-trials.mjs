@@ -62,6 +62,14 @@ if (!connectionString) {
 const stripe = new Stripe(key, { apiVersion: "2026-05-27.dahlia" });
 const mode = key.startsWith("sk_live_") ? "Live" : "Test";
 
+// Prisma écrit ses `DateTime` dans des colonnes `timestamp` sans fuseau, en UTC.
+// `pg`, lui, lit ce type dans le fuseau de la machine : sans ce parseur, chaque
+// date remonterait décalée de l'offset local (deux heures l'été à Paris), et le
+// script croirait devoir réécrire des lignes déjà justes. Même convention à
+// l'écriture : on envoie l'ISO en UTC (cf. `toSql`).
+pg.types.setTypeParser(1114, (value) => (value === null ? null : new Date(`${value}Z`)));
+const toSql = (date) => (date ? date.toISOString() : null);
+
 /**
  * Price ID → offre. Une variable peut porter un `prod_` : on prend alors tous
  * les tarifs du produit, pas seulement celui par défaut, sinon l'abonné annuel
@@ -217,9 +225,9 @@ try {
           await client.query(
             `UPDATE "Subscription"
                 SET "stripeCustomerId" = $2, "stripeSubscriptionId" = $3, "stripePriceId" = $4,
-                    status = $5, "currentPeriodEnd" = $6, "updatedAt" = now()
+                    status = $5, "currentPeriodEnd" = $6, "updatedAt" = timezone('UTC', now())
               WHERE id = $1`,
-            [row.id, customerId, sub.id, priceId, sub.status, end],
+            [row.id, customerId, sub.id, priceId, sub.status, toSql(end)],
           );
           updated += 1;
         } else {
@@ -227,13 +235,14 @@ try {
             `INSERT INTO "Subscription"
                (id, "userId", "stripeCustomerId", "stripeSubscriptionId", "stripePriceId",
                 status, "currentPeriodEnd", "createdAt", "updatedAt")
-             VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, now(), now())`,
-            [user.id, customerId, sub.id, priceId, sub.status, end],
+             VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, timezone('UTC', now()), timezone('UTC', now()))`,
+            [user.id, customerId, sub.id, priceId, sub.status, toSql(end)],
           );
           created += 1;
         }
         await client.query(
-          'UPDATE "User" SET plan = $2, "stripeCustomerId" = $3, "updatedAt" = now() WHERE id = $1',
+          `UPDATE "User" SET plan = $2, "stripeCustomerId" = $3, "updatedAt" = timezone('UTC', now())
+            WHERE id = $1`,
           [user.id, nextPlan, customerId],
         );
         await client.query("COMMIT");
