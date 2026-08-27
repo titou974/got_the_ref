@@ -164,7 +164,7 @@
       "diagnosisTitle": "Diagnostic d'architecture",
       "diagnosisSubtitle": "L'ossature technique que les IA lisent en premier.",
       "engineScoresTitle": "Score et position par moteur IA",
-      "engineScoresSubtitle": "Ce que ChatGPT, Gemini et Claude répondent quand on cherche votre activité.",
+      "engineScoresSubtitle": "Ce que ChatGPT et Gemini répondent quand on cherche votre activité.",
       "testedOn": "Position mesurée sur la requête « {query} »",
       "measured": "Mesuré",
       "estimated": "Estimé",
@@ -209,7 +209,7 @@
         "detected": "Plateforme détectée : {name}",
         "cta": "Connecter le site",
         "connectSoon": "Bientôt",
-        "soonNote": "Le rattachement automatique de votre site ouvre dans les prochains jours. En attendant, copiez les instructions ci-dessous : elles reprennent tous les manques relevés sur votre site et donnent le code exact à appliquer.",
+        "soonNote": "Wordpress et Shopify seront connectables prochainement.",
         "promptCta": "Copier le prompt de correction",
         "promptCtaAll": "Copier les instructions pour tout solutionner avec votre agent IA",
         "shareDev": "Partager à votre développeur",
@@ -874,12 +874,7 @@
   "homeHero": {
     "headingBefore": "Faites venir vos clients depuis",
     "headingAfter": "en pilote automatique",
-    "engines": [
-      "ChatGPT",
-      "Gemini",
-      "Perplexity",
-      "Google"
-    ],
+    "engines": ["ChatGPT", "Gemini", "Perplexity", "Google"],
     "subtitle": "On apporte de la visibilité aux commerces français, locaux comme en ligne, en les référençant dans les IA et sur Google. Sans qu’ils aient à payer une agence ni à lever le petit doigt !",
     "cta": "Démarrer {days} jours gratuits",
     "ctaDashboard": "Ouvrir mon tableau de bord",
@@ -913,11 +908,7 @@
         "num": "01",
         "title": "Analyse de votre activité",
         "body": "On lit votre site comme l'algorithme des IA : votre secteur, marché, concurrents, les mots clefs recherchées...",
-        "chips": [
-          "Requêtes détectées",
-          "Prompts clients",
-          "Concurrents"
-        ],
+        "chips": ["Requêtes détectées", "Prompts clients", "Concurrents"],
         "mock": {
           "url": "votre-site.fr",
           "pill": "analyse en profondeur",
@@ -935,12 +926,7 @@
         "num": "02",
         "title": "Position mesurée sur les moteurs",
         "body": "On interroge les IAs sur votre marché, puis on relève le classement qu'elles vous donnent.",
-        "chips": [
-          "ChatGPT",
-          "Gemini",
-          "Perplexity",
-          "Google AI search"
-        ],
+        "chips": ["ChatGPT", "Gemini", "Perplexity", "Google AI search"],
         "mock": {
           "label": "Position mesurée",
           "you": "Votre entreprise",
@@ -948,18 +934,12 @@
             {
               "name": "ChatGPT",
               "rank": "2",
-              "others": [
-                "Café Joyeux",
-                "Le petit coin"
-              ]
+              "others": ["Café Joyeux", "Le petit coin"]
             },
             {
               "name": "Gemini",
               "rank": "1",
-              "others": [
-                "Café des Arts",
-                "La Pause Terrasse"
-              ]
+              "others": ["Café des Arts", "La Pause Terrasse"]
             }
           ]
         }
@@ -968,11 +948,7 @@
         "num": "03",
         "title": "Correctifs priorisés",
         "body": "Structure, mots clés pertinents pour votre niche, pages citables : notre algorithmes compare tout ce qu'il a relevé sur votre site à nos standards de référencement, et on vous fait un diagnotic ! ",
-        "chips": [
-          "llms.txt",
-          "JSON-LD",
-          "Citabilité"
-        ],
+        "chips": ["llms.txt", "JSON-LD", "Citabilité"],
         "mock": {
           "applied": "appliqué",
           "impact": "Impact {value}/10",
@@ -1000,11 +976,7 @@
         "num": "04",
         "title": "Auto-correction par nos agents IA, et remesure continue",
         "body": "Nos IAs viennent corriger tout les points sur votre site en une simple connexion, puis remesurent la position, et vous voyez la courbe bouger. En 1 semaine, vous apparaissez dans les IAs et sur Google.",
-        "chips": [
-          "Score GEO",
-          "Position",
-          "Avis"
-        ],
+        "chips": ["Score GEO", "Position", "Avis"],
         "mock": {
           "scoreLabel": "Score GEO",
           "before": "42",
@@ -1162,12 +1134,7 @@
     "sites": [
       {
         "domain": "lacotriade.fr",
-        "colors": [
-          "#0B3C49",
-          "#1B7F79",
-          "#E8F3F1",
-          "#F7FBFA"
-        ],
+        "colors": ["#0B3C49", "#1B7F79", "#E8F3F1", "#F7FBFA"],
         "voice": [
           "chaleureux, ancré local",
           "cuisine de la marée",
@@ -1230,12 +1197,7 @@
       },
       {
         "domain": "atelier-lubin.fr",
-        "colors": [
-          "#3E2A18",
-          "#B07D4B",
-          "#F0E4D4",
-          "#FBF7F2"
-        ],
+        "colors": ["#3E2A18", "#B07D4B", "#F0E4D4", "#FBF7F2"],
         "voice": [
           "artisanal, précis",
           "vocabulaire du bois",
@@ -1298,12 +1260,7 @@
       },
       {
         "domain": "toiture-vendee.fr",
-        "colors": [
-          "#1C2B3A",
-          "#D7501E",
-          "#E7ECF1",
-          "#F8FAFB"
-        ],
+        "colors": ["#1C2B3A", "#D7501E", "#E7ECF1", "#F8FAFB"],
         "voice": [
           "direct, rassurant",
           "vocabulaire de chantier",
@@ -1371,12 +1328,7 @@
         "num": "1",
         "title": "Couleurs de marque",
         "kind": "colors",
-        "items": [
-          "#0B3C49",
-          "#1B7F79",
-          "#E8F3F1",
-          "#F7FBFA"
-        ]
+        "items": ["#0B3C49", "#1B7F79", "#E8F3F1", "#F7FBFA"]
       },
       {
         "num": "2",
@@ -1442,10 +1394,7 @@
     "publishedPath": "lacotriade.fr/journal",
     "demoNote": "Article et sites de démonstration.",
     "takeawaysTitle": "À retenir",
-    "tableHead": [
-      "Point",
-      "Détail"
-    ],
+    "tableHead": ["Point", "Détail"],
     "tocTitle": "Sommaire",
     "imageAlt": "Illustration de l'article"
   },
@@ -1531,11 +1480,7 @@
       ],
       "you": "votre-site.fr",
       "badge": "Cité en source n° 1",
-      "points": [
-        "E-commerce",
-        "SaaS & applications",
-        "Médias & créateurs"
-      ]
+      "points": ["E-commerce", "SaaS & applications", "Médias & créateurs"]
     },
     "local": {
       "title": "Commerces et artisans de quartier",
@@ -1543,17 +1488,9 @@
       "caption": "Réponse locale · votre zone",
       "query": "« Où manger des fruits de mer aux Sables-d'Olonne ? »",
       "you": "Votre commerce",
-      "competitors": [
-        "Concurrent",
-        "Concurrent",
-        "Concurrent"
-      ],
+      "competitors": ["Concurrent", "Concurrent", "Concurrent"],
       "badge": "Recommandé en premier",
-      "points": [
-        "Restaurants & hôtels",
-        "Artisans & BTP",
-        "Santé & bien-être"
-      ]
+      "points": ["Restaurants & hôtels", "Artisans & BTP", "Santé & bien-être"]
     }
   },
   "dashboard": {
@@ -1587,8 +1524,8 @@
       "vsPrevious": "sur {days} jours, contre la période précédente",
       "locked": {
         "badge": "À venir",
-        "title": "Vos vraies visites arrivent",
-        "body": "Ces courbes sont un exemple. Rattachez vos statistiques pour voir les vôtres, assistant par assistant.",
+        "title": "Le trafic que les IAs vous apportent",
+        "body": "Nous dévoilons le trafic que vous apportent les IA dans votre site web le 01/07.",
         "analytics": "Connecter Google Analytics",
         "tagManager": "Connecter Google Tag Manager",
         "soon": "Les deux rattachements ouvrent dans quelques jours."

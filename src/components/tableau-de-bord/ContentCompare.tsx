@@ -110,28 +110,14 @@ export function ContentCompare({
               missingDescription=""
             />
 
-            <dl className="mt-5 space-y-4 border-t border-border pt-5">
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-steel">
-                  {t("h1")}
-                </dt>
-                <dd className="mt-1 text-sm">{proposal.h1}</dd>
-              </div>
-              {proposal.intro ? (
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-steel">
-                    {t("intro")}
-                  </dt>
-                  <dd className="mt-1 text-sm text-muted">{proposal.intro}</dd>
-                </div>
-              ) : null}
-            </dl>
-
             {proposal.reasons.length ? (
               <ul className="mt-5 space-y-1.5 border-t border-border pt-5">
                 {proposal.reasons.map((reason) => (
                   <li key={reason} className="flex gap-2 text-sm text-muted">
-                    <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-pebble" />
+                    <span
+                      aria-hidden
+                      className="mt-2 h-1 w-1 shrink-0 rounded-full bg-pebble"
+                    />
                     {reason}
                   </li>
                 ))}
@@ -174,8 +160,12 @@ function SerpRow({
           {domain.slice(0, 1).toUpperCase()}
         </span>
         <span className="min-w-0">
-          <span className="block truncate text-[13px] font-medium leading-tight">{domain}</span>
-          <span className="block truncate text-[11px] leading-tight text-ash">{url}</span>
+          <span className="block truncate text-[13px] font-medium leading-tight">
+            {domain}
+          </span>
+          <span className="block truncate text-[11px] leading-tight text-ash">
+            {url}
+          </span>
         </span>
       </div>
 
@@ -186,7 +176,9 @@ function SerpRow({
       >
         {title ?? missingTitle}
       </p>
-      <p className={`mt-1 text-[13px] leading-relaxed ${description ? "text-steel" : "text-danger"}`}>
+      <p
+        className={`mt-1 text-[13px] leading-relaxed ${description ? "text-steel" : "text-danger"}`}
+      >
         {description ?? missingDescription}
       </p>
     </div>

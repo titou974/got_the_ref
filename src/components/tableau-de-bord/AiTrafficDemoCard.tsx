@@ -31,7 +31,10 @@ import { TrafficFilterBar, type TrafficPeriod } from "./TrafficFilterBar";
  */
 
 /** Le logo et la couleur de courbe de chaque assistant, dans l'ordre du tableau. */
-const ENGINES: Record<DemoEngine, { logo: string; color: "ink" | "ember" | "orchid" }> = {
+const ENGINES: Record<
+  DemoEngine,
+  { logo: string; color: "ink" | "ember" | "orchid" }
+> = {
   ChatGPT: { logo: "/chatgpt.png", color: "ink" },
   Gemini: { logo: "/gemini.webp", color: "ember" },
   Perplexity: { logo: "/perplexity.png", color: "orchid" },
@@ -43,7 +46,8 @@ const formatVisits = (value: number) => numberFormatter.format(value);
 
 const changeOf = (engine: DemoEngineSummary) =>
   engine.previousSessions > 0
-    ? ((engine.sessions - engine.previousSessions) / engine.previousSessions) * 100
+    ? ((engine.sessions - engine.previousSessions) / engine.previousSessions) *
+      100
     : null;
 
 export function AiTrafficDemoCard({
@@ -62,7 +66,8 @@ export function AiTrafficDemoCard({
   // qui est là, sans aller-retour serveur.
   const view = useMemo(() => windowDemoAiTraffic(demo, period), [demo, period]);
 
-  const engine = view.engines.find((item) => item.name === selected) ?? view.engines[0];
+  const engine =
+    view.engines.find((item) => item.name === selected) ?? view.engines[0];
   const share = (engine.sessions / view.siteSessions) * 100;
 
   return (
@@ -83,10 +88,18 @@ export function AiTrafficDemoCard({
           répondent sans que rien de lisible ne change. */}
       <div className="relative isolate mt-4">
         <Obscured>
-          <TrafficFilterBar domain={domain} period={period} onPeriodChange={setPeriod} />
+          <TrafficFilterBar
+            domain={domain}
+            period={period}
+            onPeriodChange={setPeriod}
+          />
 
           <div className="mt-5 overflow-hidden rounded-2xl border border-border">
-            <EngineTabs engines={view.engines} selected={selected} onSelect={setSelected} />
+            <EngineTabs
+              engines={view.engines}
+              selected={selected}
+              onSelect={setSelected}
+            />
 
             <div className="p-4 sm:p-5">
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
@@ -98,7 +111,10 @@ export function AiTrafficDemoCard({
                   ·
                 </span>
                 <span>
-                  {t("share", { value: share < 1 ? share.toFixed(1) : String(Math.round(share)) })}
+                  {t("share", {
+                    value:
+                      share < 1 ? share.toFixed(1) : String(Math.round(share)),
+                  })}
                 </span>
               </p>
 
@@ -151,14 +167,11 @@ function ConnectOverlay() {
         </span>
 
         <p className="mt-3 font-semibold">{t("locked.title")}</p>
-        <p className="mt-1 text-sm text-muted">{t("locked.body")}</p>
 
         <div className="mt-4 flex flex-col gap-2">
           <ConnectButton label={t("locked.analytics")} />
           <ConnectButton label={t("locked.tagManager")} />
         </div>
-
-        <p className="mt-3 text-xs text-ash">{t("locked.soon")}</p>
       </div>
     </div>
   );
@@ -181,7 +194,13 @@ function ConnectButton({ label }: { label: string }) {
 /** Le « G » de Google, dans ses quatre couleurs. */
 function GoogleMark() {
   return (
-    <svg width="15" height="15" viewBox="0 0 48 48" aria-hidden className="shrink-0">
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 48 48"
+      aria-hidden
+      className="shrink-0"
+    >
       <path
         fill="#4285F4"
         d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.7-2.1 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.1Z"
@@ -238,7 +257,8 @@ function EngineTabs({
             tabIndex={active ? 0 : -1}
             onClick={() => onSelect(item.name)}
             onKeyDown={(event) => {
-              if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+              if (event.key !== "ArrowRight" && event.key !== "ArrowLeft")
+                return;
               event.preventDefault();
               move(event.key === "ArrowRight" ? 1 : -1);
             }}

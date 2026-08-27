@@ -48,27 +48,44 @@ export function PageHeader({
   subtitle,
   actions,
 }: {
-  title: string;
+  title?: string;
   subtitle?: string | null;
   actions?: React.ReactNode;
 }) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-[32px]">{title}</h1>
-        {subtitle ? <p className="mt-1 truncate text-sm text-muted">{subtitle}</p> : null}
+        {title && (
+          <h1 className="text-2xl font-bold tracking-tight sm:text-[32px]">
+            {title}
+          </h1>
+        )}
+        {subtitle ? (
+          <p className="mt-1 truncate text-sm text-muted">{subtitle}</p>
+        ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>
+      ) : null}
     </header>
   );
 }
 
 /** Variation chiffrée, verte à la hausse et rouge à la baisse. */
-export function Delta({ value, suffix = "%" }: { value: number | null; suffix?: string }) {
+export function Delta({
+  value,
+  suffix = "%",
+}: {
+  value: number | null;
+  suffix?: string;
+}) {
   if (value === null || !Number.isFinite(value)) return null;
 
   const up = value >= 0;
-  const rounded = Math.abs(value) >= 10 ? Math.round(Math.abs(value)) : Math.round(Math.abs(value) * 10) / 10;
+  const rounded =
+    Math.abs(value) >= 10
+      ? Math.round(Math.abs(value))
+      : Math.round(Math.abs(value) * 10) / 10;
 
   return (
     <span
@@ -84,7 +101,11 @@ export function Delta({ value, suffix = "%" }: { value: number | null; suffix?: 
 }
 
 /** Pastille d'état : reprend les trois statuts du diagnostic. */
-export function StatusDot({ status }: { status: "ok" | "warn" | "ko" | "unknown" }) {
+export function StatusDot({
+  status,
+}: {
+  status: "ok" | "warn" | "ko" | "unknown";
+}) {
   const color =
     status === "ok"
       ? "bg-success"
@@ -94,5 +115,10 @@ export function StatusDot({ status }: { status: "ok" | "warn" | "ko" | "unknown"
           ? "bg-danger"
           : "bg-pebble";
 
-  return <span aria-hidden className={`inline-block h-2 w-2 shrink-0 rounded-full ${color}`} />;
+  return (
+    <span
+      aria-hidden
+      className={`inline-block h-2 w-2 shrink-0 rounded-full ${color}`}
+    />
+  );
 }

@@ -6,10 +6,11 @@
 export const SITE = {
   name: "got_the_ref",
   /** Baseline de marque : un logiciel, pas une agence, pour les commerces français. */
-  tagline: "Le premier logiciel de GEO pour les commerces français, physiques et en ligne",
+  tagline:
+    "Le premier logiciel de GEO pour les commerces français, physiques et en ligne",
   /** URL publique de l'app, surchargée par l'environnement. */
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  contactEmail: "titouanhirsch@gmail.com",
+  contactEmail: "bobodigitalcorp@gmail.com",
   /**
    * Créneau de démonstration (Cal), surchargeable par l'environnement.
    *
@@ -27,7 +28,8 @@ export const SITE = {
    * qu'un environnement de test n'envoie pas ses messages dans la vraie file.
    */
   crispWebsiteId:
-    process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? "f8f9ed32-6051-4c90-8c84-6ab97f03a07e",
+    process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ??
+    "f8f9ed32-6051-4c90-8c84-6ab97f03a07e",
   /** Fondateur — profil public référencé pour l'E-E-A-T et le schema Person. */
   founder: {
     name: "Titouan Hirsch",
