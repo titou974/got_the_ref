@@ -220,7 +220,8 @@
         "reassurance": "Accès révocable à tout moment. Aucune publication sans votre validation.",
         "fixedCount": "{count}/{total} corrigés",
         "statusFixed": "Corrigé",
-        "statusPending": "À corriger"
+        "statusPending": "À corriger",
+        "promptPreviewLabel": "À coller dans ChatGPT, Claude ou Cursor"
       }
     },
     "architecture": {

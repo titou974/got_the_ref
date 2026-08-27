@@ -174,11 +174,25 @@ export function EngineCard({
   engine,
   delay,
   locked = false,
+  compact = false,
 }: {
   engine: EngineScore;
   delay: number;
   /** Verrouillé : le moteur et son nom restent lisibles, la mesure est floutée. */
   locked?: boolean;
+  /**
+   * Version resserrée, celle du tableau de bord.
+   *
+   * Le rapport d'analyse est lu une fois, à l'achat : il y explique sa mesure,
+   * d'où la phrase de résumé et la note du moteur. Le tableau de bord est relu
+   * chaque semaine, et ces deux-là n'y disent rien que le classement juste en
+   * dessous ne montre déjà — le rang est écrit sur la ligne du commerce.
+   *
+   * La carte étant alors posée à côté de sa jumelle, les deux classements d'un
+   * même moteur restent l'un sous l'autre : les mettre côte à côte dans une
+   * demi-largeur tronquerait les noms de concurrents.
+   */
+  compact?: boolean;
 }) {
   const t = useTranslations("analysisReport.results");
   const vis = visibilityColor(engine.visibility);
@@ -186,10 +200,12 @@ export function EngineCard({
   // Tout ce qui constitue la mesure elle-même : c'est cette part qui se floute.
   const body = (
     <div className="space-y-3">
-      <p className="text-xs text-muted">{engine.summary}</p>
+      {compact ? null : <p className="text-xs text-muted">{engine.summary}</p>}
       {engine.rankings.length > 0 && (
         <div
-          className={`grid grid-cols-1 gap-3 ${engine.rankings.length > 1 ? "lg:grid-cols-2" : ""}`}
+          className={`grid grid-cols-1 gap-3 ${
+            engine.rankings.length > 1 && !compact ? "lg:grid-cols-2" : ""
+          }`}
         >
           {engine.rankings.map((r) => (
             <RankingList key={r.scope} ranking={r} locked={locked} />
@@ -238,7 +254,10 @@ export function EngineCard({
             </>
           )}
         </div>
-        {locked ? (
+        {/* La note du moteur ne suit pas la carte resserrée : sur le tableau de
+            bord, le seul chiffre qui compte est le rang, et il est écrit sur la
+            ligne du commerce dans le classement. */}
+        {compact ? null : locked ? (
           <span className="shrink-0 text-lg font-bold text-pebble" aria-hidden>
             ••
           </span>

@@ -307,7 +307,6 @@ export function ConnectSiteModal({
               onClick={copyPrompt}
               className="flex cursor-pointer items-center justify-center gap-2.5 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
             >
-              <AgentLogos />
               <span className="text-pretty">
                 {copied
                   ? t("promptCopied")
@@ -316,6 +315,30 @@ export function ConnectSiteModal({
                     : t("promptCta")}
               </span>
             </button>
+
+            {/* Le début du prompt, sous le bouton.
+                Copier un texte qu'on n'a pas vu demande de la confiance ; en
+                montrer l'entrée coûte quatre lignes et lève la question. Les
+                logos passent au-dessus, à gauche : dans le bouton, ils
+                décalaient un libellé déjà long sans dire à quoi ils servaient.
+                Au-dessus du prompt, ils disent où le coller. */}
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <AgentLogos />
+                <span className="text-xs text-muted">{t("promptPreviewLabel")}</span>
+              </div>
+              <div className="relative">
+                <pre className="max-h-40 overflow-hidden whitespace-pre-wrap break-words rounded-2xl border border-fog bg-mist px-4 py-3 font-sans text-[11px] leading-relaxed text-muted">
+                  {solutionPrompt}
+                </pre>
+                {/* Le texte s'éteint vers le bas : c'est un extrait, et une
+                    coupe nette se lirait comme un prompt tronqué à la copie. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-px bottom-px h-16 rounded-b-2xl bg-gradient-to-b from-transparent to-mist"
+                />
+              </div>
+            </div>
 
             <button
               type="button"

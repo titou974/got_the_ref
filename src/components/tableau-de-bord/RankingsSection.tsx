@@ -61,9 +61,19 @@ export function RankingsSection({ engines }: { engines: EngineScore[] }) {
       {isPending ? (
         <SearchLoader kind="audit" title={tr("refreshing")} />
       ) : (
-        <div className="space-y-4">
+        // Deux moteurs tiennent côte à côte sur un écran d'ordinateur : les
+        // empiler obligeait à faire défiler pour comparer ChatGPT et Gemini,
+        // alors que la comparaison est tout l'intérêt de la section. Au-delà de
+        // deux, la rangée redevient une pile — trois demi-largeurs tronqueraient
+        // les noms de concurrents.
+        <div className={shown.length === 2 ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
           {shown.map((engine, i) => (
-            <EngineCard key={engine.engine} engine={engine} delay={i * 0.05} />
+            <EngineCard
+              key={engine.engine}
+              engine={engine}
+              delay={i * 0.05}
+              compact={shown.length === 2}
+            />
           ))}
         </div>
       )}
