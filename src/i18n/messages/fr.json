@@ -1631,13 +1631,6 @@
         "unknown": "Non mesuré"
       }
     },
-    "prompt": {
-      "title": "Prompt de correction",
-      "hint": "À coller dans Claude, ChatGPT ou l'agent de votre développeur. Il contient les textes, fichiers et articles exacts à appliquer.",
-      "copy": "Copier",
-      "copied": "Copié",
-      "writing": "Rédaction du prompt à partir de vos derniers résultats…"
-    },
     "preparing": {
       "title": "Analyse de votre site en cours",
       "body": "Nous lisons vos pages, testons votre place dans les IA et relevons ce qui manque. Comptez une à trois minutes selon la taille du site.",
@@ -1740,7 +1733,6 @@
       "publish": "Publier sur mon site",
       "publishing": "Publication…",
       "drop": "Écarter ce sujet",
-      "noPublishLink": "Article validé. Rattachez votre site avec le droit de publication pour le déposer d'ici.",
       "seeOnline": "Voir l'article en ligne",
       "bodyPlaceholder": "Le texte de l'article, en Markdown.",
       "scheduled": "Prévu le {date}",
@@ -1801,7 +1793,12 @@
       "removeBlock": "Supprimer ce bloc",
       "words": "{count} mots",
       "unsaved": "Modifications non enregistrées",
-      "savedState": "Enregistré"
+      "savedState": "Enregistré",
+      "publishNow": "Publier maintenant",
+      "publishPromptTitle": "Prompt de publication",
+      "publishPromptHint": "À coller dans votre agent IA ou à envoyer à votre développeur : il contient l'article entier et où le poser.",
+      "publishPromptCopy": "Copier le prompt",
+      "publishPromptCopied": "Prompt copié"
     },
     "presence": {
       "pageTitle": "Présence web",

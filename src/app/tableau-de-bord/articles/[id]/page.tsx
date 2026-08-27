@@ -67,6 +67,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
           context.site?.status === "connected" && context.site.capabilities.includes("publish")
         }
         quotaRemaining={quota.remaining}
+        domain={context.domain}
+        platform={context.analysis?.signals.stack?.name ?? null}
       />
     </>
   );

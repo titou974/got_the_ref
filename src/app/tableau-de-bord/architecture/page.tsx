@@ -4,7 +4,6 @@ import { getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { CATEGORY_META } from "@/lib/geo/types";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
-import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
 import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
@@ -91,7 +90,6 @@ export default async function ArchitecturePage() {
         </dl>
       </Card>
 
-      <SolutionPrompt tab="architecture" result={analysis} diagnostic={diagnostic} />
     </>
   );
 }

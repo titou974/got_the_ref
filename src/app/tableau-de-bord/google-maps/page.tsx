@@ -2,10 +2,8 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getDashboardContext, listGooglePosts } from "@/features/dashboard/queries";
-import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { Card, CardTitle, PageHeader, StatusDot } from "@/components/tableau-de-bord/Card";
 import { GooglePostPlanner } from "@/components/tableau-de-bord/GooglePostPlanner";
-import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 
 export const maxDuration = 300;
@@ -28,7 +26,6 @@ export default async function GoogleMapsPage() {
   if (!context.analysis) return <PreparingAnalysis />;
 
   const analysis = context.analysis;
-  const diagnostic = buildDiagnostic(analysis);
   const coherence = analysis.mapsCoherence ?? null;
   const keyword = analysis.trendingKeywords?.keywords[0]?.keyword ?? null;
 
@@ -130,7 +127,6 @@ export default async function GoogleMapsPage() {
         }))}
       />
 
-      <SolutionPrompt tab="maps" result={analysis} diagnostic={diagnostic} />
     </>
   );
 }
