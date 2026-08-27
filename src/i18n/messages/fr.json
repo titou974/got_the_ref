@@ -1633,7 +1633,15 @@
       "period": "{days} derniers jours",
       "share": "soit {value} % de vos visites",
       "noAnalytics": "Rattachez Google Analytics pour voir ces visites. Sans lui, personne ne peut les compter : elles n'apparaissent pas dans Search Console.",
-      "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique."
+      "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique.",
+      "demoBadge": "Données d'exemple",
+      "demoGained": "Soit {count} visites de plus que les {days} jours précédents.",
+      "tableEngine": "Assistant",
+      "tableVisits": "Visites",
+      "tableShare": "Part",
+      "tableTrend": "Évolution",
+      "periodFilter": "Période",
+      "periodShort": "{days} j"
     },
     "rankings": {
       "refresh": "Reprendre le relevé",
@@ -1924,6 +1932,58 @@
       "closing": "Bonne visite, et bonne montée dans les réponses !",
       "dismiss": "C'est parti",
       "dismissAria": "Fermer le mot de bienvenue"
+    },
+    "settingsLink": "Réglages",
+    "settings": {
+      "title": "Réglages",
+      "subtitle": "Votre compte, la fiche de votre commerce et le ton de vos textes.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Réglages enregistrés.",
+      "back": "Retour",
+      "plans": {
+        "free": "Gratuit",
+        "pro": "Abonnement",
+        "agency": "Agence"
+      },
+      "identity": {
+        "title": "Vos informations",
+        "body": "Le nom qui vous est adressé dans le tableau de bord et dans les messages que nous vous envoyons.",
+        "name": "Nom",
+        "email": "Adresse e-mail",
+        "emailHint": "C'est votre identifiant de connexion : écrivez-nous pour en changer.",
+        "plan": "Formule",
+        "billing": "Gérer mon abonnement"
+      },
+      "business": {
+        "title": "Votre commerce",
+        "body": "Ce que les agents relisent avant chaque analyse et chaque article. Une fiche à jour vaut mieux qu'une consigne répétée.",
+        "kind": "Type d'activité",
+        "kindUnset": "Non renseigné",
+        "kindPhysical": "Sur place (boutique, atelier, cabinet)",
+        "kindOnline": "En ligne uniquement",
+        "kindBoth": "Les deux",
+        "kindHint": "« En ligne uniquement » retire l'onglet Google Maps : sans adresse, il n'y a pas de fiche à surveiller.",
+        "niche": "Niche",
+        "nichePlaceholder": "Fleuriste événementiel",
+        "market": "Marché visé",
+        "marketPlaceholder": "France, Suisse romande, Europe francophone…",
+        "description": "Votre activité",
+        "descriptionPlaceholder": "Ce que vous vendez, à qui, et ce qui vous distingue de la boutique d'à côté.",
+        "descriptionHint": "Écrit avec vos mots : c'est ce que les assistants reprendront pour vous citer.",
+        "audience": "Vos clients",
+        "audiencePlaceholder": "Particuliers, professionnels, jeunes parents, restaurateurs…"
+      },
+      "tone": {
+        "title": "Ton éditorial",
+        "body": "La voix de vos textes. Ce que vous corrigez ici vaut pour les articles à venir, pas pour ceux déjà rédigés.",
+        "instructions": "Consigne de ton",
+        "instructionsPlaceholder": "Tutoiement, phrases courtes, aucun superlatif.",
+        "instructionsHint": "Relue avant chaque rédaction.",
+        "banned": "Termes à bannir",
+        "bannedPlaceholder": "Un terme par ligne",
+        "bannedHint": "Noms de concurrents, mots interdits par votre marque."
+      }
     }
   }
 }

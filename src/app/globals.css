@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Le site n'a qu'un thème, clair. Les composants Tremor, eux, portent des
+   classes `dark:` : sans cette redéfinition, elles s'allumeraient chez tout
+   visiteur dont le système est en sombre et repeindraient les graphiques en
+   gris anthracite. Rattachée à une classe `.dark` qui n'existe nulle part, la
+   variante reste éteinte. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* ============================================================
      Awesomic — Rounded midnight marketplace (thème CLAIR)

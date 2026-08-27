@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 import { getDashboardContext, listArticles } from "@/features/dashboard/queries";
 import { fetchAiTraffic } from "@/features/dashboard/ga4";
+import { buildDemoAiTraffic } from "@/features/dashboard/demoTraffic";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
@@ -125,8 +126,14 @@ export default async function DashboardHomePage() {
       {/* 1bis. Le constat écrit à la frappe, comme sur le rapport d'analyse. */}
       <PaidReportCard result={analysis} diagnostic={diagnostic} scope="dashboard" />
 
-      {/* 2. La courbe du trafic amené par les IA. */}
-      <AiTrafficCard report={traffic} />
+      {/* 2. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
+             n'est pas rattaché. Les dates sont lues ici, côté serveur, pour que
+             le navigateur reçoive le même axe que le rendu initial. */}
+      <AiTrafficCard
+        report={traffic}
+        demo={buildDemoAiTraffic()}
+        domain={context.domain ?? analysis.domain}
+      />
 
       {/* 3. La place du commerce dans ChatGPT et Gemini. */}
       <RankingsSection engines={analysis.engines} liveQuery={analysis.liveQuery ?? null} />

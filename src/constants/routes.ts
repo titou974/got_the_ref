@@ -32,6 +32,7 @@ export const ROUTES = {
   dashboardArticle: (id: string) => `/tableau-de-bord/articles/${id}`,
   dashboardPresence: "/tableau-de-bord/presence",
   dashboardMaps: "/tableau-de-bord/google-maps",
+  dashboardSettings: "/tableau-de-bord/reglages",
   analysis: (id: string) => `/analyse/${id}`,
   /** Retour de Stripe après paiement d'une analyse (création de compte). */
   checkoutSuccess: "/paiement/succes",

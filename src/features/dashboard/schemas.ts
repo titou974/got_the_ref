@@ -57,6 +57,36 @@ export const brandVoiceSchema = z.object({
   banned: z.array(z.string().min(1).max(80)).max(40).default([]),
 });
 
+/**
+ * Les réglages du compte, enregistrés d'un seul geste.
+ *
+ * Le formulaire couvre trois tables — le compte, la fiche d'accueil, le ton —
+ * mais reste un seul écran : le client corrige souvent son nom et sa niche dans
+ * la même minute, et trois boutons « enregistrer » lui feraient croire à trois
+ * enregistrements séparés à ne pas oublier.
+ *
+ * L'adresse e-mail n'est pas là : la changer déplace la clé de connexion et
+ * demande une vérification, ce que cet écran ne sait pas faire. Le champ est
+ * affiché en lecture seule et rien ne l'accepte en entrée.
+ */
+export const settingsSchema = z.object({
+  name: z.string().trim().min(2, "Indiquez votre nom.").max(80),
+  /**
+   * Le type de commerce décide de la présence de l'onglet Google Maps : une
+   * boutique a une fiche, une activité en ligne n'en a pas. La chaîne vide est
+   * acceptée pour les comptes ouverts avant ce champ, qui n'en ont pas encore.
+   */
+  businessKind: z.enum(["", "physical", "online", "both"]),
+  niche: z.string().trim().max(120),
+  /** Champ libre, comme à l'étape « marché » du tunnel : « Suisse romande ». */
+  targetMarket: z.string().trim().max(120),
+  description: z.string().trim().max(1500),
+  audience: z.string().trim().max(600),
+  toneInstructions: z.string().trim().max(1500),
+  /** Une entrée par ligne dans le formulaire, découpée avant validation. */
+  toneBanned: z.array(z.string().min(1).max(80)).max(40).default([]),
+});
+
 export const prospectIdSchema = z.object({ id: z.string().min(1) });
 
 export const prospectStatusSchema = z.object({
