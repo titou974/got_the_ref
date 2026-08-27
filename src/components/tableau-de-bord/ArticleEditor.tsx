@@ -21,9 +21,11 @@ import {
   type Block,
   type BlockKind,
 } from "@/lib/markdown-blocks";
+import { buildArticlePublishPrompt } from "@/lib/geo/article-publish-prompt";
 import { Card, CardTitle } from "./Card";
 import { AutoTextarea } from "./AutoTextarea";
 import { BrandToneBar } from "./BrandToneBar";
+import { PublishPromptPanel } from "./PublishPromptPanel";
 import { SearchLoader } from "@/components/SearchLoader";
 
 /**
@@ -84,6 +86,8 @@ export function ArticleEditor({
   voice,
   canPublish,
   quotaRemaining,
+  domain,
+  platform,
 }: {
   article: EditorArticle;
   tone: { summary: string | null; color: string | null; sampleUrl: string | null };
@@ -91,6 +95,10 @@ export function ArticleEditor({
   canPublish: boolean;
   /** Rédactions encore disponibles cette semaine, lues à l'ouverture de la page. */
   quotaRemaining: number;
+  /** Le domaine suivi, nommé dans le prompt de publication. */
+  domain: string | null;
+  /** Plateforme reconnue sur le site : elle change les consignes de dépôt. */
+  platform: string | null;
 }) {
   const t = useTranslations("dashboard.article");
   const router = useRouter();
@@ -102,6 +110,11 @@ export function ArticleEditor({
   const [tab, setTab] = useState<"plan" | "instructions">("plan");
   const [focused, setFocused] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  // Le prompt de publication n'existe qu'après le clic : l'assembler à
+  // l'ouverture de la page recopierait l'article entier dans le HTML envoyé au
+  // navigateur, pour un bouton que la plupart des visites ne touchent pas.
+  const [publishPrompt, setPublishPrompt] = useState<string | null>(null);
 
   // La barre d'outils écrit dans la sélection du bloc actif : il faut donc
   // pouvoir atteindre la zone de saisie elle-même, pas seulement sa valeur.
@@ -442,6 +455,32 @@ export function ArticleEditor({
                 </button>
               ) : null}
 
+              {/* Site non rattaché : « publier maintenant » ne dépose pas, il
+                  écrit le prompt qui dépose. Le geste reste le même pour le
+                  client, et il n'aboutit plus sur une phrase d'attente. */}
+              {article.status === "approved" && !canPublish ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    setPublishPrompt(
+                      buildArticlePublishPrompt({
+                        title,
+                        keyword: article.keyword,
+                        excerpt: article.excerpt,
+                        body: serializeBlocks(blocks),
+                        scheduledFor: article.scheduledFor,
+                        domain,
+                        platform,
+                      }),
+                    )
+                  }
+                  className="cursor-pointer rounded-pill bg-obsidian px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
+                >
+                  {t("publishNow")}
+                </button>
+              ) : null}
+
               {article.status !== "published" ? (
                 <button
                   type="button"
@@ -455,11 +494,7 @@ export function ArticleEditor({
             </div>
           </div>
 
-          {article.status === "approved" && !canPublish ? (
-            <p className="mb-3 rounded-2xl bg-mist px-4 py-3 text-sm text-muted">
-              {t("noPublishLink")}
-            </p>
-          ) : null}
+          {publishPrompt ? <PublishPromptPanel prompt={publishPrompt} /> : null}
 
           {article.externalUrl ? (
             <p className="mb-3 text-sm">

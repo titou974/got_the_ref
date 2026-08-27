@@ -2,29 +2,33 @@
 
 import { useTranslations } from "next-intl";
 import type { AiTrafficReport } from "@/features/dashboard/ga4";
+import type { DemoAiTraffic } from "@/features/dashboard/demoTraffic";
+import { AiTrafficDemoCard } from "./AiTrafficDemoCard";
 import { Card, CardTitle, Delta } from "./Card";
 import { TrafficChart, type Point } from "./Charts";
 
 /**
  * Le trafic amené par les assistants, jour par jour.
  *
- * Sans rattachement Analytics, la carte affiche ce qui manque plutôt qu'une
- * courbe plate : un zéro et une absence de mesure se ressemblent trop pour être
- * dessinés pareil.
+ * Sans rattachement Analytics, il n'y a rien à mesurer. Plutôt qu'une phrase
+ * seule dans une carte vide, la courbe d'exemple prend la place : elle montre à
+ * quoi ressemblera l'écran une fois branché. Le bandeau « données d'exemple »
+ * et la phrase sur le rattachement restent en place — un zéro et une absence de
+ * mesure se ressemblent trop pour être dessinés pareil.
  */
-export function AiTrafficCard({ report }: { report: AiTrafficReport | null }) {
+export function AiTrafficCard({
+  report,
+  demo,
+  domain,
+}: {
+  report: AiTrafficReport | null;
+  demo: DemoAiTraffic;
+  /** Le domaine suivi, montré dans la barre de filtres de la carte d'exemple. */
+  domain: string | null;
+}) {
   const t = useTranslations("dashboard.traffic");
 
-  if (!report) {
-    return (
-      <Card>
-        <CardTitle title={t("title")} hint={t("hint")} />
-        <p className="rounded-2xl bg-mist px-4 py-8 text-center text-sm text-muted">
-          {t("noAnalytics")}
-        </p>
-      </Card>
-    );
-  }
+  if (!report) return <AiTrafficDemoCard demo={demo} domain={domain} />;
 
   const data: Point[] = report.series.map((point) => ({
     date: point.date,

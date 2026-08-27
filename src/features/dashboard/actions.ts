@@ -34,6 +34,7 @@ import {
   planGooglePostsSchema,
   prospectIdSchema,
   prospectStatusSchema,
+  settingsSchema,
   updateArticleSchema,
   writeArticleSchema,
 } from "./schemas";
@@ -707,6 +708,61 @@ export const saveBrandVoiceAction = authActionClient
     });
 
     revalidatePath(ROUTES.dashboardArticles);
+    return { ok: true };
+  });
+
+// ── Réglages ─────────────────────────────────────────────────────────────────
+
+/**
+ * Enregistre les réglages du compte : identité, fiche du commerce, ton.
+ *
+ * Trois tables, une seule écriture visible pour le client. La fiche d'accueil et
+ * le ton sont créés au besoin : un compte ouvert avant ces champs n'a pas
+ * forcément de ligne, et l'écran de réglages ne doit pas être le seul endroit
+ * où ça se voit.
+ *
+ * Les pages du tableau de bord sont revalidées en bloc : la niche et le ton
+ * nourrissent les prompts de presque toutes les sections.
+ */
+export const saveSettingsAction = authActionClient
+  .inputSchema(settingsSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+
+    // `null` plutôt que la chaîne vide : ailleurs, le code teste l'absence de
+    // niche ou de description avec `??`, qu'une chaîne vide traverserait.
+    const orNull = (value: string) => (value.length > 0 ? value : null);
+
+    const profileFields = {
+      businessKind: orNull(parsedInput.businessKind),
+      niche: orNull(parsedInput.niche),
+      targetMarket: orNull(parsedInput.targetMarket),
+      description: orNull(parsedInput.description),
+      audience: orNull(parsedInput.audience),
+    };
+
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { name: parsedInput.name } }),
+      prisma.onboardingProfile.upsert({
+        where: { userId },
+        create: { userId, ...profileFields },
+        update: profileFields,
+      }),
+      prisma.brandVoice.upsert({
+        where: { userId },
+        create: {
+          userId,
+          instructions: parsedInput.toneInstructions,
+          banned: parsedInput.toneBanned,
+        },
+        update: {
+          instructions: parsedInput.toneInstructions,
+          banned: parsedInput.toneBanned,
+        },
+      }),
+    ]);
+
+    revalidatePath(ROUTES.dashboard, "layout");
     return { ok: true };
   });
 

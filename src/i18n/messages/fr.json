@@ -220,7 +220,8 @@
         "reassurance": "Accès révocable à tout moment. Aucune publication sans votre validation.",
         "fixedCount": "{count}/{total} corrigés",
         "statusFixed": "Corrigé",
-        "statusPending": "À corriger"
+        "statusPending": "À corriger",
+        "promptPreviewLabel": "À coller dans ChatGPT, Claude ou Cursor"
       }
     },
     "architecture": {
@@ -1557,7 +1558,6 @@
   },
   "dashboard": {
     "metaTitle": "Tableau de bord",
-    "projectLabel": "Projet",
     "noProject": "Aucun site",
     "accountLink": "Gérer la facturation",
     "nav": {
@@ -1570,70 +1570,29 @@
     },
     "home": {
       "title": "Tableau de bord",
-      "subtitle": "Projet : {domain}",
       "fullReport": "Rapport complet",
       "health": "Note de visibilité",
       "priorities": "À corriger en premier",
       "prioritiesHint": "Classé par ce que ça rapporte, pas par difficulté."
-    },
-    "connect": {
-      "connected": "Rattaché",
-      "notConnected": "À rattacher",
-      "soon": "À venir",
-      "analytics": {
-        "title": "Google Analytics",
-        "body": "Pour compter les visites que ChatGPT, Perplexity et Gemini vous envoient.",
-        "soonDetail": "Le rattachement ouvre dans les prochains jours. En attendant, le prompt de correction en bas de page reprend tous les constats de votre site : collez-le dans votre IA pour appliquer les corrections tout de suite.",
-        "detail": "Lecture seule. Nous relevons vos statistiques, nous n'écrivons jamais dedans.",
-        "cta": "Rattacher Analytics",
-        "again": "Refaire le rattachement",
-        "property": "Propriété suivie : {name}",
-        "unnamedProperty": "sans nom"
-      },
-      "site": {
-        "title": "Votre site",
-        "body": "Pour que les agents corrigent vos pages et publient vos articles.",
-        "soonDetail": "Shopify, WordPress, Wix, Webflow : le rattachement ouvre dans les prochains jours. En attendant, chaque page vous donne le correctif prêt à coller et le prompt à passer à votre IA.",
-        "detail": "Shopify, WordPress, Wix, Webflow et les autres. Vos identifiants sont chiffrés avant d'être enregistrés.",
-        "cta": "Rattacher mon site",
-        "again": "Modifier le rattachement",
-        "linked": "{platform} : {rights}"
-      },
-      "rights": {
-        "publish": "publication d'articles",
-        "edit": "correction des pages",
-        "none": "aucun droit accordé"
-      },
-      "fields": {
-        "siteUrl": "Adresse du site",
-        "username": "Nom d'utilisateur",
-        "applicationPassword": "Mot de passe d'application",
-        "shopDomain": "Domaine de la boutique",
-        "adminAccessToken": "Jeton d'accès admin",
-        "siteId": "Identifiant du site",
-        "apiKey": "Clé d'API",
-        "apiToken": "Jeton d'API",
-        "adminApiKey": "Clé d'API admin",
-        "webserviceKey": "Clé du webservice",
-        "webhookUrl": "Adresse du webhook"
-      },
-      "form": {
-        "platform": "Plateforme",
-        "optional": "(facultatif)",
-        "rights": "Ce rattachement ouvre : {rights}.",
-        "docs": "Où trouver ces identifiants",
-        "checking": "Vérification…",
-        "submit": "Rattacher",
-        "cancel": "Annuler"
-      }
     },
     "traffic": {
       "title": "Trafic amené par les IA",
       "hint": "Les visites arrivées depuis un assistant.",
       "period": "{days} derniers jours",
       "share": "soit {value} % de vos visites",
-      "noAnalytics": "Rattachez Google Analytics pour voir ces visites. Sans lui, personne ne peut les compter : elles n'apparaissent pas dans Search Console.",
-      "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique."
+      "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique.",
+      "demoBadge": "Données d'exemple",
+      "periodFilter": "Période",
+      "periodShort": "{days} j",
+      "vsPrevious": "sur {days} jours, contre la période précédente",
+      "locked": {
+        "badge": "À venir",
+        "title": "Vos vraies visites arrivent",
+        "body": "Ces courbes sont un exemple. Rattachez vos statistiques pour voir les vôtres, assistant par assistant.",
+        "analytics": "Connecter Google Analytics",
+        "tagManager": "Connecter Google Tag Manager",
+        "soon": "Les deux rattachements ouvrent dans quelques jours."
+      }
     },
     "rankings": {
       "refresh": "Reprendre le relevé",
@@ -1672,13 +1631,6 @@
         "unknown": "Non mesuré"
       }
     },
-    "prompt": {
-      "title": "Prompt de correction",
-      "hint": "À coller dans Claude, ChatGPT ou l'agent de votre développeur. Il contient les textes, fichiers et articles exacts à appliquer.",
-      "copy": "Copier",
-      "copied": "Copié",
-      "writing": "Rédaction du prompt à partir de vos derniers résultats…"
-    },
     "preparing": {
       "title": "Analyse de votre site en cours",
       "body": "Nous lisons vos pages, testons votre place dans les IA et relevons ce qui manque. Comptez une à trois minutes selon la taille du site.",
@@ -1688,7 +1640,6 @@
     },
     "content": {
       "pageTitle": "Contenu",
-      "pageSubtitle": "Projet : {domain}",
       "currentTitle": "Ce que votre site affiche",
       "currentHint": "Tel qu'un moteur le reprend aujourd'hui.",
       "proposedTitle": "Ce que nous proposons",
@@ -1730,7 +1681,6 @@
     },
     "architecture": {
       "pageTitle": "Architecture",
-      "pageSubtitle": "Projet : {domain}",
       "crawlers": "Robots d'IA",
       "crawlersHint": "Qui a le droit de lire votre site.",
       "allowed": "Autorisé",
@@ -1746,7 +1696,6 @@
     },
     "articles": {
       "pageTitle": "Articles",
-      "pageSubtitle": "Projet : {domain}",
       "plan": "Ajouter {count} sujets",
       "planning": "Recherche de sujets…",
       "planHint": "Les agents choisissent les sujets à partir des requêtes de votre niche."
@@ -1784,7 +1733,6 @@
       "publish": "Publier sur mon site",
       "publishing": "Publication…",
       "drop": "Écarter ce sujet",
-      "noPublishLink": "Article validé. Rattachez votre site avec le droit de publication pour le déposer d'ici.",
       "seeOnline": "Voir l'article en ligne",
       "bodyPlaceholder": "Le texte de l'article, en Markdown.",
       "scheduled": "Prévu le {date}",
@@ -1845,11 +1793,15 @@
       "removeBlock": "Supprimer ce bloc",
       "words": "{count} mots",
       "unsaved": "Modifications non enregistrées",
-      "savedState": "Enregistré"
+      "savedState": "Enregistré",
+      "publishNow": "Publier maintenant",
+      "publishPromptTitle": "Prompt de publication",
+      "publishPromptHint": "À coller dans votre agent IA ou à envoyer à votre développeur : il contient l'article entier et où le poser.",
+      "publishPromptCopy": "Copier le prompt",
+      "publishPromptCopied": "Prompt copié"
     },
     "presence": {
       "pageTitle": "Présence web",
-      "pageSubtitle": "Projet : {domain}",
       "reputation": "Ce que le web dit de vous",
       "noMentions": "Aucune mention relevée. C'est ce que la prospection ci-dessous va changer.",
       "backlinks": "Sites qui vous citent",
@@ -1879,7 +1831,6 @@
     },
     "maps": {
       "pageTitle": "Google Maps",
-      "pageSubtitle": "Projet : {domain}",
       "listing": "Votre fiche",
       "noListing": "Fiche non analysée.",
       "noListingBody": "Ajoutez l'adresse de votre fiche Google Maps depuis votre compte pour la comparer à votre site.",
@@ -1924,6 +1875,62 @@
       "closing": "Bonne visite, et bonne montée dans les réponses !",
       "dismiss": "C'est parti",
       "dismissAria": "Fermer le mot de bienvenue"
+    },
+    "settingsLink": "Réglages",
+    "settings": {
+      "title": "Réglages",
+      "subtitle": "Votre compte, la fiche de votre commerce et le ton de vos textes.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Réglages enregistrés.",
+      "back": "Retour",
+      "plans": {
+        "free": "Gratuit",
+        "pro": "Abonnement",
+        "agency": "Agence"
+      },
+      "identity": {
+        "title": "Vos informations",
+        "body": "Le nom qui vous est adressé dans le tableau de bord et dans les messages que nous vous envoyons.",
+        "name": "Nom",
+        "email": "Adresse e-mail",
+        "emailHint": "C'est votre identifiant de connexion : écrivez-nous pour en changer.",
+        "plan": "Formule",
+        "billing": "Gérer mon abonnement"
+      },
+      "business": {
+        "title": "Votre commerce",
+        "body": "Ce que les agents relisent avant chaque analyse et chaque article. Une fiche à jour vaut mieux qu'une consigne répétée.",
+        "kind": "Type d'activité",
+        "kindUnset": "Non renseigné",
+        "kindPhysical": "Sur place (boutique, atelier, cabinet)",
+        "kindOnline": "En ligne uniquement",
+        "kindBoth": "Les deux",
+        "kindHint": "« En ligne uniquement » retire l'onglet Google Maps : sans adresse, il n'y a pas de fiche à surveiller.",
+        "niche": "Niche",
+        "nichePlaceholder": "Fleuriste événementiel",
+        "market": "Marché visé",
+        "marketPlaceholder": "France, Suisse romande, Europe francophone…",
+        "description": "Votre activité",
+        "descriptionPlaceholder": "Ce que vous vendez, à qui, et ce qui vous distingue de la boutique d'à côté.",
+        "descriptionHint": "Écrit avec vos mots : c'est ce que les assistants reprendront pour vous citer.",
+        "audience": "Vos clients",
+        "audiencePlaceholder": "Particuliers, professionnels, jeunes parents, restaurateurs…"
+      },
+      "tone": {
+        "title": "Ton éditorial",
+        "body": "La voix de vos textes. Ce que vous corrigez ici vaut pour les articles à venir, pas pour ceux déjà rédigés.",
+        "instructions": "Consigne de ton",
+        "instructionsPlaceholder": "Tutoiement, phrases courtes, aucun superlatif.",
+        "instructionsHint": "Relue avant chaque rédaction.",
+        "banned": "Termes à bannir",
+        "bannedPlaceholder": "Un terme par ligne",
+        "bannedHint": "Noms de concurrents, mots interdits par votre marque."
+      }
+    },
+    "siteSelect": {
+      "label": "Site suivi",
+      "add": "Ajouter un site"
     }
   }
 }

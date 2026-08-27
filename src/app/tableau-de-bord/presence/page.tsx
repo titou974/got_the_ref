@@ -1,10 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getDashboardContext, listProspects } from "@/features/dashboard/queries";
-import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { ProspectTable } from "@/components/tableau-de-bord/ProspectTable";
-import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 
 export const maxDuration = 300;
@@ -29,7 +27,6 @@ export default async function PresencePage() {
   if (!context.analysis) return <PreparingAnalysis />;
 
   const analysis = context.analysis;
-  const diagnostic = buildDiagnostic(analysis);
   const presence = analysis.webPresence;
   const backlinks = analysis.backlinks ?? null;
 
@@ -37,7 +34,6 @@ export default async function PresencePage() {
     <>
       <PageHeader
         title={t("pageTitle")}
-        subtitle={context.domain ? t("pageSubtitle", { domain: context.domain }) : null}
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -110,7 +106,6 @@ export default async function PresencePage() {
         }))}
       />
 
-      <SolutionPrompt tab="presence" result={analysis} diagnostic={diagnostic} />
     </>
   );
 }

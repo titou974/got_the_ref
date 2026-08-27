@@ -1,12 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
-import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
-import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
 import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
-import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { OnPageElement, OpeningHoursBlock } from "@/components/geo/OnPageElement";
 
@@ -31,14 +28,12 @@ export default async function ContenuPage() {
   if (!context.analysis) return <PreparingAnalysis />;
 
   const analysis = context.analysis;
-  const diagnostic = buildDiagnostic(analysis);
   const onPage = analysis.onPageContent;
 
   return (
     <>
       <PageHeader
         title={t("pageTitle")}
-        subtitle={context.domain ? t("pageSubtitle", { domain: context.domain }) : null}
       />
 
       <KeywordTable insight={analysis.trendingKeywords ?? null} />
@@ -62,9 +57,6 @@ export default async function ContenuPage() {
         <OpeningHoursBlock value={onPage.openingHours} />
       </Card>
 
-      <ConnectStrip />
-
-      <SolutionPrompt tab="content" result={analysis} diagnostic={diagnostic} />
     </>
   );
 }

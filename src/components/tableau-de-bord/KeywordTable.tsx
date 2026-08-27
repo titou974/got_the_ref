@@ -1,5 +1,15 @@
 import { getTranslations } from "next-intl/server";
 import type { TrendingKeywordsInsight } from "@/lib/geo/types";
+import { Badge } from "@/components/tremor/Badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRoot,
+  TableRow,
+} from "@/components/tremor/Table";
 import { Card, CardTitle } from "./Card";
 
 /**
@@ -11,7 +21,28 @@ import { Card, CardTitle } from "./Card";
  * Quand la recherche n'a pas tourné (`measured` faux), la source est annoncée :
  * une liste déduite du site vaut moins qu'une liste tirée des requêtes réelles,
  * et le client doit savoir laquelle il lit.
+ *
+ * Les remarques qui suivaient le tableau ont disparu : elles répétaient en
+ * prose ce que les colonnes disent déjà, et poussaient la suite de la page d'un
+ * écran.
  */
+
+/**
+ * La dynamique d'un terme, en pastille.
+ *
+ * « En hausse » est la seule vraie bonne nouvelle, donc la seule en vert.
+ * « Émergent » signale un pari, pas un acquis : il reste neutre plutôt que de
+ * se peindre en avertissement, qui se lirait comme un défaut.
+ */
+const TREND_VARIANT: Record<
+  TrendingKeywordsInsight["keywords"][number]["trend"],
+  "success" | "default" | "neutral"
+> = {
+  montant: "success",
+  émergent: "default",
+  stable: "neutral",
+};
+
 export async function KeywordTable({ insight }: { insight: TrendingKeywordsInsight | null }) {
   const t = await getTranslations("dashboard.keywords");
 
@@ -35,54 +66,40 @@ export async function KeywordTable({ insight }: { insight: TrendingKeywordsInsig
         }
       />
 
-      <div className="-mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-[520px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-[11px] uppercase tracking-wider text-steel">
-              <th className="py-2 font-medium">{t("columns.keyword")}</th>
-              <th className="py-2 font-medium">{t("columns.intent")}</th>
-              <th className="py-2 font-medium">{t("columns.trend")}</th>
-              <th className="py-2 font-medium">{t("columns.placements")}</th>
-            </tr>
-          </thead>
-          <tbody>
+      {/* Les marges négatives rendent au tableau la largeur que la carte lui
+          prend : ses cellules portent déjà leur propre gouttière. */}
+      <TableRoot className="-mx-5 w-[calc(100%+2.5rem)] sm:-mx-6 sm:w-[calc(100%+3rem)]">
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>{t("columns.keyword")}</TableHeaderCell>
+              <TableHeaderCell>{t("columns.intent")}</TableHeaderCell>
+              <TableHeaderCell>{t("columns.trend")}</TableHeaderCell>
+              <TableHeaderCell>{t("columns.placements")}</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {insight.keywords.map((keyword) => (
-              <tr key={keyword.keyword} className="border-b border-border last:border-0">
-                <td className="py-3 pr-3 font-medium">{keyword.keyword}</td>
-                <td className="py-3 pr-3 text-muted">{keyword.intent}</td>
-                <td className="py-3 pr-3">
-                  <span className="rounded-xl bg-mist px-2 py-0.5 text-[11px] font-medium text-steel">
-                    {t(`trend.${keyword.trend}`)}
-                  </span>
-                </td>
-                <td className="py-3">
+              <TableRow key={keyword.keyword}>
+                <TableCell className="font-medium text-ink">{keyword.keyword}</TableCell>
+                <TableCell>{keyword.intent}</TableCell>
+                <TableCell>
+                  <Badge variant={TREND_VARIANT[keyword.trend]}>{t(`trend.${keyword.trend}`)}</Badge>
+                </TableCell>
+                <TableCell>
                   <span className="flex flex-wrap gap-1">
                     {keyword.placements.map((placement) => (
-                      <span
-                        key={placement}
-                        className="rounded-xl border border-border px-2 py-0.5 text-[11px] text-steel"
-                      >
+                      <Badge key={placement} variant="neutral">
                         {t(`placements.${placement}`)}
-                      </span>
+                      </Badge>
                     ))}
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      {insight.notes.length ? (
-        <ul className="mt-4 space-y-1.5 border-t border-border pt-4">
-          {insight.notes.map((note) => (
-            <li key={note} className="flex gap-2 text-sm text-muted">
-              <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-pebble" />
-              {note}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+          </TableBody>
+        </Table>
+      </TableRoot>
     </Card>
   );
 }
