@@ -1632,12 +1632,19 @@
       "hint": "Les visites arrivées depuis un assistant.",
       "period": "{days} derniers jours",
       "share": "soit {value} % de vos visites",
-      "noAnalytics": "Rattachez Google Analytics pour voir ces visites. Sans lui, personne ne peut les compter : elles n'apparaissent pas dans Search Console.",
       "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique.",
       "demoBadge": "Données d'exemple",
       "periodFilter": "Période",
       "periodShort": "{days} j",
-      "vsPrevious": "sur {days} jours, contre la période précédente"
+      "vsPrevious": "sur {days} jours, contre la période précédente",
+      "locked": {
+        "badge": "À venir",
+        "title": "Vos vraies visites arrivent",
+        "body": "Ces courbes sont un exemple. Rattachez vos statistiques pour voir les vôtres, assistant par assistant.",
+        "analytics": "Connecter Google Analytics",
+        "tagManager": "Connecter Google Tag Manager",
+        "soon": "Les deux rattachements ouvrent dans quelques jours."
+      }
     },
     "rankings": {
       "refresh": "Reprendre le relevé",
