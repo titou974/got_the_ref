@@ -1,8 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDashboardContext } from "@/features/dashboard/queries";
 import type { PlanKey } from "@/constants/plans";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
+import { Divider } from "@/components/tableau-de-bord/Field";
+import { SiteConnectionForm } from "@/components/tableau-de-bord/SiteConnectionForm";
 import { SettingsForm } from "@/components/tableau-de-bord/SettingsForm";
 
 const PLAN_KEY: Record<PlanKey, "free" | "pro" | "agency"> = {
@@ -38,16 +41,41 @@ export default async function SettingsPage() {
   const user = await requireUser();
   const t = await getTranslations("dashboard.settings");
 
-  const [profile, voice] = await Promise.all([
+  const [profile, voice, context] = await Promise.all([
     prisma.onboardingProfile.findUnique({ where: { userId: user.id } }),
     prisma.brandVoice.findUnique({ where: { userId: user.id } }),
+    getDashboardContext(user.id),
   ]);
+
+  // La date est mise en forme ici : le composant est client, et laisser le
+  // navigateur formater donnerait un rendu différent de celui du serveur.
+  const connectedAt = context.site?.connectedAt
+    ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(context.site.connectedAt)
+    : null;
 
   const planLabel = t(`plans.${PLAN_KEY[user.plan as PlanKey] ?? "free"}`);
 
   return (
     <>
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
+
+      <SiteConnectionForm
+        connection={
+          context.site
+            ? {
+                platform: context.site.platform,
+                siteUrl: context.site.siteUrl,
+                status: context.site.status,
+                capabilities: context.site.capabilities,
+                connectedAt,
+                lastError: context.site.lastError,
+              }
+            : null
+        }
+        suggestedPlatform={context.analysis?.signals.stack?.id ?? "wordpress"}
+      />
+
+      <Divider className="my-12" />
 
       <SettingsForm
         name={user.name ?? ""}

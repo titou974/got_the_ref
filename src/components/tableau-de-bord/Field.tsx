@@ -160,3 +160,32 @@ export function SelectField({
 export function Divider({ className = "" }: { className?: string }) {
   return <hr className={cx("border-0 border-t border-border", className)} />;
 }
+
+/**
+ * Un bloc de formulaire : l'intitulé à gauche, les champs à droite.
+ *
+ * Repris du bloc « settings » de Tremor, et partagé entre les réglages du
+ * compte et le rattachement du site pour que les deux tombent sur la même
+ * gouttière.
+ */
+export function Section({
+  title,
+  body,
+  children,
+}: {
+  title: string;
+  body: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-10">
+      <div>
+        <h2 className="font-semibold">{title}</h2>
+        <p className="mt-1 text-sm leading-6 text-muted">{body}</p>
+      </div>
+      <div className="md:col-span-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">{children}</div>
+      </div>
+    </div>
+  );
+}

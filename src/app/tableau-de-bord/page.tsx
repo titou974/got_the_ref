@@ -140,7 +140,7 @@ export default async function DashboardHomePage() {
 
       {/* ---- Ce qui explique les chiffres du haut ---- */}
 
-      <ConnectStrip />
+      <ConnectStrip site={context.site} />
 
       <ProfileHeader profile={analysis.profile} />
 

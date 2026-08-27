@@ -93,7 +93,7 @@ export default async function ArchitecturePage() {
         </dl>
       </Card>
 
-      <ConnectStrip />
+      <ConnectStrip site={context.site} />
 
       <SolutionPrompt tab="architecture" result={analysis} diagnostic={diagnostic} />
     </>

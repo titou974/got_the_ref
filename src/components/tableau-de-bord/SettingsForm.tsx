@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { saveSettingsAction } from "@/features/dashboard/actions";
 import { ROUTES } from "@/constants/routes";
 import { BillingPortalButton } from "@/components/BillingPortalButton";
-import { AreaField, Divider, SelectField, TextField } from "./Field";
+import { AreaField, Divider, Section, SelectField, TextField } from "./Field";
 
 /**
  * L'écran de réglages, sur le patron du bloc « settings » de Tremor : à gauche
@@ -245,25 +245,3 @@ export function SettingsForm({
   );
 }
 
-/** Un bloc du formulaire : l'intitulé à gauche, les champs à droite. */
-function Section({
-  title,
-  body,
-  children,
-}: {
-  title: string;
-  body: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-10">
-      <div>
-        <h2 className="font-semibold">{title}</h2>
-        <p className="mt-1 text-sm leading-6 text-muted">{body}</p>
-      </div>
-      <div className="md:col-span-2">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">{children}</div>
-      </div>
-    </div>
-  );
-}

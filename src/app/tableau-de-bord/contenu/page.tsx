@@ -62,7 +62,7 @@ export default async function ContenuPage() {
         <OpeningHoursBlock value={onPage.openingHours} />
       </Card>
 
-      <ConnectStrip />
+      <ConnectStrip site={context.site} />
 
       <SolutionPrompt tab="content" result={analysis} diagnostic={diagnostic} />
     </>
