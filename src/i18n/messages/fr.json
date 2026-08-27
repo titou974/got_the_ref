@@ -1635,13 +1635,9 @@
       "noAnalytics": "Rattachez Google Analytics pour voir ces visites. Sans lui, personne ne peut les compter : elles n'apparaissent pas dans Search Console.",
       "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique.",
       "demoBadge": "Données d'exemple",
-      "demoGained": "Soit {count} visites de plus que les {days} jours précédents.",
-      "tableEngine": "Assistant",
-      "tableVisits": "Visites",
-      "tableShare": "Part",
-      "tableTrend": "Évolution",
       "periodFilter": "Période",
-      "periodShort": "{days} j"
+      "periodShort": "{days} j",
+      "vsPrevious": "sur {days} jours, contre la période précédente"
     },
     "rankings": {
       "refresh": "Reprendre le relevé",
