@@ -36,7 +36,6 @@ export default async function GoogleMapsPage() {
     <>
       <PageHeader
         title={t("pageTitle")}
-        subtitle={context.domain ? t("pageSubtitle", { domain: context.domain }) : null}
       />
 
       <div className="grid gap-4 lg:grid-cols-2">

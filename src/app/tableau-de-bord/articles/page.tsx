@@ -40,7 +40,6 @@ export default async function ArticlesPage() {
     <>
       <PageHeader
         title={t("pageTitle")}
-        subtitle={context.domain ? t("pageSubtitle", { domain: context.domain }) : null}
       />
 
       {/* La demande de planning est posée sur la page, pas dans l'en-tête : le

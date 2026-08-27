@@ -3,7 +3,6 @@ import { requireUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
-import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
 import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
 import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
@@ -38,7 +37,6 @@ export default async function ContenuPage() {
     <>
       <PageHeader
         title={t("pageTitle")}
-        subtitle={context.domain ? t("pageSubtitle", { domain: context.domain }) : null}
       />
 
       <KeywordTable insight={analysis.trendingKeywords ?? null} />
@@ -61,8 +59,6 @@ export default async function ContenuPage() {
         </div>
         <OpeningHoursBlock value={onPage.openingHours} />
       </Card>
-
-      <ConnectStrip />
 
       <SolutionPrompt tab="content" result={analysis} diagnostic={diagnostic} />
     </>

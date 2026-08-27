@@ -21,14 +21,7 @@ import { DASHBOARD_ENGINES, type EngineScore } from "@/lib/geo/types";
  * de recherche, Gemini par le grounding Google Search. Aucun modèle de service
  * ne fabrique un classement à leur place.
  */
-export function RankingsSection({
-  engines,
-  liveQuery,
-}: {
-  engines: EngineScore[];
-  /** Requête réellement envoyée aux moteurs, quand un relevé a abouti. */
-  liveQuery: string | null;
-}) {
+export function RankingsSection({ engines }: { engines: EngineScore[] }) {
   const t = useTranslations("analysisReport.results");
   const tr = useTranslations("dashboard.rankings");
   const router = useRouter();
@@ -44,9 +37,11 @@ export function RankingsSection({
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg font-bold">{t("engineScoresTitle")}</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-muted">
-            {liveQuery ? t("testedOn", { query: liveQuery }) : t("engineScoresSubtitle")}
-          </p>
+          {/* La requête exacte envoyée aux moteurs ne s'affiche plus ici :
+              trois lignes de prompt sous un titre repoussaient les classements
+              hors du premier écran, et le client vient lire son rang, pas la
+              question posée en son nom. */}
+          <p className="mt-0.5 max-w-2xl text-sm text-muted">{t("engineScoresSubtitle")}</p>
         </div>
         <span className="flex flex-col items-end gap-1">
           <button

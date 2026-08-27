@@ -1557,7 +1557,6 @@
   },
   "dashboard": {
     "metaTitle": "Tableau de bord",
-    "projectLabel": "Projet",
     "noProject": "Aucun site",
     "accountLink": "Gérer la facturation",
     "nav": {
@@ -1570,62 +1569,10 @@
     },
     "home": {
       "title": "Tableau de bord",
-      "subtitle": "Projet : {domain}",
       "fullReport": "Rapport complet",
       "health": "Note de visibilité",
       "priorities": "À corriger en premier",
       "prioritiesHint": "Classé par ce que ça rapporte, pas par difficulté."
-    },
-    "connect": {
-      "connected": "Rattaché",
-      "notConnected": "À rattacher",
-      "soon": "À venir",
-      "analytics": {
-        "title": "Google Analytics",
-        "body": "Pour compter les visites que ChatGPT, Perplexity et Gemini vous envoient.",
-        "soonDetail": "Le rattachement ouvre dans les prochains jours. En attendant, le prompt de correction en bas de page reprend tous les constats de votre site : collez-le dans votre IA pour appliquer les corrections tout de suite.",
-        "detail": "Lecture seule. Nous relevons vos statistiques, nous n'écrivons jamais dedans.",
-        "cta": "Rattacher Analytics",
-        "again": "Refaire le rattachement",
-        "property": "Propriété suivie : {name}",
-        "unnamedProperty": "sans nom"
-      },
-      "site": {
-        "title": "Votre site",
-        "body": "Pour que les agents corrigent vos pages et publient vos articles.",
-        "soonDetail": "Shopify, WordPress, Wix, Webflow : le rattachement ouvre dans les prochains jours. En attendant, chaque page vous donne le correctif prêt à coller et le prompt à passer à votre IA.",
-        "detail": "Shopify, WordPress, Wix, Webflow et les autres. Vos identifiants sont chiffrés avant d'être enregistrés.",
-        "cta": "Rattacher mon site",
-        "again": "Modifier le rattachement",
-        "linked": "{platform} : {rights}"
-      },
-      "rights": {
-        "publish": "publication d'articles",
-        "edit": "correction des pages",
-        "none": "aucun droit accordé"
-      },
-      "fields": {
-        "siteUrl": "Adresse du site",
-        "username": "Nom d'utilisateur",
-        "applicationPassword": "Mot de passe d'application",
-        "shopDomain": "Domaine de la boutique",
-        "adminAccessToken": "Jeton d'accès admin",
-        "siteId": "Identifiant du site",
-        "apiKey": "Clé d'API",
-        "apiToken": "Jeton d'API",
-        "adminApiKey": "Clé d'API admin",
-        "webserviceKey": "Clé du webservice",
-        "webhookUrl": "Adresse du webhook"
-      },
-      "form": {
-        "platform": "Plateforme",
-        "optional": "(facultatif)",
-        "rights": "Ce rattachement ouvre : {rights}.",
-        "docs": "Où trouver ces identifiants",
-        "checking": "Vérification…",
-        "submit": "Rattacher",
-        "cancel": "Annuler"
-      }
     },
     "traffic": {
       "title": "Trafic amené par les IA",
@@ -1699,7 +1646,6 @@
     },
     "content": {
       "pageTitle": "Contenu",
-      "pageSubtitle": "Projet : {domain}",
       "currentTitle": "Ce que votre site affiche",
       "currentHint": "Tel qu'un moteur le reprend aujourd'hui.",
       "proposedTitle": "Ce que nous proposons",
@@ -1741,7 +1687,6 @@
     },
     "architecture": {
       "pageTitle": "Architecture",
-      "pageSubtitle": "Projet : {domain}",
       "crawlers": "Robots d'IA",
       "crawlersHint": "Qui a le droit de lire votre site.",
       "allowed": "Autorisé",
@@ -1757,7 +1702,6 @@
     },
     "articles": {
       "pageTitle": "Articles",
-      "pageSubtitle": "Projet : {domain}",
       "plan": "Ajouter {count} sujets",
       "planning": "Recherche de sujets…",
       "planHint": "Les agents choisissent les sujets à partir des requêtes de votre niche."
@@ -1860,7 +1804,6 @@
     },
     "presence": {
       "pageTitle": "Présence web",
-      "pageSubtitle": "Projet : {domain}",
       "reputation": "Ce que le web dit de vous",
       "noMentions": "Aucune mention relevée. C'est ce que la prospection ci-dessous va changer.",
       "backlinks": "Sites qui vous citent",
@@ -1890,7 +1833,6 @@
     },
     "maps": {
       "pageTitle": "Google Maps",
-      "pageSubtitle": "Projet : {domain}",
       "listing": "Votre fiche",
       "noListing": "Fiche non analysée.",
       "noListingBody": "Ajoutez l'adresse de votre fiche Google Maps depuis votre compte pour la comparer à votre site.",
@@ -1987,6 +1929,10 @@
         "bannedPlaceholder": "Un terme par ligne",
         "bannedHint": "Noms de concurrents, mots interdits par votre marque."
       }
+    },
+    "siteSelect": {
+      "label": "Site suivi",
+      "add": "Ajouter un site"
     }
   }
 }

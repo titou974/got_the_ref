@@ -8,7 +8,6 @@ import { buildDemoAiTraffic } from "@/features/dashboard/demoTraffic";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
-import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
 import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
@@ -69,7 +68,6 @@ export default async function DashboardHomePage() {
     <>
       <PageHeader
         title={t("title")}
-        subtitle={context.domain ? t("subtitle", { domain: context.domain }) : null}
         actions={
           context.analysisId ? (
             <Link
@@ -136,11 +134,9 @@ export default async function DashboardHomePage() {
       />
 
       {/* 3. La place du commerce dans ChatGPT et Gemini. */}
-      <RankingsSection engines={analysis.engines} liveQuery={analysis.liveQuery ?? null} />
+      <RankingsSection engines={analysis.engines} />
 
       {/* ---- Ce qui explique les chiffres du haut ---- */}
-
-      <ConnectStrip />
 
       <ProfileHeader profile={analysis.profile} />
 
