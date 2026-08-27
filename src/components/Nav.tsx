@@ -21,8 +21,9 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
         { href: ROUTES.pricing, label: t("pricing") },
       ];
 
-  // Identifié, on ramène au compte ; sinon on propose l'essai plutôt que la
-  // connexion. Un visiteur qui découvre le site n'a pas de compte à retrouver :
+  // Identifié, on ramène au tableau de bord — l'ancienne page « mon compte » a
+  // disparu, et c'est là que le client retrouve son projet et sa facturation ;
+  // sinon on propose l'essai plutôt que la connexion. Un visiteur qui découvre le site n'a pas de compte à retrouver :
   // lui tendre « Connexion » lui demandait de se souvenir d'un mot de passe
   // qu'il n'a jamais créé. La connexion reste à un geste — depuis le tiroir
   // mobile, et depuis la page d'inscription qui l'annonce en tête.
@@ -32,7 +33,7 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
   // haut de page et avec la barre basse.
   const accountLink = user ? (
     <Link
-      href={ROUTES.account}
+      href={ROUTES.dashboard}
       className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text"
     >
       {t("account")}

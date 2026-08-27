@@ -343,6 +343,12 @@ model SiteConnection {
   /// (déposer un article), « edit » (réécrire une balise ou un bloc).
   capabilities String[] @default([])
 
+  /// Publier sans relecture. Faux par défaut : la tâche planifiée ne dépose
+  /// alors que les articles validés par le client, à la date prévue. Vrai, elle
+  /// dépose aussi les articles rédigés et jamais ouverts — c'est le pilote
+  /// automatique complet, et cela reste un choix explicite du client.
+  autoPublish Boolean @default(false)
+
   connectedAt DateTime?
   lastSyncAt  DateTime?
   createdAt   DateTime  @default(now())

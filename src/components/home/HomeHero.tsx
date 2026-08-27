@@ -5,7 +5,8 @@ import { RotatingWord } from "./RotatingWord";
 import { GoogleMark } from "./GoogleMark";
 import { AiSearchSimulation } from "@/components/AiSearchSimulation";
 import { ROUTES } from "@/constants/routes";
-import { TRIAL } from "@/constants/plans";
+import { TRIAL, hasActiveSubscription } from "@/constants/plans";
+import { getCurrentUser } from "@/lib/auth";
 
 /**
  * Ancre du haut de page, partagée avec `TrialBottomBar` : la barre d'essai
@@ -50,6 +51,12 @@ const HEADING_MARKS = [
 export async function HomeHero() {
   const t = await getTranslations("homeHero");
   const th = await getTranslations("home");
+
+  // Un client qui paie déjà — ou qui est en essai — n'a rien à démarrer : le
+  // bouton l'emmène chez lui. Le visiteur, et le compte resté gratuit, gardent
+  // l'invitation à l'essai : c'est encore la décision qu'ils ont à prendre.
+  const user = await getCurrentUser();
+  const home = hasActiveSubscription(user?.subscription);
 
   return (
     // `id` lu par `TrialBottomBar` : c'est le passage sous ce bloc qui déclenche
@@ -97,10 +104,10 @@ export async function HomeHero() {
             avant d'annoncer un montant. Le compte créé reste au plan `free` :
             aucune analyse complète tant que la carte n'est pas enregistrée. */}
         <Link
-          href={ROUTES.signUp}
+          href={home ? ROUTES.dashboard : ROUTES.signUp}
           className="mt-8 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-7 py-4 text-base font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
-          {t("cta", { days: TRIAL.days })}
+          {home ? t("ctaDashboard") : t("cta", { days: TRIAL.days })}
           <svg
             width="18"
             height="18"

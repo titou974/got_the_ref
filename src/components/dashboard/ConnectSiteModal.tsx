@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { StackMark } from "@/components/StackMark";
@@ -118,11 +119,60 @@ function AgentConsole({ domain, issues }: { domain: string; issues: string[] }) 
   );
 }
 
+/**
+ * Les agents dans lesquels le prompt se colle. Les montrer évite la question
+ * « c'est pour quel outil ? » : le client reconnaît le sien et sait quoi faire.
+ */
+const AGENTS = [
+  { name: "ChatGPT", logo: "/chatgpt.png" },
+  { name: "Claude", logo: "/claude.svg" },
+  { name: "Cursor", logo: null },
+] as const;
+
+/** Le cube de Cursor, dessiné ici : aucun fichier de marque dans /public. */
+function CursorMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 2.6 20.5 7v10L12 21.4 3.5 17V7L12 2.6Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M3.9 7.3 12 12l8.1-4.7M12 12v9.2" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+function AgentLogos() {
+  return (
+    <span className="flex items-center gap-1.5" aria-hidden>
+      {AGENTS.map((agent) =>
+        agent.logo ? (
+          <Image
+            key={agent.name}
+            src={agent.logo}
+            alt=""
+            width={16}
+            height={16}
+            className="h-4 w-4 rounded-[4px] bg-white object-contain p-px"
+          />
+        ) : (
+          <span key={agent.name} className="flex h-4 w-4 items-center justify-center">
+            <CursorMark />
+          </span>
+        ),
+      )}
+    </span>
+  );
+}
+
 export function ConnectSiteModal({
   domain,
   stack,
   issues,
   solutionPrompt,
+  scope = "report",
   onClose,
 }: {
   domain: string;
@@ -131,10 +181,17 @@ export function ConnectSiteModal({
   issues: string[];
   /** Le prompt de correction, seule action réellement disponible aujourd'hui. */
   solutionPrompt: string;
+  /**
+   * Depuis le rapport, le prompt ne couvre que le plan d'action ; depuis le
+   * tableau de bord, il couvre les six sections. Seul le libellé du bouton
+   * change — la promesse n'est pas la même.
+   */
+  scope?: "report" | "dashboard";
   onClose: () => void;
 }) {
   const t = useTranslations("analysisReport.solve.modal");
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
 
   async function copyPrompt() {
     try {
@@ -143,6 +200,31 @@ export function ConnectSiteModal({
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       /* presse-papiers indisponible : rien à signaler, le bouton ne change pas */
+    }
+  }
+
+  /**
+   * Passer le travail au développeur, c'est lui passer le prompt — pas un lien
+   * vers un écran auquel il n'a pas accès. Sur mobile, la feuille de partage du
+   * système l'envoie où le client veut ; ailleurs, il n'y a rien à ouvrir et la
+   * copie fait le même travail.
+   */
+  async function shareWithDeveloper() {
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: t("shareDevTitle", { domain }), text: solutionPrompt });
+        return;
+      } catch {
+        // Partage annulé ou refusé : on retombe sur la copie.
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(solutionPrompt);
+      setShared(true);
+      window.setTimeout(() => setShared(false), 2600);
+    } catch {
+      /* presse-papiers indisponible : le prompt reste copiable à la main */
     }
   }
 
@@ -200,21 +282,49 @@ export function ConnectSiteModal({
           )}
 
           {/* Le rattachement automatique arrive ; d'ici là, le prompt fait le
-              travail. Un bouton qui promet la connexion sans la faire coûte
-              plus cher en confiance que l'aveu du calendrier. */}
-          <p className="mt-4 rounded-2xl border border-fog bg-mist px-4 py-3 text-xs leading-relaxed text-muted">
-            {t("soonNote")}
-          </p>
-
+              travail. Le bouton reste à sa place, désactivé et daté : masquer
+              l'étape à venir ferait croire qu'elle n'existe pas, et un bouton
+              qui promet la connexion sans la faire coûte encore plus cher. */}
           <div className="mt-5 flex flex-col gap-2.5">
+            <button
+              type="button"
+              disabled
+              aria-disabled
+              className="flex cursor-not-allowed items-center justify-center gap-2 rounded-full border border-fog bg-mist px-5 py-3 text-sm font-medium text-muted"
+            >
+              {t("cta")}
+              <span className="rounded-full bg-obsidian/10 px-2 py-0.5 text-[11px] font-semibold text-graphite">
+                {t("connectSoon")}
+              </span>
+            </button>
+            <p className="rounded-2xl border border-fog bg-mist px-4 py-3 text-xs leading-relaxed text-muted">
+              {t("soonNote")}
+            </p>
+
             <button
               type="button"
               autoFocus
               onClick={copyPrompt}
-              className="cursor-pointer rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+              className="flex cursor-pointer items-center justify-center gap-2.5 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
             >
-              {copied ? t("promptCopied") : t("promptCta")}
+              <AgentLogos />
+              <span className="text-pretty">
+                {copied
+                  ? t("promptCopied")
+                  : scope === "dashboard"
+                    ? t("promptCtaAll")
+                    : t("promptCta")}
+              </span>
             </button>
+
+            <button
+              type="button"
+              onClick={shareWithDeveloper}
+              className="cursor-pointer rounded-full border border-fog px-5 py-2.5 text-sm font-medium text-text transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+            >
+              {shared ? t("shareDevDone") : t("shareDev")}
+            </button>
+
             <button
               type="button"
               onClick={onClose}

@@ -63,6 +63,18 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
 const CACHE_MAX = 200;
 const cache = new Map<string, { prompt: string; at: number }>();
 
+/**
+ * Le dernier dossier connu par onglet et par site.
+ *
+ * Il sépare la première rédaction de ses actualisations. Écrire ce prompt à
+ * partir de rien demande de tenir six dossiers dans la même voix : c'est le
+ * travail de `gpt-5.4-mini`. Le réécrire parce qu'un contrôle est passé au vert
+ * n'est plus le même travail — le cadre existe, DeepSeek Flash le reprend pour
+ * une fraction du prix. La mémoire est celle du processus : au pire, un
+ * redémarrage fait repayer une rédaction complète.
+ */
+const seen = new Map<string, string>();
+
 function cacheGet(key: string): string | null {
   const hit = cache.get(key);
   if (!hit) return null;
@@ -103,9 +115,17 @@ export async function writeSolutionPrompt(input: SolutionFactsInput): Promise<st
 
   if (!isAiConfigured()) return fallback();
 
-  const key = `${input.tab}:${createHash("sha1").update(dossier).digest("hex")}`;
+  const fingerprint = createHash("sha1").update(dossier).digest("hex");
+  const scope = `${input.tab}:${input.result.domain}`;
+  const key = `${scope}:${fingerprint}`;
   const cached = cacheGet(key);
   if (cached) return cached;
+
+  // Première rédaction pour ce site et cet onglet, ou simple actualisation
+  // après un changement de dossier — les deux ne partent pas au même modèle.
+  const known = seen.get(scope);
+  const role = known && known !== fingerprint ? "default" : "solution";
+  seen.set(scope, fingerprint);
 
   try {
     const written = await askJson(schema, {
@@ -119,10 +139,9 @@ Dossier de l'onglet « ${input.tab} » (source de vérité, ne rien recopier) :
 ${summarizeForModel(dossier)}
 
 Réponds en JSON : {"intro": "…", "instructions": "…"}.`,
-      // Un prompt à recopier dans ChatGPT : le client le relit avant de s'en
-      // servir, et le dossier qui le suit porte déjà tous les faits. DeepSeek
-      // Flash suffit largement pour l'emballer.
-      role: "default",
+      // `solution` à la première écriture, `default` (DeepSeek Flash) aux
+      // actualisations : voir `seen` plus haut.
+      role,
       maxTokens: 1200,
     });
 
@@ -139,6 +158,7 @@ Réponds en JSON : {"intro": "…", "instructions": "…"}.`,
   } catch (error) {
     aiLog("prompt de correction — repli sur le gabarit déterministe", {
       onglet: input.tab,
+      role,
       erreur: String(error),
     });
     return fallback();

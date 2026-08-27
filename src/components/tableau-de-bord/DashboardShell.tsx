@@ -1,8 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { ROUTES } from "@/constants/routes";
 import { SignOutButton } from "@/components/SignOutButton";
+import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { SidebarNav } from "./SidebarNav";
 
 /**
@@ -54,13 +54,14 @@ export async function DashboardShell({
 
           <div className="mt-auto hidden border-t border-border pt-4 lg:block">
             <p className="truncate px-3 text-sm font-medium">{userName ?? ""}</p>
+            {/* La page « mon compte » a disparu au profit de cet écran : le
+                seul geste qu'elle portait encore, ouvrir le portail de
+                facturation, se fait maintenant d'ici. */}
             <div className="mt-1 flex items-center gap-3 px-3">
-              <Link
-                href={ROUTES.account}
-                className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text"
-              >
-                {t("accountLink")}
-              </Link>
+              <BillingPortalButton
+                label={t("accountLink")}
+                className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text disabled:opacity-60"
+              />
               <SignOutButton />
             </div>
           </div>

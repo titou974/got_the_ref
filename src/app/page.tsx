@@ -16,10 +16,10 @@ import { RankAndMentions } from "@/components/home/RankAndMentions";
 import { PricingComparison } from "@/components/pricing/PricingComparison";
 import { DemoCtaSection } from "@/components/home/DemoCtaSection";
 import { Faq } from "@/components/home/Faq";
-import { TRIAL } from "@/constants/plans";
+import { TRIAL, hasActiveSubscription } from "@/constants/plans";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getCurrentUser, getSession } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 
 /**
@@ -47,6 +47,11 @@ export default async function Home() {
   // if (await getSession()) redirect(ROUTES.dashboard);
 
   const t = await getTranslations("homeHero");
+
+  // Même arbitrage que dans le hero : abonné ou en essai, la barre basse mène
+  // au tableau de bord plutôt qu'à une inscription déjà faite.
+  const user = await getCurrentUser();
+  const subscribed = hasActiveSubscription(user?.subscription);
 
   return (
     <main className="flex min-h-dvh flex-col">
@@ -93,8 +98,9 @@ export default async function Home() {
       {/* Le CTA d'essai revient par le bas dès que le hero est dépassé, pour que
           l'entrée reste à portée sur toute la longueur de la page. */}
       <TrialBottomBar
-        label={t("trialBarCta", { days: TRIAL.days })}
+        label={subscribed ? t("ctaDashboard") : t("trialBarCta", { days: TRIAL.days })}
         heroId={HERO_ID}
+        href={subscribed ? ROUTES.dashboard : ROUTES.signUp}
       />
     </main>
   );

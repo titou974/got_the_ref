@@ -128,6 +128,11 @@ function modelFor(config: ProviderConfig, tier: AiTier): string {
  *   tel quel, et DeepSeek dépassait le budget de temps sur cet appel-là.
  * - `tone` : la détection du ton de marque, ensuite enregistrée et rejouée à
  *   chaque rédaction. `gpt-5.4-nano` suffit : il extrait, il ne juge pas.
+ * - `solution` : la première écriture du prompt général, celui qui rassemble
+ *   toutes les catégories du tableau de bord. Il est long, il croise six
+ *   dossiers, et le client le colle tel quel dans son agent : `gpt-5.4-mini`
+ *   l'écrit une fois. Ses réécritures, elles, repartent en `default` — mettre à
+ *   jour un texte déjà cadré coûte moins cher que l'écrire.
  * - `default` : tout le reste — profil, concurrents, prospects, posts Google,
  *   réécriture on-page, rédaction des prompts. DeepSeek Flash.
  *
@@ -135,7 +140,14 @@ function modelFor(config: ProviderConfig, tier: AiTier): string {
  * seul modèle du lot relié à un index de liens (`lib/ai/gemini`). Le rôle
  * `backlinks` ne sert qu'à son repli, quand Gemini ne répond pas.
  */
-export type AiRole = "topics" | "article" | "overview" | "tone" | "backlinks" | "default";
+export type AiRole =
+  | "topics"
+  | "article"
+  | "overview"
+  | "tone"
+  | "backlinks"
+  | "solution"
+  | "default";
 
 type Route = { provider: AiProvider; tier: AiTier };
 
@@ -145,6 +157,7 @@ const ROLE_ROUTING: Record<AiRole, Route> = {
   overview: { provider: "openai", tier: "strong" },
   tone: { provider: "openai", tier: "fast" },
   backlinks: { provider: "deepseek", tier: "fast" },
+  solution: { provider: "openai", tier: "strong" },
   default: { provider: "deepseek", tier: "fast" },
 };
 

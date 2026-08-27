@@ -11,16 +11,26 @@ import { AiOverview, type OverviewBlock } from "./AiOverview";
  * l'analyse gratuite : en-tête signé, passages surlignés, frappe progressive.
  *
  * Le fond diffère : l'aperçu gratuit argumente sur ce qu'il n'a pas mesuré,
- * celui-ci rend compte des relevés — position par moteur, notes éditoriale et de
- * notoriété, mots-clés tendances, plan d'action. Et il ne porte pas d'appel à
- * l'action : il n'y a plus rien à débloquer.
+ * celui-ci rend compte des relevés — position par moteur, note éditoriale,
+ * plan d'action. Et il ne porte pas d'appel à l'action : il n'y a plus rien à
+ * débloquer.
+ *
+ * Deux surfaces l'affichent, et pas avec le même contenu. Sur le rapport
+ * d'analyse, le constat récapitule tout ce qui a été mesuré, notoriété et
+ * mots-clés tendances compris : le lecteur découvre l'audit, il a besoin de
+ * l'inventaire. Sur l'accueil du tableau de bord, ces deux angles ont leur
+ * propre section dans la colonne de gauche, et les répéter en tête ferait du
+ * constat un sommaire.
  */
 export async function PaidReportCard({
   result,
   diagnostic,
+  scope = "report",
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
+  /** `dashboard` : sans les lignes notoriété et mots-clés tendances. */
+  scope?: "report" | "dashboard";
 }) {
   const t = await getTranslations("paidReport");
   const ta = await getTranslations("analysisReport.architecture.checks");
@@ -70,9 +80,11 @@ export async function PaidReportCard({
     lines.push(t("measured.rankings", { detail: rankDetail }));
   }
   lines.push(t("measured.content", { score: facts.contentScore }));
-  lines.push(t("measured.presence", { score: facts.presenceScore }));
-  if (facts.keywordCount > 0) {
-    lines.push(t("measured.keywords", { count: facts.keywordCount }));
+  if (scope === "report") {
+    lines.push(t("measured.presence", { score: facts.presenceScore }));
+    if (facts.keywordCount > 0) {
+      lines.push(t("measured.keywords", { count: facts.keywordCount }));
+    }
   }
   if (facts.recommendationCount > 0) {
     lines.push(

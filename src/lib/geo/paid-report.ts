@@ -7,8 +7,11 @@ import { buildFreeReport } from "./free-report";
  *
  * L'aperçu gratuit argumente sur ce qu'il n'a PAS mesuré ; ici tout l'a été. Le
  * constat change donc de nature : il rend compte des relevés — position par
- * moteur, notes éditoriale et de notoriété, mots-clés tendances, plan d'action —
- * au lieu d'annoncer ce qui reste fermé.
+ * moteur, notes éditoriale et de notoriété, mots-clés tendances, plan d'action
+ * — au lieu d'annoncer ce qui reste fermé.
+ *
+ * Les faits sont les mêmes pour les deux surfaces qui affichent ce constat ;
+ * c'est la carte qui choisit lesquels elle montre (voir `PaidReportCard`).
  *
  * Comme pour l'aperçu, cette couche ne produit que des faits et une graine ; les
  * formulations vivent dans l'i18n (`paidReport.*`).
@@ -34,7 +37,9 @@ export type PaidReportFacts = {
   /** Nombre de moteurs dont le classement a été réellement relevé. */
   measuredEngineCount: number;
   contentScore: number;
+  /** Note de notoriété hors-site (présence web). */
   presenceScore: number;
+  /** Nombre de mots-clés tendances relevés sur la niche. */
   keywordCount: number;
   recommendationCount: number;
   /** Titre du correctif le plus prioritaire, s'il y en a un. */

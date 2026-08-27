@@ -11,7 +11,7 @@
     "pricing": "Tarifs",
     "signIn": "Connexion",
     "signUp": "Inscription",
-    "account": "Mon compte",
+    "account": "Mon tableau de bord",
     "freeTrial": "Essai gratuit",
     "analyzeMyBusiness": "Analyser mon commerce",
     "menu": "Menu",
@@ -208,8 +208,13 @@
         "body": "Les agents appliquent les correctifs directement sur votre site : fichiers, balises et données structurées. Vous validez chaque changement avant publication.",
         "detected": "Plateforme détectée : {name}",
         "cta": "Connecter le site",
-        "soonNote": "Le rattachement automatique de votre site ouvre dans les prochains jours. En attendant, copiez le prompt ci-dessous : il reprend tous les manques relevés sur votre site et donne le code exact à appliquer.",
+        "connectSoon": "Bientôt",
+        "soonNote": "Le rattachement automatique de votre site ouvre dans les prochains jours. En attendant, copiez les instructions ci-dessous : elles reprennent tous les manques relevés sur votre site et donnent le code exact à appliquer.",
         "promptCta": "Copier le prompt de correction",
+        "promptCtaAll": "Copier les instructions pour tout solutionner avec votre agent IA",
+        "shareDev": "Partager à votre développeur",
+        "shareDevDone": "Instructions copiées, envoyez-les à votre développeur",
+        "shareDevTitle": "Corrections à appliquer sur {domain}",
         "promptCopied": "Prompt copié",
         "later": "Plus tard",
         "reassurance": "Accès révocable à tout moment. Aucune publication sans votre validation.",
@@ -865,22 +870,6 @@
     "ctaSubtitle": "Réservez une démo gratuite de 30 minutes : on regarde votre visibilité sur les IA ensemble.",
     "ctaButton": "Réserver ma démo"
   },
-  "account": {
-    "metaTitle": "Mon compte",
-    "greeting": "Bonjour {name}",
-    "planLabelFree": "Gratuit",
-    "planLabelPro": "À l'analyse",
-    "planLabelAgency": "Agence",
-    "yourPlan": "Votre formule",
-    "active": "actif",
-    "manageSubscription": "Gérer la facturation",
-    "upgrade": "Analyser mon site",
-    "freeHint": "Vos analyses sont gratuites : vous ne payez que les rapports que vous choisissez de débloquer.",
-    "myAnalyses": "Mes analyses",
-    "newAnalysis": "+ Nouvelle analyse",
-    "emptyState": "Vous n'avez pas encore lancé d'analyse.",
-    "analyzeMySite": "Analyser mon site"
-  },
   "homeHero": {
     "headingBefore": "Faites venir vos clients depuis",
     "headingAfter": "en pilote automatique",
@@ -892,6 +881,7 @@
     ],
     "subtitle": "On apporte de la visibilité aux commerces français, locaux comme en ligne, en les référençant dans les IA et sur Google. Sans qu’ils aient à payer une agence ni à lever le petit doigt !",
     "cta": "Démarrer {days} jours gratuits",
+    "ctaDashboard": "Ouvrir mon tableau de bord",
     "trialBarCta": "Démarrer l'essai de {days} jours",
     "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
     "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
@@ -1569,7 +1559,7 @@
     "metaTitle": "Tableau de bord",
     "projectLabel": "Projet",
     "noProject": "Aucun site",
-    "accountLink": "Mon compte",
+    "accountLink": "Gérer la facturation",
     "nav": {
       "home": "Accueil",
       "content": "Contenu",
@@ -1585,15 +1575,6 @@
       "health": "Note de visibilité",
       "priorities": "À corriger en premier",
       "prioritiesHint": "Classé par ce que ça rapporte, pas par difficulté."
-    },
-    "stats": {
-      "score": "Note de visibilité IA",
-      "sessions": "Visites venues des IA",
-      "sessionsMissing": "Analytics n'est pas rattaché",
-      "sessionsWindow": "30 derniers jours",
-      "fixes": "Corrections en attente",
-      "fixesNone": "Rien à corriger pour l'instant",
-      "fixesCaption": "Relevées au dernier passage"
     },
     "connect": {
       "connected": "Rattaché",
@@ -1701,6 +1682,8 @@
     "preparing": {
       "title": "Analyse de votre site en cours",
       "body": "Nous lisons vos pages, testons votre place dans les IA et relevons ce qui manque. Comptez une à trois minutes selon la taille du site.",
+      "articlesTitle": "Préparation de votre mois d'articles",
+      "articlesBody": "Douze sujets sont planifiés pour les quatre prochaines semaines, à raison de trois par semaine. Les trois premiers sont en cours de rédaction.",
       "retry": "Relancer"
     },
     "content": {
@@ -1726,7 +1709,7 @@
     "keywords": {
       "title": "Mots-clés tendances de votre niche",
       "empty": "Aucun mot-clé relevé pour l'instant.",
-      "hintMeasured": "Relevés par Gemini avec recherche Google, {period}.",
+      "hintMeasured": "Relevés avec recherche Google, {period}.",
       "hintEstimated": "Déduits de votre site, {period}. La recherche Google n'a pas pu être interrogée.",
       "columns": {
         "keyword": "Mot-clé",

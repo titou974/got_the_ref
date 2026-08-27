@@ -217,3 +217,18 @@ export function stripePriceEnvValue(
 
 /** Statuts d'abonnement Stripe considérés comme actifs. */
 export const ACTIVE_SUBSCRIPTION_STATUSES = ["active", "trialing"] as const;
+
+/**
+ * L'abonnement donne-t-il accès au tableau de bord ?
+ *
+ * Abonné ou en essai, c'est oui — et c'est la même question partout : la home
+ * y décide du libellé de son bouton, l'authentification de sa destination.
+ */
+export function hasActiveSubscription(
+  subscription: { status: string } | null | undefined,
+): boolean {
+  return (
+    subscription != null &&
+    (ACTIVE_SUBSCRIPTION_STATUSES as readonly string[]).includes(subscription.status)
+  );
+}
