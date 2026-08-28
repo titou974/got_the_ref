@@ -1721,7 +1721,7 @@
       "keyword": "Mot-clé visé",
       "noKeyword": "Aucun",
       "outline": "Plan",
-      "noOutline": "Aucun plan enregistré.",
+      "noOutline": "Le plan se remplit tout seul : chaque titre de section écrit dans l'article apparaît ici.",
       "angle": "Angle",
       "revisions": "Versions demandées",
       "rewrite": "Demander une version",
@@ -1737,7 +1737,7 @@
       "publishing": "Publication…",
       "drop": "Écarter ce sujet",
       "seeOnline": "Voir l'article en ligne",
-      "bodyPlaceholder": "Le texte de l'article, en Markdown.",
+      "bodyPlaceholder": "Écrivez l'article. Une réponse nette par section, dès la première phrase.",
       "scheduled": "Prévu le {date}",
       "undated": "Sans date de publication",
       "back": "Retour aux articles",
@@ -1758,10 +1758,6 @@
         "instructions": "Vos consignes",
         "instructionsEmpty": "Aucune consigne ajoutée. Les agents s'en tiennent au ton relevé."
       },
-      "tabs": {
-        "plan": "Plan",
-        "instructions": "Consignes"
-      },
       "toolbar": {
         "p": "Paragraphe",
         "h2": "Titre de section",
@@ -1772,28 +1768,13 @@
         "code": "Bloc de code",
         "bold": "Gras",
         "italic": "Italique",
-        "link": "Lien"
+        "link": "Lien",
+        "undo": "Annuler",
+        "redo": "Rétablir"
       },
-      "placeholders": {
-        "p": "Écrivez ce paragraphe. Une réponse par paragraphe, dès la première phrase.",
-        "h2": "Titre de section",
-        "h3": "Sous-titre",
-        "ul": "Une entrée par ligne",
-        "ol": "Une étape par ligne",
-        "quote": "La citation, sans les guillemets",
-        "code": "Le code, tel quel"
-      },
-      "headingPlaceholder": "Titre de la section",
       "sectionInstructionPlaceholder": "Ce que vous voulez lire ici : un exemple, un tarif, une objection à lever.",
       "addSection": "Ajouter une section",
-      "removeSection": "Retirer",
-      "toggleLevel": "Changer le niveau de titre",
-      "moveUp": "Monter",
-      "moveDown": "Descendre",
-      "syncFromBody": "Reprendre le plan du texte",
       "titlePlaceholder": "Le titre de l'article",
-      "addBlock": "Ajouter un bloc",
-      "removeBlock": "Supprimer ce bloc",
       "words": "{count} mots",
       "unsaved": "Modifications non enregistrées",
       "savedState": "Enregistré",
@@ -1801,7 +1782,16 @@
       "publishPromptTitle": "Prompt de publication",
       "publishPromptHint": "À coller dans votre agent IA ou à envoyer à votre développeur : il contient l'article entier et où le poser.",
       "publishPromptCopy": "Copier le prompt",
-      "publishPromptCopied": "Prompt copié"
+      "publishPromptCopied": "Prompt copié",
+      "sections": "{count, plural, =0 {aucune section} one {# section} other {# sections}}",
+      "citableAll": "Chaque section ouvre sur une réponse de {min} à {max} mots : citable telle quelle.",
+      "citableOff": "{count, plural, one {# section n'ouvre pas} other {# sections n'ouvrent pas}} sur une réponse de {min} à {max} mots.",
+      "answerWords": "{count} mots d'ouverture",
+      "answerMissing": "Pas de réponse d'ouverture",
+      "untitledSection": "Section sans titre",
+      "addBrief": "Ajouter une consigne",
+      "editBrief": "Modifier la consigne",
+      "linkPrompt": "Adresse du lien"
     },
     "presence": {
       "pageTitle": "Présence web",

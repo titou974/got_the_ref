@@ -438,3 +438,150 @@ html.scroll-locked body {
 @media (prefers-reduced-motion: reduce) {
   .animate-\[loader-drift_9s_ease-in-out_infinite\] { animation: none !important; }
 }
+
+/* ============================================================
+   Atelier d'article — la feuille Tiptap
+   L'interface reste en Cosmica (Jakarta) ; le document, lui, est composé
+   en serif : on écrit dans la forme de l'article publié, pas dans une
+   zone de formulaire. La variable de fonte est posée par la page de
+   l'article, seule route qui charge cette famille.
+   ============================================================ */
+
+.article-title {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--color-obsidian);
+}
+
+.article-title::placeholder {
+  color: var(--color-ash);
+}
+
+/* Les pastilles de la barre d'outils (P, H2, H3, I) empruntent la même serif :
+   le bouton montre ce qu'il produit. */
+.article-glyph {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+}
+
+.article-canvas .tiptap {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--color-ink);
+  outline: none;
+}
+
+.article-canvas .tiptap > * + * {
+  margin-top: 1.05em;
+}
+
+.article-canvas .tiptap h2,
+.article-canvas .tiptap h3 {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  color: var(--color-obsidian);
+  scroll-margin-top: 5rem;
+}
+
+.article-canvas .tiptap h2 {
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.9em;
+}
+
+.article-canvas .tiptap h3 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 1.6em;
+}
+
+.article-canvas .tiptap > :first-child {
+  margin-top: 0;
+}
+
+.article-canvas .tiptap ul,
+.article-canvas .tiptap ol {
+  padding-left: 1.3em;
+}
+
+.article-canvas .tiptap ul {
+  list-style: disc;
+}
+
+.article-canvas .tiptap ol {
+  list-style: decimal;
+}
+
+.article-canvas .tiptap li + li {
+  margin-top: 0.35em;
+}
+
+.article-canvas .tiptap li p {
+  margin: 0;
+}
+
+.article-canvas .tiptap blockquote {
+  border-left: 2px solid var(--color-pebble);
+  padding-left: 1em;
+  font-style: italic;
+  color: var(--color-slate);
+}
+
+.article-canvas .tiptap pre {
+  background: var(--color-mist);
+  border-radius: 16px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.article-canvas .tiptap code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+
+.article-canvas .tiptap :not(pre) > code {
+  background: var(--color-mist);
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+
+.article-canvas .tiptap a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-pebble);
+}
+
+.article-canvas .tiptap a:hover {
+  text-decoration-color: var(--color-obsidian);
+}
+
+.article-canvas .tiptap strong {
+  font-weight: 650;
+}
+
+.article-canvas .tiptap hr {
+  border: none;
+  border-top: 1px solid var(--color-fog);
+  margin: 2em 0;
+}
+
+.article-canvas .tiptap ::selection {
+  background: var(--color-highlight);
+}
+
+/* Le texte d'amorce ne s'affiche que sur un document vide, et il ne pousse
+   rien : sinon la première ligne sauterait à la frappe. */
+.article-canvas .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-ash);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
