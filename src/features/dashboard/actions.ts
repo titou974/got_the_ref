@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { authActionClient, subscriberActionClient } from "@/lib/safe-action";
+import { authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
@@ -520,8 +520,13 @@ export const rewriteOnPageAction = authActionClient
  * composant — un bouton grisé côté client n'empêche personne d'appeler l'action.
  * La passe n'est comptée qu'une fois le texte obtenu : un appel au modèle qui
  * échoue ne coûte pas une des trois demandes du client.
+ *
+ * Le client d'action est celui de tout le tableau de bord, pas
+ * `subscriberActionClient` : l'accès à la section est déjà la garde, et exiger
+ * ici un abonnement Stripe actif renvoyait vers la page tarifs un client
+ * pourtant assis devant son tableau de bord.
  */
-export const regenerateOnPageAction = subscriberActionClient
+export const regenerateOnPageAction = authActionClient
   .inputSchema(regenerateOnPageSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
