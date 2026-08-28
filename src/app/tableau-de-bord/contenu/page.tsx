@@ -1,40 +1,34 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext } from "@/features/dashboard/queries";
-import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
+import { getDashboardContext, getOnPageRewriteQuota } from "@/features/dashboard/queries";
+import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
 import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
-import { OnPageElement, OpeningHoursBlock } from "@/components/geo/OnPageElement";
 
 export const maxDuration = 300;
 
 /**
- * Contenu : les mots-clés de la niche, puis ce que le site en dit aujourd'hui
- * face à ce qu'il pourrait en dire.
- *
- * La balise title et la meta description restent présentées en résultat Google,
- * forme sous laquelle le client les a déjà vues passer. Le H1 et le premier
- * paragraphe, eux, reprennent les cartes du rapport d'analyse : elles montrent
- * le texte réel, les critères attendus un par un, et le conseil qui va avec —
- * ce qu'une ligne de définition ne dirait pas.
+ * Contenu : les mots-clés de la niche, puis les trois endroits où ils
+ * s'écrivent — la balise title et la meta description, le H1, le paragraphe
+ * d'introduction. Chacun montre l'existant et la réécriture côte à côte, et
+ * rien d'autre que les mots-clés effectivement placés.
  */
 export default async function ContenuPage() {
   const user = await requireUser();
-  const context = await getDashboardContext(user.id);
-  const t = await getTranslations("dashboard.content");
-  const ta = await getTranslations("analysisReport.content.onPage");
+  const [context, quota, t] = await Promise.all([
+    getDashboardContext(user.id),
+    getOnPageRewriteQuota(user.id),
+    getTranslations("dashboard.content"),
+  ]);
 
   if (!context.analysis) return <PreparingAnalysis />;
 
   const analysis = context.analysis;
-  const onPage = analysis.onPageContent;
 
   return (
     <>
-      <PageHeader
-        title={t("pageTitle")}
-      />
+      <PageHeader title={t("pageTitle")} />
 
       <KeywordTable insight={analysis.trendingKeywords ?? null} />
 
@@ -42,21 +36,14 @@ export default async function ContenuPage() {
         current={{
           title: analysis.signals.title,
           metaDescription: analysis.signals.metaDescription,
+          h1: analysis.signals.h1[0] ?? null,
+          intro: analysis.signals.firstParagraph,
           url: analysis.url,
           domain: analysis.domain,
         }}
-        suggested={analysis.trendingKeywords?.suggested ?? null}
+        insight={analysis.trendingKeywords ?? null}
+        quota={quota}
       />
-
-      <Card>
-        <CardTitle title={ta("title")} hint={ta("subtitle")} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <OnPageElement label={ta("elements.h1")} check={onPage.h1} />
-          <OnPageElement label={ta("elements.firstSentence")} check={onPage.firstSentence} />
-        </div>
-        <OpeningHoursBlock value={onPage.openingHours} />
-      </Card>
-
     </>
   );
 }

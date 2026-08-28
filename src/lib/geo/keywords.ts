@@ -136,6 +136,41 @@ export function fallbackTrendingKeywords(
   };
 }
 
+/* --------------------------- Règles de rédaction --------------------------- */
+
+/**
+ * La forme du title : le nom de l'entreprise d'abord.
+ *
+ * Un title qui commence par les mots-clés et finit par la marque se fait
+ * tronquer là où le nom se trouve, et l'internaute qui cherche l'enseigne ne la
+ * voit pas. L'ordre inverse — « Reliance Paris | Parfum sans alcool & soins
+ * naturels » — garde le nom lisible même coupé, et laisse les mots-clés dans la
+ * partie qui reste indexée.
+ */
+const TITLE_SHAPE =
+  "« title » : le nom de l'entreprise EN PREMIER, puis « | », puis les mots-clés porteurs. Forme attendue : « Reliance Paris | Parfum sans alcool & soins naturels ». Jamais le nom à la fin, jamais « Mots-clés | Nom ». 60 caractères au plus.";
+
+/**
+ * Ce qui distingue un texte écrit par le commerçant d'un texte de modèle.
+ *
+ * Ces phrases sont les premières que le client relit dans son tableau de bord,
+ * et les seules qu'il colle telles quelles dans son CMS : un H1 qui sonne
+ * comme un modèle ne sera pas publié, quelle que soit sa densité en mots-clés.
+ */
+const STYLE_RULES = [
+  "Le H1 et le premier paragraphe doivent sonner comme le commerçant, jamais comme un texte de modèle :",
+  "- verbes simples (« est », « propose », « ouvre », « répare ») plutôt que « se positionne comme » ou « constitue » ;",
+  "- aucune promesse creuse (« votre partenaire de confiance », « au cœur de », « depuis toujours », « l'excellence au service de ») ;",
+  "- aucune triade décorative (« qualité, proximité et savoir-faire ») : deux faits valent mieux que trois adjectifs ;",
+  "- aucun participe présent d'analyse en fin de phrase (« soulignant… », « garantissant… », « permettant ainsi… ») ;",
+  "- aucune tournure « non seulement… mais aussi » ni « ce n'est pas X, c'est Y » ;",
+  "- aucun emoji, aucun gras, aucune majuscule à chaque mot ;",
+  "- le premier paragraphe ne répète pas le H1 : il ajoute le fait que le H1 n'a pas la place de porter.",
+].join("\n");
+
+const PARAGRAPH_RULE =
+  "Pour « firstParagraph » : réécris le premier paragraphe de la page d'accueil de sorte qu'un assistant IA puisse le citer tel quel. Il dit en une première phrase qui est ce commerce, ce qu'il fait et où ; les phrases suivantes ajoutent un fait vérifiable (spécialité, ancienneté, zone desservie, horaires). Aucun superlatif publicitaire, aucune formule d'ouverture creuse, aucun tiret cadratin, aucun chiffre ni nom propre absent des éléments ci-dessus.";
+
 /* --------------------------------- Gemini --------------------------------- */
 
 function buildPrompt(
@@ -163,27 +198,292 @@ function buildPrompt(
     "}",
     "",
     `Contraintes : 6 à ${MAX_KEYWORDS} mots-clés, du plus porteur au moins porteur ; les quatre réécritures doivent intégrer les mots-clés les plus porteurs sans bourrage et rester lisibles par un humain.`,
+    TITLE_SHAPE,
     "",
-    "Pour « firstParagraph » : réécris le premier paragraphe de la page d'accueil de sorte qu'un assistant IA puisse le citer tel quel. Il dit en une première phrase qui est ce commerce, ce qu'il fait et où ; les phrases suivantes ajoutent un fait vérifiable (spécialité, ancienneté, zone desservie, horaires). Aucun superlatif publicitaire, aucune formule d'ouverture creuse, aucun tiret cadratin, aucun chiffre ni nom propre absent des éléments ci-dessus.",
+    PARAGRAPH_RULE,
     "",
-    // Ces deux phrases sont les premières que le client relit dans son tableau
-    // de bord, et les seules qu'il colle telles quelles dans son CMS. Un H1 qui
-    // sonne comme un texte de modèle ne sera pas publié, quelle que soit sa
-    // pertinence en mots-clés.
-    "Le H1 et le premier paragraphe doivent sonner comme le commerçant, jamais comme un texte de modèle :",
-    "- verbes simples (« est », « propose », « ouvre », « répare ») plutôt que « se positionne comme » ou « constitue » ;",
-    "- aucune promesse creuse (« votre partenaire de confiance », « au cœur de », « depuis toujours », « l'excellence au service de ») ;",
-    "- aucune triade décorative (« qualité, proximité et savoir-faire ») : deux faits valent mieux que trois adjectifs ;",
-    "- aucun participe présent d'analyse en fin de phrase (« soulignant… », « garantissant… », « permettant ainsi… ») ;",
-    "- aucune tournure « non seulement… mais aussi » ni « ce n'est pas X, c'est Y » ;",
-    "- aucun emoji, aucun gras, aucune majuscule à chaque mot ;",
-    "- le premier paragraphe ne répète pas le H1 : il ajoute le fait que le H1 n'a pas la place de porter.",
+    STYLE_RULES,
     tone
       ? `Écris ces réécritures dans la tonalité relevée sur les textes du client, qui doit se reconnaître dans les deux :\n${tone}`
       : "",
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/* ------------------------------- Réécritures ------------------------------- */
+
+type Suggested = TrendingKeywordsInsight["suggested"];
+
+/** Les mots-clés tels qu'ils sont donnés au rédacteur, emplacement compris. */
+function keywordBriefing(keywords: TrendingKeyword[]): string {
+  const labels: Record<KeywordPlacement, string> = {
+    title: "title",
+    metaDescription: "meta description",
+    h1: "H1",
+  };
+  return keywords
+    .map(
+      (k, i) =>
+        `${i + 1}. « ${k.keyword} » — intention : ${k.intent} — à placer dans : ${k.placements
+          .map((p) => labels[p])
+          .join(", ")}`,
+    )
+    .join("\n");
+}
+
+function buildRewritePrompt(
+  profile: BusinessProfile,
+  signals: SiteSignals,
+  keywords: TrendingKeyword[],
+  tone: string | null,
+): string {
+  const city = profile.location
+    ? `Zone : ${profile.location}.`
+    : "Activité en ligne, sans zone géographique.";
+  return [
+    "Tu réécris quatre éléments on-page d'une page d'accueil. Tu ne cherches rien sur le web et tu n'inventes aucun fait : tu ne travailles qu'avec ce qui suit.",
+    `Niche : « ${profile.niche} ». Catégorie large : « ${profile.generalCategory} ». ${city}`,
+    `Site : ${signals.url}`,
+    `Title actuel : ${signals.title ?? "(absent)"}`,
+    `Meta description actuelle : ${signals.metaDescription ?? "(absente)"}`,
+    `H1 actuel : ${signals.h1[0] ?? "(absent)"}`,
+    `Premier paragraphe actuel : ${signals.firstParagraph ?? "(absent)"}`,
+    "",
+    "Mots-clés relevés sur la niche ce mois-ci, par ordre de valeur :",
+    keywordBriefing(keywords),
+    "",
+    "Place ces mots-clés dans les réécritures, à l'emplacement indiqué pour chacun :",
+    "- écris-les mot pour mot ; seuls l'accord en nombre et la majuscule initiale peuvent changer (« parfum sans alcool » → « parfums sans alcool » : accepté ; « fragrances sans alcool » : refusé, le mot-clé a disparu) ;",
+    "- le H1 porte le mot-clé n° 1 en toutes lettres ;",
+    "- la meta description en porte deux ou trois ;",
+    "- le premier paragraphe en porte trois ou plus, répartis dans les phrases ;",
+    "- jamais deux fois le même mot-clé dans un même élément, et aucune énumération de mots-clés collés les uns aux autres.",
+    "",
+    TITLE_SHAPE,
+    "« metaDescription » : 155 caractères au plus. « h1 » : 70 caractères au plus. « firstParagraph » : 40 à 60 mots.",
+    "",
+    PARAGRAPH_RULE,
+    "",
+    STYLE_RULES,
+    tone
+      ? `Tonalité relevée sur les textes du client, à laquelle les quatre réécritures se tiennent :\n${tone}`
+      : "",
+    "",
+    "Réponds UNIQUEMENT par un objet JSON, en français, sans commentaire :",
+    '{ "brandName": "nom exact de l\'entreprise tel qu\'il apparaît sur le site", "title": "…", "metaDescription": "…", "h1": "…", "firstParagraph": "…" }',
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
+ * Réécrit les quatre éléments avec GPT-4o mini, la liste de mots-clés en main.
+ *
+ * La recherche des mots-clés reste chez Gemini, seul à voir les requêtes du
+ * moment ; la rédaction part chez OpenAI, à qui l'on donne la liste déjà
+ * arrêtée. Séparer les deux étapes rend la consigne exécutable : un modèle qui
+ * découvre les mots-clés et rédige dans le même souffle place ce qu'il vient
+ * d'inventer, pas ce que la liste affichée au client annonce.
+ *
+ * `null` si la clé manque ou si la réponse est inexploitable : l'appelant garde
+ * alors les réécritures de Gemini.
+ */
+async function rewriteWithOpenAI(
+  profile: BusinessProfile,
+  signals: SiteSignals,
+  keywords: TrendingKeyword[],
+  tone: string | null,
+): Promise<Suggested | null> {
+  const json = await askRewriteModel(
+    buildRewritePrompt(profile, signals, keywords, tone),
+    { motsClés: keywords.map((k) => k.keyword) },
+  );
+  if (!json) return null;
+
+  const title = clean(json.title, 120);
+  const metaDescription = clean(json.metaDescription, 220);
+  const h1 = clean(json.h1, 120);
+  const firstParagraph = clean(json.firstParagraph, 700);
+  if (!title || !metaDescription || !h1 || !firstParagraph) {
+    geoLog("Réécritures on-page — réponse incomplète", json);
+    return null;
+  }
+
+  const brand = clean(json.brandName, 60) || brandFromSignals(signals);
+  const suggested: Suggested = {
+    title: ensureBrandFirst(title, brand),
+    metaDescription,
+    h1,
+    firstParagraph,
+  };
+  geoLog("Réécritures on-page — résultat", { marque: brand, ...suggested });
+  return suggested;
+}
+
+/**
+ * L'appel au rédacteur : GPT-4o mini, une consigne, un objet JSON en retour.
+ *
+ * `null` couvre les trois cas où l'appelant doit garder ce qu'il a déjà — clé
+ * absente, appel en échec, réponse illisible — plutôt que d'écraser un texte
+ * publiable par un texte vide.
+ */
+async function askRewriteModel(
+  prompt: string,
+  logContext: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) {
+    geoLog("Réécritures on-page — ignoré (pas de clé OPENAI_API_KEY)");
+    return null;
+  }
+
+  const model = process.env.OPENAI_REWRITE_MODEL || "gpt-4o-mini";
+  geoLog(`Réécritures on-page — appel OpenAI (${model})…`, logContext);
+  try {
+    const data = (await postJson(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.4,
+          max_tokens: 900,
+          response_format: { type: "json_object" },
+          messages: [{ role: "user", content: prompt }],
+        }),
+      },
+      "OpenAI réécritures",
+    )) as Record<string, unknown>;
+
+    const choices = (data.choices as Array<Record<string, unknown>>) ?? [];
+    const text = ((choices[0]?.message as Record<string, unknown>)?.content as string) ?? "";
+    const json = extractJson(text);
+    if (!json) geoLog("Réécritures on-page — réponse illisible", text.slice(0, 300));
+    return json;
+  } catch (err) {
+    geoLog("Réécritures on-page — échec", String(err));
+    return null;
+  }
+}
+
+/** Ce qu'un clic sur « Regénérer » remet en jeu, élément par élément. */
+export type OnPageElement = "serp" | "h1" | "intro";
+
+const ELEMENT_BRIEF: Record<OnPageElement, { label: string; shape: string; rule: string }> = {
+  serp: {
+    label: "la balise title et la meta description",
+    shape: '{ "brandName": "…", "title": "…", "metaDescription": "…" }',
+    rule: "« metaDescription » : 155 caractères au plus, deux ou trois mots-clés de la liste.",
+  },
+  h1: {
+    label: "le H1",
+    shape: '{ "h1": "…" }',
+    rule: "« h1 » : 70 caractères au plus, une seule idée, le mot-clé n° 1 en toutes lettres.",
+  },
+  intro: {
+    label: "le paragraphe d'introduction",
+    shape: '{ "firstParagraph": "…" }',
+    rule: "« firstParagraph » : 40 à 60 mots, trois mots-clés de la liste ou plus.",
+  },
+};
+
+/**
+ * Une autre version d'un seul élément, à la demande du client.
+ *
+ * Le texte déjà proposé part avec la consigne : sans lui, le modèle rend
+ * souvent la même phrase à un synonyme près, et le client a dépensé une passe
+ * de son quota pour rien.
+ */
+export async function regenerateOnPageElement(
+  profile: BusinessProfile,
+  signals: SiteSignals,
+  keywords: TrendingKeyword[],
+  element: OnPageElement,
+  current: Partial<Suggested>,
+  tone: string | null = null,
+): Promise<Partial<Suggested> | null> {
+  const brief = ELEMENT_BRIEF[element];
+  const alreadyProposed = [
+    element === "serp" ? `Title déjà proposé : ${current.title ?? "(aucun)"}` : "",
+    element === "serp"
+      ? `Meta description déjà proposée : ${current.metaDescription ?? "(aucune)"}`
+      : "",
+    element === "h1" ? `H1 déjà proposé : ${current.h1 ?? "(aucun)"}` : "",
+    element === "intro"
+      ? `Paragraphe déjà proposé : ${current.firstParagraph ?? "(aucun)"}`
+      : "",
+  ].filter(Boolean);
+
+  const prompt = [
+    buildRewritePrompt(profile, signals, keywords, tone),
+    "",
+    "── Cette fois, une seule chose t'est demandée ──",
+    ...alreadyProposed,
+    `Réécris uniquement ${brief.label}, dans une formulation nettement différente de celle déjà proposée : autre angle d'attaque, autre ordre des faits, autres mots-clés de la liste quand c'est possible. Les mêmes règles s'appliquent.`,
+    brief.rule,
+    `Réponds UNIQUEMENT par : ${brief.shape}`,
+  ].join("\n");
+
+  const json = await askRewriteModel(prompt, { élément: element });
+  if (!json) return null;
+
+  if (element === "serp") {
+    const title = clean(json.title, 120);
+    const metaDescription = clean(json.metaDescription, 220);
+    if (!title || !metaDescription) return null;
+    const brand = clean(json.brandName, 60) || brandFromSignals(signals);
+    return { title: ensureBrandFirst(title, brand), metaDescription };
+  }
+
+  if (element === "h1") {
+    const h1 = clean(json.h1, 120);
+    return h1 ? { h1 } : null;
+  }
+
+  const firstParagraph = clean(json.firstParagraph, 700);
+  return firstParagraph ? { firstParagraph } : null;
+}
+
+/** Le nom de l'enseigne, à défaut de réponse du modèle : premier segment du title. */
+function brandFromSignals(signals: SiteSignals): string {
+  return signals.title?.split(/[|·–—]/)[0].trim() || signals.domain;
+}
+
+/**
+ * Remet le nom de l'entreprise en tête du title.
+ *
+ * Le modèle respecte la consigne la plupart du temps, mais pas toujours : quand
+ * il range la marque en fin de ligne, on déplace le segment plutôt que de jeter
+ * une réécriture par ailleurs bonne.
+ */
+function ensureBrandFirst(title: string, brand: string): string {
+  if (!brand) return title;
+
+  const key = foldCase(brand);
+  if (foldCase(title).startsWith(key)) return title;
+
+  const segments = title
+    .split(/\s*[|·–—]\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const brandIndex = segments.findIndex((s) => foldCase(s).includes(key));
+  if (brandIndex === -1) return `${brand} | ${title}`;
+
+  const [brandSegment] = segments.splice(brandIndex, 1);
+  return [brandSegment, ...segments].join(" | ");
+}
+
+function foldCase(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 /**
@@ -239,17 +539,26 @@ export async function fetchTrendingKeywords(
 
     const suggested = (json.suggested ?? {}) as Record<string, unknown>;
     const fb = fallbackTrendingKeywords(profile, signals);
+    const brand = brandFromSignals(signals);
+    const fromGemini: Suggested = {
+      title: ensureBrandFirst(clean(suggested.title, 120) || fb.suggested.title, brand),
+      metaDescription: clean(suggested.metaDescription, 220) || fb.suggested.metaDescription,
+      h1: clean(suggested.h1, 120) || fb.suggested.h1,
+      firstParagraph: clean(suggested.firstParagraph, 700) || fb.suggested.firstParagraph,
+    };
+
+    // Les réécritures repartent chez GPT-4o mini avec la liste de mots-clés
+    // arrêtée ci-dessus : c'est elle que le tableau de bord affiche, donc c'est
+    // elle que le rédacteur doit avoir sous les yeux. Gemini garde la main si
+    // l'appel échoue ou si la clé OpenAI manque.
+    const rewritten = await rewriteWithOpenAI(profile, signals, keywords, tone);
+
     const insight: TrendingKeywordsInsight = {
       measured: true,
       source: "gemini",
       period: clean(json.period, 40) || currentPeriod(),
       keywords,
-      suggested: {
-        title: clean(suggested.title, 120) || fb.suggested.title,
-        metaDescription: clean(suggested.metaDescription, 220) || fb.suggested.metaDescription,
-        h1: clean(suggested.h1, 120) || fb.suggested.h1,
-        firstParagraph: clean(suggested.firstParagraph, 700) || fb.suggested.firstParagraph,
-      },
+      suggested: rewritten ?? fromGemini,
       notes: Array.isArray(json.notes)
         ? json.notes.map((n) => clean(n, 240)).filter(Boolean).slice(0, 4)
         : [],

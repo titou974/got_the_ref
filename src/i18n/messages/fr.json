@@ -874,7 +874,12 @@
   "homeHero": {
     "headingBefore": "Faites venir vos clients depuis",
     "headingAfter": "en pilote automatique",
-    "engines": ["ChatGPT", "Gemini", "Perplexity", "Google"],
+    "engines": [
+      "ChatGPT",
+      "Gemini",
+      "Perplexity",
+      "Google"
+    ],
     "subtitle": "On apporte de la visibilité aux commerces français, locaux comme en ligne, en les référençant dans les IA et sur Google. Sans qu’ils aient à payer une agence ni à lever le petit doigt !",
     "cta": "Démarrer {days} jours gratuits",
     "ctaDashboard": "Ouvrir mon tableau de bord",
@@ -908,7 +913,11 @@
         "num": "01",
         "title": "Analyse de votre activité",
         "body": "On lit votre site comme l'algorithme des IA : votre secteur, marché, concurrents, les mots clefs recherchées...",
-        "chips": ["Requêtes détectées", "Prompts clients", "Concurrents"],
+        "chips": [
+          "Requêtes détectées",
+          "Prompts clients",
+          "Concurrents"
+        ],
         "mock": {
           "url": "votre-site.fr",
           "pill": "analyse en profondeur",
@@ -926,7 +935,12 @@
         "num": "02",
         "title": "Position mesurée sur les moteurs",
         "body": "On interroge les IAs sur votre marché, puis on relève le classement qu'elles vous donnent.",
-        "chips": ["ChatGPT", "Gemini", "Perplexity", "Google AI search"],
+        "chips": [
+          "ChatGPT",
+          "Gemini",
+          "Perplexity",
+          "Google AI search"
+        ],
         "mock": {
           "label": "Position mesurée",
           "you": "Votre entreprise",
@@ -934,12 +948,18 @@
             {
               "name": "ChatGPT",
               "rank": "2",
-              "others": ["Café Joyeux", "Le petit coin"]
+              "others": [
+                "Café Joyeux",
+                "Le petit coin"
+              ]
             },
             {
               "name": "Gemini",
               "rank": "1",
-              "others": ["Café des Arts", "La Pause Terrasse"]
+              "others": [
+                "Café des Arts",
+                "La Pause Terrasse"
+              ]
             }
           ]
         }
@@ -948,7 +968,11 @@
         "num": "03",
         "title": "Correctifs priorisés",
         "body": "Structure, mots clés pertinents pour votre niche, pages citables : notre algorithmes compare tout ce qu'il a relevé sur votre site à nos standards de référencement, et on vous fait un diagnotic ! ",
-        "chips": ["llms.txt", "JSON-LD", "Citabilité"],
+        "chips": [
+          "llms.txt",
+          "JSON-LD",
+          "Citabilité"
+        ],
         "mock": {
           "applied": "appliqué",
           "impact": "Impact {value}/10",
@@ -976,7 +1000,11 @@
         "num": "04",
         "title": "Auto-correction par nos agents IA, et remesure continue",
         "body": "Nos IAs viennent corriger tout les points sur votre site en une simple connexion, puis remesurent la position, et vous voyez la courbe bouger. En 1 semaine, vous apparaissez dans les IAs et sur Google.",
-        "chips": ["Score GEO", "Position", "Avis"],
+        "chips": [
+          "Score GEO",
+          "Position",
+          "Avis"
+        ],
         "mock": {
           "scoreLabel": "Score GEO",
           "before": "42",
@@ -1134,7 +1162,12 @@
     "sites": [
       {
         "domain": "lacotriade.fr",
-        "colors": ["#0B3C49", "#1B7F79", "#E8F3F1", "#F7FBFA"],
+        "colors": [
+          "#0B3C49",
+          "#1B7F79",
+          "#E8F3F1",
+          "#F7FBFA"
+        ],
         "voice": [
           "chaleureux, ancré local",
           "cuisine de la marée",
@@ -1197,7 +1230,12 @@
       },
       {
         "domain": "atelier-lubin.fr",
-        "colors": ["#3E2A18", "#B07D4B", "#F0E4D4", "#FBF7F2"],
+        "colors": [
+          "#3E2A18",
+          "#B07D4B",
+          "#F0E4D4",
+          "#FBF7F2"
+        ],
         "voice": [
           "artisanal, précis",
           "vocabulaire du bois",
@@ -1260,7 +1298,12 @@
       },
       {
         "domain": "toiture-vendee.fr",
-        "colors": ["#1C2B3A", "#D7501E", "#E7ECF1", "#F8FAFB"],
+        "colors": [
+          "#1C2B3A",
+          "#D7501E",
+          "#E7ECF1",
+          "#F8FAFB"
+        ],
         "voice": [
           "direct, rassurant",
           "vocabulaire de chantier",
@@ -1328,7 +1371,12 @@
         "num": "1",
         "title": "Couleurs de marque",
         "kind": "colors",
-        "items": ["#0B3C49", "#1B7F79", "#E8F3F1", "#F7FBFA"]
+        "items": [
+          "#0B3C49",
+          "#1B7F79",
+          "#E8F3F1",
+          "#F7FBFA"
+        ]
       },
       {
         "num": "2",
@@ -1394,7 +1442,10 @@
     "publishedPath": "lacotriade.fr/journal",
     "demoNote": "Article et sites de démonstration.",
     "takeawaysTitle": "À retenir",
-    "tableHead": ["Point", "Détail"],
+    "tableHead": [
+      "Point",
+      "Détail"
+    ],
     "tocTitle": "Sommaire",
     "imageAlt": "Illustration de l'article"
   },
@@ -1480,7 +1531,11 @@
       ],
       "you": "votre-site.fr",
       "badge": "Cité en source n° 1",
-      "points": ["E-commerce", "SaaS & applications", "Médias & créateurs"]
+      "points": [
+        "E-commerce",
+        "SaaS & applications",
+        "Médias & créateurs"
+      ]
     },
     "local": {
       "title": "Commerces et artisans de quartier",
@@ -1488,9 +1543,17 @@
       "caption": "Réponse locale · votre zone",
       "query": "« Où manger des fruits de mer aux Sables-d'Olonne ? »",
       "you": "Votre commerce",
-      "competitors": ["Concurrent", "Concurrent", "Concurrent"],
+      "competitors": [
+        "Concurrent",
+        "Concurrent",
+        "Concurrent"
+      ],
       "badge": "Recommandé en premier",
-      "points": ["Restaurants & hôtels", "Artisans & BTP", "Santé & bien-être"]
+      "points": [
+        "Restaurants & hôtels",
+        "Artisans & BTP",
+        "Santé & bien-être"
+      ]
     }
   },
   "dashboard": {
@@ -1575,25 +1638,6 @@
       "articlesBody": "Douze sujets sont planifiés pour les quatre prochaines semaines, à raison de trois par semaine. Les trois premiers sont en cours de rédaction.",
       "retry": "Relancer"
     },
-    "content": {
-      "pageTitle": "Contenu",
-      "currentTitle": "Ce que votre site affiche",
-      "currentHint": "Tel qu'un moteur le reprend aujourd'hui.",
-      "proposedTitle": "Ce que nous proposons",
-      "proposedHint": "Les mêmes éléments, avec les mots-clés du mois placés là où ils comptent.",
-      "proposedEmpty": "Aucune réécriture pour l'instant. Demandez-en une.",
-      "generate": "Proposer une réécriture",
-      "again": "Une autre version",
-      "working": "Rédaction…",
-      "h1": "Titre H1",
-      "intro": "Paragraphe d'introduction",
-      "missing": {
-        "title": "Aucune balise title",
-        "description": "Aucune meta description",
-        "h1": "Aucun H1 sur la page d'accueil",
-        "intro": "Aucun paragraphe d'introduction lisible"
-      }
-    },
     "keywords": {
       "title": "Mots-clés tendances de votre niche",
       "empty": "Aucun mot-clé relevé pour l'instant.",
@@ -1614,6 +1658,28 @@
         "title": "Balise title",
         "metaDescription": "Meta description",
         "h1": "H1"
+      }
+    },
+    "content": {
+      "pageTitle": "Contenu",
+      "serpTitle": "Titre et description",
+      "h1Title": "Titre principal de la page",
+      "introTitle": "Paragraphe d'introduction",
+      "before": "Aujourd'hui",
+      "after": "Proposé",
+      "becomes": "devient",
+      "proposedEmpty": "Réécriture livrée avec la prochaine analyse.",
+      "keywordsLabel": "Mots-clés placés",
+      "keywordsEmpty": "Aucun mot-clé de votre niche.",
+      "regenerate": "Regénérer",
+      "regenerating": "Rédaction…",
+      "regenerateLeft": "{left} sur {limit} aujourd'hui",
+      "regenerateExhausted": "Épuisé, revient demain",
+      "missing": {
+        "title": "Aucune balise title",
+        "description": "Aucune meta description",
+        "h1": "Aucun H1 sur la page d'accueil",
+        "intro": "Aucun paragraphe d'introduction lisible"
       }
     },
     "architecture": {

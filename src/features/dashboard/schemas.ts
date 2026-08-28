@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { ON_PAGE_ELEMENTS } from "@/constants/plans";
+
 /** Les entrées du tableau de bord, validées avant toute écriture. */
 
 export const connectSiteSchema = z.object({
@@ -13,6 +15,11 @@ export const connectSiteSchema = z.object({
 });
 
 export const disconnectSiteSchema = z.object({});
+
+/** L'élément on-page dont le client redemande une version. */
+export const regenerateOnPageSchema = z.object({
+  element: z.enum(ON_PAGE_ELEMENTS),
+});
 
 export const planArticlesSchema = z.object({
   count: z.number().int().min(1).max(12).default(4),
