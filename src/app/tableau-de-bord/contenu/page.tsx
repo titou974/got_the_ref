@@ -1,42 +1,33 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
-import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
+import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
-import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
-import { OnPageElement, OpeningHoursBlock } from "@/components/geo/OnPageElement";
 
 export const maxDuration = 300;
 
 /**
- * Contenu : les mots-clés de la niche, puis ce que le site en dit aujourd'hui
- * face à ce qu'il pourrait en dire.
+ * Contenu : la balise title et la meta description, avant et après.
  *
- * La balise title et la meta description restent présentées en résultat Google,
- * forme sous laquelle le client les a déjà vues passer. Le H1 et le premier
- * paragraphe, eux, reprennent les cartes du rapport d'analyse : elles montrent
- * le texte réel, les critères attendus un par un, et le conseil qui va avec —
- * ce qu'une ligne de définition ne dirait pas.
+ * Un seul objet sur la page. Le tableau des mots-clés et l'audit du H1 et de la
+ * première phrase sont retirés : ils doublaient le rapport d'analyse et
+ * repoussaient la comparaison, qui est ce que le client vient voir. Ce qu'il
+ * reste des mots-clés tient en badges sous le diptyque — ceux réellement placés
+ * dans la réécriture — et le niveau estimé dit où en est chaque version.
  */
 export default async function ContenuPage() {
   const user = await requireUser();
   const context = await getDashboardContext(user.id);
   const t = await getTranslations("dashboard.content");
-  const ta = await getTranslations("analysisReport.content.onPage");
 
   if (!context.analysis) return <PreparingAnalysis />;
 
   const analysis = context.analysis;
-  const onPage = analysis.onPageContent;
 
   return (
     <>
-      <PageHeader
-        title={t("pageTitle")}
-      />
-
-      <KeywordTable insight={analysis.trendingKeywords ?? null} />
+      <PageHeader title={t("pageTitle")} />
 
       <ContentCompare
         current={{
@@ -45,18 +36,8 @@ export default async function ContenuPage() {
           url: analysis.url,
           domain: analysis.domain,
         }}
-        suggested={analysis.trendingKeywords?.suggested ?? null}
+        insight={analysis.trendingKeywords ?? null}
       />
-
-      <Card>
-        <CardTitle title={ta("title")} hint={ta("subtitle")} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <OnPageElement label={ta("elements.h1")} check={onPage.h1} />
-          <OnPageElement label={ta("elements.firstSentence")} check={onPage.firstSentence} />
-        </div>
-        <OpeningHoursBlock value={onPage.openingHours} />
-      </Card>
-
     </>
   );
 }
