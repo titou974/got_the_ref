@@ -315,17 +315,76 @@ function Markup({
   );
 }
 
-/** Les mots-clés de la niche qu'on retrouve dans la réécriture. */
+/**
+ * Les mots-clés de la niche qu'on retrouve dans un texte.
+ *
+ * La comparaison ne peut pas être une recherche de sous-chaîne : un rédacteur
+ * accorde. « parfum sans alcool » s'écrit « parfums sans alcool » dans un H1,
+ * « soins naturels » devient « soins d'origine naturelle » dans un paragraphe —
+ * le mot-clé est bien placé, et l'égalité stricte le déclarait absent.
+ *
+ * On compare donc mot à mot, sur des radicaux : le mot-clé est retenu quand
+ * tous ses mots porteurs se retrouvent dans le texte, quel que soit leur ordre.
+ */
 function placedIn(keywords: string[], text: string | null) {
   if (!text) return [];
-  const haystack = normalize(text);
-  return keywords.filter((keyword) => haystack.includes(normalize(keyword)));
+  const haystack = stems(text);
+  return keywords.filter((keyword) => {
+    const wanted = stems(keyword);
+    return wanted.length > 0 && wanted.every((root) => haystack.some((word) => carries(word, root)));
+  });
 }
 
-/** Comparaison insensible à la casse et aux accents, comme le ferait un moteur. */
-function normalize(value: string) {
+/** Un mot du texte porte le radical cherché — tel quel, ou en dérivé (parfum / parfumerie). */
+function carries(word: string, root: string) {
+  return word === root || (root.length >= 4 && word.startsWith(root));
+}
+
+/**
+ * Un radical français juste assez large pour reconnaître deux formes du même mot.
+ *
+ * Pas un lemmatiseur : le pluriel, le féminin et la consonne doublée finale
+ * couvrent l'écart entre un mot-clé et sa reprise dans une phrase, ce qui est
+ * exactement ce qu'on mesure ici.
+ */
+function stem(word: string) {
+  let root = word;
+  if (root.length > 4) root = root.replace(/aux$/, "al");
+  if (root.length > 3) root = root.replace(/[sx]$/, "");
+  if (root.length > 3) root = root.replace(/e$/, "");
+  return root.replace(/(.)\1$/, "$1");
+}
+
+/** Articles, prépositions et liaisons : présents partout, ils ne prouvent rien. */
+const STOPWORDS = new Set([
+  "de",
+  "du",
+  "des",
+  "la",
+  "le",
+  "les",
+  "un",
+  "une",
+  "au",
+  "aux",
+  "et",
+  "en",
+  "pour",
+  "par",
+  "sur",
+  "dans",
+  "chez",
+  "avec",
+  "ou",
+]);
+
+/** Les mots d'un texte, réduits à leur radical, articles et liaisons écartés. */
+function stems(value: string) {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word.length > 1 && !STOPWORDS.has(word))
+    .map(stem);
 }
