@@ -45,7 +45,9 @@ export function BrandVoicePanel({
         }}
       >
         <label className="block">
-          <span className="mb-1 block text-sm font-medium">{t("instructions")}</span>
+          <span className="mb-1 block text-sm font-medium">
+            {t("instructions")}
+          </span>
           <textarea
             value={value}
             onChange={(event) => setValue(event.target.value)}
@@ -64,10 +66,14 @@ export function BrandVoicePanel({
             placeholder={t("bannedPlaceholder")}
             className="w-full rounded-[14px] border border-border bg-surface px-3 py-2.5 text-sm"
           />
-          <span className="mt-1 block text-xs text-muted">{t("bannedHelp")}</span>
+          <span className="mt-1 block text-xs text-muted">
+            {t("bannedHelp")}
+          </span>
         </label>
 
-        {result.serverError ? <p className="text-sm text-danger">{result.serverError}</p> : null}
+        {result.serverError ? (
+          <p className="text-sm text-danger">{result.serverError}</p>
+        ) : null}
 
         <div className="flex items-center gap-3">
           <button
@@ -77,10 +83,10 @@ export function BrandVoicePanel({
           >
             {isPending ? t("saving") : t("save")}
           </button>
-          {saved ? <span className="text-sm text-success">{t("saved")}</span> : null}
+          {saved ? (
+            <span className="text-sm text-success">{t("saved")}</span>
+          ) : null}
         </div>
-
-        <p className="text-xs text-muted">{t("scope")}</p>
       </form>
     </Card>
   );

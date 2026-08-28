@@ -5,7 +5,12 @@ import { prisma } from "@/lib/prisma";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { decryptJson } from "@/lib/crypto";
 import type { SiteCapability } from "@/constants/site-platforms";
-import { ARTICLE_QUOTAS } from "@/constants/plans";
+import {
+  ARTICLE_QUOTAS,
+  ON_PAGE_ELEMENTS,
+  ON_PAGE_REWRITE_QUOTA,
+  type OnPageElementKey,
+} from "@/constants/plans";
 
 /**
  * Tout ce que le tableau de bord relit avant d'afficher quoi que ce soit.
@@ -212,4 +217,54 @@ export async function getArticleQuota(userId: string): Promise<ArticleQuota> {
         ? null
         : new Date(oldest.createdAt.getTime() + ARTICLE_QUOTAS.windowMs),
   };
+}
+
+/** Ce qu'il reste de réécritures aujourd'hui, élément par élément. */
+export type OnPageRewriteQuota = Record<OnPageElementKey, number>;
+
+/**
+ * Minuit à Paris, exprimé en instant.
+ *
+ * Le serveur peut tourner n'importe où : compter « depuis minuit » sur son
+ * horloge donnerait à un client une journée qui commence à 2 h du matin. On
+ * relit donc la date du jour dans le fuseau annoncé, et on en refait un instant.
+ */
+function startOfDay(): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ON_PAGE_REWRITE_QUOTA.timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const at = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+
+  const elapsedMs =
+    ((at("hour") % 24) * 60 * 60 + at("minute") * 60 + at("second")) * 1000;
+  return new Date(Date.now() - elapsedMs);
+}
+
+/**
+ * Le quota de réécriture du jour, par élément.
+ *
+ * Les trois compteurs sont lus d'un coup : la page affiche les trois boutons,
+ * et trois requêtes pour trois nombres seraient trois allers-retours pour rien.
+ */
+export async function getOnPageRewriteQuota(userId: string): Promise<OnPageRewriteQuota> {
+  const runs = await prisma.onPageRewrite.groupBy({
+    by: ["element"],
+    where: { userId, createdAt: { gte: startOfDay() } },
+    _count: { _all: true },
+  });
+
+  const used = new Map(runs.map((run) => [run.element, run._count._all]));
+  return Object.fromEntries(
+    ON_PAGE_ELEMENTS.map((element) => [
+      element,
+      Math.max(0, ON_PAGE_REWRITE_QUOTA.daily - (used.get(element) ?? 0)),
+    ]),
+  ) as OnPageRewriteQuota;
 }

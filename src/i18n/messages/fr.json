@@ -164,7 +164,7 @@
       "diagnosisTitle": "Diagnostic d'architecture",
       "diagnosisSubtitle": "L'ossature technique que les IA lisent en premier.",
       "engineScoresTitle": "Score et position par moteur IA",
-      "engineScoresSubtitle": "Ce que ChatGPT, Gemini et Claude répondent quand on cherche votre activité.",
+      "engineScoresSubtitle": "Ce que ChatGPT et Gemini répondent quand on cherche votre activité.",
       "testedOn": "Position mesurée sur la requête « {query} »",
       "measured": "Mesuré",
       "estimated": "Estimé",
@@ -209,7 +209,7 @@
         "detected": "Plateforme détectée : {name}",
         "cta": "Connecter le site",
         "connectSoon": "Bientôt",
-        "soonNote": "Le rattachement automatique de votre site ouvre dans les prochains jours. En attendant, copiez les instructions ci-dessous : elles reprennent tous les manques relevés sur votre site et donnent le code exact à appliquer.",
+        "soonNote": "Wordpress et Shopify seront connectables prochainement.",
         "promptCta": "Copier le prompt de correction",
         "promptCtaAll": "Copier les instructions pour tout solutionner avec votre agent IA",
         "shareDev": "Partager à votre développeur",
@@ -220,7 +220,8 @@
         "reassurance": "Accès révocable à tout moment. Aucune publication sans votre validation.",
         "fixedCount": "{count}/{total} corrigés",
         "statusFixed": "Corrigé",
-        "statusPending": "À corriger"
+        "statusPending": "À corriger",
+        "promptPreviewLabel": "À coller dans ChatGPT, Claude ou Cursor"
       }
     },
     "architecture": {
@@ -1557,7 +1558,6 @@
   },
   "dashboard": {
     "metaTitle": "Tableau de bord",
-    "projectLabel": "Projet",
     "noProject": "Aucun site",
     "accountLink": "Gérer la facturation",
     "nav": {
@@ -1570,36 +1570,12 @@
     },
     "home": {
       "title": "Tableau de bord",
-      "subtitle": "Projet : {domain}",
       "fullReport": "Rapport complet",
       "health": "Note de visibilité",
       "priorities": "À corriger en premier",
       "prioritiesHint": "Classé par ce que ça rapporte, pas par difficulté."
     },
     "connect": {
-      "connected": "Rattaché",
-      "notConnected": "À rattacher",
-      "soon": "À venir",
-      "analytics": {
-        "title": "Google Analytics",
-        "body": "Pour compter les visites que ChatGPT, Perplexity et Gemini vous envoient.",
-        "soonDetail": "Le rattachement ouvre dans les prochains jours. En attendant, le prompt de correction en bas de page reprend tous les constats de votre site : collez-le dans votre IA pour appliquer les corrections tout de suite.",
-        "detail": "Lecture seule. Nous relevons vos statistiques, nous n'écrivons jamais dedans.",
-        "cta": "Rattacher Analytics",
-        "again": "Refaire le rattachement",
-        "property": "Propriété suivie : {name}",
-        "unnamedProperty": "sans nom"
-      },
-      "site": {
-        "title": "Votre site",
-        "body": "Pour que les agents corrigent vos pages et publient vos articles.",
-        "soonDetail": "Shopify, WordPress, Wix, Webflow : le rattachement ouvre dans les prochains jours. En attendant, chaque page vous donne le correctif prêt à coller et le prompt à passer à votre IA.",
-        "detail": "Shopify, WordPress, Wix, Webflow et les autres. Vos identifiants sont chiffrés avant d'être enregistrés.",
-        "cta": "Rattacher mon site",
-        "again": "Modifier le rattachement",
-        "linked": "{platform} : {rights}",
-        "manage": "Voir le rattachement"
-      },
       "rights": {
         "publish": "publication d'articles",
         "edit": "correction des pages",
@@ -1686,12 +1662,19 @@
       "hint": "Les visites arrivées depuis un assistant.",
       "period": "{days} derniers jours",
       "share": "soit {value} % de vos visites",
-      "noAnalytics": "Rattachez Google Analytics pour voir ces visites. Sans lui, personne ne peut les compter : elles n'apparaissent pas dans Search Console.",
       "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique.",
       "demoBadge": "Données d'exemple",
       "periodFilter": "Période",
       "periodShort": "{days} j",
-      "vsPrevious": "sur {days} jours, contre la période précédente"
+      "vsPrevious": "sur {days} jours, contre la période précédente",
+      "locked": {
+        "badge": "À venir",
+        "title": "Le trafic que les IAs vous apportent",
+        "body": "Nous dévoilons le trafic que vous apportent les IA dans votre site web le 01/07.",
+        "analytics": "Connecter Google Analytics",
+        "tagManager": "Connecter Google Tag Manager",
+        "soon": "Les deux rattachements ouvrent dans quelques jours."
+      }
     },
     "rankings": {
       "refresh": "Reprendre le relevé",
@@ -1730,39 +1713,12 @@
         "unknown": "Non mesuré"
       }
     },
-    "prompt": {
-      "title": "Prompt de correction",
-      "hint": "À coller dans Claude, ChatGPT ou l'agent de votre développeur. Il contient les textes, fichiers et articles exacts à appliquer.",
-      "copy": "Copier",
-      "copied": "Copié",
-      "writing": "Rédaction du prompt à partir de vos derniers résultats…"
-    },
     "preparing": {
       "title": "Analyse de votre site en cours",
       "body": "Nous lisons vos pages, testons votre place dans les IA et relevons ce qui manque. Comptez une à trois minutes selon la taille du site.",
       "articlesTitle": "Préparation de votre mois d'articles",
       "articlesBody": "Douze sujets sont planifiés pour les quatre prochaines semaines, à raison de trois par semaine. Les trois premiers sont en cours de rédaction.",
       "retry": "Relancer"
-    },
-    "content": {
-      "pageTitle": "Contenu",
-      "pageSubtitle": "Projet : {domain}",
-      "currentTitle": "Ce que votre site affiche",
-      "currentHint": "Tel qu'un moteur le reprend aujourd'hui.",
-      "proposedTitle": "Ce que nous proposons",
-      "proposedHint": "Les mêmes éléments, avec les mots-clés du mois placés là où ils comptent.",
-      "proposedEmpty": "Aucune réécriture pour l'instant. Demandez-en une.",
-      "generate": "Proposer une réécriture",
-      "again": "Une autre version",
-      "working": "Rédaction…",
-      "h1": "Titre H1",
-      "intro": "Paragraphe d'introduction",
-      "missing": {
-        "title": "Aucune balise title",
-        "description": "Aucune meta description",
-        "h1": "Aucun H1 sur la page d'accueil",
-        "intro": "Aucun paragraphe d'introduction lisible"
-      }
     },
     "keywords": {
       "title": "Mots-clés tendances de votre niche",
@@ -1786,9 +1742,30 @@
         "h1": "H1"
       }
     },
+    "content": {
+      "pageTitle": "Contenu",
+      "serpTitle": "Titre et description",
+      "h1Title": "Titre principal de la page",
+      "introTitle": "Paragraphe d'introduction",
+      "before": "Aujourd'hui",
+      "after": "Proposé",
+      "becomes": "devient",
+      "proposedEmpty": "Réécriture livrée avec la prochaine analyse.",
+      "keywordsLabel": "Mots-clés placés",
+      "keywordsEmpty": "Aucun mot-clé de votre niche.",
+      "regenerate": "Regénérer",
+      "regenerating": "Rédaction…",
+      "regenerateLeft": "{left} sur {limit} aujourd'hui",
+      "regenerateExhausted": "Épuisé, revient demain",
+      "missing": {
+        "title": "Aucune balise title",
+        "description": "Aucune meta description",
+        "h1": "Aucun H1 sur la page d'accueil",
+        "intro": "Aucun paragraphe d'introduction lisible"
+      }
+    },
     "architecture": {
       "pageTitle": "Architecture",
-      "pageSubtitle": "Projet : {domain}",
       "crawlers": "Robots d'IA",
       "crawlersHint": "Qui a le droit de lire votre site.",
       "allowed": "Autorisé",
@@ -1804,7 +1781,6 @@
     },
     "articles": {
       "pageTitle": "Articles",
-      "pageSubtitle": "Projet : {domain}",
       "plan": "Ajouter {count} sujets",
       "planning": "Recherche de sujets…",
       "planHint": "Les agents choisissent les sujets à partir des requêtes de votre niche."
@@ -1827,7 +1803,7 @@
       "keyword": "Mot-clé visé",
       "noKeyword": "Aucun",
       "outline": "Plan",
-      "noOutline": "Aucun plan enregistré.",
+      "noOutline": "Le plan se remplit tout seul : chaque titre de section écrit dans l'article apparaît ici.",
       "angle": "Angle",
       "revisions": "Versions demandées",
       "rewrite": "Demander une version",
@@ -1842,9 +1818,8 @@
       "publish": "Publier sur mon site",
       "publishing": "Publication…",
       "drop": "Écarter ce sujet",
-      "noPublishLink": "Article validé. Rattachez votre site avec le droit de publication pour le déposer d'ici.",
       "seeOnline": "Voir l'article en ligne",
-      "bodyPlaceholder": "Le texte de l'article, en Markdown.",
+      "bodyPlaceholder": "Écrivez l'article. Une réponse nette par section, dès la première phrase.",
       "scheduled": "Prévu le {date}",
       "undated": "Sans date de publication",
       "back": "Retour aux articles",
@@ -1865,10 +1840,6 @@
         "instructions": "Vos consignes",
         "instructionsEmpty": "Aucune consigne ajoutée. Les agents s'en tiennent au ton relevé."
       },
-      "tabs": {
-        "plan": "Plan",
-        "instructions": "Consignes"
-      },
       "toolbar": {
         "p": "Paragraphe",
         "h2": "Titre de section",
@@ -1879,35 +1850,33 @@
         "code": "Bloc de code",
         "bold": "Gras",
         "italic": "Italique",
-        "link": "Lien"
+        "link": "Lien",
+        "undo": "Annuler",
+        "redo": "Rétablir"
       },
-      "placeholders": {
-        "p": "Écrivez ce paragraphe. Une réponse par paragraphe, dès la première phrase.",
-        "h2": "Titre de section",
-        "h3": "Sous-titre",
-        "ul": "Une entrée par ligne",
-        "ol": "Une étape par ligne",
-        "quote": "La citation, sans les guillemets",
-        "code": "Le code, tel quel"
-      },
-      "headingPlaceholder": "Titre de la section",
       "sectionInstructionPlaceholder": "Ce que vous voulez lire ici : un exemple, un tarif, une objection à lever.",
       "addSection": "Ajouter une section",
-      "removeSection": "Retirer",
-      "toggleLevel": "Changer le niveau de titre",
-      "moveUp": "Monter",
-      "moveDown": "Descendre",
-      "syncFromBody": "Reprendre le plan du texte",
       "titlePlaceholder": "Le titre de l'article",
-      "addBlock": "Ajouter un bloc",
-      "removeBlock": "Supprimer ce bloc",
       "words": "{count} mots",
       "unsaved": "Modifications non enregistrées",
-      "savedState": "Enregistré"
+      "savedState": "Enregistré",
+      "publishNow": "Publier maintenant",
+      "publishPromptTitle": "Prompt de publication",
+      "publishPromptHint": "À coller dans votre agent IA ou à envoyer à votre développeur : il contient l'article entier et où le poser.",
+      "publishPromptCopy": "Copier le prompt",
+      "publishPromptCopied": "Prompt copié",
+      "sections": "{count, plural, =0 {aucune section} one {# section} other {# sections}}",
+      "citableAll": "Chaque section ouvre sur une réponse de {min} à {max} mots : citable telle quelle.",
+      "citableOff": "{count, plural, one {# section n'ouvre pas} other {# sections n'ouvrent pas}} sur une réponse de {min} à {max} mots.",
+      "answerWords": "{count} mots d'ouverture",
+      "answerMissing": "Pas de réponse d'ouverture",
+      "untitledSection": "Section sans titre",
+      "addBrief": "Ajouter une consigne",
+      "editBrief": "Modifier la consigne",
+      "linkPrompt": "Adresse du lien"
     },
     "presence": {
       "pageTitle": "Présence web",
-      "pageSubtitle": "Projet : {domain}",
       "reputation": "Ce que le web dit de vous",
       "noMentions": "Aucune mention relevée. C'est ce que la prospection ci-dessous va changer.",
       "backlinks": "Sites qui vous citent",
@@ -1937,7 +1906,6 @@
     },
     "maps": {
       "pageTitle": "Google Maps",
-      "pageSubtitle": "Projet : {domain}",
       "listing": "Votre fiche",
       "noListing": "Fiche non analysée.",
       "noListingBody": "Ajoutez l'adresse de votre fiche Google Maps depuis votre compte pour la comparer à votre site.",
@@ -2034,6 +2002,10 @@
         "bannedPlaceholder": "Un terme par ligne",
         "bannedHint": "Noms de concurrents, mots interdits par votre marque."
       }
+    },
+    "siteSelect": {
+      "label": "Site suivi",
+      "add": "Ajouter un site"
     }
   }
 }

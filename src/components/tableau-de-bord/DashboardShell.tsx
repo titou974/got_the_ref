@@ -5,7 +5,7 @@ import { SignOutButton } from "@/components/SignOutButton";
 import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { ROUTES } from "@/constants/routes";
 import { SidebarNav } from "./SidebarNav";
-import { SiteFavicon } from "./SiteFavicon";
+import { SiteSelect } from "./SiteSelect";
 
 /**
  * Les initiales de l'avatar : deux lettres au plus.
@@ -64,14 +64,10 @@ export async function DashboardShell({
             <span>got_the_ref</span>
           </Link>
 
-          {/* Le site suivi, favicon en tête : le client reconnaît son icône
-              avant d'avoir lu le domaine. */}
-          <div className="mb-4 hidden rounded-2xl border border-border bg-surface px-3.5 py-3 lg:mt-6 lg:block">
-            <p className="text-[11px] uppercase tracking-wider text-steel">{t("projectLabel")}</p>
-            <div className="mt-1 flex items-center gap-2.5">
-              {domain ? <SiteFavicon domain={domain} /> : null}
-              <p className="truncate text-sm font-semibold">{domain ?? t("noProject")}</p>
-            </div>
+          {/* Le site suivi, dans un sélecteur : il dit lequel est ouvert et
+              montre où s'ajoutera le suivant. */}
+          <div className="mb-4 hidden lg:mt-6 lg:block">
+            <SiteSelect domain={domain} />
           </div>
 
           <SidebarNav showMaps={showMaps} />

@@ -22,7 +22,13 @@ const ROW_HEIGHT = 40; // hauteur d'une ligne du bandeau, en px
  * faisceau d'analyse. C'est la promesse du produit, jouée sur ses propres
  * données plutôt que sur une illustration générique.
  */
-function AgentConsole({ domain, issues }: { domain: string; issues: string[] }) {
+function AgentConsole({
+  domain,
+  issues,
+}: {
+  domain: string;
+  issues: string[];
+}) {
   const t = useTranslations("analysisReport.solve.modal");
   const reduced = useReducedMotion();
   const [step, setStep] = useState(reduced ? issues.length : 0);
@@ -56,7 +62,10 @@ function AgentConsole({ domain, issues }: { domain: string; issues: string[] }) 
       </div>
 
       {/* Lignes de correction + faisceau qui les balaie. */}
-      <div className="relative mt-3" style={{ height: issues.length * ROW_HEIGHT }}>
+      <div
+        className="relative mt-3"
+        style={{ height: issues.length * ROW_HEIGHT }}
+      >
         {!reduced && (
           <motion.div
             aria-hidden
@@ -82,16 +91,26 @@ function AgentConsole({ domain, issues }: { domain: string; issues: string[] }) 
               className="flex items-center justify-between gap-3 border-b border-white/10 last:border-0"
               style={{ height: ROW_HEIGHT }}
             >
-              <span className="min-w-0 flex-1 truncate text-sm text-white/80">{label}</span>
+              <span className="min-w-0 flex-1 truncate text-sm text-white/80">
+                {label}
+              </span>
               <motion.span
                 animate={{
-                  backgroundColor: fixed ? "rgba(17,180,140,0.18)" : "rgba(255,255,255,0.08)",
+                  backgroundColor: fixed
+                    ? "rgba(17,180,140,0.18)"
+                    : "rgba(255,255,255,0.08)",
                   color: fixed ? "#3ddcae" : "rgba(255,255,255,0.5)",
                 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
                 className="flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden
+                >
                   {fixed ? (
                     <path
                       d="M5 13l4 4L19 7"
@@ -139,7 +158,11 @@ function CursorMark() {
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <path d="M3.9 7.3 12 12l8.1-4.7M12 12v9.2" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M3.9 7.3 12 12l8.1-4.7M12 12v9.2"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
     </svg>
   );
 }
@@ -158,7 +181,10 @@ function AgentLogos() {
             className="h-4 w-4 rounded-[4px] bg-white object-contain p-px"
           />
         ) : (
-          <span key={agent.name} className="flex h-4 w-4 items-center justify-center">
+          <span
+            key={agent.name}
+            className="flex h-4 w-4 items-center justify-center"
+          >
             <CursorMark />
           </span>
         ),
@@ -212,7 +238,10 @@ export function ConnectSiteModal({
   async function shareWithDeveloper() {
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: t("shareDevTitle", { domain }), text: solutionPrompt });
+        await navigator.share({
+          title: t("shareDevTitle", { domain }),
+          text: solutionPrompt,
+        });
         return;
       } catch {
         // Partage annulé ou refusé : on retombe sur la copie.
@@ -272,7 +301,9 @@ export function ConnectSiteModal({
           <h2 id="connect-site-title" className="text-xl font-bold text-text">
             {t("title")}
           </h2>
-          <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">{t("body")}</p>
+          <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">
+            {t("body")}
+          </p>
 
           {stack && (
             <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-fog bg-mist px-3 py-1.5 text-xs text-text">
@@ -297,17 +328,12 @@ export function ConnectSiteModal({
                 {t("connectSoon")}
               </span>
             </button>
-            <p className="rounded-2xl border border-fog bg-mist px-4 py-3 text-xs leading-relaxed text-muted">
-              {t("soonNote")}
-            </p>
-
             <button
               type="button"
               autoFocus
               onClick={copyPrompt}
               className="flex cursor-pointer items-center justify-center gap-2.5 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
             >
-              <AgentLogos />
               <span className="text-pretty">
                 {copied
                   ? t("promptCopied")
@@ -316,6 +342,32 @@ export function ConnectSiteModal({
                     : t("promptCta")}
               </span>
             </button>
+
+            {/* Le début du prompt, sous le bouton.
+                Copier un texte qu'on n'a pas vu demande de la confiance ; en
+                montrer l'entrée coûte quatre lignes et lève la question. Les
+                logos passent au-dessus, à gauche : dans le bouton, ils
+                décalaient un libellé déjà long sans dire à quoi ils servaient.
+                Au-dessus du prompt, ils disent où le coller. */}
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <AgentLogos />
+                <span className="text-xs text-muted">
+                  {t("promptPreviewLabel")}
+                </span>
+              </div>
+              <div className="relative">
+                <pre className="max-h-40 overflow-hidden whitespace-pre-wrap break-words rounded-2xl border border-fog bg-mist px-4 py-3 font-sans text-[11px] leading-relaxed text-muted">
+                  {solutionPrompt}
+                </pre>
+                {/* Le texte s'éteint vers le bas : c'est un extrait, et une
+                    coupe nette se lirait comme un prompt tronqué à la copie. */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-px bottom-px h-16 rounded-b-2xl bg-gradient-to-b from-transparent to-mist"
+                />
+              </div>
+            </div>
 
             <button
               type="button"
@@ -333,8 +385,6 @@ export function ConnectSiteModal({
               {t("later")}
             </button>
           </div>
-
-          <p className="mt-4 text-center text-xs text-muted/80">{t("reassurance")}</p>
         </div>
       </motion.div>
     </motion.div>

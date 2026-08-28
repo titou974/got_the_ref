@@ -1,149 +1,104 @@
-"use client";
-
-import { useState } from "react";
-import { useAction } from "next-safe-action/hooks";
-import { useTranslations } from "next-intl";
-import { rewriteOnPageAction } from "@/features/dashboard/actions";
-import type { OnPageRewrite } from "@/features/dashboard/service";
-import { Card, CardTitle } from "./Card";
-import { SearchLoader } from "@/components/SearchLoader";
+import { getTranslations } from "next-intl/server";
+import type { TrendingKeywordsInsight } from "@/lib/geo/types";
+import type { OnPageRewriteQuota } from "@/features/dashboard/queries";
+import { CompareCard } from "./CompareCard";
+import { SiteFavicon } from "./SiteFavicon";
 
 /**
- * L'existant et la proposition, côte à côte.
+ * Trois éléments de la page d'accueil, chacun dans son avant/après.
  *
- * À gauche, ce que le site affiche aujourd'hui, présenté comme un résultat
- * Google : c'est sous cette forme que le client l'a déjà vu passer, et le
- * décalage avec ce qu'il croyait écrire saute aux yeux tout seul. La balise
- * title et la meta description s'arrêtent là : le H1 et le premier paragraphe
- * sont audités juste en dessous, sous forme de cartes, parce qu'eux se jugent
- * sur leur contenu et non sur leur allure dans un résultat de recherche.
+ * Le couple title + meta description garde la forme d'un résultat Google : le
+ * client l'a déjà vu passer ainsi. Le H1 et le paragraphe d'introduction, eux,
+ * sont montrés dans leur balise — `<h1>…</h1>`, `<p>…</p>` — parce que c'est
+ * là qu'ils vivent et que la balise dit à elle seule leur poids.
  *
- * À droite, la réécriture. Elle arrive déjà remplie quand l'analyse en a
- * produit une ; le bouton en redemande une autre, à jour des mots-clés du mois.
+ * Autour de chaque comparaison, une seule information : les mots-clés de la
+ * niche réellement placés dans la réécriture. Pas de note, pas de diagnostic —
+ * l'audit critère par critère est le travail du rapport d'analyse.
  */
 
 type Current = {
   title: string | null;
   metaDescription: string | null;
+  h1: string | null;
+  intro: string | null;
   url: string;
   domain: string;
 };
 
-export function ContentCompare({
+export async function ContentCompare({
   current,
-  suggested,
+  insight,
+  quota,
 }: {
   current: Current;
-  /** Réécriture livrée par l'analyse, avant toute demande du client. */
-  suggested: {
-    title: string;
-    metaDescription: string;
-    h1: string;
-    firstParagraph: string;
-  } | null;
+  /** Mots-clés de la niche + réécriture livrée par l'analyse. */
+  insight: TrendingKeywordsInsight | null;
+  /** Ce qu'il reste de réécritures aujourd'hui, élément par élément. */
+  quota: OnPageRewriteQuota;
 }) {
-  const t = useTranslations("dashboard.content");
-  const [rewrite, setRewrite] = useState<OnPageRewrite | null>(null);
-  const { execute, isPending, result } = useAction(rewriteOnPageAction, {
-    onSuccess: ({ data }) => setRewrite(data ?? null),
-  });
-
-  // Le H1 et le premier paragraphe réécrits arrivent avec l'analyse : ils sont
-  // affichés d'emblée, sans attendre que le client demande une réécriture.
-  const proposal =
-    rewrite ??
-    (suggested
-      ? {
-          title: suggested.title,
-          metaDescription: suggested.metaDescription,
-          h1: suggested.h1,
-          intro: suggested.firstParagraph,
-          reasons: [] as string[],
-        }
-      : null);
+  const t = await getTranslations("dashboard.content");
+  const suggested = insight?.suggested ?? null;
+  const keywords = insight?.keywords.map((keyword) => keyword.keyword) ?? [];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
-        <CardTitle title={t("currentTitle")} hint={t("currentHint")} />
-
-        <SerpRow
-          domain={current.domain}
-          url={current.url}
-          title={current.title}
-          description={current.metaDescription}
-          missingTitle={t("missing.title")}
-          missingDescription={t("missing.description")}
-        />
-      </Card>
-
-      <Card>
-        <CardTitle
-          title={t("proposedTitle")}
-          hint={t("proposedHint")}
-          action={
-            <button
-              type="button"
-              onClick={() => execute({})}
-              disabled={isPending}
-              className="cursor-pointer rounded-pill bg-obsidian px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
-            >
-              {isPending ? t("working") : proposal ? t("again") : t("generate")}
-            </button>
-          }
-        />
-
-        {result.serverError ? (
-          <p className="mb-3 text-sm text-danger">{result.serverError}</p>
-        ) : null}
-
-        {isPending ? (
-          <SearchLoader kind="writing" compact title={t("working")} />
-        ) : proposal ? (
-          <>
+    <div className="space-y-4">
+      <CompareCard
+        element="serp"
+        remaining={quota.serp}
+        title={t("serpTitle")}
+        placed={placedIn(
+          keywords,
+          suggested && `${suggested.title} ${suggested.metaDescription}`,
+        )}
+        before={
+          <SerpRow
+            domain={current.domain}
+            url={current.url}
+            title={current.title}
+            description={current.metaDescription}
+            missingTitle={t("missing.title")}
+            missingDescription={t("missing.description")}
+          />
+        }
+        after={
+          suggested ? (
             <SerpRow
               domain={current.domain}
               url={current.url}
-              title={proposal.title}
-              description={proposal.metaDescription}
-              missingTitle=""
-              missingDescription=""
+              title={suggested.title}
+              description={suggested.metaDescription}
+              missingTitle={t("missing.title")}
+              missingDescription={t("missing.description")}
             />
+          ) : null
+        }
+        skeleton={<SerpSkeleton domain={current.domain} url={current.url} />}
+      />
 
-            <dl className="mt-5 space-y-4 border-t border-border pt-5">
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-steel">
-                  {t("h1")}
-                </dt>
-                <dd className="mt-1 text-sm">{proposal.h1}</dd>
-              </div>
-              {proposal.intro ? (
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-steel">
-                    {t("intro")}
-                  </dt>
-                  <dd className="mt-1 text-sm text-muted">{proposal.intro}</dd>
-                </div>
-              ) : null}
-            </dl>
+      <CompareCard
+        element="h1"
+        remaining={quota.h1}
+        title={t("h1Title")}
+        placed={placedIn(keywords, suggested?.h1 ?? null)}
+        before={<Markup tag="h1" text={current.h1} missing={t("missing.h1")} />}
+        after={suggested ? <Markup tag="h1" text={suggested.h1} missing={t("missing.h1")} /> : null}
+        skeleton={<MarkupSkeleton tag="h1" lines={1} />}
+      />
 
-            {proposal.reasons.length ? (
-              <ul className="mt-5 space-y-1.5 border-t border-border pt-5">
-                {proposal.reasons.map((reason) => (
-                  <li key={reason} className="flex gap-2 text-sm text-muted">
-                    <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-pebble" />
-                    {reason}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </>
-        ) : (
-          <p className="rounded-2xl bg-mist px-4 py-8 text-center text-sm text-muted">
-            {t("proposedEmpty")}
-          </p>
-        )}
-      </Card>
+      <CompareCard
+        element="intro"
+        remaining={quota.intro}
+        title={t("introTitle")}
+        placed={placedIn(keywords, suggested?.firstParagraph ?? null)}
+        before={<Markup tag="p" text={current.intro} missing={t("missing.intro")} />}
+        after={
+          suggested ? (
+            <Markup tag="p" text={suggested.firstParagraph} missing={t("missing.intro")} />
+          ) : null
+        }
+        skeleton={<MarkupSkeleton tag="p" lines={3} />}
+      />
     </div>
   );
 }
@@ -165,30 +120,199 @@ function SerpRow({
   missingDescription: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border p-4">
-      <div className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-mist text-[11px] font-semibold text-steel"
-        >
-          {domain.slice(0, 1).toUpperCase()}
-        </span>
-        <span className="min-w-0">
-          <span className="block truncate text-[13px] font-medium leading-tight">{domain}</span>
-          <span className="block truncate text-[11px] leading-tight text-ash">{url}</span>
-        </span>
-      </div>
+    <>
+      <SerpIdentity domain={domain} url={url} />
 
       <p
-        className={`mt-2 text-[19px] leading-snug ${
+        className={`mt-2 line-clamp-2 text-[19px] leading-snug ${
           title ? "text-[#1a0dab]" : "text-danger"
-        } line-clamp-2`}
+        }`}
       >
         {title ?? missingTitle}
       </p>
-      <p className={`mt-1 text-[13px] leading-relaxed ${description ? "text-steel" : "text-danger"}`}>
+      <p
+        className={`mt-1 text-[13px] leading-relaxed ${description ? "text-steel" : "text-danger"}`}
+      >
         {description ?? missingDescription}
       </p>
+    </>
+  );
+}
+
+/**
+ * Le site dans le résultat : favicon, domaine, URL.
+ *
+ * Cette ligne ne change jamais d'une réécriture à l'autre — c'est le même site.
+ * Elle reste donc affichée pendant la rédaction, et seul le texte en dessous
+ * passe en attente : voir le favicon disparaître laisserait croire que la carte
+ * entière se recharge.
+ */
+function SerpIdentity({ domain, url }: { domain: string; url: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <SiteFavicon domain={domain} className="h-6 w-6 rounded-full" />
+      <span className="min-w-0">
+        <span className="block truncate text-[13px] font-medium leading-tight">{domain}</span>
+        <span className="block truncate text-[11px] leading-tight text-ash">{url}</span>
+      </span>
     </div>
   );
+}
+
+/**
+ * Le texte dans sa balise, écrite en toutes lettres.
+ *
+ * `<h1>` et `<p>` sont laissés visibles : ils rappellent que la phrase n'est
+ * pas un slogan flottant mais un élément de la page, et le client retrouve la
+ * balise telle quelle dans son éditeur au moment de coller la réécriture.
+ */
+function Markup({
+  tag,
+  text,
+  missing,
+}: {
+  tag: "h1" | "p";
+  text: string | null;
+  missing: string;
+}) {
+  return (
+    <p className={`text-[15px] leading-relaxed ${text ? "text-ink" : "text-danger"}`}>
+      <Tag name={tag} />
+      <span className="mx-1.5">{text ?? missing}</span>
+      <Tag name={tag} closing />
+    </p>
+  );
+}
+
+/** Une balise ouvrante ou fermante, en chasse fixe. */
+function Tag({ name, closing = false }: { name: "h1" | "p"; closing?: boolean }) {
+  return (
+    <span className="font-mono text-[12px] text-ash">{`<${closing ? "/" : ""}${name}>`}</span>
+  );
+}
+
+/* ------------------------------- Chargement -------------------------------- */
+
+/**
+ * Le résultat de recherche pendant sa réécriture.
+ *
+ * Le site reste identifié — favicon, domaine, URL — et seules les deux lignes
+ * qui changent passent en attente, aux longueurs qu'un vrai title et une vraie
+ * meta description occupent. Le gabarit ne bouge donc pas quand le texte arrive.
+ */
+function SerpSkeleton({ domain, url }: { domain: string; url: string }) {
+  return (
+    <>
+      <SerpIdentity domain={domain} url={url} />
+
+      <div className="mt-3 space-y-2">
+        <Bar className="h-[18px] w-[78%]" />
+        <div className="space-y-1.5 pt-1.5">
+          <Bar className="h-3 w-full" />
+          <Bar className="h-3 w-[92%]" />
+          <Bar className="h-3 w-[64%]" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Le H1 ou le paragraphe pendant sa réécriture : les balises tiennent, le texte attend. */
+function MarkupSkeleton({ tag, lines }: { tag: "h1" | "p"; lines: number }) {
+  // La dernière ligne s'arrête court, comme une phrase qui finit : trois barres
+  // de largeur égale se liraient comme un bloc, pas comme du texte.
+  const widths = ["w-full", "w-[96%]", "w-[71%]"];
+
+  return (
+    <div className="text-[15px] leading-relaxed">
+      <Tag name={tag} />
+      <div className="my-1.5 space-y-2">
+        {Array.from({ length: lines }, (_, index) => (
+          <Bar key={index} className={`h-[15px] ${widths[index % widths.length]}`} />
+        ))}
+      </div>
+      <Tag name={tag} closing />
+    </div>
+  );
+}
+
+/** Une ligne de texte en attente : le shimmer du thème, arrondi comme une ligne. */
+function Bar({ className }: { className: string }) {
+  return <span className={`block rounded-md shimmer ${className}`} />;
+}
+
+/* ------------------------------- Mots-clés --------------------------------- */
+
+/**
+ * Les mots-clés de la niche qu'on retrouve dans un texte.
+ *
+ * La comparaison ne peut pas être une recherche de sous-chaîne : un rédacteur
+ * accorde. « parfum sans alcool » s'écrit « parfums sans alcool » dans un H1,
+ * « soins naturels » devient « soins d'origine naturelle » dans un paragraphe —
+ * le mot-clé est bien placé, et l'égalité stricte le déclarait absent.
+ *
+ * On compare donc mot à mot, sur des radicaux : le mot-clé est retenu quand
+ * tous ses mots porteurs se retrouvent dans le texte, quel que soit leur ordre.
+ */
+function placedIn(keywords: string[], text: string | null) {
+  if (!text) return [];
+  const haystack = stems(text);
+  return keywords.filter((keyword) => {
+    const wanted = stems(keyword);
+    return wanted.length > 0 && wanted.every((root) => haystack.some((word) => carries(word, root)));
+  });
+}
+
+/** Un mot du texte porte le radical cherché — tel quel, ou en dérivé (parfum / parfumerie). */
+function carries(word: string, root: string) {
+  return word === root || (root.length >= 4 && word.startsWith(root));
+}
+
+/**
+ * Un radical français juste assez large pour reconnaître deux formes du même mot.
+ *
+ * Pas un lemmatiseur : le pluriel, le féminin et la consonne doublée finale
+ * couvrent l'écart entre un mot-clé et sa reprise dans une phrase, ce qui est
+ * exactement ce qu'on mesure ici.
+ */
+function stem(word: string) {
+  let root = word;
+  if (root.length > 4) root = root.replace(/aux$/, "al");
+  if (root.length > 3) root = root.replace(/[sx]$/, "");
+  if (root.length > 3) root = root.replace(/e$/, "");
+  return root.replace(/(.)\1$/, "$1");
+}
+
+/** Articles, prépositions et liaisons : présents partout, ils ne prouvent rien. */
+const STOPWORDS = new Set([
+  "de",
+  "du",
+  "des",
+  "la",
+  "le",
+  "les",
+  "un",
+  "une",
+  "au",
+  "aux",
+  "et",
+  "en",
+  "pour",
+  "par",
+  "sur",
+  "dans",
+  "chez",
+  "avec",
+  "ou",
+]);
+
+/** Les mots d'un texte, réduits à leur radical, articles et liaisons écartés. */
+function stems(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word.length > 1 && !STOPWORDS.has(word))
+    .map(stem);
 }

@@ -2,13 +2,15 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
-import { getDashboardContext, listArticles } from "@/features/dashboard/queries";
+import {
+  getDashboardContext,
+  listArticles,
+} from "@/features/dashboard/queries";
 import { fetchAiTraffic } from "@/features/dashboard/ga4";
 import { buildDemoAiTraffic } from "@/features/dashboard/demoTraffic";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
-import { ConnectStrip } from "@/components/tableau-de-bord/ConnectStrip";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
 import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
@@ -67,20 +69,7 @@ export default async function DashboardHomePage() {
 
   return (
     <>
-      <PageHeader
-        title={t("title")}
-        subtitle={context.domain ? t("subtitle", { domain: context.domain }) : null}
-        actions={
-          context.analysisId ? (
-            <Link
-              href={ROUTES.analysis(context.analysisId)}
-              className="inline-flex cursor-pointer items-center rounded-pill border border-graphite px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist"
-            >
-              {t("fullReport")}
-            </Link>
-          ) : null
-        }
-      />
+      <PageHeader />
 
       {/* 1. La fenêtre du site, assombrie, avec la note posée dessus. */}
       <SiteScreenshot
@@ -124,7 +113,11 @@ export default async function DashboardHomePage() {
       </SiteScreenshot>
 
       {/* 1bis. Le constat écrit à la frappe, comme sur le rapport d'analyse. */}
-      <PaidReportCard result={analysis} diagnostic={diagnostic} scope="dashboard" />
+      <PaidReportCard
+        result={analysis}
+        diagnostic={diagnostic}
+        scope="dashboard"
+      />
 
       {/* 2. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
              n'est pas rattaché. Les dates sont lues ici, côté serveur, pour que
@@ -136,33 +129,9 @@ export default async function DashboardHomePage() {
       />
 
       {/* 3. La place du commerce dans ChatGPT et Gemini. */}
-      <RankingsSection engines={analysis.engines} liveQuery={analysis.liveQuery ?? null} />
+      <RankingsSection engines={analysis.engines} />
 
       {/* ---- Ce qui explique les chiffres du haut ---- */}
-
-      <ConnectStrip site={context.site} />
-
-      <ProfileHeader profile={analysis.profile} />
-
-      <AnimatedCard delay={0.05} className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="flex flex-col items-center justify-center gap-3 text-center lg:border-r lg:border-fog">
-          <AnimatedScoreRing
-            score={diagnostic.architecture.score}
-            size={120}
-            stroke={10}
-            label={ta("results.scoreLabel")}
-          />
-          <div>
-            <h3 className="font-semibold">{ta("results.diagnosisTitle")}</h3>
-            <p className="mx-auto mt-1 max-w-xs text-sm text-muted">
-              {ta("results.diagnosisSubtitle")}
-            </p>
-          </div>
-        </div>
-        <div className="lg:col-span-2">
-          <DiagnosticGrid section={diagnostic.architecture} labelNs="architecture" />
-        </div>
-      </AnimatedCard>
 
       <section>
         <div className="mb-3">

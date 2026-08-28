@@ -31,8 +31,27 @@ model User {
   brandVoice         BrandVoice?
   articles           Article[]
   articleGenerations ArticleGeneration[]
+  onPageRewrites     OnPageRewrite[]
   prospects          OutreachProspect[]
   googlePosts        GooglePost[]
+}
+
+/// Une passe de réécriture demandée depuis l'onglet Contenu.
+///
+/// Le compteur du quota quotidien : une ligne par clic sur « Regénérer », avec
+/// l'élément visé (title + meta description, H1, paragraphe d'introduction).
+/// Chaque élément a son propre plafond, sinon trois essais sur le H1 fermeraient
+/// la porte au paragraphe, qui n'a rien demandé.
+model OnPageRewrite {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// « serp » (title + meta description), « h1 » ou « intro ».
+  element   String
+  createdAt DateTime @default(now())
+
+  @@index([userId, element, createdAt])
 }
 
 /// Le questionnaire d'accueil, rempli juste après le paiement ou l'ouverture de

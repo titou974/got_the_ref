@@ -60,12 +60,15 @@ export function SiteScreenshot({
       animate={forceVisible ? { opacity: 1, y: 0 } : undefined}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="overflow-hidden rounded-[36px] border border-fog bg-snow shadow-[var(--shadow-md)]"
+      className="overflow-hidden rounded-[36px] border border-fog bg-snow shadow-[var(--shadow-md)] max-w-2xl mx-auto"
     >
       {/* Chrome de fenêtre */}
       <div className="flex items-center gap-3 border-b border-fog bg-mist px-4 py-3">
         {isMaps ? (
-          <span className="inline-flex items-center gap-1.5 text-obsidian" aria-hidden>
+          <span
+            className="inline-flex items-center gap-1.5 text-obsidian"
+            aria-hidden
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path
                 d="M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11Z"
@@ -73,7 +76,13 @@ export function SiteScreenshot({
                 strokeWidth="1.6"
                 strokeLinejoin="round"
               />
-              <circle cx="12" cy="10" r="2.4" stroke="currentColor" strokeWidth="1.6" />
+              <circle
+                cx="12"
+                cy="10"
+                r="2.4"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              />
             </svg>
           </span>
         ) : (
@@ -84,7 +93,7 @@ export function SiteScreenshot({
           </span>
         )}
         <span className="min-w-0 flex-1 truncate rounded-full border border-fog bg-snow px-3 py-1 text-xs text-steel">
-          {isMaps ? label ?? "Google Maps" : domain ?? url}
+          {isMaps ? (label ?? "Google Maps") : (domain ?? url)}
         </span>
         {/* Plateforme du site, lue pendant le crawl : elle appartient à la
             fenêtre du navigateur autant que l'adresse. */}
@@ -129,8 +138,11 @@ export function SiteScreenshot({
         {hasOverlay && (
           <>
             {/* Filtre noir pour faire ressortir le contenu superposé */}
-            <div className="pointer-events-none absolute inset-0 bg-black/65" aria-hidden />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6 py-8 text-center">
+            <div
+              className="pointer-events-none absolute inset-0 bg-black/65"
+              aria-hidden
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6 py-8 text-center ">
               {children}
             </div>
           </>

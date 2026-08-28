@@ -7,8 +7,6 @@ import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 import { PlanArticlesButton } from "@/components/tableau-de-bord/PlanArticlesButton";
 import { ArticleQuotaBar } from "@/components/tableau-de-bord/ArticleQuotaBar";
 import { BrandVoicePanel } from "@/components/tableau-de-bord/BrandVoicePanel";
-import { SolutionPrompt } from "@/components/tableau-de-bord/SolutionPrompt";
-import { buildDiagnostic } from "@/lib/geo/diagnostic";
 
 export const maxDuration = 300;
 
@@ -40,7 +38,6 @@ export default async function ArticlesPage() {
     <>
       <PageHeader
         title={t("pageTitle")}
-        subtitle={context.domain ? t("pageSubtitle", { domain: context.domain }) : null}
       />
 
       {/* La demande de planning est posée sur la page, pas dans l'en-tête : le
@@ -66,23 +63,6 @@ export default async function ArticlesPage() {
         instructions={context.brandVoice?.instructions ?? ""}
         banned={context.brandVoice?.banned ?? []}
       />
-
-      {context.analysis ? (
-        <SolutionPrompt
-          tab="articles"
-          result={context.analysis}
-          diagnostic={buildDiagnostic(context.analysis)}
-          articles={articles.map((article) => ({
-            title: article.title,
-            keyword: article.keyword,
-            status: article.status,
-            scheduledFor: article.scheduledFor,
-            excerpt: article.excerpt,
-            outline: article.outline,
-            body: article.body,
-          }))}
-        />
-      ) : null}
     </>
   );
 }

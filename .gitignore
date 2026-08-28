@@ -48,3 +48,6 @@ next-env.d.ts
 /prisma/generated
 .claude/worktrees/demo-page
 .claude/worktrees/stripe-trial-cycles
+
+# Dépôts de référence clonés en local (documentation Tiptap, etc.)
+.reference/
