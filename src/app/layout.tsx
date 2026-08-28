@@ -126,9 +126,16 @@ export default async function RootLayout({
   const locale = await getLocale();
   const messages = await getMessages();
 
+  // Les extensions du navigateur (gestionnaires de mots de passe, correcteurs,
+  // traducteurs) posent leurs propres attributs sur `html` et `body` avant que
+  // React n'hydrate — on a vu passer un `__processed_<uuid>="true"` sur le
+  // `body`. React les lit comme un écart serveur/client et rejette
+  // l'hydratation de l'arbre entier alors que rien dans notre rendu n'a bougé.
+  // `suppressHydrationWarning` ne porte que sur les attributs de l'élément où
+  // il est posé : les vrais écarts, plus bas dans la page, restent signalés.
   return (
-    <html lang={locale} className={`${jakarta.variable} h-full`}>
-      <body className="min-h-full">
+    <html lang={locale} className={`${jakarta.variable} h-full`} suppressHydrationWarning>
+      <body className="min-h-full" suppressHydrationWarning>
         <JsonLd data={organizationJsonLd()} />
         <JsonLd data={websiteJsonLd()} />
         <JsonLd data={softwareApplicationJsonLd()} />
