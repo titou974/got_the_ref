@@ -1638,26 +1638,44 @@
       "articlesBody": "Douze sujets sont planifiés pour les quatre prochaines semaines, à raison de trois par semaine. Les trois premiers sont en cours de rédaction.",
       "retry": "Relancer"
     },
+    "keywords": {
+      "title": "Mots-clés tendances de votre niche",
+      "empty": "Aucun mot-clé relevé pour l'instant.",
+      "hintMeasured": "Relevés avec recherche Google, {period}.",
+      "hintEstimated": "Déduits de votre site, {period}. La recherche Google n'a pas pu être interrogée.",
+      "columns": {
+        "keyword": "Mot-clé",
+        "intent": "Intention",
+        "trend": "Dynamique",
+        "placements": "Où l'écrire"
+      },
+      "trend": {
+        "montant": "En hausse",
+        "stable": "Stable",
+        "émergent": "Émergent"
+      },
+      "placements": {
+        "title": "Balise title",
+        "metaDescription": "Meta description",
+        "h1": "H1"
+      }
+    },
     "content": {
       "pageTitle": "Contenu",
-      "cardTitle": "Titre et description",
-      "cardHint": "Ce que votre site affiche aujourd'hui, et ce que nous écririons à la place.",
+      "serpTitle": "Titre et description",
+      "h1Title": "Titre principal de la page",
+      "introTitle": "Paragraphe d'introduction",
       "before": "Aujourd'hui",
       "after": "Proposé",
       "becomes": "devient",
-      "proposedEmpty": "Aucune réécriture pour l'instant. Elle arrive avec la prochaine analyse.",
+      "proposedEmpty": "Réécriture livrée avec la prochaine analyse.",
       "keywordsLabel": "Mots-clés placés",
-      "keywordsEmpty": "Aucun mot-clé de votre niche n'est placé dans la proposition.",
-      "levelLabel": "Niveau estimé",
-      "levelHint": "Estimé sur la longueur des deux éléments et les mots-clés qu'ils portent.",
-      "level": {
-        "1": "À revoir",
-        "2": "Correct",
-        "3": "Optimal"
-      },
+      "keywordsEmpty": "Aucun mot-clé de votre niche.",
       "missing": {
         "title": "Aucune balise title",
-        "description": "Aucune meta description"
+        "description": "Aucune meta description",
+        "h1": "Aucun H1 sur la page d'accueil",
+        "intro": "Aucun paragraphe d'introduction lisible"
       }
     },
     "architecture": {

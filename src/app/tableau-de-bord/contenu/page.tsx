@@ -3,18 +3,16 @@ import { requireUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
+import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 
 export const maxDuration = 300;
 
 /**
- * Contenu : la balise title et la meta description, avant et après.
- *
- * Un seul objet sur la page. Le tableau des mots-clés et l'audit du H1 et de la
- * première phrase sont retirés : ils doublaient le rapport d'analyse et
- * repoussaient la comparaison, qui est ce que le client vient voir. Ce qu'il
- * reste des mots-clés tient en badges sous le diptyque — ceux réellement placés
- * dans la réécriture — et le niveau estimé dit où en est chaque version.
+ * Contenu : les mots-clés de la niche, puis les trois endroits où ils
+ * s'écrivent — la balise title et la meta description, le H1, le paragraphe
+ * d'introduction. Chacun montre l'existant et la réécriture côte à côte, et
+ * rien d'autre que les mots-clés effectivement placés.
  */
 export default async function ContenuPage() {
   const user = await requireUser();
@@ -29,10 +27,14 @@ export default async function ContenuPage() {
     <>
       <PageHeader title={t("pageTitle")} />
 
+      <KeywordTable insight={analysis.trendingKeywords ?? null} />
+
       <ContentCompare
         current={{
           title: analysis.signals.title,
           metaDescription: analysis.signals.metaDescription,
+          h1: analysis.signals.h1[0] ?? null,
+          intro: analysis.signals.firstParagraph,
           url: analysis.url,
           domain: analysis.domain,
         }}

@@ -4,22 +4,23 @@ import { Badge } from "@/components/tremor/Badge";
 import { Card, CardTitle } from "./Card";
 
 /**
- * L'avant et l'après d'une même page, dans la forme où Google les affiche.
+ * Trois éléments de la page d'accueil, chacun dans son avant/après.
  *
- * Un seul objet à lire : la balise title et la meta description d'aujourd'hui,
- * puis les mêmes réécrites, séparées par une flèche. Le décalage se voit sans
- * commentaire, ce qui vaut mieux qu'un audit critère par critère : le client a
- * déjà vu son site passer sous cette forme dans un résultat de recherche.
+ * Le couple title + meta description garde la forme d'un résultat Google : le
+ * client l'a déjà vu passer ainsi. Le H1 et le paragraphe d'introduction, eux,
+ * sont montrés dans leur balise — `<h1>…</h1>`, `<p>…</p>` — parce que c'est
+ * là qu'ils vivent et que la balise dit à elle seule leur poids.
  *
- * Sous le diptyque, deux repères et rien d'autre : les mots-clés de la niche
- * effectivement placés dans la proposition, et le niveau estimé de chaque
- * version. Le reste — dynamique du mot-clé, emplacements attendus, notes —
- * appartient au rapport d'analyse.
+ * Autour de chaque comparaison, une seule information : les mots-clés de la
+ * niche réellement placés dans la réécriture. Pas de note, pas de diagnostic —
+ * l'audit critère par critère est le travail du rapport d'analyse.
  */
 
 type Current = {
   title: string | null;
   metaDescription: string | null;
+  h1: string | null;
+  intro: string | null;
   url: string;
   domain: string;
 };
@@ -36,98 +37,176 @@ export async function ContentCompare({
   const suggested = insight?.suggested ?? null;
   const keywords = insight?.keywords.map((keyword) => keyword.keyword) ?? [];
 
-  const usedKeywords = suggested
-    ? keywords.filter((keyword) =>
-        containsKeyword(`${suggested.title} ${suggested.metaDescription}`, keyword),
-      )
-    : [];
+  return (
+    <div className="space-y-4">
+      <CompareCard
+        title={t("serpTitle")}
+        arrowLabel={t("becomes")}
+        beforeLabel={t("before")}
+        afterLabel={t("after")}
+        emptyLabel={t("proposedEmpty")}
+        keywordsLabel={t("keywordsLabel")}
+        keywordsEmpty={t("keywordsEmpty")}
+        placed={placedIn(
+          keywords,
+          suggested && `${suggested.title} ${suggested.metaDescription}`,
+        )}
+        before={
+          <SerpRow
+            domain={current.domain}
+            url={current.url}
+            title={current.title}
+            description={current.metaDescription}
+            missingTitle={t("missing.title")}
+            missingDescription={t("missing.description")}
+          />
+        }
+        after={
+          suggested ? (
+            <SerpRow
+              domain={current.domain}
+              url={current.url}
+              title={suggested.title}
+              description={suggested.metaDescription}
+              missingTitle={t("missing.title")}
+              missingDescription={t("missing.description")}
+            />
+          ) : null
+        }
+      />
 
-  const currentLevel = estimateLevel(current.title, current.metaDescription, keywords);
-  const proposedLevel = suggested
-    ? estimateLevel(suggested.title, suggested.metaDescription, keywords)
-    : null;
+      <CompareCard
+        title={t("h1Title")}
+        arrowLabel={t("becomes")}
+        beforeLabel={t("before")}
+        afterLabel={t("after")}
+        emptyLabel={t("proposedEmpty")}
+        keywordsLabel={t("keywordsLabel")}
+        keywordsEmpty={t("keywordsEmpty")}
+        placed={placedIn(keywords, suggested?.h1 ?? null)}
+        before={<Markup tag="h1" text={current.h1} missing={t("missing.h1")} />}
+        after={suggested ? <Markup tag="h1" text={suggested.h1} missing={t("missing.h1")} /> : null}
+      />
 
+      <CompareCard
+        title={t("introTitle")}
+        arrowLabel={t("becomes")}
+        beforeLabel={t("before")}
+        afterLabel={t("after")}
+        emptyLabel={t("proposedEmpty")}
+        keywordsLabel={t("keywordsLabel")}
+        keywordsEmpty={t("keywordsEmpty")}
+        placed={placedIn(keywords, suggested?.firstParagraph ?? null)}
+        before={<Markup tag="p" text={current.intro} missing={t("missing.intro")} />}
+        after={
+          suggested ? (
+            <Markup tag="p" text={suggested.firstParagraph} missing={t("missing.intro")} />
+          ) : null
+        }
+      />
+    </div>
+  );
+}
+
+/**
+ * Une carte de comparaison : l'existant, la flèche, la réécriture.
+ *
+ * Les trois éléments partagent la même boîte pour que l'œil compare toujours
+ * au même endroit ; seul le contenu des deux panneaux change.
+ */
+function CompareCard({
+  title,
+  before,
+  after,
+  placed,
+  arrowLabel,
+  beforeLabel,
+  afterLabel,
+  emptyLabel,
+  keywordsLabel,
+  keywordsEmpty,
+}: {
+  title: string;
+  before: React.ReactNode;
+  after: React.ReactNode | null;
+  placed: string[];
+  arrowLabel: string;
+  beforeLabel: string;
+  afterLabel: string;
+  emptyLabel: string;
+  keywordsLabel: string;
+  keywordsEmpty: string;
+}) {
   return (
     <Card>
-      <CardTitle title={t("cardTitle")} hint={t("cardHint")} />
+      <CardTitle title={title} />
 
       {/* Trois colonnes sur large écran : avant, pivot, après. Empilé en
           dessous, la flèche bascule d'un quart de tour pour rester lisible. */}
       <div className="grid items-center gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-4">
-        <SerpPanel
-          eyebrow={t("before")}
-          tone="before"
-          domain={current.domain}
-          url={current.url}
-          title={current.title}
-          description={current.metaDescription}
-          missingTitle={t("missing.title")}
-          missingDescription={t("missing.description")}
-        />
+        <Panel eyebrow={beforeLabel} tone="before">
+          {before}
+        </Panel>
 
-        <Pivot label={t("becomes")} />
+        <Pivot label={arrowLabel} />
 
-        {suggested ? (
-          <SerpPanel
-            eyebrow={t("after")}
-            tone="after"
-            domain={current.domain}
-            url={current.url}
-            title={suggested.title}
-            description={suggested.metaDescription}
-            missingTitle={t("missing.title")}
-            missingDescription={t("missing.description")}
-          />
+        {after ? (
+          <Panel eyebrow={afterLabel} tone="after">
+            {after}
+          </Panel>
         ) : (
           <p className="rounded-2xl border border-dashed border-pebble px-4 py-10 text-center text-sm text-muted">
-            {t("proposedEmpty")}
+            {emptyLabel}
           </p>
         )}
       </div>
 
-      <div className="mt-6 border-t border-border pt-5">
-        <Eyebrow>{t("keywordsLabel")}</Eyebrow>
-        {usedKeywords.length ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {usedKeywords.map((keyword) => (
-              <Badge key={keyword} variant="neutral">
-                {keyword}
-              </Badge>
-            ))}
-          </div>
+      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-4">
+        <Eyebrow>{keywordsLabel}</Eyebrow>
+        {placed.length ? (
+          placed.map((keyword) => (
+            <Badge key={keyword} variant="neutral">
+              {keyword}
+            </Badge>
+          ))
         ) : (
-          <p className="mt-2 text-sm text-muted">{t("keywordsEmpty")}</p>
+          <span className="text-sm text-muted">{keywordsEmpty}</span>
         )}
-      </div>
-
-      <div className="mt-5 border-t border-border pt-5">
-        <Eyebrow>{t("levelLabel")}</Eyebrow>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <LevelMeter
-            caption={t("before")}
-            level={currentLevel}
-            label={t(`level.${currentLevel}`)}
-          />
-          {proposedLevel ? (
-            <LevelMeter
-              caption={t("after")}
-              level={proposedLevel}
-              label={t(`level.${proposedLevel}`)}
-            />
-          ) : null}
-        </div>
-        <p className="mt-3 text-xs text-muted">{t("levelHint")}</p>
       </div>
     </Card>
   );
 }
 
-/** Libellé de section : capitales espacées, la même dans toute la carte. */
+/** Libellé de section : capitales espacées, la même dans toute la page. */
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
     <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ash">
       {children}
     </span>
+  );
+}
+
+/** Le panneau qui porte une version : sourd pour l'existant, net pour la proposition. */
+function Panel({
+  eyebrow,
+  tone,
+  children,
+}: {
+  eyebrow: string;
+  tone: "before" | "after";
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border p-4 ${
+        tone === "after"
+          ? "border-obsidian/15 bg-surface shadow-[0_1px_2px_rgba(9,9,11,0.04)]"
+          : "border-border bg-mist/60"
+      }`}
+    >
+      <Eyebrow>{eyebrow}</Eyebrow>
+      <div className="mt-3">{children}</div>
+    </div>
   );
 }
 
@@ -169,9 +248,7 @@ function Pivot({ label }: { label: string }) {
 }
 
 /** Un résultat de recherche, dans la forme où Google l'affiche. */
-function SerpPanel({
-  eyebrow,
-  tone,
+function SerpRow({
   domain,
   url,
   title,
@@ -179,8 +256,6 @@ function SerpPanel({
   missingTitle,
   missingDescription,
 }: {
-  eyebrow: string;
-  tone: "before" | "after";
   domain: string;
   url: string;
   title: string | null;
@@ -188,19 +263,9 @@ function SerpPanel({
   missingTitle: string;
   missingDescription: string;
 }) {
-  const after = tone === "after";
-
   return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        after
-          ? "border-obsidian/15 bg-surface shadow-[0_1px_2px_rgba(9,9,11,0.04)]"
-          : "border-border bg-mist/60"
-      }`}
-    >
-      <Eyebrow>{eyebrow}</Eyebrow>
-
-      <div className="mt-3 flex items-center gap-2">
+    <>
+      <div className="flex items-center gap-2">
         <span
           aria-hidden
           className="flex h-6 w-6 items-center justify-center rounded-full bg-mist text-[11px] font-semibold text-steel"
@@ -225,84 +290,43 @@ function SerpPanel({
       >
         {description ?? missingDescription}
       </p>
-    </div>
+    </>
   );
 }
-
-/** Le niveau estimé, en trois crans : à revoir, correct, optimal. */
-function LevelMeter({
-  caption,
-  level,
-  label,
-}: {
-  caption: string;
-  level: Level;
-  label: string;
-}) {
-  const fill = level === 3 ? "bg-success" : level === 2 ? "bg-warning" : "bg-danger";
-
-  return (
-    <div className="rounded-2xl border border-border px-4 py-3">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ash">
-          {caption}
-        </span>
-        <span className="text-sm font-medium">{label}</span>
-      </div>
-      <div className="mt-2 flex gap-1" aria-hidden>
-        {[1, 2, 3].map((step) => (
-          <span
-            key={step}
-            className={`h-1.5 flex-1 rounded-full ${step <= level ? fill : "bg-fog"}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-type Level = 1 | 2 | 3;
-
-/** Longueurs affichables sans troncature dans un résultat de recherche. */
-const TITLE_RANGE = [30, 65] as const;
-const DESCRIPTION_RANGE = [70, 160] as const;
 
 /**
- * Le niveau d'un couple title + meta description.
+ * Le texte dans sa balise, écrite en toutes lettres.
  *
- * Trois critères pèsent pareil : la balise title tient-elle dans la largeur
- * affichée, la meta description aussi, et les deux portent-elles les mots-clés
- * de la niche. C'est une estimation, pas une note : elle sert à comparer
- * l'avant et l'après, pas à mesurer la page dans l'absolu.
+ * `<h1>` et `<p>` sont laissés visibles : ils rappellent que la phrase n'est
+ * pas un slogan flottant mais un élément de la page, et le client retrouve la
+ * balise telle quelle dans son éditeur au moment de coller la réécriture.
  */
-function estimateLevel(
-  title: string | null,
-  description: string | null,
-  keywords: string[],
-): Level {
-  const haystack = `${title ?? ""} ${description ?? ""}`;
-  const matched = keywords.filter((keyword) => containsKeyword(haystack, keyword)).length;
-
-  const score =
-    lengthPoints(title, TITLE_RANGE) +
-    lengthPoints(description, DESCRIPTION_RANGE) +
-    Math.min(matched, 2);
-
-  if (score >= 5) return 3;
-  if (score >= 3) return 2;
-  return 1;
+function Markup({
+  tag,
+  text,
+  missing,
+}: {
+  tag: "h1" | "p";
+  text: string | null;
+  missing: string;
+}) {
+  return (
+    <p className={`text-[15px] leading-relaxed ${text ? "text-ink" : "text-danger"}`}>
+      <span className="font-mono text-[12px] text-ash">{`<${tag}>`}</span>
+      <span className="mx-1.5">{text ?? missing}</span>
+      <span className="font-mono text-[12px] text-ash">{`</${tag}>`}</span>
+    </p>
+  );
 }
 
-function lengthPoints(value: string | null, [min, max]: readonly [number, number]) {
-  if (!value) return 0;
-  return value.length >= min && value.length <= max ? 2 : 1;
+/** Les mots-clés de la niche qu'on retrouve dans la réécriture. */
+function placedIn(keywords: string[], text: string | null) {
+  if (!text) return [];
+  const haystack = normalize(text);
+  return keywords.filter((keyword) => haystack.includes(normalize(keyword)));
 }
 
 /** Comparaison insensible à la casse et aux accents, comme le ferait un moteur. */
-function containsKeyword(haystack: string, keyword: string) {
-  return normalize(haystack).includes(normalize(keyword));
-}
-
 function normalize(value: string) {
   return value
     .normalize("NFD")
