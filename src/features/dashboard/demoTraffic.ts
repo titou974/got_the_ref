@@ -10,7 +10,8 @@
  *
  * Les valeurs sont écrites en dur plutôt que tirées au sort : un graphique qui
  * change de forme à chaque rechargement se lit comme une vraie mesure erratique.
- * Seules les dates suivent l'horloge, pour que l'axe ressemble au mois en cours.
+ * Seules les dates suivent l'horloge, pour que l'axe ressemble au mois en cours,
+ * et avec elles le creux du week-end, calé sur les jours réels.
  */
 
 /** Les trois assistants montrés. Les libellés servent aussi de clés de série. */
@@ -71,6 +72,16 @@ const PREVIOUS_RATIO: Record<DemoEngine, number> = {
   Perplexity: 0.86,
 };
 
+/**
+ * Le rythme de la semaine, par jour (0 = dimanche).
+ *
+ * Le trafic venu des assistants suit les journées de travail : il creuse le
+ * samedi et le dimanche, culmine en milieu de semaine. Le facteur s'applique
+ * d'après la date réelle du point, pas d'après son rang dans la table — sinon
+ * les creux tomberaient un mardi dès que l'exemple est ouvert un autre jour.
+ */
+const WEEKDAY_FACTOR = [0.68, 1.05, 1.12, 1.09, 1.03, 0.94, 0.66];
+
 /** Part des assistants dans le total des visites du site, dans cet exemple. */
 const AI_SHARE_OF_SITE = 0.068;
 
@@ -94,11 +105,13 @@ export function buildDemoAiTraffic(endingOn: Date = new Date()): DemoAiTraffic {
     const date = new Date(endingOn);
     date.setDate(date.getDate() - (total - 1 - index));
 
+    const weekday = WEEKDAY_FACTOR[date.getDay()];
+
     return {
       date: formatDay(date),
-      ChatGPT: DAILY.ChatGPT[index],
-      Gemini: DAILY.Gemini[index],
-      Perplexity: DAILY.Perplexity[index],
+      ChatGPT: Math.round(DAILY.ChatGPT[index] * weekday),
+      Gemini: Math.round(DAILY.Gemini[index] * weekday),
+      Perplexity: Math.round(DAILY.Perplexity[index] * weekday),
     };
   });
 
