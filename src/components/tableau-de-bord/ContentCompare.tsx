@@ -1,11 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import type { TrendingKeywordsInsight } from "@/lib/geo/types";
-import { Badge } from "@/components/tremor/Badge";
-import { Card, CardTitle } from "./Card";
-import { RegenerateButton } from "./RegenerateButton";
-import { SiteFavicon } from "./SiteFavicon";
-import { ON_PAGE_REWRITE_QUOTA, type OnPageElementKey } from "@/constants/plans";
 import type { OnPageRewriteQuota } from "@/features/dashboard/queries";
+import { CompareCard } from "./CompareCard";
+import { SiteFavicon } from "./SiteFavicon";
 
 /**
  * Trois éléments de la page d'accueil, chacun dans son avant/après.
@@ -50,12 +47,6 @@ export async function ContentCompare({
         element="serp"
         remaining={quota.serp}
         title={t("serpTitle")}
-        arrowLabel={t("becomes")}
-        beforeLabel={t("before")}
-        afterLabel={t("after")}
-        emptyLabel={t("proposedEmpty")}
-        keywordsLabel={t("keywordsLabel")}
-        keywordsEmpty={t("keywordsEmpty")}
         placed={placedIn(
           keywords,
           suggested && `${suggested.title} ${suggested.metaDescription}`,
@@ -82,33 +73,23 @@ export async function ContentCompare({
             />
           ) : null
         }
+        skeleton={<SerpSkeleton domain={current.domain} url={current.url} />}
       />
 
       <CompareCard
         element="h1"
         remaining={quota.h1}
         title={t("h1Title")}
-        arrowLabel={t("becomes")}
-        beforeLabel={t("before")}
-        afterLabel={t("after")}
-        emptyLabel={t("proposedEmpty")}
-        keywordsLabel={t("keywordsLabel")}
-        keywordsEmpty={t("keywordsEmpty")}
         placed={placedIn(keywords, suggested?.h1 ?? null)}
         before={<Markup tag="h1" text={current.h1} missing={t("missing.h1")} />}
         after={suggested ? <Markup tag="h1" text={suggested.h1} missing={t("missing.h1")} /> : null}
+        skeleton={<MarkupSkeleton tag="h1" lines={1} />}
       />
 
       <CompareCard
         element="intro"
         remaining={quota.intro}
         title={t("introTitle")}
-        arrowLabel={t("becomes")}
-        beforeLabel={t("before")}
-        afterLabel={t("after")}
-        emptyLabel={t("proposedEmpty")}
-        keywordsLabel={t("keywordsLabel")}
-        keywordsEmpty={t("keywordsEmpty")}
         placed={placedIn(keywords, suggested?.firstParagraph ?? null)}
         before={<Markup tag="p" text={current.intro} missing={t("missing.intro")} />}
         after={
@@ -116,173 +97,7 @@ export async function ContentCompare({
             <Markup tag="p" text={suggested.firstParagraph} missing={t("missing.intro")} />
           ) : null
         }
-      />
-    </div>
-  );
-}
-
-/**
- * Une carte de comparaison : l'existant, la flèche, la réécriture.
- *
- * Les trois éléments partagent la même boîte pour que l'œil compare toujours
- * au même endroit ; seul le contenu des deux panneaux change.
- */
-function CompareCard({
-  element,
-  remaining,
-  title,
-  before,
-  after,
-  placed,
-  arrowLabel,
-  beforeLabel,
-  afterLabel,
-  emptyLabel,
-  keywordsLabel,
-  keywordsEmpty,
-}: {
-  element: OnPageElementKey;
-  remaining: number;
-  title: string;
-  before: React.ReactNode;
-  after: React.ReactNode | null;
-  placed: string[];
-  arrowLabel: string;
-  beforeLabel: string;
-  afterLabel: string;
-  emptyLabel: string;
-  keywordsLabel: string;
-  keywordsEmpty: string;
-}) {
-  return (
-    <Card>
-      <CardTitle
-        title={title}
-        action={
-          <RegenerateButton
-            element={element}
-            remaining={remaining}
-            limit={ON_PAGE_REWRITE_QUOTA.daily}
-          />
-        }
-      />
-
-      {/* Trois colonnes sur large écran : avant, pivot, après. Empilé en
-          dessous, la flèche bascule d'un quart de tour pour rester lisible. */}
-      <div className="grid items-center gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-4">
-        <Panel eyebrow={beforeLabel} tone="before">
-          {before}
-        </Panel>
-
-        <Pivot label={arrowLabel} />
-
-        {after ? (
-          <Panel eyebrow={afterLabel} tone="after">
-            {after}
-          </Panel>
-        ) : (
-          <p className="rounded-2xl border border-dashed border-pebble px-4 py-10 text-center text-sm text-muted">
-            {emptyLabel}
-          </p>
-        )}
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-4">
-        <Eyebrow>{keywordsLabel}</Eyebrow>
-        {placed.length ? (
-          placed.map((keyword) => (
-            <Badge key={keyword} variant="neutral">
-              {keyword}
-            </Badge>
-          ))
-        ) : (
-          <span className="text-sm text-muted">{keywordsEmpty}</span>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-/** Libellé de section : capitales espacées, la même dans toute la page. */
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ash">
-      {children}
-    </span>
-  );
-}
-
-/** Le panneau qui porte une version : sourd pour l'existant, net pour la proposition. */
-function Panel({
-  eyebrow,
-  tone,
-  children,
-}: {
-  eyebrow: string;
-  tone: "before" | "after";
-  children: React.ReactNode;
-}) {
-  const after = tone === "after";
-
-  return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        after
-          ? "border-obsidian/15 bg-surface shadow-[0_1px_2px_rgba(9,9,11,0.04)]"
-          : "border-border bg-mist/60"
-      }`}
-    >
-      {/* Le libellé de version porte une couleur pleine : sur trois cartes qui
-          se ressemblent, c'est lui qui dit d'un coup d'œil de quel côté on lit.
-          Ambre pour l'existant, vert pour la proposition — les deux états que
-          le tableau de bord emploie déjà partout ailleurs. */}
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] ring-1 ring-inset ${
-          after
-            ? "bg-success/10 text-success ring-success/25"
-            : "bg-warning/10 text-warning ring-warning/25"
-        }`}
-      >
-        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
-        {eyebrow}
-      </span>
-      <div className="mt-3">{children}</div>
-    </div>
-  );
-}
-
-/**
- * Le pivot entre les deux versions.
- *
- * Le fil est pointillé du côté de l'existant et plein du côté de la
- * proposition : la même page, mais l'une est encore à écrire et l'autre non.
- */
-function Pivot({ label }: { label: string }) {
-  return (
-    <div className="flex items-center justify-center gap-2 py-1 lg:h-full lg:flex-col lg:py-6">
-      <span
-        aria-hidden
-        className="h-px flex-1 border-t border-dashed border-pebble lg:h-auto lg:w-px lg:border-l lg:border-t-0"
-      />
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-4 w-4 rotate-90 text-steel lg:rotate-0"
-          role="img"
-          aria-label={label}
-        >
-          <path d="M4 12h15" />
-          <path d="m13 6 6 6-6 6" />
-        </svg>
-      </span>
-      <span
-        aria-hidden
-        className="h-px flex-1 border-t border-pebble lg:h-auto lg:w-px lg:border-l lg:border-t-0"
+        skeleton={<MarkupSkeleton tag="p" lines={3} />}
       />
     </div>
   );
@@ -306,13 +121,7 @@ function SerpRow({
 }) {
   return (
     <>
-      <div className="flex items-center gap-2">
-        <SiteFavicon domain={domain} className="h-6 w-6 rounded-full" />
-        <span className="min-w-0">
-          <span className="block truncate text-[13px] font-medium leading-tight">{domain}</span>
-          <span className="block truncate text-[11px] leading-tight text-ash">{url}</span>
-        </span>
-      </div>
+      <SerpIdentity domain={domain} url={url} />
 
       <p
         className={`mt-2 line-clamp-2 text-[19px] leading-snug ${
@@ -327,6 +136,26 @@ function SerpRow({
         {description ?? missingDescription}
       </p>
     </>
+  );
+}
+
+/**
+ * Le site dans le résultat : favicon, domaine, URL.
+ *
+ * Cette ligne ne change jamais d'une réécriture à l'autre — c'est le même site.
+ * Elle reste donc affichée pendant la rédaction, et seul le texte en dessous
+ * passe en attente : voir le favicon disparaître laisserait croire que la carte
+ * entière se recharge.
+ */
+function SerpIdentity({ domain, url }: { domain: string; url: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <SiteFavicon domain={domain} className="h-6 w-6 rounded-full" />
+      <span className="min-w-0">
+        <span className="block truncate text-[13px] font-medium leading-tight">{domain}</span>
+        <span className="block truncate text-[11px] leading-tight text-ash">{url}</span>
+      </span>
+    </div>
   );
 }
 
@@ -348,12 +177,71 @@ function Markup({
 }) {
   return (
     <p className={`text-[15px] leading-relaxed ${text ? "text-ink" : "text-danger"}`}>
-      <span className="font-mono text-[12px] text-ash">{`<${tag}>`}</span>
+      <Tag name={tag} />
       <span className="mx-1.5">{text ?? missing}</span>
-      <span className="font-mono text-[12px] text-ash">{`</${tag}>`}</span>
+      <Tag name={tag} closing />
     </p>
   );
 }
+
+/** Une balise ouvrante ou fermante, en chasse fixe. */
+function Tag({ name, closing = false }: { name: "h1" | "p"; closing?: boolean }) {
+  return (
+    <span className="font-mono text-[12px] text-ash">{`<${closing ? "/" : ""}${name}>`}</span>
+  );
+}
+
+/* ------------------------------- Chargement -------------------------------- */
+
+/**
+ * Le résultat de recherche pendant sa réécriture.
+ *
+ * Le site reste identifié — favicon, domaine, URL — et seules les deux lignes
+ * qui changent passent en attente, aux longueurs qu'un vrai title et une vraie
+ * meta description occupent. Le gabarit ne bouge donc pas quand le texte arrive.
+ */
+function SerpSkeleton({ domain, url }: { domain: string; url: string }) {
+  return (
+    <>
+      <SerpIdentity domain={domain} url={url} />
+
+      <div className="mt-3 space-y-2">
+        <Bar className="h-[18px] w-[78%]" />
+        <div className="space-y-1.5 pt-1.5">
+          <Bar className="h-3 w-full" />
+          <Bar className="h-3 w-[92%]" />
+          <Bar className="h-3 w-[64%]" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Le H1 ou le paragraphe pendant sa réécriture : les balises tiennent, le texte attend. */
+function MarkupSkeleton({ tag, lines }: { tag: "h1" | "p"; lines: number }) {
+  // La dernière ligne s'arrête court, comme une phrase qui finit : trois barres
+  // de largeur égale se liraient comme un bloc, pas comme du texte.
+  const widths = ["w-full", "w-[96%]", "w-[71%]"];
+
+  return (
+    <div className="text-[15px] leading-relaxed">
+      <Tag name={tag} />
+      <div className="my-1.5 space-y-2">
+        {Array.from({ length: lines }, (_, index) => (
+          <Bar key={index} className={`h-[15px] ${widths[index % widths.length]}`} />
+        ))}
+      </div>
+      <Tag name={tag} closing />
+    </div>
+  );
+}
+
+/** Une ligne de texte en attente : le shimmer du thème, arrondi comme une ligne. */
+function Bar({ className }: { className: string }) {
+  return <span className={`block rounded-md shimmer ${className}`} />;
+}
+
+/* ------------------------------- Mots-clés --------------------------------- */
 
 /**
  * Les mots-clés de la niche qu'on retrouve dans un texte.
