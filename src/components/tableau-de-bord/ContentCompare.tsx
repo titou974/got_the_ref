@@ -222,15 +222,30 @@ function Panel({
   tone: "before" | "after";
   children: React.ReactNode;
 }) {
+  const after = tone === "after";
+
   return (
     <div
       className={`rounded-2xl border p-4 ${
-        tone === "after"
+        after
           ? "border-obsidian/15 bg-surface shadow-[0_1px_2px_rgba(9,9,11,0.04)]"
           : "border-border bg-mist/60"
       }`}
     >
-      <Eyebrow>{eyebrow}</Eyebrow>
+      {/* Le libellé de version porte une couleur pleine : sur trois cartes qui
+          se ressemblent, c'est lui qui dit d'un coup d'œil de quel côté on lit.
+          Ambre pour l'existant, vert pour la proposition — les deux états que
+          le tableau de bord emploie déjà partout ailleurs. */}
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] ring-1 ring-inset ${
+          after
+            ? "bg-success/10 text-success ring-success/25"
+            : "bg-warning/10 text-warning ring-warning/25"
+        }`}
+      >
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
+        {eyebrow}
+      </span>
       <div className="mt-3">{children}</div>
     </div>
   );
