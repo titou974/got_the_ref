@@ -1671,6 +1671,10 @@
       "proposedEmpty": "Réécriture livrée avec la prochaine analyse.",
       "keywordsLabel": "Mots-clés placés",
       "keywordsEmpty": "Aucun mot-clé de votre niche.",
+      "regenerate": "Regénérer",
+      "regenerating": "Rédaction…",
+      "regenerateLeft": "{left} sur {limit} aujourd'hui",
+      "regenerateExhausted": "Épuisé, revient demain",
       "missing": {
         "title": "Aucune balise title",
         "description": "Aucune meta description",

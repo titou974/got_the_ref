@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { authActionClient } from "@/lib/safe-action";
+import { authActionClient, subscriberActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
@@ -9,12 +9,18 @@ import { encryptJson, isCredentialsKeySet } from "@/lib/crypto";
 import { connectorFor } from "@/constants/site-platforms";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
+import { regenerateOnPageElement } from "@/lib/geo/keywords";
 import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
 import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
-import { getArticleQuota, getDashboardContext, readSiteCredentials } from "./queries";
-import { ARTICLE_QUOTAS } from "@/constants/plans";
+import {
+  getArticleQuota,
+  getDashboardContext,
+  getOnPageRewriteQuota,
+  readSiteCredentials,
+} from "./queries";
+import { ARTICLE_QUOTAS, ON_PAGE_REWRITE_QUOTA } from "@/constants/plans";
 import { parseOutline, serializeOutline } from "./outline";
 import {
   draftOutreachMessage,
@@ -34,6 +40,7 @@ import {
   planGooglePostsSchema,
   prospectIdSchema,
   prospectStatusSchema,
+  regenerateOnPageSchema,
   settingsSchema,
   updateArticleSchema,
   writeArticleSchema,
@@ -504,6 +511,74 @@ export const rewriteOnPageAction = authActionClient
     const context = await getDashboardContext(ctx.auth.user.id);
     if (!context.analysis) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
     return rewriteOnPage(context);
+  });
+
+/**
+ * Une autre version d'un élément on-page, à la demande.
+ *
+ * Trois par élément et par jour : le plafond est vérifié ici, jamais dans le
+ * composant — un bouton grisé côté client n'empêche personne d'appeler l'action.
+ * La passe n'est comptée qu'une fois le texte obtenu : un appel au modèle qui
+ * échoue ne coûte pas une des trois demandes du client.
+ */
+export const regenerateOnPageAction = subscriberActionClient
+  .inputSchema(regenerateOnPageSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    const { element } = parsedInput;
+
+    const [context, quota] = await Promise.all([
+      getDashboardContext(userId),
+      getOnPageRewriteQuota(userId),
+    ]);
+
+    const analysis = context.analysis;
+    if (!analysis || !context.analysisId) {
+      throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
+    }
+    const insight = analysis.trendingKeywords;
+    if (!insight) {
+      throw new AppError(
+        "Les mots-clés de la niche ne sont pas encore relevés.",
+        "NO_KEYWORDS",
+        400,
+      );
+    }
+    if (quota[element] <= 0) {
+      throw new AppError(
+        `Vous avez utilisé vos ${ON_PAGE_REWRITE_QUOTA.daily} réécritures du jour sur cet élément. Le compteur repart demain.`,
+        "QUOTA_EXCEEDED",
+        429,
+      );
+    }
+
+    const rewritten = await regenerateOnPageElement(
+      analysis.profile,
+      analysis.signals,
+      insight.keywords,
+      element,
+      insight.suggested,
+      context.tone.summary,
+    );
+    if (!rewritten) {
+      throw new AppError("La réécriture n'a rien donné. Réessayez.", "REWRITE_FAILED", 502);
+    }
+
+    const updated: GeoAnalysisResult = {
+      ...analysis,
+      trendingKeywords: { ...insight, suggested: { ...insight.suggested, ...rewritten } },
+    };
+
+    await Promise.all([
+      prisma.analysis.update({
+        where: { id: context.analysisId },
+        data: { data: JSON.stringify(updated) },
+      }),
+      prisma.onPageRewrite.create({ data: { userId, element } }),
+    ]);
+
+    revalidatePath(ROUTES.dashboardContent);
+    return { remaining: quota[element] - 1 };
   });
 
 // ── Articles ─────────────────────────────────────────────────────────────────

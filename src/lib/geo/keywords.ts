@@ -295,6 +295,43 @@ async function rewriteWithOpenAI(
   keywords: TrendingKeyword[],
   tone: string | null,
 ): Promise<Suggested | null> {
+  const json = await askRewriteModel(
+    buildRewritePrompt(profile, signals, keywords, tone),
+    { motsClés: keywords.map((k) => k.keyword) },
+  );
+  if (!json) return null;
+
+  const title = clean(json.title, 120);
+  const metaDescription = clean(json.metaDescription, 220);
+  const h1 = clean(json.h1, 120);
+  const firstParagraph = clean(json.firstParagraph, 700);
+  if (!title || !metaDescription || !h1 || !firstParagraph) {
+    geoLog("Réécritures on-page — réponse incomplète", json);
+    return null;
+  }
+
+  const brand = clean(json.brandName, 60) || brandFromSignals(signals);
+  const suggested: Suggested = {
+    title: ensureBrandFirst(title, brand),
+    metaDescription,
+    h1,
+    firstParagraph,
+  };
+  geoLog("Réécritures on-page — résultat", { marque: brand, ...suggested });
+  return suggested;
+}
+
+/**
+ * L'appel au rédacteur : GPT-4o mini, une consigne, un objet JSON en retour.
+ *
+ * `null` couvre les trois cas où l'appelant doit garder ce qu'il a déjà — clé
+ * absente, appel en échec, réponse illisible — plutôt que d'écraser un texte
+ * publiable par un texte vide.
+ */
+async function askRewriteModel(
+  prompt: string,
+  logContext: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) {
     geoLog("Réécritures on-page — ignoré (pas de clé OPENAI_API_KEY)");
@@ -302,9 +339,7 @@ async function rewriteWithOpenAI(
   }
 
   const model = process.env.OPENAI_REWRITE_MODEL || "gpt-4o-mini";
-  geoLog(`Réécritures on-page — appel OpenAI (${model})…`, {
-    motsClés: keywords.map((k) => k.keyword),
-  });
+  geoLog(`Réécritures on-page — appel OpenAI (${model})…`, logContext);
   try {
     const data = (await postJson(
       "https://api.openai.com/v1/chat/completions",
@@ -319,12 +354,7 @@ async function rewriteWithOpenAI(
           temperature: 0.4,
           max_tokens: 900,
           response_format: { type: "json_object" },
-          messages: [
-            {
-              role: "user",
-              content: buildRewritePrompt(profile, signals, keywords, tone),
-            },
-          ],
+          messages: [{ role: "user", content: prompt }],
         }),
       },
       "OpenAI réécritures",
@@ -333,33 +363,90 @@ async function rewriteWithOpenAI(
     const choices = (data.choices as Array<Record<string, unknown>>) ?? [];
     const text = ((choices[0]?.message as Record<string, unknown>)?.content as string) ?? "";
     const json = extractJson(text);
-    if (!json) {
-      geoLog("Réécritures on-page — réponse illisible", text.slice(0, 300));
-      return null;
-    }
-
-    const title = clean(json.title, 120);
-    const metaDescription = clean(json.metaDescription, 220);
-    const h1 = clean(json.h1, 120);
-    const firstParagraph = clean(json.firstParagraph, 700);
-    if (!title || !metaDescription || !h1 || !firstParagraph) {
-      geoLog("Réécritures on-page — réponse incomplète", json);
-      return null;
-    }
-
-    const brand = clean(json.brandName, 60) || brandFromSignals(signals);
-    const suggested: Suggested = {
-      title: ensureBrandFirst(title, brand),
-      metaDescription,
-      h1,
-      firstParagraph,
-    };
-    geoLog("Réécritures on-page — résultat", { marque: brand, ...suggested });
-    return suggested;
+    if (!json) geoLog("Réécritures on-page — réponse illisible", text.slice(0, 300));
+    return json;
   } catch (err) {
     geoLog("Réécritures on-page — échec", String(err));
     return null;
   }
+}
+
+/** Ce qu'un clic sur « Regénérer » remet en jeu, élément par élément. */
+export type OnPageElement = "serp" | "h1" | "intro";
+
+const ELEMENT_BRIEF: Record<OnPageElement, { label: string; shape: string; rule: string }> = {
+  serp: {
+    label: "la balise title et la meta description",
+    shape: '{ "brandName": "…", "title": "…", "metaDescription": "…" }',
+    rule: "« metaDescription » : 155 caractères au plus, deux ou trois mots-clés de la liste.",
+  },
+  h1: {
+    label: "le H1",
+    shape: '{ "h1": "…" }',
+    rule: "« h1 » : 70 caractères au plus, une seule idée, le mot-clé n° 1 en toutes lettres.",
+  },
+  intro: {
+    label: "le paragraphe d'introduction",
+    shape: '{ "firstParagraph": "…" }',
+    rule: "« firstParagraph » : 40 à 60 mots, trois mots-clés de la liste ou plus.",
+  },
+};
+
+/**
+ * Une autre version d'un seul élément, à la demande du client.
+ *
+ * Le texte déjà proposé part avec la consigne : sans lui, le modèle rend
+ * souvent la même phrase à un synonyme près, et le client a dépensé une passe
+ * de son quota pour rien.
+ */
+export async function regenerateOnPageElement(
+  profile: BusinessProfile,
+  signals: SiteSignals,
+  keywords: TrendingKeyword[],
+  element: OnPageElement,
+  current: Partial<Suggested>,
+  tone: string | null = null,
+): Promise<Partial<Suggested> | null> {
+  const brief = ELEMENT_BRIEF[element];
+  const alreadyProposed = [
+    element === "serp" ? `Title déjà proposé : ${current.title ?? "(aucun)"}` : "",
+    element === "serp"
+      ? `Meta description déjà proposée : ${current.metaDescription ?? "(aucune)"}`
+      : "",
+    element === "h1" ? `H1 déjà proposé : ${current.h1 ?? "(aucun)"}` : "",
+    element === "intro"
+      ? `Paragraphe déjà proposé : ${current.firstParagraph ?? "(aucun)"}`
+      : "",
+  ].filter(Boolean);
+
+  const prompt = [
+    buildRewritePrompt(profile, signals, keywords, tone),
+    "",
+    "── Cette fois, une seule chose t'est demandée ──",
+    ...alreadyProposed,
+    `Réécris uniquement ${brief.label}, dans une formulation nettement différente de celle déjà proposée : autre angle d'attaque, autre ordre des faits, autres mots-clés de la liste quand c'est possible. Les mêmes règles s'appliquent.`,
+    brief.rule,
+    `Réponds UNIQUEMENT par : ${brief.shape}`,
+  ].join("\n");
+
+  const json = await askRewriteModel(prompt, { élément: element });
+  if (!json) return null;
+
+  if (element === "serp") {
+    const title = clean(json.title, 120);
+    const metaDescription = clean(json.metaDescription, 220);
+    if (!title || !metaDescription) return null;
+    const brand = clean(json.brandName, 60) || brandFromSignals(signals);
+    return { title: ensureBrandFirst(title, brand), metaDescription };
+  }
+
+  if (element === "h1") {
+    const h1 = clean(json.h1, 120);
+    return h1 ? { h1 } : null;
+  }
+
+  const firstParagraph = clean(json.firstParagraph, 700);
+  return firstParagraph ? { firstParagraph } : null;
 }
 
 /** Le nom de l'enseigne, à défaut de réponse du modèle : premier segment du title. */

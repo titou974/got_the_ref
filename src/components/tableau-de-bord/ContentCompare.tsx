@@ -2,7 +2,10 @@ import { getTranslations } from "next-intl/server";
 import type { TrendingKeywordsInsight } from "@/lib/geo/types";
 import { Badge } from "@/components/tremor/Badge";
 import { Card, CardTitle } from "./Card";
+import { RegenerateButton } from "./RegenerateButton";
 import { SiteFavicon } from "./SiteFavicon";
+import { ON_PAGE_REWRITE_QUOTA, type OnPageElementKey } from "@/constants/plans";
+import type { OnPageRewriteQuota } from "@/features/dashboard/queries";
 
 /**
  * Trois éléments de la page d'accueil, chacun dans son avant/après.
@@ -29,10 +32,13 @@ type Current = {
 export async function ContentCompare({
   current,
   insight,
+  quota,
 }: {
   current: Current;
   /** Mots-clés de la niche + réécriture livrée par l'analyse. */
   insight: TrendingKeywordsInsight | null;
+  /** Ce qu'il reste de réécritures aujourd'hui, élément par élément. */
+  quota: OnPageRewriteQuota;
 }) {
   const t = await getTranslations("dashboard.content");
   const suggested = insight?.suggested ?? null;
@@ -41,6 +47,8 @@ export async function ContentCompare({
   return (
     <div className="space-y-4">
       <CompareCard
+        element="serp"
+        remaining={quota.serp}
         title={t("serpTitle")}
         arrowLabel={t("becomes")}
         beforeLabel={t("before")}
@@ -77,6 +85,8 @@ export async function ContentCompare({
       />
 
       <CompareCard
+        element="h1"
+        remaining={quota.h1}
         title={t("h1Title")}
         arrowLabel={t("becomes")}
         beforeLabel={t("before")}
@@ -90,6 +100,8 @@ export async function ContentCompare({
       />
 
       <CompareCard
+        element="intro"
+        remaining={quota.intro}
         title={t("introTitle")}
         arrowLabel={t("becomes")}
         beforeLabel={t("before")}
@@ -116,6 +128,8 @@ export async function ContentCompare({
  * au même endroit ; seul le contenu des deux panneaux change.
  */
 function CompareCard({
+  element,
+  remaining,
   title,
   before,
   after,
@@ -127,6 +141,8 @@ function CompareCard({
   keywordsLabel,
   keywordsEmpty,
 }: {
+  element: OnPageElementKey;
+  remaining: number;
   title: string;
   before: React.ReactNode;
   after: React.ReactNode | null;
@@ -140,7 +156,16 @@ function CompareCard({
 }) {
   return (
     <Card>
-      <CardTitle title={title} />
+      <CardTitle
+        title={title}
+        action={
+          <RegenerateButton
+            element={element}
+            remaining={remaining}
+            limit={ON_PAGE_REWRITE_QUOTA.daily}
+          />
+        }
+      />
 
       {/* Trois colonnes sur large écran : avant, pivot, après. Empilé en
           dessous, la flèche bascule d'un quart de tour pour rester lisible. */}

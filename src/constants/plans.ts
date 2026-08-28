@@ -149,6 +149,25 @@ export const ARTICLE_QUOTAS = {
   windowMs: 7 * 24 * 60 * 60 * 1000,
 } as const;
 
+/** Les trois éléments que l'onglet Contenu régénère séparément. */
+export const ON_PAGE_ELEMENTS = ["serp", "h1", "intro"] as const;
+export type OnPageElementKey = (typeof ON_PAGE_ELEMENTS)[number];
+
+/**
+ * Les réécritures on-page qu'un abonné peut redemander dans la journée.
+ *
+ * Trois par élément et par jour : de quoi essayer une autre formulation sans
+ * transformer le bouton en machine à jeter des appels au modèle. Le compteur
+ * est par élément — trois essais sur le H1 ne ferment pas le paragraphe — et
+ * repart à zéro à minuit, heure de Paris, celle que le client lit à sa montre.
+ */
+export const ON_PAGE_REWRITE_QUOTA = {
+  /** Passes par élément et par jour. */
+  daily: 3,
+  /** Le fuseau qui décide où commence la journée. */
+  timeZone: "Europe/Paris",
+} as const;
+
 /**
  * Le nom du cookie qui retient l'analyse gratuite déjà consommée.
  *

@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext } from "@/features/dashboard/queries";
+import { getDashboardContext, getOnPageRewriteQuota } from "@/features/dashboard/queries";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
 import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
@@ -16,8 +16,11 @@ export const maxDuration = 300;
  */
 export default async function ContenuPage() {
   const user = await requireUser();
-  const context = await getDashboardContext(user.id);
-  const t = await getTranslations("dashboard.content");
+  const [context, quota, t] = await Promise.all([
+    getDashboardContext(user.id),
+    getOnPageRewriteQuota(user.id),
+    getTranslations("dashboard.content"),
+  ]);
 
   if (!context.analysis) return <PreparingAnalysis />;
 
@@ -39,6 +42,7 @@ export default async function ContenuPage() {
           domain: analysis.domain,
         }}
         insight={analysis.trendingKeywords ?? null}
+        quota={quota}
       />
     </>
   );
