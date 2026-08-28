@@ -7,11 +7,14 @@ import {
   listArticles,
 } from "@/features/dashboard/queries";
 import { fetchAiTraffic } from "@/features/dashboard/ga4";
+import { fetchLlmMentions } from "@/features/dashboard/llmMentions";
 import { buildDemoAiTraffic } from "@/features/dashboard/demoTraffic";
+import { buildDemoLlmMentions } from "@/features/dashboard/demoLlmMentions";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
+import { LlmMentionsCard } from "@/components/tableau-de-bord/LlmMentionsCard";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
 import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
@@ -54,8 +57,9 @@ export default async function DashboardHomePage() {
 
   const analysis = context.analysis;
   const diagnostic = buildDiagnostic(analysis);
-  const [traffic, articles] = await Promise.all([
+  const [traffic, mentions, articles] = await Promise.all([
     fetchAiTraffic(user.id, 30),
+    fetchLlmMentions(context.domain ?? analysis.domain, context.country),
     listArticles(user.id),
   ]);
 
@@ -125,6 +129,15 @@ export default async function DashboardHomePage() {
       <AiTrafficCard
         report={traffic}
         demo={buildDemoAiTraffic()}
+        domain={context.domain ?? analysis.domain}
+      />
+
+      {/* 2bis. Combien de fois chaque modèle cite le commerce. La mesure précède
+             celle du dessus : on est cité avant d'être cliqué, et le relevé
+             DataForSEO lit l'archive des réponses plutôt que d'en provoquer. */}
+      <LlmMentionsCard
+        report={mentions}
+        demo={buildDemoLlmMentions(context.domain ?? analysis.domain)}
         domain={context.domain ?? analysis.domain}
       />
 

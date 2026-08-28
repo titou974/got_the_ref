@@ -15,7 +15,8 @@
     "gen:lottie": "node scripts/gen-lottie.mjs",
     "recolor:lottie": "node scripts/recolor-lottie.mjs",
     "create:subscriber": "node scripts/create-subscriber.mjs",
-    "export:leads": "node scripts/export-leads.mjs"
+    "export:leads": "node scripts/export-leads.mjs",
+    "check:dataforseo": "node scripts/check-dataforseo.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

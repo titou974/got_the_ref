@@ -49,6 +49,12 @@ export type DashboardContext = {
   mapsUrl: string | null;
   niche: string | null;
   cities: string[];
+  /**
+   * Le pays relevé pendant l'accueil, en code ISO à deux lettres. Il choisit la
+   * localisation interrogée chez DataForSEO : les mentions d'un commerce belge
+   * ne se cherchent pas dans l'archive française.
+   */
+  country: string | null;
   analysisId: string | null;
   analysis: DashboardAnalysis | null;
   google: GoogleLinkState;
@@ -110,6 +116,7 @@ export const getDashboardContext = cache(async function getDashboardContext(
     mapsUrl: profile?.mapsUrl ?? null,
     niche: profile?.niche ?? analysis?.profile.niche ?? null,
     cities: profile?.cities ?? [],
+    country: profile?.detectedCountry ?? null,
     analysisId: record?.id ?? null,
     analysis,
     google: {

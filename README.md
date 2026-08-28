@@ -49,6 +49,8 @@ npm run dev                 # http://localhost:3000
 | `RESEND_API_KEY` | Clé Resend pour les e-mails transactionnels (sans elle, les envois sont journalisés en console) |
 | `RESEND_FROM` | Expéditeur, ex. `got_the_ref <bonjour@votre-domaine.fr>` (`onboarding@resend.dev` par défaut) |
 | `RESEND_REPLY_TO` | Adresse de réponse (par défaut, le contact du site) |
+| `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` | Identifiants DataForSEO ([api-access](https://app.dataforseo.com/api-access)) pour le relevé des mentions dans les IA. Sans eux, la carte reste en mode exemple. |
+| `DATAFORSEO_AUTH` | Variante à variable unique : base64 de `login:password` |
 
 ## Tunnel d'accueil et crawl
 
@@ -159,6 +161,34 @@ paramètre d'URL :
   couvre que les clics depuis l'application. Les liens des aperçus IA de Google
   partent de `google.com` et restent mêlés au référencement classique. L'interface
   le dit plutôt que de gonfler le chiffre.
+
+### Mentions dans les IA (DataForSEO)
+
+La carte « Mentions dans les IA » compte, modèle par modèle, les réponses d'IA où
+le domaine du commerce est cité. Elle lit l'archive DataForSEO
+(`/v3/ai_optimization/llm_mentions/search_mentions/live`) : des millions de
+questions grand public rejouées en continu sur ChatGPT et sur les aperçus IA de
+Google, réponses et sources conservées.
+
+- Une ligne de l'archive = une réponse d'IA citant le domaine. Le décompte par
+  `model_name` donne les barres du graphique ; le volume de recherche cumulé des
+  questions concernées donne le second chiffre, celui qui dit si ces mentions
+  pèsent quelque chose.
+- La cible est le domaine de la fiche d'accueil, sous-domaines compris ; la
+  localisation suit le pays relevé pendant l'accueil (France par défaut).
+- Chaque appel est facturé par DataForSEO : le relevé est donc mémorisé
+  24 heures par domaine (`unstable_cache`), et borné à trois pages de 1 000
+  réponses — au-delà, le total exact reste lu dans `total_count` et la carte
+  signale un détail partiel.
+- Sans identifiants, aucun appel ne part : la carte montre l'exemple sous voile,
+  avec son bandeau « données d'exemple ».
+
+Pour vérifier le branchement en ligne de commande :
+
+```bash
+npm run check:dataforseo -- exemple.fr        # France (2250) par défaut
+npm run check:dataforseo -- exemple.be 2056   # autre localisation
+```
 
 ### Rattachement du site
 
