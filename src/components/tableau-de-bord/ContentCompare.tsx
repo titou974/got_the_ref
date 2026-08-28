@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import type { TrendingKeywordsInsight } from "@/lib/geo/types";
 import { Badge } from "@/components/tremor/Badge";
 import { Card, CardTitle } from "./Card";
+import { SiteFavicon } from "./SiteFavicon";
 
 /**
  * Trois éléments de la page d'accueil, chacun dans son avant/après.
@@ -266,12 +267,7 @@ function SerpRow({
   return (
     <>
       <div className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-mist text-[11px] font-semibold text-steel"
-        >
-          {domain.slice(0, 1).toUpperCase()}
-        </span>
+        <SiteFavicon domain={domain} className="h-6 w-6 rounded-full" />
         <span className="min-w-0">
           <span className="block truncate text-[13px] font-medium leading-tight">{domain}</span>
           <span className="block truncate text-[11px] leading-tight text-ash">{url}</span>
