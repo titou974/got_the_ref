@@ -1,8 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getTranslations } from "next-intl/server";
-import { SignOutButton } from "@/components/SignOutButton";
-import { BillingPortalButton } from "@/components/BillingPortalButton";
 import {
   Sidebar,
   SidebarContent,
@@ -43,7 +40,7 @@ function initials(name: string | null): string {
  * site est répété en haut : c'est ce que le client vérifie en arrivant, avant
  * même de lire un chiffre.
  */
-export async function DashboardShell({
+export function DashboardShell({
   domain,
   showMaps,
   userName,
@@ -54,8 +51,6 @@ export async function DashboardShell({
   userName: string | null;
   children: React.ReactNode;
 }) {
-  const t = await getTranslations("dashboard");
-
   return (
     <SidebarProvider>
       <Sidebar>
@@ -91,10 +86,15 @@ export async function DashboardShell({
         </SidebarContent>
 
         <SidebarFooter className="hidden border-t border-border lg:flex">
-          {/* Le nom mène aux réglages : c'est là que le client cherche ce qui
-              le concerne lui plutôt que son site. L'avatar porte ses
-              initiales — sans photo à téléverser, une pastille de couleur unie
-              serait un rond sans information. */}
+          {/* Le pied de colonne se réduit à qui est connecté : l'avatar et le
+              nom, rien d'autre. Le portail de facturation et la déconnexion
+              encombraient une colonne dont le rôle est de naviguer ; le premier
+              vit dans les réglages, où la ligne « abonnement » le porte déjà.
+              Le nom reste le lien vers cet écran : c'est là que le client
+              cherche ce qui le concerne lui plutôt que son site.
+
+              L'avatar porte les initiales — sans photo à téléverser, une
+              pastille de couleur unie serait un rond sans information. */}
           <Link
             href={ROUTES.dashboardSettings}
             className="flex cursor-pointer items-center gap-2.5 rounded-2xl px-3 py-2 transition-colors duration-200 hover:bg-mist"
@@ -105,22 +105,8 @@ export async function DashboardShell({
             >
               {initials(userName)}
             </span>
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-medium">{userName ?? ""}</span>
-              <span className="block text-xs text-muted">{t("settingsLink")}</span>
-            </span>
+            <span className="min-w-0 truncate text-sm font-medium">{userName ?? ""}</span>
           </Link>
-
-          {/* La page « mon compte » a disparu au profit de cet écran : le seul
-              geste qu'elle portait encore, ouvrir le portail de facturation, se
-              fait maintenant d'ici. */}
-          <div className="flex items-center gap-3 px-3">
-            <BillingPortalButton
-              label={t("accountLink")}
-              className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text disabled:opacity-60"
-            />
-            <SignOutButton />
-          </div>
         </SidebarFooter>
       </Sidebar>
 
