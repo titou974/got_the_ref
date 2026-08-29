@@ -7,9 +7,11 @@ import {
   DataForSeoError,
 } from "@/lib/dataforseo/client";
 import {
+  fetchBrandHistory,
   locationCodeOf,
   searchLlmMentions,
   type LlmMentionItem,
+  type MonthlyMentions,
 } from "@/lib/dataforseo/llm-mentions";
 
 /**
@@ -53,6 +55,16 @@ export type LlmModelMentions = {
   topQuestion: string | null;
 };
 
+/** Un mois de l'historique, écart avec le mois précédent compris. */
+export type MonthlyMentionsPoint = MonthlyMentions & {
+  /**
+   * Mentions gagnées ou perdues depuis le mois précédent. Calculée ici plutôt
+   * que lue chez `timeseries_delta` : une soustraction ne vaut pas un appel
+   * facturé, et le premier mois de la série n'a rien à quoi se comparer.
+   */
+  delta: number | null;
+};
+
 export type LlmMentionsReport = {
   domain: string;
   /** Total des mentions, pages non lues comprises. */
@@ -60,6 +72,14 @@ export type LlmMentionsReport = {
   /** Vrai quand l'archive dépasse ce que le relevé a ramené. */
   truncated: boolean;
   models: LlmModelMentions[];
+  /**
+   * La marque suivie sur douze mois — son nom, tel qu'il est cité. Facultatifs,
+   * ces deux champs : un relevé écrit en base avant l'arrivée de l'historique
+   * ne les porte pas, et il doit rester lisible.
+   */
+  brand?: string | null;
+  /** Les douze derniers mois, du plus ancien au plus récent. */
+  history?: MonthlyMentionsPoint[];
   fetchedAt: string;
   /**
    * Quand le prochain appel deviendra possible. Écrit dans la carte : le client
@@ -155,6 +175,14 @@ export function groupByModel(items: LlmMentionItem[]): LlmModelMentions[] {
   return [...byModel.values()].sort((a, b) => b.mentions - a.mentions);
 }
 
+/** Pose l'écart mois par mois sur une série de niveaux mensuels. */
+export function withMonthlyDeltas(series: MonthlyMentions[]): MonthlyMentionsPoint[] {
+  return series.map((point, index) => ({
+    ...point,
+    delta: index === 0 ? null : point.mentions - series[index - 1].mentions,
+  }));
+}
+
 /** Le domaine tel qu'on l'envoie à DataForSEO : sans protocole, sans www, sans chemin. */
 function cleanDomain(domain: string): string {
   return domain
@@ -200,6 +228,8 @@ function parseReport(payload: string | null): LlmMentionsReport | null {
 export const fetchLlmMentions = cache(async function fetchLlmMentions(
   userId: string,
   domain: string | null,
+  /** Le nom de la marque, cible de la courbe sur douze mois. */
+  brand?: string | null,
   country?: string | null,
 ): Promise<LlmMentionsReport | null> {
   if (!domain) return null;
@@ -250,13 +280,30 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     return null;
   }
 
+  const brandName = brand?.trim() || null;
+
   try {
-    const page = await searchLlmMentions({ domain: clean, locationCode });
+    // Deux relevés dans la même journée d'appel : le décompte par modèle, sur le
+    // domaine, et les douze mois de la marque. L'historique a le droit d'échouer
+    // seul — une marque absente de l'archive ne doit pas emporter le graphique
+    // des modèles avec elle.
+    const [page, history] = await Promise.all([
+      searchLlmMentions({ domain: clean, locationCode }),
+      brandName
+        ? fetchBrandHistory({ brand: brandName, locationCode }).catch((error) => {
+            console.error(`[llm-mentions] historique impossible pour ${brandName} : ${String(error)}`);
+            return [] as MonthlyMentions[];
+          })
+        : Promise.resolve([] as MonthlyMentions[]),
+    ]);
+
     const report: LlmMentionsReport = {
       domain: clean,
       totalMentions: page.totalCount,
       truncated: page.truncated,
       models: groupByModel(page.items),
+      brand: brandName,
+      history: withMonthlyDeltas(history),
       fetchedAt: new Date().toISOString(),
     };
 

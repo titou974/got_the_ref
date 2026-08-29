@@ -59,7 +59,12 @@ export default async function DashboardHomePage() {
   const diagnostic = buildDiagnostic(analysis);
   const [traffic, mentions, articles] = await Promise.all([
     fetchAiTraffic(user.id, 30),
-    fetchLlmMentions(user.id, context.domain ?? analysis.domain, context.country),
+    fetchLlmMentions(
+      user.id,
+      context.domain ?? analysis.domain,
+      context.businessName || analysis.businessName,
+      context.country,
+    ),
     listArticles(user.id),
   ]);
 

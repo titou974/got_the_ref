@@ -66,6 +66,54 @@ export function TrafficChart({ data, labels }: { data: Point[]; labels: string[]
   );
 }
 
+export type MonthBar = {
+  /** Le mois abrégé écrit sous la barre, « août », « sept. »… */
+  label: string;
+  value: number;
+};
+
+/**
+ * Les mentions mois par mois, sur douze mois.
+ *
+ * Des barres et non une aire : ces relevés sont mensuels, chacun mesuré à part,
+ * et une courbe continue laisserait croire à une mesure de tous les jours.
+ * L'axe des mois reste écrit en entier — douze repères tiennent, même sur un
+ * téléphone, à condition de les incliner un peu.
+ */
+export function MonthlyMentionsChart({ data }: { data: MonthBar[] }) {
+  return (
+    <div className="h-48 w-full sm:h-56">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <BarChart data={data} margin={{ top: 12, right: 4, bottom: 0, left: 4 }}>
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={false}
+            interval={0}
+            tick={{ fill: "#a1a1aa", fontSize: 10 }}
+          />
+          <YAxis hide domain={[0, "dataMax + 1"]} />
+          <Bar
+            dataKey="value"
+            fill={EMBER}
+            radius={[6, 6, 0, 0]}
+            maxBarSize={34}
+            isAnimationActive={false}
+          >
+            <LabelList
+              dataKey="value"
+              position="top"
+              className="fill-obsidian"
+              fontSize={11}
+              fontWeight={600}
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export type ModelBar = {
   /** Le nom du modèle, écrit à gauche de sa barre. */
   label: string;

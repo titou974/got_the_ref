@@ -4,8 +4,13 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { LlmMentionsReport } from "@/features/dashboard/llmMentions";
 import { Obscured } from "@/components/dashboard/LockedContent";
-import { Card, CardTitle } from "./Card";
-import { ModelMentionsChart, type ModelBar } from "./Charts";
+import { Card, CardTitle, Delta } from "./Card";
+import {
+  ModelMentionsChart,
+  MonthlyMentionsChart,
+  type ModelBar,
+  type MonthBar,
+} from "./Charts";
 
 /**
  * Combien de fois chaque modèle cite le commerce.
@@ -39,8 +44,52 @@ export function LlmMentionsCard({
     platform: model.platform,
   }));
 
+  const history = shown.history ?? [];
+  const months: MonthBar[] = history.map((point) => ({
+    label: formatMonth(point.month),
+    value: point.mentions,
+  }));
+
+  // Le dernier mois relevé, et sa variation : le chiffre qui répond à « est-ce
+  // que ça monte ? » avant même que l'œil ait lu le graphique.
+  const lastMonth = history.at(-1) ?? null;
+  const previousMentions = history.at(-2)?.mentions ?? null;
+  const monthChange =
+    lastMonth && previousMentions
+      ? ((lastMonth.mentions - previousMentions) / previousMentions) * 100
+      : null;
+
   const body = (
     <>
+      {/* 1. Les douze derniers mois de la marque, mois par mois. */}
+      {months.length > 0 ? (
+        <section className="mb-6">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold">
+                {t("historyTitle", { brand: shown.brand ?? domain ?? "" })}
+              </h3>
+              <p className="mt-0.5 text-xs text-muted">
+                {t("historyHint", { months: months.length })}
+              </p>
+            </div>
+            {lastMonth ? (
+              <p className="flex items-center gap-2 text-sm">
+                <span className="font-semibold tabular-nums">
+                  {numberFormatter.format(lastMonth.mentions)}
+                </span>
+                <Delta value={monthChange} />
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-3">
+            <MonthlyMentionsChart data={months} />
+          </div>
+        </section>
+      ) : null}
+
+      {/* 2. Le détail par modèle, sur le domaine. */}
       <div className="flex flex-wrap items-end gap-3">
         <p className="text-[32px] font-bold leading-none tabular-nums">
           {numberFormatter.format(shown.totalMentions)}
@@ -142,4 +191,16 @@ const dayFormatter = new Intl.DateTimeFormat("fr-FR", {
 function formatDay(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? "" : dayFormatter.format(date);
+}
+
+/** Le mois abrégé d'un « 2026-08-01 » : « août 26 » sous la barre. */
+const monthFormatter = new Intl.DateTimeFormat("fr-FR", {
+  month: "short",
+  year: "2-digit",
+  timeZone: "UTC",
+});
+
+function formatMonth(iso: string): string {
+  const date = new Date(`${iso}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? iso : monthFormatter.format(date);
 }

@@ -2,11 +2,14 @@
  * Vérifie le branchement DataForSEO et montre les mentions d'un domaine,
  * modèle par modèle — le même décompte que la carte du tableau de bord.
  *
- *   node scripts/check-dataforseo.mjs exemple.fr [code_localisation]
+ *   node scripts/check-dataforseo.mjs exemple.fr [code_localisation] [marque]
  *
  * Le code de localisation vaut 2250 (France) par défaut ; 2840 pour les
- * États-Unis, 2056 pour la Belgique. L'appel est facturé par DataForSEO :
- * une exécution = une requête « live » sur l'archive des réponses d'IA.
+ * États-Unis, 2056 pour la Belgique. Avec un nom de marque en troisième
+ * argument, les douze derniers mois de mentions sont affichés en plus.
+ *
+ * Les appels sont facturés par DataForSEO : une exécution = une requête
+ * « live » sur l'archive, deux si la marque est donnée.
  *
  * Identifiants lus dans .env : DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD, ou
  * DATAFORSEO_AUTH (base64 de « login:password »).
@@ -16,9 +19,12 @@ import "dotenv/config";
 
 const domain = process.argv[2];
 const locationCode = Number(process.argv[3] ?? 2250);
+const brand = process.argv[4] ?? null;
 
 if (!domain) {
-  console.error("Usage : node scripts/check-dataforseo.mjs exemple.fr [code_localisation]");
+  console.error(
+    "Usage : node scripts/check-dataforseo.mjs exemple.fr [code_localisation] [marque]",
+  );
   process.exit(1);
 }
 
@@ -37,44 +43,49 @@ if (!auth) {
   process.exit(1);
 }
 
-const res = await fetch(
-  "https://api.dataforseo.com/v3/ai_optimization/llm_mentions/search_mentions/live",
-  {
+/** Une tâche « live », avec les deux niveaux d'état vérifiés. */
+async function call(path, task) {
+  const res = await fetch(`https://api.dataforseo.com${path}`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${auth}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify([
-      {
-        target: [{ domain, include_subdomains: true }],
-        location_code: locationCode,
-        language_code: "fr",
-        order_by: ["ai_search_volume,desc"],
-        limit: 1000,
-      },
-    ]),
+    body: JSON.stringify([task]),
+  });
+
+  if (!res.ok) {
+    console.error(`HTTP ${res.status} — ${await res.text()}`);
+    process.exit(1);
+  }
+
+  const body = await res.json();
+  const first = body.tasks?.[0];
+
+  if (body.status_code !== 20000 || !first || first.status_code !== 20000) {
+    console.error(
+      `Erreur DataForSEO ${first?.status_code ?? body.status_code} — ${
+        first?.status_message ?? body.status_message
+      }`,
+    );
+    process.exit(1);
+  }
+
+  return { cost: body.cost, result: first.result?.[0] ?? null };
+}
+
+const payload = await call(
+  "/v3/ai_optimization/llm_mentions/search_mentions/live",
+  {
+    target: [{ domain, include_subdomains: true }],
+    location_code: locationCode,
+    language_code: "fr",
+    order_by: ["ai_search_volume,desc"],
+    limit: 1000,
   },
 );
 
-if (!res.ok) {
-  console.error(`HTTP ${res.status} — ${await res.text()}`);
-  process.exit(1);
-}
-
-const payload = await res.json();
-const task = payload.tasks?.[0];
-
-if (payload.status_code !== 20000 || !task || task.status_code !== 20000) {
-  console.error(
-    `Erreur DataForSEO ${task?.status_code ?? payload.status_code} — ${
-      task?.status_message ?? payload.status_message
-    }`,
-  );
-  process.exit(1);
-}
-
-const result = task.result?.[0];
+const result = payload.result;
 const items = result?.items ?? [];
 
 const perModel = new Map();
@@ -100,5 +111,42 @@ if (perModel.size === 0) {
         stats.volume,
       ).padStart(8)} recherches/mois`,
     );
+  }
+}
+
+if (brand) {
+  // Douze mois calendaires, l'archive DataForSEO ne remontant pas avant août 2025.
+  const now = new Date();
+  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
+  const dateFrom = from.toISOString().slice(0, 10);
+
+  const history = await call("/v3/ai_optimization/llm_mentions/historical/live", {
+    target: [{ keyword: brand }],
+    location_code: locationCode,
+    language_code: "fr",
+    date_from: dateFrom < "2025-08-01" ? "2025-08-01" : dateFrom,
+    date_to: now.toISOString().slice(0, 10),
+    // Hors États-Unis, seul Google est historisé chez DataForSEO.
+    ...(locationCode === 2840 ? {} : { platform: "google" }),
+  });
+
+  console.log("");
+  console.log(`Marque         : « ${brand} », 12 derniers mois`);
+  console.log(`Coût de l'appel: ${history.cost} $`);
+  console.log("");
+
+  const months = history.result?.items ?? [];
+  if (months.length === 0) {
+    console.log("Aucun historique pour cette marque.");
+  } else {
+    for (const month of months) {
+      const mentions = month.metrics?.mentions ?? month.mentions ?? 0;
+      const volume = month.metrics?.ai_search_volume ?? month.ai_search_volume ?? 0;
+      console.log(
+        `${String(month.year)}-${String(month.month).padStart(2, "0")}   ${String(
+          mentions,
+        ).padStart(6)} mentions  ${String(volume).padStart(8)} recherches/mois`,
+      );
+    }
   }
 }

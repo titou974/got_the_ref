@@ -174,11 +174,22 @@ Google, réponses et sources conservées.
   `model_name` donne les barres du graphique ; le volume de recherche cumulé des
   questions concernées donne le second chiffre, celui qui dit si ces mentions
   pèsent quelque chose.
+- Au-dessus, une seconde série : les mentions **de la marque** mois par mois sur
+  douze mois, via `/v3/ai_optimization/llm_mentions/historical/live` — le nom du
+  commerce en mot-clé, pas son domaine : une IA qui conseille un commerce le
+  nomme bien plus souvent qu'elle ne cite son site. `timeseries_delta` a été
+  écarté : il ne rend que `delta_mentions`, l'écart avec le mois précédent, pas
+  le nombre. L'écart est donc recalculé d'une soustraction, ce qui économise un
+  appel facturé. L'archive ne remonte pas avant **2025-08-01**, et hors
+  États-Unis seul Google est historisé — la courbe porte donc sur les aperçus IA
+  de Google, ce que la carte dit.
 - La cible est le domaine de la fiche d'accueil, sous-domaines compris ; la
   localisation suit le pays relevé pendant l'accueil (France par défaut).
-- **Un appel par client et par jour**, tenu en base (`LlmMentionSnapshot`, une
+- **Un relevé par client et par jour**, tenu en base (`LlmMentionSnapshot`, une
   ligne par compte) et non par un cache : un cache s'évapore à chaque
-  déploiement, la facture non. La table garde deux dates — `attemptedAt`, la
+  déploiement, la facture non. Un relevé = deux requêtes DataForSEO, le décompte
+  par modèle et les douze mois de la marque ; l'historique a le droit d'échouer
+  seul, une marque absente de l'archive n'emporte pas le reste de la carte. La table garde deux dates — `attemptedAt`, la
   dernière tentative réussie **ou ratée**, qui ouvre ou ferme la porte, et
   `fetchedAt`, le dernier relevé exploitable, celui que la carte affiche. Rien
   ne rouvre la porte avant l'heure, pas même un changement de domaine — sinon un
@@ -195,8 +206,9 @@ directement et ne passe pas par le compteur quotidien, chaque exécution est don
 facturée :
 
 ```bash
-npm run check:dataforseo -- exemple.fr        # France (2250) par défaut
-npm run check:dataforseo -- exemple.be 2056   # autre localisation
+npm run check:dataforseo -- exemple.fr                    # France (2250) par défaut
+npm run check:dataforseo -- exemple.be 2056               # autre localisation
+npm run check:dataforseo -- exemple.fr 2250 "Ma Marque"   # + les 12 mois de la marque
 ```
 
 ### Rattachement du site

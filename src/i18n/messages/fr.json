@@ -1597,13 +1597,15 @@
     "mentions": {
       "title": "Mentions dans les IA",
       "hint": "Les réponses d'IA où {domain} est cité, modèle par modèle.",
+      "historyTitle": "« {brand} » dans les IA, mois par mois",
+      "historyHint": "Mentions de la marque sur les {months} derniers mois.",
       "subtitle": "mentions relevées sur {count} modèles",
       "searchVolume": "{value} recherches/mois",
       "topQuestion": "Question la plus posée : « {question} »",
       "empty": "Aucune mention relevée pour l'instant sur ce domaine.",
       "demoBadge": "Données d'exemple",
       "demoNote": "Données d'exemple : le relevé des mentions n'est pas encore branché sur ce compte.",
-      "source": "Source : archive DataForSEO des réponses ChatGPT et des aperçus IA de Google.",
+      "source": "Source : archive DataForSEO des réponses ChatGPT et des aperçus IA de Google. La courbe mensuelle porte sur les aperçus IA de Google, seuls historisés hors États-Unis.",
       "measuredOn": "Relevé du {date}.",
       "nextRefresh": "Prochain relevé possible le {date} : un appel par jour.",
       "truncated": "Le total dépasse ce que le relevé ramène : le détail par modèle porte sur les mentions les plus recherchées."

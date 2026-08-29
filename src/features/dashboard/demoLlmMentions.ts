@@ -14,9 +14,33 @@ import type { LlmMentionsReport } from "./llmMentions";
  * souvent parce qu'il répond à toutes les questions locales, ChatGPT suit sur
  * des questions moins nombreuses mais bien plus recherchées.
  */
+/**
+ * Douze mois de mentions, en pente montante.
+ *
+ * Écrits en dur eux aussi, et posés sur les douze derniers mois réels : l'axe
+ * doit ressembler à l'année qui vient de passer, sinon la carte d'exemple
+ * paraît figée dans un autre calendrier.
+ */
+function demoHistory(brand: number[]): LlmMentionsReport["history"] {
+  const now = new Date();
+  return brand.map((mentions, index) => {
+    const date = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (brand.length - 1 - index), 1),
+    );
+    return {
+      month: date.toISOString().slice(0, 10),
+      mentions,
+      searchVolume: mentions * 180,
+      delta: index === 0 ? null : mentions - brand[index - 1],
+    };
+  });
+}
+
 export function buildDemoLlmMentions(domain: string | null): LlmMentionsReport {
   return {
     domain: domain ?? "votre-domaine.fr",
+    brand: "Votre marque",
+    history: demoHistory([12, 15, 14, 19, 23, 21, 28, 34, 31, 42, 48, 57]),
     totalMentions: 142,
     truncated: false,
     fetchedAt: new Date().toISOString(),

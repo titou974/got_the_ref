@@ -23,6 +23,14 @@ import { dataForSeoLive } from "./client";
 
 const PATH = "/v3/ai_optimization/llm_mentions/search_mentions/live";
 
+const HISTORY_PATH = "/v3/ai_optimization/llm_mentions/historical/live";
+
+/**
+ * Le premier jour couvert par l'archive DataForSEO. Toute date antérieure est
+ * refusée : la collecte a commencé là.
+ */
+const ARCHIVE_START = "2025-08-01";
+
 /** Le maximum accepté par l'API pour un appel. */
 const PAGE_SIZE = 1000;
 
@@ -151,4 +159,117 @@ export async function searchLlmMentions({
     totalCount: Math.max(totalCount, items.length),
     truncated: totalCount > items.length,
   };
+}
+
+/**
+ * L'historique mensuel, mois calendaire par mois calendaire.
+ *
+ * `historical` et non `timeseries_delta` : le second ne rend que `delta_mentions`,
+ * l'écart avec la période précédente, quand la carte a besoin du nombre. L'écart,
+ * lui, se recalcule d'une soustraction une fois les niveaux connus — un appel
+ * facturé de moins pour la même information.
+ *
+ * https://docs.dataforseo.com/v3/ai_optimization/llm_mentions/historical/live/
+ */
+
+type HistoryItem = {
+  year: number;
+  month: number;
+  /** Selon les versions, les compteurs sont imbriqués ou posés à plat. */
+  metrics?: { mentions?: number | null; ai_search_volume?: number | null } | null;
+  mentions?: number | null;
+  ai_search_volume?: number | null;
+};
+
+type HistoryResult = {
+  items: HistoryItem[] | null;
+};
+
+export type MonthlyMentions = {
+  /** Premier jour du mois, « 2026-08-01 » : trie et s'affiche sans ambiguïté. */
+  month: string;
+  mentions: number;
+  searchVolume: number;
+};
+
+/** Le premier jour du mois, `n` mois en arrière, au format attendu par l'API. */
+function monthStart(date: Date, monthsBack = 0): string {
+  const start = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - monthsBack, 1),
+  );
+  return start.toISOString().slice(0, 10);
+}
+
+/**
+ * Les douze derniers mois de mentions d'une marque.
+ *
+ * La cible est le nom de la marque en mot-clé, pas le domaine : une IA qui
+ * conseille le commerce le nomme bien plus souvent qu'elle ne cite son site.
+ *
+ * ChatGPT n'a d'historique qu'aux États-Unis et en anglais chez DataForSEO :
+ * ailleurs, la plateforme est fixée à Google, sans quoi la requête reviendrait
+ * vide. Sur ce marché-là, en revanche, les deux plateformes répondent et les
+ * mois sont additionnés — deux lignes pour un même mois valent une somme, pas
+ * un doublon.
+ *
+ * Les mois sans mention ne reviennent pas de l'API : ils sont rétablis à zéro,
+ * sans quoi l'axe sauterait de juin à septembre et la courbe mentirait sur
+ * l'allure.
+ */
+export async function fetchBrandHistory({
+  brand,
+  locationCode = DEFAULT_LOCATION_CODE,
+  languageCode = DEFAULT_LANGUAGE_CODE,
+  months = 12,
+  now = new Date(),
+}: {
+  brand: string;
+  locationCode?: number;
+  languageCode?: string;
+  months?: number;
+  now?: Date;
+}): Promise<MonthlyMentions[]> {
+  const requested = monthStart(now, months - 1);
+  const dateFrom = requested < ARCHIVE_START ? ARCHIVE_START : requested;
+
+  const usEnglish = locationCode === 2840 && languageCode === "en";
+
+  const task: Record<string, unknown> = {
+    target: [{ keyword: brand.slice(0, 250) }],
+    location_code: locationCode,
+    language_code: languageCode,
+    date_from: dateFrom,
+    date_to: now.toISOString().slice(0, 10),
+  };
+  // Hors États-Unis, seul Google a un historique : le demander explicitement
+  // évite une réponse vide où l'on croirait à une marque jamais citée.
+  if (!usEnglish) task.platform = "google";
+
+  const results = await dataForSeoLive<HistoryResult>(HISTORY_PATH, task);
+  const items = results[0]?.items ?? [];
+
+  const byMonth = new Map<string, MonthlyMentions>();
+  for (const item of items) {
+    if (!item?.year || !item?.month) continue;
+    const key = `${item.year}-${String(item.month).padStart(2, "0")}-01`;
+    const mentions = item.metrics?.mentions ?? item.mentions ?? 0;
+    const volume = item.metrics?.ai_search_volume ?? item.ai_search_volume ?? 0;
+
+    const current = byMonth.get(key) ?? { month: key, mentions: 0, searchVolume: 0 };
+    current.mentions += mentions;
+    current.searchVolume += volume;
+    byMonth.set(key, current);
+  }
+
+  // L'axe complet, du premier mois couvert jusqu'au mois en cours.
+  const series: MonthlyMentions[] = [];
+  const cursor = new Date(`${dateFrom}T00:00:00Z`);
+  const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  while (cursor <= last) {
+    const key = cursor.toISOString().slice(0, 10);
+    series.push(byMonth.get(key) ?? { month: key, mentions: 0, searchVolume: 0 });
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+
+  return series.slice(-months);
 }
