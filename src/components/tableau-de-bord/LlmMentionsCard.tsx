@@ -3,12 +3,14 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { LlmMentionsReport } from "@/features/dashboard/llmMentions";
-import { Card, CardTitle, Delta } from "./Card";
+import { Card, CardTitle } from "./Card";
 import {
+  DELTA_COLORS,
   ModelMentionsChart,
-  MonthlyMentionsChart,
+  PlatformDeltaChart,
+  type DeltaRow,
+  type DeltaSeries,
   type ModelBar,
-  type MonthBar,
 } from "./Charts";
 
 /**
@@ -45,47 +47,71 @@ export function LlmMentionsCard({
     platform: model.platform,
   }));
 
-  const history = shown.history ?? [];
-  const months: MonthBar[] = history.map((point) => ({
-    label: formatMonth(point.month),
-    value: point.mentions,
+  // L'évolution depuis le 1er janvier : une série par modèle d'IA, chacune sa
+  // couleur dans la légende, toutes rangées sur le même axe de mois.
+  const history = (shown.history ?? []).filter((entry) => entry.points.length > 0);
+  const series: DeltaSeries[] = history.map((entry, index) => ({
+    key: entry.platform,
+    label: entry.label,
+    color: DELTA_COLORS[index % DELTA_COLORS.length],
   }));
 
-  // Le dernier mois relevé, et sa variation : le chiffre qui répond à « est-ce
-  // que ça monte ? » avant même que l'œil ait lu le graphique.
-  const lastMonth = history.at(-1) ?? null;
-  const previousMentions = history.at(-2)?.mentions ?? null;
-  const monthChange =
-    lastMonth && previousMentions
-      ? ((lastMonth.mentions - previousMentions) / previousMentions) * 100
-      : null;
+  // Les mois de la série la plus longue font l'axe : une plateforme absente
+  // d'un mois y vaut zéro plutôt que d'en raccourcir le tracé.
+  const monthKeys = [
+    ...new Set(history.flatMap((entry) => entry.points.map((point) => point.month))),
+  ].sort();
+
+  const rows: DeltaRow[] = monthKeys.map((month) => {
+    const row: DeltaRow = { label: formatMonth(month) };
+    for (const entry of history) {
+      row[entry.platform] =
+        entry.points.find((point) => point.month === month)?.delta ?? 0;
+    }
+    return row;
+  });
+
+  // Le mois en cours, toutes plateformes confondues : le chiffre qui répond à
+  // « est-ce que ça monte ? » avant même que l'œil ait lu le graphique.
+  const lastMonthTotal = monthKeys.length
+    ? history.reduce(
+        (total, entry) =>
+          total +
+          (entry.points.find((point) => point.month === monthKeys.at(-1))?.delta ?? 0),
+        0,
+      )
+    : null;
 
   const body = (
     <>
-      {/* 1. Les douze derniers mois de la marque, mois par mois. */}
-      {months.length > 0 ? (
+      {/* 1. L'évolution depuis le 1er janvier, un modèle d'IA par couleur. */}
+      {rows.length > 0 ? (
         <section className="mb-6">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div className="min-w-0">
               <h3 className="text-sm font-semibold">
-                {t("historyTitle", { brand: shown.brand ?? domain ?? "" })}
+                {t("historyTitle", { domain: domain ?? shown.domain })}
               </h3>
               <p className="mt-0.5 text-xs text-muted">
-                {t("historyHint", { months: months.length })}
+                {t("historyHint", { months: rows.length })}
               </p>
             </div>
-            {lastMonth ? (
-              <p className="flex items-center gap-2 text-sm">
-                <span className="font-semibold tabular-nums">
-                  {numberFormatter.format(lastMonth.mentions)}
-                </span>
-                <Delta value={monthChange} />
+            {lastMonthTotal !== null ? (
+              <p className="text-sm">
+                <span
+                  className={`font-semibold tabular-nums ${
+                    lastMonthTotal < 0 ? "text-danger" : ""
+                  }`}
+                >
+                  {signedFormatter.format(lastMonthTotal)}
+                </span>{" "}
+                <span className="text-muted">{t("lastMonth")}</span>
               </p>
             ) : null}
           </div>
 
           <div className="mt-3">
-            <MonthlyMentionsChart data={months} />
+            <PlatformDeltaChart rows={rows} series={series} />
           </div>
         </section>
       ) : null}
@@ -175,6 +201,16 @@ export function LlmMentionsCard({
 }
 
 const numberFormatter = new Intl.NumberFormat("fr-FR");
+
+/**
+ * Le signe toujours écrit, plus comme moins.
+ *
+ * Ce chiffre est un écart, pas un total : « 18 » sans signe se lirait comme un
+ * nombre de mentions, alors qu'il dit « dix-huit de plus que le mois dernier ».
+ */
+const signedFormatter = new Intl.NumberFormat("fr-FR", {
+  signDisplay: "exceptZero",
+});
 
 /**
  * Le jour d'un horodatage ISO, en heure de Paris.

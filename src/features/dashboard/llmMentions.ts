@@ -8,11 +8,13 @@ import {
 } from "@/lib/dataforseo/client";
 import { dataForSeoLog } from "@/lib/dataforseo/log";
 import {
-  fetchBrandHistory,
+  fetchDomainTimeseries,
   locationCodeOf,
   searchLlmMentions,
+  TIMESERIES_PLATFORMS,
   type LlmMentionItem,
-  type MonthlyMentions,
+  type MonthlyDelta,
+  type PlatformSeries,
 } from "@/lib/dataforseo/llm-mentions";
 
 /**
@@ -80,14 +82,14 @@ export type LlmModelMentions = {
   topQuestion: string | null;
 };
 
-/** Un mois de l'historique, écart avec le mois précédent compris. */
-export type MonthlyMentionsPoint = MonthlyMentions & {
-  /**
-   * Mentions gagnées ou perdues depuis le mois précédent. Calculée ici plutôt
-   * que lue chez `timeseries_delta` : une soustraction ne vaut pas un appel
-   * facturé, et le premier mois de la série n'a rien à quoi se comparer.
-   */
-  delta: number | null;
+/** Une plateforme et son évolution mensuelle, prête pour le graphique. */
+export type LlmPlatformSeries = {
+  /** « google », « chat_gpt » : la clé rendue par DataForSEO. */
+  platform: string;
+  label: string;
+  /** La localisation réellement interrogée — ChatGPT n'existe qu'en archive US. */
+  locationCode: number;
+  points: MonthlyDelta[];
 };
 
 export type LlmMentionsReport = {
@@ -98,13 +100,11 @@ export type LlmMentionsReport = {
   truncated: boolean;
   models: LlmModelMentions[];
   /**
-   * La marque suivie sur douze mois — son nom, tel qu'il est cité. Facultatifs,
-   * ces deux champs : un relevé écrit en base avant l'arrivée de l'historique
-   * ne les porte pas, et il doit rester lisible.
+   * L'évolution depuis le 1er janvier, une série par plateforme. Facultative :
+   * un relevé écrit en base avant l'arrivée de cette courbe ne la porte pas, et
+   * il doit rester lisible.
    */
-  brand?: string | null;
-  /** Les douze derniers mois, du plus ancien au plus récent. */
-  history?: MonthlyMentionsPoint[];
+  history?: LlmPlatformSeries[];
   fetchedAt: string;
   /**
    * Quand le prochain appel deviendra possible. Écrit dans la carte : le client
@@ -200,14 +200,6 @@ export function groupByModel(items: LlmMentionItem[]): LlmModelMentions[] {
   return [...byModel.values()].sort((a, b) => b.mentions - a.mentions);
 }
 
-/** Pose l'écart mois par mois sur une série de niveaux mensuels. */
-export function withMonthlyDeltas(series: MonthlyMentions[]): MonthlyMentionsPoint[] {
-  return series.map((point, index) => ({
-    ...point,
-    delta: index === 0 ? null : point.mentions - series[index - 1].mentions,
-  }));
-}
-
 /** Le domaine tel qu'on l'envoie à DataForSEO : sans protocole, sans www, sans chemin. */
 function cleanDomain(domain: string): string {
   return domain
@@ -216,6 +208,35 @@ function cleanDomain(domain: string): string {
     .replace(/^www\./, "")
     .replace(/\/.*$/, "")
     .toLowerCase();
+}
+
+/**
+ * Le nom lisible d'une plateforme suivie.
+ *
+ * DataForSEO nomme ses plateformes en interne (« chat_gpt ») ; la légende du
+ * graphique, elle, s'adresse à un commerçant. Une plateforme inconnue garde son
+ * nom brut embelli plutôt que de disparaître de la légende.
+ */
+const PLATFORM_LABELS: Record<string, string> = {
+  google: "Aperçus IA de Google",
+  chat_gpt: "ChatGPT",
+};
+
+function labelOfPlatform(platform: string): string {
+  return (
+    PLATFORM_LABELS[platform] ??
+    platform.replace(/[-_]/g, " ").replace(/^\w/, (c) => c.toUpperCase())
+  );
+}
+
+/** Habille les séries brutes de l'API du nom que la légende affichera. */
+function describeSeries(series: PlatformSeries[]): LlmPlatformSeries[] {
+  return series.map((entry) => ({
+    platform: entry.platform,
+    label: labelOfPlatform(entry.platform),
+    locationCode: entry.locationCode,
+    points: entry.points,
+  }));
 }
 
 function parseReport(payload: string | null): LlmMentionsReport | null {
@@ -229,11 +250,13 @@ function parseReport(payload: string | null): LlmMentionsReport | null {
   }
 }
 
-function parseHistory(payload: string | null): MonthlyMentionsPoint[] | null {
+function parseHistory(payload: string | null): LlmPlatformSeries[] | null {
   if (!payload) return null;
   try {
-    const parsed = JSON.parse(payload) as MonthlyMentionsPoint[];
-    return Array.isArray(parsed) ? parsed : null;
+    const parsed = JSON.parse(payload) as LlmPlatformSeries[];
+    return Array.isArray(parsed) && parsed.every((entry) => Array.isArray(entry?.points))
+      ? parsed
+      : null;
   } catch {
     return null;
   }
@@ -262,14 +285,15 @@ function parseHistory(payload: string | null): MonthlyMentionsPoint[] | null {
  * domaine et localisation identiques ; sinon la carte repasse à l'exemple, le
  * temps que le mois suivant rende l'appel possible.
  *
+ * Tout part du domaine, jamais du nom de la marque : c'est le site du commerce
+ * qu'on suit, et lui seul s'écrit sans ambiguïté d'orthographe.
+ *
  * `null` — pas d'identifiants, pas de domaine, aucun relevé jamais réussi — est
  * traité par la carte comme une absence de mesure : elle montre l'exemple.
  */
 export const fetchLlmMentions = cache(async function fetchLlmMentions(
   userId: string,
   domain: string | null,
-  /** Le nom de la marque, cible de la courbe sur douze mois. */
-  brand?: string | null,
   country?: string | null,
 ): Promise<LlmMentionsReport | null> {
   if (!domain) return null;
@@ -278,7 +302,6 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
   if (!clean) return null;
 
   const locationCode = locationCodeOf(country);
-  const brandName = brand?.trim() || null;
 
   // La table est le compteur : sans elle (migration pas encore poussée), on
   // s'abstient plutôt que d'appeler une API facturée sans garde-fou.
@@ -303,10 +326,12 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     snapshot && monthKeyOf(snapshot.attemptedAt) === currentMonthKey(),
   );
 
-  /** Le relevé rendu à l'écran : le décompte par modèle et l'historique gardé. */
-  const compose = (report: LlmMentionsReport, history: MonthlyMentionsPoint[] | null) => ({
+  /** Le relevé rendu à l'écran : le décompte par modèle et l'évolution gardée. */
+  const compose = (
+    report: LlmMentionsReport,
+    history: LlmPlatformSeries[] | null,
+  ): LlmMentionsReport => ({
     ...report,
-    brand: snapshot?.historyBrand ?? brandName,
     history: history ?? [],
     nextRefreshAt: nextRefreshAt?.toISOString(),
   });
@@ -316,7 +341,7 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
       domaine: clean,
       dernier_releve: snapshot?.fetchedAt?.toISOString() ?? "(aucun)",
       prochain_appel: nextRefreshAt?.toISOString(),
-      historique_en_base: storedHistory?.length ?? 0,
+      series_en_base: storedHistory?.length ?? 0,
     });
     return sameQuestion && stored ? compose(stored, storedHistory) : null;
   }
@@ -325,14 +350,6 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     dataForSeoLog("⏸ identifiants absents — aucun appel");
     return sameQuestion && stored ? compose(stored, storedHistory) : null;
   }
-
-  // L'historique garde ses colonnes à lui : quand son appel échoue, le relevé
-  // du mois précédent reste affiché au lieu de laisser un graphique vide.
-  const historyFresh =
-    storedHistory !== null &&
-    storedHistory.length > 0 &&
-    snapshot?.historyBrand === brandName &&
-    storedHistory.at(-1)?.month === currentMonthKey();
 
   // La tentative est datée avant l'appel : une requête qui n'aboutit jamais
   // (temps mort, instance recyclée) ne doit pas rouvrir la porte au rechargement
@@ -354,31 +371,26 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
 
   dataForSeoLog("▶ relevé du mois — départ", {
     domaine: clean,
-    marque: brandName ?? "(aucune)",
     location_code: locationCode,
-    appels_prevus: historyFresh || !brandName ? 1 : 2,
-    historique: historyFresh
-      ? `déjà à jour en base (${storedHistory?.length ?? 0} mois)`
-      : "à relever",
+    // Le décompte par modèle, puis une série d'évolution par plateforme suivie.
+    appels_prevus: 1 + TIMESERIES_PLATFORMS.length,
     premier_releve: snapshot ? "non" : "oui — compte jamais relevé",
   });
 
   try {
-    // L'historique a le droit d'échouer seul : une marque absente de l'archive
-    // ne doit pas emporter le graphique des modèles avec elle.
+    // L'évolution a le droit d'échouer seule : un domaine absent de l'archive
+    // historisée ne doit pas emporter le graphique des modèles avec lui.
     const [page, history] = await Promise.all([
       searchLlmMentions({ domain: clean, locationCode }),
-      brandName && !historyFresh
-        ? fetchBrandHistory({ brand: brandName, locationCode })
-            .then(withMonthlyDeltas)
-            .catch((error) => {
-              dataForSeoLog("✗ historique impossible — on garde celui de la base", {
-                marque: brandName,
-                erreur: String(error),
-              });
-              return null;
-            })
-        : Promise.resolve(null),
+      fetchDomainTimeseries({ domain: clean, locationCode })
+        .then(describeSeries)
+        .catch((error) => {
+          dataForSeoLog("✗ évolution impossible — on garde celle de la base", {
+            domaine: clean,
+            erreur: String(error),
+          });
+          return null;
+        }),
     ]);
 
     const report: LlmMentionsReport = {
@@ -397,11 +409,10 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
         payload: JSON.stringify(report),
         fetchedAt: new Date(),
         lastError: null,
-        // L'historique n'est réécrit que s'il vient d'être relevé : sa date de
-        // fraîcheur doit rester celle de l'appel qui l'a produit.
+        // L'évolution n'est réécrite que si elle vient d'être relevée : sa date
+        // de fraîcheur doit rester celle de l'appel qui l'a produite.
         ...(history
           ? {
-              historyBrand: brandName,
               historyPayload: JSON.stringify(history),
               historyFetchedAt: new Date(),
             }
@@ -413,14 +424,14 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
       domaine: clean,
       mentions: report.totalMentions,
       modeles: report.models.length,
-      historique_mois: freshHistory?.length ?? 0,
-      historique_source: history ? "appel" : "base",
+      series: freshHistory?.length ?? 0,
+      mois_par_serie: freshHistory?.[0]?.points.length ?? 0,
+      evolution_source: history ? "appel" : "base",
       prochain_appel: nextMonthStart(attemptedAt).toISOString(),
     });
 
     return {
       ...report,
-      brand: brandName,
       history: freshHistory ?? [],
       nextRefreshAt: nextMonthStart(attemptedAt).toISOString(),
     };
@@ -439,7 +450,6 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     return sameQuestion && stored
       ? {
           ...stored,
-          brand: snapshot?.historyBrand ?? brandName,
           history: storedHistory ?? [],
           nextRefreshAt: nextMonthStart(attemptedAt).toISOString(),
         }

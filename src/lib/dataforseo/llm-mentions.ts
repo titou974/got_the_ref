@@ -23,7 +23,8 @@ import { dataForSeoLive } from "./client";
 
 const PATH = "/v3/ai_optimization/llm_mentions/search_mentions/live";
 
-const HISTORY_PATH = "/v3/ai_optimization/llm_mentions/historical/live";
+const TIMESERIES_DELTA_PATH =
+  "/v3/ai_optimization/llm_mentions/timeseries_delta/live";
 
 /**
  * Le premier jour couvert par l'archive DataForSEO. Toute date antérieure est
@@ -162,114 +163,130 @@ export async function searchLlmMentions({
 }
 
 /**
- * L'historique mensuel, mois calendaire par mois calendaire.
- *
- * `historical` et non `timeseries_delta` : le second ne rend que `delta_mentions`,
- * l'écart avec la période précédente, quand la carte a besoin du nombre. L'écart,
- * lui, se recalcule d'une soustraction une fois les niveaux connus — un appel
- * facturé de moins pour la même information.
- *
- * https://docs.dataforseo.com/v3/ai_optimization/llm_mentions/historical/live/
+ * L'évolution mensuelle, plateforme par plateforme, depuis le début de l'année.
  */
 
-type HistoryItem = {
-  year: number;
-  month: number;
-  /** Selon les versions, les compteurs sont imbriqués ou posés à plat. */
-  metrics?: { mentions?: number | null; ai_search_volume?: number | null } | null;
-  mentions?: number | null;
-  ai_search_volume?: number | null;
+type DeltaItem = {
+  /** Premier jour de la période, « 2026-03-01 » en regroupement mensuel. */
+  date: string;
+  delta_mentions: number | null;
+  delta_ai_search_volume: number | null;
 };
 
-type HistoryResult = {
-  items: HistoryItem[] | null;
+type DeltaResult = {
+  items: DeltaItem[] | null;
 };
 
-export type MonthlyMentions = {
+/** Un mois d'une série : ce que la plateforme a gagné ou perdu ce mois-là. */
+export type MonthlyDelta = {
   /** Premier jour du mois, « 2026-08-01 » : trie et s'affiche sans ambiguïté. */
   month: string;
-  mentions: number;
-  searchVolume: number;
+  /** Écart de mentions avec le mois précédent, tel que l'API le rend. */
+  delta: number;
+  /** Écart du volume de recherche IA, même période. */
+  deltaSearchVolume: number;
 };
 
-/** Le premier jour du mois, `n` mois en arrière, au format attendu par l'API. */
-function monthStart(date: Date, monthsBack = 0): string {
-  const start = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - monthsBack, 1),
-  );
-  return start.toISOString().slice(0, 10);
-}
+/** Une plateforme suivie et sa série mensuelle. */
+export type PlatformSeries = {
+  /** « google » ou « chat_gpt », tels que DataForSEO les nomme. */
+  platform: string;
+  /** La localisation réellement interrogée pour cette plateforme. */
+  locationCode: number;
+  points: MonthlyDelta[];
+};
 
 /**
- * Les douze derniers mois de mentions d'une marque.
+ * Les plateformes interrogées, et ce que DataForSEO accepte pour chacune.
  *
- * La cible est le nom de la marque en mot-clé, pas le domaine : une IA qui
- * conseille le commerce le nomme bien plus souvent qu'elle ne cite son site.
- *
- * ChatGPT n'a d'historique qu'aux États-Unis et en anglais chez DataForSEO :
- * ailleurs, la plateforme est fixée à Google, sans quoi la requête reviendrait
- * vide. Sur ce marché-là, en revanche, les deux plateformes répondent et les
- * mois sont additionnés — deux lignes pour un même mois valent une somme, pas
- * un doublon.
- *
- * Les mois sans mention ne reviennent pas de l'API : ils sont rétablis à zéro,
- * sans quoi l'axe sauterait de juin à septembre et la courbe mentirait sur
- * l'allure.
+ * ChatGPT n'est historisé qu'aux États-Unis et en anglais : lui envoyer la
+ * localisation du client reviendrait à demander une série qui n'existe pas, et
+ * à lire le vide comme une absence de mentions. Sa case est donc toujours
+ * relevée sur l'archive américaine, ce que la carte annonce.
  */
-export async function fetchBrandHistory({
-  brand,
+export const TIMESERIES_PLATFORMS = [
+  { platform: "google", forcedLocation: null, forcedLanguage: null },
+  { platform: "chat_gpt", forcedLocation: 2840, forcedLanguage: "en" },
+] as const;
+
+/**
+ * L'évolution mensuelle des mentions d'un domaine, une série par plateforme.
+ *
+ * La cible est le domaine seul — aucun mot-clé : c'est le site du commerce que
+ * l'on suit, pas l'orthographe de son nom. `include_subdomains` reste actif,
+ * une boutique sur `shop.exemple.fr` étant le même établissement.
+ *
+ * Ce que rend l'API, c'est `delta_mentions` : l'écart avec le mois précédent,
+ * pas un total. La série est donc une variation, et la carte l'écrit ainsi
+ * plutôt que d'appeler « nombre de mentions » un chiffre qui n'en est pas un.
+ *
+ * Un appel par plateforme, parce que `platform` ne prend qu'une valeur par
+ * requête et que la carte veut une case par modèle d'IA. Les mois absents de la
+ * réponse sont rétablis à zéro : un axe qui saute de mars à juin ment sur
+ * l'allure.
+ *
+ * https://docs.dataforseo.com/v3/ai_optimization/llm_mentions/timeseries_delta/live/
+ */
+export async function fetchDomainTimeseries({
+  domain,
   locationCode = DEFAULT_LOCATION_CODE,
   languageCode = DEFAULT_LANGUAGE_CODE,
-  months = 12,
   now = new Date(),
 }: {
-  brand: string;
+  domain: string;
   locationCode?: number;
   languageCode?: string;
-  months?: number;
   now?: Date;
-}): Promise<MonthlyMentions[]> {
-  const requested = monthStart(now, months - 1);
-  const dateFrom = requested < ARCHIVE_START ? ARCHIVE_START : requested;
+}): Promise<PlatformSeries[]> {
+  // Depuis le 1er janvier de l'année en cours, sans descendre sous le premier
+  // jour couvert par l'archive.
+  const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1))
+    .toISOString()
+    .slice(0, 10);
+  const dateFrom = yearStart < ARCHIVE_START ? ARCHIVE_START : yearStart;
+  const dateTo = now.toISOString().slice(0, 10);
 
-  const usEnglish = locationCode === 2840 && languageCode === "en";
+  const series = await Promise.all(
+    TIMESERIES_PLATFORMS.map(async (entry) => {
+      const askedLocation = entry.forcedLocation ?? locationCode;
+      const askedLanguage = entry.forcedLanguage ?? languageCode;
 
-  const task: Record<string, unknown> = {
-    target: [{ keyword: brand.slice(0, 250) }],
-    location_code: locationCode,
-    language_code: languageCode,
-    date_from: dateFrom,
-    date_to: now.toISOString().slice(0, 10),
-  };
-  // Hors États-Unis, seul Google a un historique : le demander explicitement
-  // évite une réponse vide où l'on croirait à une marque jamais citée.
-  if (!usEnglish) task.platform = "google";
+      const results = await dataForSeoLive<DeltaResult>(TIMESERIES_DELTA_PATH, {
+        target: [{ domain, include_subdomains: true }],
+        location_code: askedLocation,
+        language_code: askedLanguage,
+        platform: entry.platform,
+        date_from: dateFrom,
+        date_to: dateTo,
+        group_range: "month",
+      });
 
-  const results = await dataForSeoLive<HistoryResult>(HISTORY_PATH, task);
-  const items = results[0]?.items ?? [];
+      const byMonth = new Map<string, MonthlyDelta>();
+      for (const item of results[0]?.items ?? []) {
+        if (!item?.date) continue;
+        const key = item.date.slice(0, 8) + "01";
+        const current = byMonth.get(key) ?? {
+          month: key,
+          delta: 0,
+          deltaSearchVolume: 0,
+        };
+        current.delta += item.delta_mentions ?? 0;
+        current.deltaSearchVolume += item.delta_ai_search_volume ?? 0;
+        byMonth.set(key, current);
+      }
 
-  const byMonth = new Map<string, MonthlyMentions>();
-  for (const item of items) {
-    if (!item?.year || !item?.month) continue;
-    const key = `${item.year}-${String(item.month).padStart(2, "0")}-01`;
-    const mentions = item.metrics?.mentions ?? item.mentions ?? 0;
-    const volume = item.metrics?.ai_search_volume ?? item.ai_search_volume ?? 0;
+      const points: MonthlyDelta[] = [];
+      const cursor = new Date(`${dateFrom}T00:00:00Z`);
+      const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      while (cursor <= last) {
+        const key = cursor.toISOString().slice(0, 10);
+        points.push(byMonth.get(key) ?? { month: key, delta: 0, deltaSearchVolume: 0 });
+        cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+      }
 
-    const current = byMonth.get(key) ?? { month: key, mentions: 0, searchVolume: 0 };
-    current.mentions += mentions;
-    current.searchVolume += volume;
-    byMonth.set(key, current);
-  }
+      return { platform: entry.platform, locationCode: askedLocation, points };
+    }),
+  );
 
-  // L'axe complet, du premier mois couvert jusqu'au mois en cours.
-  const series: MonthlyMentions[] = [];
-  const cursor = new Date(`${dateFrom}T00:00:00Z`);
-  const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  while (cursor <= last) {
-    const key = cursor.toISOString().slice(0, 10);
-    series.push(byMonth.get(key) ?? { month: key, mentions: 0, searchVolume: 0 });
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-  }
-
-  return series.slice(-months);
+  return series;
 }

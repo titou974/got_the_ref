@@ -2,14 +2,17 @@
  * Vérifie le branchement DataForSEO et montre les mentions d'un domaine,
  * modèle par modèle — le même décompte que la carte du tableau de bord.
  *
- *   node scripts/check-dataforseo.mjs exemple.fr [code_localisation] [marque]
+ *   node scripts/check-dataforseo.mjs exemple.fr [code_localisation]
  *
  * Le code de localisation vaut 2250 (France) par défaut ; 2840 pour les
- * États-Unis, 2056 pour la Belgique. Avec un nom de marque en troisième
- * argument, les douze derniers mois de mentions sont affichés en plus.
+ * États-Unis, 2056 pour la Belgique.
  *
- * Les appels sont facturés par DataForSEO : une exécution = une requête
- * « live » sur l'archive, deux si la marque est donnée.
+ * Suit l'évolution mensuelle depuis le 1er janvier, une série par plateforme,
+ * relevée sur le domaine seul — jamais sur le nom de la marque, dont
+ * l'orthographe varie d'une source à l'autre.
+ *
+ * Les appels sont facturés par DataForSEO : une exécution = un appel
+ * « search_mentions » plus un appel « timeseries_delta » par plateforme.
  *
  * Identifiants lus dans .env : DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD, ou
  * DATAFORSEO_AUTH (base64 de « login:password »).
@@ -19,11 +22,10 @@ import "dotenv/config";
 
 const domain = process.argv[2];
 const locationCode = Number(process.argv[3] ?? 2250);
-const brand = process.argv[4] ?? null;
 
 if (!domain) {
   console.error(
-    "Usage : node scripts/check-dataforseo.mjs exemple.fr [code_localisation] [marque]",
+    "Usage : node scripts/check-dataforseo.mjs exemple.fr [code_localisation]",
   );
   process.exit(1);
 }
@@ -114,39 +116,52 @@ if (perModel.size === 0) {
   }
 }
 
-if (brand) {
-  // Douze mois calendaires, l'archive DataForSEO ne remontant pas avant août 2025.
-  const now = new Date();
-  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
-  const dateFrom = from.toISOString().slice(0, 10);
+// L'évolution mensuelle, une série par plateforme, depuis le 1er janvier.
+// L'archive DataForSEO ne remonte pas avant août 2025.
+const now = new Date();
+const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1)).toISOString().slice(0, 10);
+const dateFrom = yearStart < "2025-08-01" ? "2025-08-01" : yearStart;
+const dateTo = now.toISOString().slice(0, 10);
 
-  const history = await call("/v3/ai_optimization/llm_mentions/historical/live", {
-    target: [{ keyword: brand }],
-    location_code: locationCode,
-    language_code: "fr",
-    date_from: dateFrom < "2025-08-01" ? "2025-08-01" : dateFrom,
-    date_to: now.toISOString().slice(0, 10),
-    // Hors États-Unis, seul Google est historisé chez DataForSEO.
-    ...(locationCode === 2840 ? {} : { platform: "google" }),
+// ChatGPT n'est historisé qu'aux États-Unis et en anglais : lui envoyer la
+// localisation du client rendrait une série vide, qu'on lirait à tort comme une
+// absence de mentions.
+const platforms = [
+  { platform: "google", location: locationCode, language: "fr" },
+  { platform: "chat_gpt", location: 2840, language: "en" },
+];
+
+for (const entry of platforms) {
+  const series = await call("/v3/ai_optimization/llm_mentions/timeseries_delta/live", {
+    target: [{ domain, include_subdomains: true }],
+    location_code: entry.location,
+    language_code: entry.language,
+    platform: entry.platform,
+    date_from: dateFrom,
+    date_to: dateTo,
+    group_range: "month",
   });
 
   console.log("");
-  console.log(`Marque         : « ${brand} », 12 derniers mois`);
-  console.log(`Coût de l'appel: ${history.cost} $`);
+  console.log(
+    `Évolution      : ${entry.platform} (localisation ${entry.location}), depuis le ${dateFrom}`,
+  );
+  console.log(`Coût de l'appel: ${series.cost} $`);
   console.log("");
 
-  const months = history.result?.items ?? [];
+  const months = series.result?.items ?? [];
   if (months.length === 0) {
-    console.log("Aucun historique pour cette marque.");
-  } else {
-    for (const month of months) {
-      const mentions = month.metrics?.mentions ?? month.mentions ?? 0;
-      const volume = month.metrics?.ai_search_volume ?? month.ai_search_volume ?? 0;
-      console.log(
-        `${String(month.year)}-${String(month.month).padStart(2, "0")}   ${String(
-          mentions,
-        ).padStart(6)} mentions  ${String(volume).padStart(8)} recherches/mois`,
-      );
-    }
+    console.log("Aucune évolution relevée pour cette plateforme.");
+    continue;
+  }
+
+  for (const month of months) {
+    const delta = month.delta_mentions ?? 0;
+    const volume = month.delta_ai_search_volume ?? 0;
+    console.log(
+      `${String(month.date).slice(0, 7)}   ${String(delta).padStart(6)} mentions  ${String(
+        volume,
+      ).padStart(8)} recherches/mois`,
+    );
   }
 }

@@ -1,4 +1,4 @@
-import type { LlmMentionsReport } from "./llmMentions";
+import type { LlmMentionsReport, LlmPlatformSeries } from "./llmMentions";
 
 /**
  * Le relevé de mentions d'exemple, tant que le compte DataForSEO n'est pas
@@ -14,33 +14,56 @@ import type { LlmMentionsReport } from "./llmMentions";
  * souvent parce qu'il répond à toutes les questions locales, ChatGPT suit sur
  * des questions moins nombreuses mais bien plus recherchées.
  */
+
 /**
- * Douze mois de mentions, en pente montante.
+ * Les mois écoulés depuis le 1er janvier, dans la forme des points relevés.
  *
- * Écrits en dur eux aussi, et posés sur les douze derniers mois réels : l'axe
- * doit ressembler à l'année qui vient de passer, sinon la carte d'exemple
- * paraît figée dans un autre calendrier.
+ * L'axe d'exemple doit ressembler à celui du vrai relevé — de janvier au mois
+ * en cours — sinon la carte paraît figée dans un autre calendrier.
  */
-function demoHistory(brand: number[]): LlmMentionsReport["history"] {
+function monthsOfYear(): string[] {
   const now = new Date();
-  return brand.map((mentions, index) => {
-    const date = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (brand.length - 1 - index), 1),
+  const months: string[] = [];
+  for (let month = 0; month <= now.getUTCMonth(); month += 1) {
+    months.push(
+      new Date(Date.UTC(now.getUTCFullYear(), month, 1)).toISOString().slice(0, 10),
     );
-    return {
-      month: date.toISOString().slice(0, 10),
-      mentions,
-      searchVolume: mentions * 180,
-      delta: index === 0 ? null : mentions - brand[index - 1],
-    };
-  });
+  }
+  return months;
+}
+
+/**
+ * Une série d'exemple pour une plateforme.
+ *
+ * Les valeurs sont des écarts, comme dans le vrai relevé : elles montent, elles
+ * redescendent une fois, et la série est rognée ou complétée pour tomber juste
+ * sur le nombre de mois écoulés.
+ */
+function demoSeries(
+  platform: string,
+  label: string,
+  locationCode: number,
+  deltas: number[],
+): LlmPlatformSeries {
+  const months = monthsOfYear();
+  return {
+    platform,
+    label,
+    locationCode,
+    points: months.map((month, index) => {
+      const delta = deltas[index % deltas.length];
+      return { month, delta, deltaSearchVolume: delta * 180 };
+    }),
+  };
 }
 
 export function buildDemoLlmMentions(domain: string | null): LlmMentionsReport {
   return {
     domain: domain ?? "votre-domaine.fr",
-    brand: "Votre marque",
-    history: demoHistory([12, 15, 14, 19, 23, 21, 28, 34, 31, 42, 48, 57]),
+    history: [
+      demoSeries("google", "Aperçus IA de Google", 2250, [4, 7, 6, 11, 9, 14, 12, 18]),
+      demoSeries("chat_gpt", "ChatGPT", 2840, [2, 3, -1, 5, 4, 6, 8, 7]),
+    ],
     totalMentions: 142,
     truncated: false,
     fetchedAt: new Date().toISOString(),

@@ -7,8 +7,10 @@ import {
   BarChart,
   Cell,
   LabelList,
+  Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   XAxis,
   YAxis,
@@ -66,25 +68,48 @@ export function TrafficChart({ data, labels }: { data: Point[]; labels: string[]
   );
 }
 
-export type MonthBar = {
-  /** Le mois abrégé écrit sous la barre, « août », « sept. »… */
+/** Une plateforme dans la légende : sa clé dans les lignes, son nom, sa couleur. */
+export type DeltaSeries = {
+  /** La clé lue dans chaque ligne, « google », « chat_gpt »… */
+  key: string;
   label: string;
-  value: number;
+  color: string;
 };
 
+/** Un mois du graphique : son étiquette, puis une valeur par plateforme. */
+export type DeltaRow = { label: string } & Record<string, string | number>;
+
 /**
- * Les mentions mois par mois, sur douze mois.
+ * Les couleurs des plateformes, dans l'ordre où elles arrivent.
  *
- * Des barres et non une aire : ces relevés sont mensuels, chacun mesuré à part,
- * et une courbe continue laisserait croire à une mesure de tous les jours.
- * L'axe des mois reste écrit en entier — douze repères tiennent, même sur un
- * téléphone, à condition de les incliner un peu.
+ * Le noir d'abord, parce que la première série est celle des aperçus IA de
+ * Google — la plus fournie, celle qui doit se lire d'un coup d'œil.
  */
-export function MonthlyMentionsChart({ data }: { data: MonthBar[] }) {
+export const DELTA_COLORS = [INK, EMBER, ORCHID];
+
+/**
+ * L'évolution mensuelle, une case de couleur par modèle d'IA.
+ *
+ * Des barres groupées : à chaque mois, une barre par plateforme, côte à côte.
+ * C'est ce qui permet de lire deux choses à la fois — la marche du mois, et
+ * lequel des modèles la produit.
+ *
+ * Ce que ces barres portent est un écart, pas un total : DataForSEO rend la
+ * variation par rapport au mois précédent. Une barre peut donc descendre sous
+ * zéro, d'où la ligne de base tracée à 0 et le domaine ouvert vers le bas ;
+ * sans elle, une baisse se lirait comme une hausse.
+ */
+export function PlatformDeltaChart({
+  rows,
+  series,
+}: {
+  rows: DeltaRow[];
+  series: DeltaSeries[];
+}) {
   return (
-    <div className="h-48 w-full sm:h-56">
+    <div className="h-52 w-full sm:h-60">
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <BarChart data={data} margin={{ top: 12, right: 4, bottom: 0, left: 4 }}>
+        <BarChart data={rows} margin={{ top: 12, right: 4, bottom: 0, left: 4 }}>
           <XAxis
             dataKey="label"
             tickLine={false}
@@ -92,22 +117,26 @@ export function MonthlyMentionsChart({ data }: { data: MonthBar[] }) {
             interval={0}
             tick={{ fill: "#a1a1aa", fontSize: 10 }}
           />
-          <YAxis hide domain={[0, "dataMax + 1"]} />
-          <Bar
-            dataKey="value"
-            fill={INK}
-            radius={[6, 6, 0, 0]}
-            maxBarSize={34}
-            isAnimationActive={false}
-          >
-            <LabelList
-              dataKey="value"
-              position="top"
-              className="fill-obsidian"
-              fontSize={11}
-              fontWeight={600}
+          <YAxis hide domain={["dataMin - 1", "dataMax + 1"]} />
+          <ReferenceLine y={0} stroke="#e4e4e7" strokeWidth={1} />
+          <Legend
+            verticalAlign="bottom"
+            height={28}
+            iconType="circle"
+            iconSize={8}
+            wrapperStyle={{ fontSize: 11, color: "#71717a" }}
+          />
+          {series.map((entry) => (
+            <Bar
+              key={entry.key}
+              dataKey={entry.key}
+              name={entry.label}
+              fill={entry.color}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={22}
+              isAnimationActive={false}
             />
-          </Bar>
+          ))}
         </BarChart>
       </ResponsiveContainer>
     </div>

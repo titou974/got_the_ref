@@ -174,15 +174,24 @@ Google, réponses et sources conservées.
   `model_name` donne les barres du graphique ; le volume de recherche cumulé des
   questions concernées donne le second chiffre, celui qui dit si ces mentions
   pèsent quelque chose.
-- Au-dessus, une seconde série : les mentions **de la marque** mois par mois sur
-  douze mois, via `/v3/ai_optimization/llm_mentions/historical/live` — le nom du
-  commerce en mot-clé, pas son domaine : une IA qui conseille un commerce le
-  nomme bien plus souvent qu'elle ne cite son site. `timeseries_delta` a été
-  écarté : il ne rend que `delta_mentions`, l'écart avec le mois précédent, pas
-  le nombre. L'écart est donc recalculé d'une soustraction, ce qui économise un
-  appel facturé. L'archive ne remonte pas avant **2025-08-01**, et hors
-  États-Unis seul Google est historisé — la courbe porte donc sur les aperçus IA
-  de Google, ce que la carte dit.
+- Au-dessus, l'évolution mois par mois **depuis le 1er janvier**, via
+  `/v3/ai_optimization/llm_mentions/timeseries_delta/live`, en barres groupées :
+  une couleur par modèle d'IA, côte à côte à chaque mois. Cela se lit à deux
+  niveaux — la marche du mois, et lequel des modèles la produit.
+- La cible de cette série est le **domaine seul**, jamais le nom de la marque :
+  c'est le site du commerce qu'on suit, et lui seul s'écrit sans ambiguïté
+  d'orthographe. Un appel par plateforme, `platform` ne prenant qu'une valeur
+  par requête.
+- Ce que rend cette route est `delta_mentions` : **l'écart avec le mois
+  précédent, pas un total**. Une barre peut donc descendre sous zéro, d'où la
+  ligne de base tracée à 0 ; la carte l'écrit plutôt que d'appeler « nombre de
+  mentions » un chiffre qui n'en est pas un. Les mois absents de la réponse sont
+  rétablis à zéro : un axe qui saute de mars à juin ment sur l'allure.
+- L'archive ne remonte pas avant **2025-08-01** : `date_from` ne descend jamais
+  sous cette date. ChatGPT n'est historisé qu'aux États-Unis et en anglais — sa
+  série est donc toujours relevée sur `location_code: 2840` et
+  `language_code: "en"`, faute de quoi elle rendrait un vide qu'on lirait comme
+  une absence de mentions. La carte le dit.
 - La cible est le domaine de la fiche d'accueil, sous-domaines compris ; la
   localisation suit le pays relevé pendant l'accueil (France par défaut).
 - **Un relevé par client et par mois calendaire**, tenu en base
@@ -201,10 +210,9 @@ Google, réponses et sources conservées.
   l'heure, pas même un changement de domaine — sinon un aller-retour entre deux
   domaines suffirait à appeler sans limite ; le relevé gardé ne ressort que s'il
   porte sur le même domaine et la même localisation.
-- L'historique de la marque a ses colonnes à lui (`historyBrand`,
-  `historyPayload`, `historyFetchedAt`) et le droit d'échouer seul : une marque
-  absente de l'archive n'emporte pas le graphique des modèles, et l'historique
-  du mois précédent reste affiché.
+- L'évolution a ses colonnes à elle (`historyPayload`, `historyFetchedAt`) et le
+  droit d'échouer seule : un domaine absent de l'archive historisée n'emporte
+  pas le graphique des modèles, et la série du mois précédent reste affichée.
 - **Tout passe dans le terminal serveur** (`⚫ [DATAFORSEO]`) : la requête
   partie avec sa cible et sa période, la réponse avec son coût en dollars et sa
   durée, et — tout aussi important — les relevés lus en base sans qu'aucun appel
@@ -218,13 +226,12 @@ Google, réponses et sources conservées.
   `npm run db:push` puis `npm run db:generate`.
 
 Pour vérifier le branchement en ligne de commande — le script parle à DataForSEO
-directement et ne passe pas par le compteur quotidien, chaque exécution est donc
+directement et ne passe pas par le compteur mensuel, chaque exécution est donc
 facturée :
 
 ```bash
-npm run check:dataforseo -- exemple.fr                    # France (2250) par défaut
-npm run check:dataforseo -- exemple.be 2056               # autre localisation
-npm run check:dataforseo -- exemple.fr 2250 "Ma Marque"   # + les 12 mois de la marque
+npm run check:dataforseo -- exemple.fr        # France (2250) par défaut
+npm run check:dataforseo -- exemple.be 2056   # autre localisation
 ```
 
 ### Rattachement du site
