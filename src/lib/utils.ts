@@ -14,15 +14,18 @@ export function cx(...args: ClassValue[]) {
   return twMerge(clsx(...args));
 }
 
+// Le bleu de Tremor n'a pas de place ici : le système n'a pas d'accent
+// chromatique, l'emphase se fait au noir. Les deux constantes gardent leur nom
+// pour rester interchangeables avec un composant Tremor collé tel quel.
 export const focusInput = [
   "focus:ring-2",
-  "focus:ring-blue-200 dark:focus:ring-blue-700/30",
-  "focus:border-blue-500 dark:focus:border-blue-700",
+  "focus:ring-pebble/60",
+  "focus:border-obsidian",
 ];
 
 export const focusRing = [
   "outline outline-offset-2 outline-0 focus-visible:outline-2",
-  "outline-blue-500 dark:outline-blue-500",
+  "outline-obsidian",
 ];
 
 export const hasErrorInput = [
