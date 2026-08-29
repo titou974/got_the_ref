@@ -111,7 +111,13 @@ export function LlmMentionsCard({
       {isDemo ? <Obscured>{body}</Obscured> : body}
 
       <p className="mt-4 text-xs text-ash">
-        {isDemo ? t("demoNote") : t("source")}
+        {isDemo
+          ? t("demoNote")
+          : `${t("source")} ${t("measuredOn", { date: formatDay(shown.fetchedAt) })}${
+              shown.nextRefreshAt
+                ? ` ${t("nextRefresh", { date: formatDay(shown.nextRefreshAt) })}`
+                : ""
+            }`}
         {!isDemo && shown.truncated ? ` ${t("truncated")}` : ""}
       </p>
     </Card>
@@ -119,3 +125,21 @@ export function LlmMentionsCard({
 }
 
 const numberFormatter = new Intl.NumberFormat("fr-FR");
+
+/**
+ * Le jour d'un horodatage ISO, en heure de Paris.
+ *
+ * Le fuseau est fixé plutôt que laissé au navigateur : le serveur rend cette
+ * carte en UTC, et une date qui change entre le rendu initial et l'hydratation
+ * casse la page pour économiser une nuance que personne ne lit.
+ */
+const dayFormatter = new Intl.DateTimeFormat("fr-FR", {
+  day: "numeric",
+  month: "long",
+  timeZone: "Europe/Paris",
+});
+
+function formatDay(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "" : dayFormatter.format(date);
+}

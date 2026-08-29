@@ -34,6 +34,7 @@ model User {
   onPageRewrites     OnPageRewrite[]
   prospects          OutreachProspect[]
   googlePosts        GooglePost[]
+  llmMentions        LlmMentionSnapshot?
 }
 
 /// Une passe de réécriture demandée depuis l'onglet Contenu.
@@ -512,4 +513,39 @@ model GooglePost {
   updatedAt DateTime @updatedAt
 
   @@index([userId, scheduledFor])
+}
+
+/// Le dernier relevé des mentions dans les IA, un par compte.
+///
+/// La table n'est pas qu'un cache : c'est le compteur qui tient la règle « un
+/// appel DataForSEO par jour et par client ». Chaque appel est facturé, et
+/// l'accueil du tableau de bord est rechargé plusieurs fois par jour — sans
+/// garde-fou, une visite tous les quarts d'heure ferait autant de factures.
+///
+/// D'où deux dates plutôt qu'une : `attemptedAt` retient la dernière tentative,
+/// réussie ou non, et c'est elle qui ouvre ou ferme la porte ; `fetchedAt`
+/// retient le dernier relevé exploitable, celui que la carte affiche. Une panne
+/// DataForSEO ne doit pas rendre la main pour réessayer à chaque rechargement :
+/// elle consommerait la journée en appels perdus.
+model LlmMentionSnapshot {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le domaine et la localisation interrogés. Un changement de l'un des deux
+  /// rouvre le droit d'appel : la question posée n'est plus la même.
+  domain       String
+  locationCode Int
+
+  /// Le rapport sérialisé en JSON (total, modèles, date du relevé).
+  payload String?
+
+  /// Le message d'erreur de la dernière tentative ratée, effacé au succès.
+  lastError String?
+
+  attemptedAt DateTime  @default(now())
+  fetchedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

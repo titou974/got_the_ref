@@ -176,14 +176,23 @@ Google, réponses et sources conservées.
   pèsent quelque chose.
 - La cible est le domaine de la fiche d'accueil, sous-domaines compris ; la
   localisation suit le pays relevé pendant l'accueil (France par défaut).
-- Chaque appel est facturé par DataForSEO : le relevé est donc mémorisé
-  24 heures par domaine (`unstable_cache`), et borné à trois pages de 1 000
-  réponses — au-delà, le total exact reste lu dans `total_count` et la carte
-  signale un détail partiel.
+- **Un appel par client et par jour**, tenu en base (`LlmMentionSnapshot`, une
+  ligne par compte) et non par un cache : un cache s'évapore à chaque
+  déploiement, la facture non. La table garde deux dates — `attemptedAt`, la
+  dernière tentative réussie **ou ratée**, qui ouvre ou ferme la porte, et
+  `fetchedAt`, le dernier relevé exploitable, celui que la carte affiche. Rien
+  ne rouvre la porte avant l'heure, pas même un changement de domaine — sinon un
+  aller-retour entre deux domaines suffirait à appeler sans limite ; le relevé
+  gardé ne ressort que s'il porte sur le même domaine et la même localisation.
+  Ajouter la table : `npm run db:push`.
+- Le relevé est borné à trois pages de 1 000 réponses — au-delà, le total exact
+  reste lu dans `total_count` et la carte signale un détail partiel.
 - Sans identifiants, aucun appel ne part : la carte montre l'exemple sous voile,
   avec son bandeau « données d'exemple ».
 
-Pour vérifier le branchement en ligne de commande :
+Pour vérifier le branchement en ligne de commande — le script parle à DataForSEO
+directement et ne passe pas par le compteur quotidien, chaque exécution est donc
+facturée :
 
 ```bash
 npm run check:dataforseo -- exemple.fr        # France (2250) par défaut

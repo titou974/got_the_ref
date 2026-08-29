@@ -1,6 +1,7 @@
 import "server-only";
 
-import { unstable_cache } from "next/cache";
+import { cache } from "react";
+import { prisma } from "@/lib/prisma";
 import {
   isDataForSeoConfigured,
   DataForSeoError,
@@ -26,8 +27,15 @@ import {
  * moins qu'une seule sur la question centrale du métier.
  */
 
-/** Le relevé est facturé à l'appel : une fois par jour et par domaine suffit. */
-const CACHE_SECONDS = 60 * 60 * 24;
+/**
+ * Le délai entre deux appels DataForSEO pour un même compte.
+ *
+ * Chaque appel est facturé et l'accueil du tableau de bord est rouvert plusieurs
+ * fois par jour : la règle est donc « un relevé par client et par jour », tenue
+ * en base (`LlmMentionSnapshot`) et non par un cache. Un cache s'évapore à
+ * chaque déploiement — la facture, elle, resterait.
+ */
+export const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export type LlmModelMentions = {
   /** Le `model_name` brut renvoyé par l'API, ex. « google_ai_overview ». */
@@ -53,6 +61,11 @@ export type LlmMentionsReport = {
   truncated: boolean;
   models: LlmModelMentions[];
   fetchedAt: string;
+  /**
+   * Quand le prochain appel deviendra possible. Écrit dans la carte : le client
+   * doit savoir que le chiffre est daté et jusqu'à quand il le restera.
+   */
+  nextRefreshAt?: string;
 };
 
 /**
@@ -142,48 +155,141 @@ export function groupByModel(items: LlmMentionItem[]): LlmModelMentions[] {
   return [...byModel.values()].sort((a, b) => b.mentions - a.mentions);
 }
 
+/** Le domaine tel qu'on l'envoie à DataForSEO : sans protocole, sans www, sans chemin. */
+function cleanDomain(domain: string): string {
+  return domain
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "")
+    .toLowerCase();
+}
+
+function parseReport(payload: string | null): LlmMentionsReport | null {
+  if (!payload) return null;
+  try {
+    return JSON.parse(payload) as LlmMentionsReport;
+  } catch {
+    // Une ligne illisible vaut une absence de relevé — mais elle ne rouvre pas
+    // le droit d'appel pour autant : `attemptedAt` reste la seule porte.
+    return null;
+  }
+}
+
 /**
- * Le relevé complet d'un domaine, mémorisé une journée.
+ * Le relevé du compte, appelé au plus une fois par jour.
  *
- * `null` a trois causes possibles — pas d'identifiants, pas de domaine, appel
- * en échec — et la carte les traite pareil : elle montre l'exemple plutôt qu'un
- * graphique vide. Une panne DataForSEO ne doit pas emporter l'accueil du
- * tableau de bord avec elle, d'où l'erreur avalée après journalisation.
+ * Trois situations, dans cet ordre :
+ *
+ *   1. la dernière tentative a moins de 24 h — on rend ce qui est en base, sans
+ *      toucher à l'API, même si cette tentative avait échoué ;
+ *   2. la porte est ouverte — un appel part, le résultat est écrit en base ;
+ *   3. l'appel échoue — l'échec est daté lui aussi, et le relevé précédent, s'il
+ *      existe, reprend l'écran. Réessayer à chaque rechargement consommerait la
+ *      journée en appels perdus.
+ *
+ * La porte ne dépend que de la date : changer de domaine ne la rouvre pas,
+ * sinon un aller-retour entre deux domaines suffirait à appeler sans limite.
+ * Le relevé en base ne ressort alors que s'il porte sur la même question —
+ * domaine et localisation identiques ; sinon la carte repasse à l'exemple, le
+ * temps que le lendemain rende l'appel possible.
+ *
+ * `null` — pas d'identifiants, pas de domaine, aucun relevé jamais réussi — est
+ * traité par la carte comme une absence de mesure : elle montre l'exemple.
  */
-export async function fetchLlmMentions(
+export const fetchLlmMentions = cache(async function fetchLlmMentions(
+  userId: string,
   domain: string | null,
   country?: string | null,
 ): Promise<LlmMentionsReport | null> {
-  if (!domain || !isDataForSeoConfigured()) return null;
+  if (!domain) return null;
 
-  const clean = domain.trim().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  const clean = cleanDomain(domain);
   if (!clean) return null;
 
   const locationCode = locationCodeOf(country);
 
-  const load = unstable_cache(
-    async () => {
-      const page = await searchLlmMentions({ domain: clean, locationCode });
-      return {
-        domain: clean,
-        totalMentions: page.totalCount,
-        truncated: page.truncated,
-        models: groupByModel(page.items),
-        fetchedAt: new Date().toISOString(),
-      } satisfies LlmMentionsReport;
-    },
-    ["llm-mentions", clean, String(locationCode)],
-    { revalidate: CACHE_SECONDS, tags: [`llm-mentions:${clean}`] },
-  );
+  // La table est le compteur : sans elle (migration pas encore poussée), on
+  // s'abstient plutôt que d'appeler une API facturée sans garde-fou.
+  let snapshot;
+  try {
+    snapshot = await prisma.llmMentionSnapshot.findUnique({ where: { userId } });
+  } catch (error) {
+    console.error(`[llm-mentions] compteur illisible pour ${userId} : ${String(error)}`);
+    return null;
+  }
+
+  const stored = parseReport(snapshot?.payload ?? null);
+  const sameQuestion =
+    snapshot?.domain === clean && snapshot?.locationCode === locationCode;
+  const nextRefreshAt = snapshot
+    ? new Date(snapshot.attemptedAt.getTime() + REFRESH_INTERVAL_MS)
+    : null;
+  const doorClosed = Boolean(nextRefreshAt && nextRefreshAt.getTime() > Date.now());
+
+  if (doorClosed) {
+    return sameQuestion && stored
+      ? { ...stored, nextRefreshAt: nextRefreshAt?.toISOString() }
+      : null;
+  }
+
+  if (!isDataForSeoConfigured()) return sameQuestion ? stored : null;
+
+  // La tentative est datée avant l'appel : une requête qui n'aboutit jamais
+  // (temps mort, instance recyclée) ne doit pas rouvrir la porte au rechargement
+  // suivant. DataForSEO facture la requête partie, pas la réponse rendue.
+  const attemptedAt = new Date();
+  try {
+    await prisma.llmMentionSnapshot.upsert({
+      where: { userId },
+      create: { userId, domain: clean, locationCode, attemptedAt },
+      update: { domain: clean, locationCode, attemptedAt },
+    });
+  } catch (error) {
+    console.error(`[llm-mentions] compteur non inscriptible pour ${userId} : ${String(error)}`);
+    return null;
+  }
 
   try {
-    return await load();
+    const page = await searchLlmMentions({ domain: clean, locationCode });
+    const report: LlmMentionsReport = {
+      domain: clean,
+      totalMentions: page.totalCount,
+      truncated: page.truncated,
+      models: groupByModel(page.items),
+      fetchedAt: new Date().toISOString(),
+    };
+
+    await prisma.llmMentionSnapshot.update({
+      where: { userId },
+      data: {
+        payload: JSON.stringify(report),
+        fetchedAt: new Date(),
+        lastError: null,
+      },
+    });
+
+    return {
+      ...report,
+      nextRefreshAt: new Date(attemptedAt.getTime() + REFRESH_INTERVAL_MS).toISOString(),
+    };
   } catch (error) {
     const detail =
       error instanceof DataForSeoError
         ? `${error.statusCode} — ${error.message}`
         : String(error);
     console.error(`[llm-mentions] relevé impossible pour ${clean} : ${detail}`);
-    return null;
+
+    await prisma.llmMentionSnapshot
+      .update({ where: { userId }, data: { lastError: detail.slice(0, 500) } })
+      .catch(() => undefined);
+
+    // Le relevé de la veille vaut mieux qu'une carte d'exemple : il a été mesuré.
+    return sameQuestion && stored
+      ? {
+          ...stored,
+          nextRefreshAt: new Date(attemptedAt.getTime() + REFRESH_INTERVAL_MS).toISOString(),
+        }
+      : null;
   }
-}
+});
