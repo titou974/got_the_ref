@@ -10,91 +10,78 @@ import type { LlmMentionsReport, LlmPlatformSeries } from "./llmMentions";
  * forme à chaque rechargement se lirait comme une vraie mesure erratique — et
  * la carte porte le bandeau « données d'exemple » au-dessus.
  *
- * L'allure raconte ce que vend le produit : l'aperçu IA de Google cite le plus
- * souvent parce qu'il répond à toutes les questions locales, ChatGPT suit sur
- * des questions moins nombreuses mais bien plus recherchées.
+ * L'allure raconte ce que vend le produit : les aperçus IA de Google gagnent le
+ * plus vite parce qu'ils répondent à toutes les questions locales, ChatGPT suit
+ * sur des questions moins nombreuses mais bien plus recherchées. Un mois y
+ * recule, parce que la vraie mesure recule parfois et qu'un exemple qui ne
+ * monte jamais que tout droit prépare mal à la première barre négative.
  */
 
 /**
- * Les mois écoulés depuis le 1er janvier, dans la forme des points relevés.
+ * Les douze derniers mois, dans la forme des points relevés.
  *
- * L'axe d'exemple doit ressembler à celui du vrai relevé — de janvier au mois
- * en cours — sinon la carte paraît figée dans un autre calendrier.
+ * L'axe d'exemple doit ressembler à celui du vrai relevé — même fenêtre
+ * glissante — sinon la carte paraît figée dans un autre calendrier.
  */
-function monthsOfYear(): string[] {
+function lastTwelveMonths(): string[] {
   const now = new Date();
   const months: string[] = [];
-  for (let month = 0; month <= now.getUTCMonth(); month += 1) {
+  for (let back = 11; back >= 0; back -= 1) {
     months.push(
-      new Date(Date.UTC(now.getUTCFullYear(), month, 1)).toISOString().slice(0, 10),
+      new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1))
+        .toISOString()
+        .slice(0, 10),
     );
   }
   return months;
 }
 
-/**
- * Une série d'exemple pour une plateforme.
- *
- * Les valeurs sont des écarts, comme dans le vrai relevé : elles montent, elles
- * redescendent une fois, et la série est rognée ou complétée pour tomber juste
- * sur le nombre de mois écoulés.
- */
+/** Une série d'exemple pour une plateforme, à partir de ses écarts mensuels. */
 function demoSeries(
   platform: string,
   label: string,
+  logo: string,
   locationCode: number,
   deltas: number[],
 ): LlmPlatformSeries {
-  const months = monthsOfYear();
+  const points = lastTwelveMonths().map((month, index) => {
+    const delta = deltas[index];
+    return { month, delta, deltaSearchVolume: delta * 180 };
+  });
+
   return {
     platform,
     label,
+    logo,
     locationCode,
-    points: months.map((month, index) => {
-      const delta = deltas[index % deltas.length];
-      return { month, delta, deltaSearchVolume: delta * 180 };
-    }),
+    points,
+    netDelta: points.reduce((total, point) => total + point.delta, 0),
+    netSearchVolume: points.reduce((total, point) => total + point.deltaSearchVolume, 0),
   };
 }
 
 export function buildDemoLlmMentions(domain: string | null): LlmMentionsReport {
+  const platforms = [
+    demoSeries(
+      "google",
+      "Aperçus IA de Google",
+      "/gemini.webp",
+      2250,
+      [3, 5, 4, 8, 7, 11, 9, -2, 14, 12, 17, 19],
+    ),
+    demoSeries(
+      "chat_gpt",
+      "ChatGPT",
+      "/chatgpt.png",
+      2840,
+      [1, 2, 4, 3, 6, 5, 8, 7, 6, 10, 9, 13],
+    ),
+  ];
+
   return {
     domain: domain ?? "votre-domaine.fr",
-    history: [
-      demoSeries("google", "Aperçus IA de Google", 2250, [4, 7, 6, 11, 9, 14, 12, 18]),
-      demoSeries("chat_gpt", "ChatGPT", 2840, [2, 3, -1, 5, 4, 6, 8, 7]),
-    ],
-    totalMentions: 142,
-    truncated: false,
+    platforms,
+    netDelta: platforms.reduce((total, entry) => total + entry.netDelta, 0),
     fetchedAt: new Date().toISOString(),
-    models: [
-      {
-        id: "google_ai_overview",
-        platform: "google",
-        label: "Aperçus IA de Google",
-        logo: "/gemini.webp",
-        mentions: 78,
-        searchVolume: 24_600,
-        topQuestion: "meilleur restaurant de fruits de mer à la rochelle",
-      },
-      {
-        id: "gpt-5",
-        platform: "chat_gpt",
-        label: "ChatGPT gpt-5",
-        logo: "/chatgpt.png",
-        mentions: 41,
-        searchVolume: 31_200,
-        topQuestion: "où manger des huîtres à la rochelle",
-      },
-      {
-        id: "gpt-4o",
-        platform: "chat_gpt",
-        label: "ChatGPT gpt-4o",
-        logo: "/chatgpt.png",
-        mentions: 23,
-        searchVolume: 12_400,
-        topQuestion: "restaurant vue sur le port la rochelle",
-      },
-    ],
   };
 }

@@ -1596,20 +1596,16 @@
     },
     "mentions": {
       "title": "Mentions dans les IA",
-      "hint": "Les réponses d'IA où {domain} est cité, modèle par modèle.",
-      "historyTitle": "Évolution de {domain} dans les IA, mois par mois",
-      "historyHint": "Écart de mentions d'un mois sur l'autre, depuis janvier ({months} mois).",
-      "lastMonth": "ce mois-ci",
-      "subtitle": "mentions relevées sur {count} modèles",
+      "hint": "Comment les citations de {domain} évoluent, modèle par modèle.",
+      "subtitle": "citations gagnées sur les {months} derniers mois",
       "searchVolume": "{value} recherches/mois",
-      "topQuestion": "Question la plus posée : « {question} »",
-      "empty": "Aucune mention relevée pour l'instant sur ce domaine.",
+      "platformScope": "Relevé sur {location}",
+      "empty": "Aucune évolution relevée pour l'instant sur ce domaine.",
       "demoBadge": "Données d'exemple",
       "demoNote": "Données d'exemple : le relevé des mentions n'est pas encore branché sur ce compte.",
-      "source": "Source : archive DataForSEO des réponses ChatGPT et des aperçus IA de Google. Les barres mensuelles disent l'écart avec le mois précédent, pas un total ; celles de ChatGPT sont relevées sur l'archive américaine, la seule historisée pour ce modèle.",
+      "source": "Source : archive DataForSEO des réponses ChatGPT et des aperçus IA de Google. Les barres disent l'écart avec le mois précédent, pas un total ; celles de ChatGPT sont relevées sur l'archive américaine, la seule historisée pour ce modèle.",
       "measuredOn": "Relevé du {date}.",
-      "nextRefresh": "Prochain relevé le {date} : un relevé par mois.",
-      "truncated": "Le total dépasse ce que le relevé ramène : le détail par modèle porte sur les mentions les plus recherchées."
+      "nextRefresh": "Prochain relevé le {date} : un relevé par mois."
     },
     "rankings": {
       "refresh": "Reprendre le relevé",

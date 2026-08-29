@@ -10,26 +10,23 @@ import { dataForSeoLog } from "@/lib/dataforseo/log";
 import {
   fetchDomainTimeseries,
   locationCodeOf,
-  searchLlmMentions,
   TIMESERIES_PLATFORMS,
-  type LlmMentionItem,
   type MonthlyDelta,
   type PlatformSeries,
 } from "@/lib/dataforseo/llm-mentions";
 
 /**
- * Les mentions du commerce dans les IA, rangées par modèle.
+ * Les mentions du commerce dans les IA, modèle par modèle et mois par mois.
  *
- * La question posée par le client est simple — « combien de fois chaque IA me
- * cite ? » — et la réponse tient dans un décompte par `model_name` : DataForSEO
- * rend une ligne par réponse d'IA où son domaine apparaît, et chaque ligne dit
- * quel modèle l'a écrite. On compte donc les lignes, modèle par modèle.
+ * La question posée par le client est simple — « est-ce que les IA parlent de
+ * moi, et est-ce que ça monte ? » — et la réponse tient dans une série par
+ * modèle : DataForSEO rend, pour un domaine, ce qu'il a gagné ou perdu en
+ * citations chaque mois, séparément sur les aperçus IA de Google et sur
+ * ChatGPT.
  *
- * Deux chiffres accompagnent chaque barre, parce qu'ils ne disent pas la même
- * chose : le nombre de mentions (combien de réponses différentes vous citent)
- * et le volume de recherche cumulé (combien de fois par mois ces questions-là
- * sont posées). Dix mentions sur des questions que personne ne pose valent
- * moins qu'une seule sur la question centrale du métier.
+ * Ce sont des écarts, pas des totaux : « +18 » veut dire dix-huit citations de
+ * plus que le mois précédent. L'interface l'écrit ainsi partout, signe compris,
+ * plutôt que de laisser lire un nombre de mentions là où il n'y en a pas.
  */
 
 /**
@@ -66,45 +63,28 @@ function nextMonthStart(from: Date): Date {
   return new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1));
 }
 
-export type LlmModelMentions = {
-  /** Le `model_name` brut renvoyé par l'API, ex. « google_ai_overview ». */
-  id: string;
-  /** La plateforme : « google » ou « chat_gpt ». */
-  platform: string;
-  label: string;
-  /** Logo servi depuis `public/`. */
-  logo: string;
-  /** Nombre de réponses d'IA distinctes où le domaine est cité. */
-  mentions: number;
-  /** Volume de recherche mensuel cumulé des questions concernées. */
-  searchVolume: number;
-  /** La question la plus demandée où le commerce apparaît. */
-  topQuestion: string | null;
-};
-
 /** Une plateforme et son évolution mensuelle, prête pour le graphique. */
 export type LlmPlatformSeries = {
   /** « google », « chat_gpt » : la clé rendue par DataForSEO. */
   platform: string;
   label: string;
+  /** Logo servi depuis `public/`. */
+  logo: string;
   /** La localisation réellement interrogée — ChatGPT n'existe qu'en archive US. */
   locationCode: number;
   points: MonthlyDelta[];
+  /** Somme des écarts de la fenêtre : le mouvement net sur douze mois. */
+  netDelta: number;
+  /** Même somme, côté volume de recherche des questions concernées. */
+  netSearchVolume: number;
 };
 
 export type LlmMentionsReport = {
   domain: string;
-  /** Total des mentions, pages non lues comprises. */
-  totalMentions: number;
-  /** Vrai quand l'archive dépasse ce que le relevé a ramené. */
-  truncated: boolean;
-  models: LlmModelMentions[];
-  /**
-   * L'évolution depuis le 1er janvier, une série par plateforme. Facultative :
-   * un relevé écrit en base avant l'arrivée de cette courbe ne la porte pas, et
-   * il doit rester lisible.
-   */
-  history?: LlmPlatformSeries[];
+  /** Une série par modèle d'IA suivi, sur les douze derniers mois. */
+  platforms: LlmPlatformSeries[];
+  /** Le mouvement net toutes plateformes confondues, sur la fenêtre entière. */
+  netDelta: number;
   fetchedAt: string;
   /**
    * Quand le prochain appel deviendra possible. Écrit dans la carte : le client
@@ -116,88 +96,41 @@ export type LlmMentionsReport = {
 /**
  * Ce qu'on sait nommer, et sous quel logo.
  *
- * La liste des modèles n'est pas figée chez DataForSEO : ChatGPT change de
- * version sans prévenir, et un `model_name` inconnu doit rester affichable.
- * D'où la reconnaissance par préfixe puis le repli sur le nom brut embelli —
- * une barre étiquetée « gpt-5.2 » vaut mieux qu'une barre disparue.
+ * DataForSEO nomme ses plateformes en interne (« chat_gpt ») ; la légende du
+ * graphique, elle, s'adresse à un commerçant. Une plateforme que DataForSEO
+ * ajouterait garde son nom brut embelli plutôt que de disparaître de la carte.
  */
-const KNOWN_MODELS: {
-  match: (model: string, platform: string) => boolean;
-  label: (model: string) => string;
-  logo: string;
-}[] = [
-  {
-    match: (model) => model === "google_ai_overview",
-    label: () => "Aperçus IA de Google",
-    logo: "/gemini.webp",
-  },
-  {
-    match: (model) => model.startsWith("gemini"),
-    label: (model) => `Gemini ${model.replace(/^gemini[-_]?/, "")}`.trim(),
-    logo: "/gemini.webp",
-  },
-  {
-    match: (model, platform) => platform === "chat_gpt" || model.startsWith("gpt"),
-    label: (model) => `ChatGPT ${model}`,
-    logo: "/chatgpt.png",
-  },
-  {
-    match: (model) => model.startsWith("claude"),
-    label: (model) => `Claude ${model.replace(/^claude[-_]?/, "")}`.trim(),
-    logo: "/claude.svg",
-  },
-  {
-    match: (model) => model.startsWith("perplexity") || model.startsWith("sonar"),
-    label: (model) => `Perplexity ${model}`,
-    logo: "/perplexity.png",
-  },
-];
+const PLATFORM_META: Record<string, { label: string; logo: string }> = {
+  google: { label: "Aperçus IA de Google", logo: "/gemini.webp" },
+  chat_gpt: { label: "ChatGPT", logo: "/chatgpt.png" },
+};
 
-function describeModel(model: string, platform: string) {
-  const known = KNOWN_MODELS.find((entry) => entry.match(model, platform));
-  if (known) return { label: known.label(model), logo: known.logo };
-
-  // Repli : « gpt-4o-mini » devient « Gpt 4o mini », lisible sans être inventé.
-  const pretty = model.replace(/[-_]/g, " ").replace(/^\w/, (c) => c.toUpperCase());
-  return { label: pretty, logo: "/chatgpt.png" };
+function describePlatform(platform: string): { label: string; logo: string } {
+  return (
+    PLATFORM_META[platform] ?? {
+      label: platform.replace(/[-_]/g, " ").replace(/^\w/, (c) => c.toUpperCase()),
+      logo: "/chatgpt.png",
+    }
+  );
 }
 
-/** Regroupe les réponses par modèle, la plus citée en tête. */
-export function groupByModel(items: LlmMentionItem[]): LlmModelMentions[] {
-  const byModel = new Map<string, LlmModelMentions>();
-  /** Le volume de la question retenue, gardé à part : il ne sort pas d'ici. */
-  const topVolumes = new Map<string, number>();
-
-  for (const item of items) {
-    const model = item.model_name || item.platform || "inconnu";
-    const platform = item.platform || "";
-    const volume = item.ai_search_volume ?? 0;
-
-    let current = byModel.get(model);
-    if (!current) {
-      const { label, logo } = describeModel(model, platform);
-      current = {
-        id: model,
-        platform,
-        label,
-        logo,
-        mentions: 0,
-        searchVolume: 0,
-        topQuestion: null,
-      };
-      byModel.set(model, current);
-      topVolumes.set(model, -1);
-    }
-
-    current.mentions += 1;
-    current.searchVolume += volume;
-    if (volume > (topVolumes.get(model) ?? -1)) {
-      topVolumes.set(model, volume);
-      current.topQuestion = item.question || null;
-    }
-  }
-
-  return [...byModel.values()].sort((a, b) => b.mentions - a.mentions);
+/** Habille les séries brutes du nom, du logo et des totaux que la carte affiche. */
+export function describeSeries(series: PlatformSeries[]): LlmPlatformSeries[] {
+  return series.map((entry) => {
+    const { label, logo } = describePlatform(entry.platform);
+    return {
+      platform: entry.platform,
+      label,
+      logo,
+      locationCode: entry.locationCode,
+      points: entry.points,
+      netDelta: entry.points.reduce((total, point) => total + point.delta, 0),
+      netSearchVolume: entry.points.reduce(
+        (total, point) => total + point.deltaSearchVolume,
+        0,
+      ),
+    };
+  });
 }
 
 /** Le domaine tel qu'on l'envoie à DataForSEO : sans protocole, sans www, sans chemin. */
@@ -211,53 +144,23 @@ function cleanDomain(domain: string): string {
 }
 
 /**
- * Le nom lisible d'une plateforme suivie.
+ * Le relevé gardé en base, s'il a la forme attendue.
  *
- * DataForSEO nomme ses plateformes en interne (« chat_gpt ») ; la légende du
- * graphique, elle, s'adresse à un commerçant. Une plateforme inconnue garde son
- * nom brut embelli plutôt que de disparaître de la légende.
+ * La vérification porte sur `platforms` : un relevé écrit par une version
+ * antérieure de cet écran a une autre forme, et vaut mieux être traité comme
+ * absent — la carte repasse à l'exemple — que rendu à moitié.
  */
-const PLATFORM_LABELS: Record<string, string> = {
-  google: "Aperçus IA de Google",
-  chat_gpt: "ChatGPT",
-};
-
-function labelOfPlatform(platform: string): string {
-  return (
-    PLATFORM_LABELS[platform] ??
-    platform.replace(/[-_]/g, " ").replace(/^\w/, (c) => c.toUpperCase())
-  );
-}
-
-/** Habille les séries brutes de l'API du nom que la légende affichera. */
-function describeSeries(series: PlatformSeries[]): LlmPlatformSeries[] {
-  return series.map((entry) => ({
-    platform: entry.platform,
-    label: labelOfPlatform(entry.platform),
-    locationCode: entry.locationCode,
-    points: entry.points,
-  }));
-}
-
 function parseReport(payload: string | null): LlmMentionsReport | null {
   if (!payload) return null;
   try {
-    return JSON.parse(payload) as LlmMentionsReport;
-  } catch {
-    // Une ligne illisible vaut une absence de relevé — mais elle ne rouvre pas
-    // le droit d'appel pour autant : `attemptedAt` reste la seule porte.
-    return null;
-  }
-}
-
-function parseHistory(payload: string | null): LlmPlatformSeries[] | null {
-  if (!payload) return null;
-  try {
-    const parsed = JSON.parse(payload) as LlmPlatformSeries[];
-    return Array.isArray(parsed) && parsed.every((entry) => Array.isArray(entry?.points))
+    const parsed = JSON.parse(payload) as LlmMentionsReport;
+    return Array.isArray(parsed?.platforms) &&
+      parsed.platforms.every((entry) => Array.isArray(entry?.points))
       ? parsed
       : null;
   } catch {
+    // Une ligne illisible vaut une absence de relevé — mais elle ne rouvre pas
+    // le droit d'appel pour autant : `attemptedAt` reste la seule porte.
     return null;
   }
 }
@@ -317,7 +220,6 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
   }
 
   const stored = parseReport(snapshot?.payload ?? null);
-  const storedHistory = parseHistory(snapshot?.historyPayload ?? null);
   const sameQuestion =
     snapshot?.domain === clean && snapshot?.locationCode === locationCode;
   // La porte se ferme pour le reste du mois dès qu'une tentative y a eu lieu.
@@ -326,13 +228,9 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     snapshot && monthKeyOf(snapshot.attemptedAt) === currentMonthKey(),
   );
 
-  /** Le relevé rendu à l'écran : le décompte par modèle et l'évolution gardée. */
-  const compose = (
-    report: LlmMentionsReport,
-    history: LlmPlatformSeries[] | null,
-  ): LlmMentionsReport => ({
+  /** Le relevé gardé, redaté de la prochaine ouverture de la porte. */
+  const compose = (report: LlmMentionsReport): LlmMentionsReport => ({
     ...report,
-    history: history ?? [],
     nextRefreshAt: nextRefreshAt?.toISOString(),
   });
 
@@ -341,14 +239,14 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
       domaine: clean,
       dernier_releve: snapshot?.fetchedAt?.toISOString() ?? "(aucun)",
       prochain_appel: nextRefreshAt?.toISOString(),
-      series_en_base: storedHistory?.length ?? 0,
+      series_en_base: stored?.platforms.length ?? 0,
     });
-    return sameQuestion && stored ? compose(stored, storedHistory) : null;
+    return sameQuestion && stored ? compose(stored) : null;
   }
 
   if (!isDataForSeoConfigured()) {
     dataForSeoLog("⏸ identifiants absents — aucun appel");
-    return sameQuestion && stored ? compose(stored, storedHistory) : null;
+    return sameQuestion && stored ? compose(stored) : null;
   }
 
   // La tentative est datée avant l'appel : une requête qui n'aboutit jamais
@@ -372,36 +270,22 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
   dataForSeoLog("▶ relevé du mois — départ", {
     domaine: clean,
     location_code: locationCode,
-    // Le décompte par modèle, puis une série d'évolution par plateforme suivie.
-    appels_prevus: 1 + TIMESERIES_PLATFORMS.length,
+    // Une série d'évolution par plateforme suivie, donc un appel chacune.
+    appels_prevus: TIMESERIES_PLATFORMS.length,
     premier_releve: snapshot ? "non" : "oui — compte jamais relevé",
   });
 
   try {
-    // L'évolution a le droit d'échouer seule : un domaine absent de l'archive
-    // historisée ne doit pas emporter le graphique des modèles avec lui.
-    const [page, history] = await Promise.all([
-      searchLlmMentions({ domain: clean, locationCode }),
-      fetchDomainTimeseries({ domain: clean, locationCode })
-        .then(describeSeries)
-        .catch((error) => {
-          dataForSeoLog("✗ évolution impossible — on garde celle de la base", {
-            domaine: clean,
-            erreur: String(error),
-          });
-          return null;
-        }),
-    ]);
+    const platforms = describeSeries(
+      await fetchDomainTimeseries({ domain: clean, locationCode }),
+    );
 
     const report: LlmMentionsReport = {
       domain: clean,
-      totalMentions: page.totalCount,
-      truncated: page.truncated,
-      models: groupByModel(page.items),
+      platforms,
+      netDelta: platforms.reduce((total, entry) => total + entry.netDelta, 0),
       fetchedAt: new Date().toISOString(),
     };
-
-    const freshHistory = history ?? storedHistory;
 
     await prisma.llmMentionSnapshot.update({
       where: { userId },
@@ -409,30 +293,19 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
         payload: JSON.stringify(report),
         fetchedAt: new Date(),
         lastError: null,
-        // L'évolution n'est réécrite que si elle vient d'être relevée : sa date
-        // de fraîcheur doit rester celle de l'appel qui l'a produite.
-        ...(history
-          ? {
-              historyPayload: JSON.stringify(history),
-              historyFetchedAt: new Date(),
-            }
-          : {}),
       },
     });
 
     dataForSeoLog("✓ relevé du mois — écrit en base", {
       domaine: clean,
-      mentions: report.totalMentions,
-      modeles: report.models.length,
-      series: freshHistory?.length ?? 0,
-      mois_par_serie: freshHistory?.[0]?.points.length ?? 0,
-      evolution_source: history ? "appel" : "base",
+      series: platforms.length,
+      mois_par_serie: platforms[0]?.points.length ?? 0,
+      evolution_nette: report.netDelta,
       prochain_appel: nextMonthStart(attemptedAt).toISOString(),
     });
 
     return {
       ...report,
-      history: freshHistory ?? [],
       nextRefreshAt: nextMonthStart(attemptedAt).toISOString(),
     };
   } catch (error) {
@@ -450,7 +323,6 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     return sameQuestion && stored
       ? {
           ...stored,
-          history: storedHistory ?? [],
           nextRefreshAt: nextMonthStart(attemptedAt).toISOString(),
         }
       : null;

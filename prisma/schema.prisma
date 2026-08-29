@@ -518,15 +518,16 @@ model GooglePost {
 /// Le dernier relevé des mentions dans les IA, un par compte.
 ///
 /// La table n'est pas qu'un cache : c'est le compteur qui tient la règle « un
-/// appel DataForSEO par jour et par client ». Chaque appel est facturé, et
-/// l'accueil du tableau de bord est rechargé plusieurs fois par jour — sans
-/// garde-fou, une visite tous les quarts d'heure ferait autant de factures.
+/// relevé DataForSEO par mois calendaire et par client ». Chaque appel est
+/// facturé, et l'accueil du tableau de bord est rechargé plusieurs fois par
+/// jour — sans garde-fou, une visite tous les quarts d'heure ferait autant de
+/// factures.
 ///
 /// D'où deux dates plutôt qu'une : `attemptedAt` retient la dernière tentative,
 /// réussie ou non, et c'est elle qui ouvre ou ferme la porte ; `fetchedAt`
 /// retient le dernier relevé exploitable, celui que la carte affiche. Une panne
 /// DataForSEO ne doit pas rendre la main pour réessayer à chaque rechargement :
-/// elle consommerait la journée en appels perdus.
+/// elle consommerait le mois en appels perdus.
 model LlmMentionSnapshot {
   id     String @id @default(cuid())
   userId String @unique
@@ -537,7 +538,8 @@ model LlmMentionSnapshot {
   domain       String
   locationCode Int
 
-  /// Le rapport sérialisé en JSON (total, modèles, date du relevé).
+  /// Le rapport sérialisé en JSON : une série mensuelle par modèle d'IA, le
+  /// mouvement net de la fenêtre, et la date du relevé.
   payload String?
 
   /// Le message d'erreur de la dernière tentative ratée, effacé au succès.
@@ -546,12 +548,11 @@ model LlmMentionSnapshot {
   attemptedAt DateTime  @default(now())
   fetchedAt   DateTime?
 
-  /// L'historique mensuel de la marque, gardé à part du reste.
-  ///
-  /// Ces chiffres sont mensuels : les redemander tous les jours paierait douze
-  /// mois figés pour voir bouger le seul mois en cours. Ils ont donc leur propre
-  /// fraîcheur — une semaine, ou l'entrée dans un nouveau mois — et le relevé
-  /// quotidien les relit en base au lieu de rappeler l'API.
+  /// Vestiges de l'historique de marque, relevé à part quand la carte tenait
+  /// deux routes DataForSEO. Elle n'en tient plus qu'une, et l'évolution est
+  /// désormais dans `payload` avec le reste. Ces colonnes ne sont plus écrites ;
+  /// elles restent là parce que les supprimer coûterait une migration
+  /// destructive pour ne rien gagner.
   historyBrand     String?
   historyPayload   String?
   historyFetchedAt DateTime?

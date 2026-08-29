@@ -5,8 +5,6 @@ import {
   AreaChart,
   Bar,
   BarChart,
-  Cell,
-  LabelList,
   Legend,
   Line,
   LineChart,
@@ -18,8 +16,8 @@ import {
 
 /**
  * Les tracés du tableau de bord : une courbe de fond pour la carte de tête, une
- * miniature pour les chiffres, un demi-anneau pour la note, des barres pour les
- * mentions modèle par modèle.
+ * miniature pour les chiffres, un demi-anneau pour la note, des barres groupées
+ * pour l'évolution des mentions modèle d'IA par modèle d'IA.
  *
  * Aucun axe des ordonnées, aucune infobulle : ces graphiques disent une allure,
  * et le chiffre exact est déjà écrit à côté en gros. Les axes ne feraient que
@@ -137,68 +135,6 @@ export function PlatformDeltaChart({
               isAnimationActive={false}
             />
           ))}
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-export type ModelBar = {
-  /** Le nom du modèle, écrit à gauche de sa barre. */
-  label: string;
-  value: number;
-  /** La plateforme, qui décide de la couleur : Google, ChatGPT, autre. */
-  platform: string;
-};
-
-/** La couleur d'une barre, une par plateforme pour les distinguer d'un coup d'œil. */
-function barColor(platform: string): string {
-  if (platform === "google") return INK;
-  if (platform === "chat_gpt") return EMBER;
-  return ORCHID;
-}
-
-/**
- * Les mentions par modèle, en barres horizontales.
- *
- * Horizontales et non verticales : les noms de modèles sont longs (« Aperçus IA
- * de Google »), et verticalement ils se coucheraient ou se tronqueraient. La
- * hauteur suit le nombre de barres — un graphique à trois modèles ne doit pas
- * réserver la place de huit.
- */
-export function ModelMentionsChart({ data }: { data: ModelBar[] }) {
-  const height = Math.max(120, data.length * 46 + 16);
-
-  return (
-    <div className="w-full" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 4, right: 44, bottom: 4, left: 0 }}
-          barCategoryGap={12}
-        >
-          <XAxis type="number" hide domain={[0, "dataMax"]} />
-          <YAxis
-            type="category"
-            dataKey="label"
-            tickLine={false}
-            axisLine={false}
-            width={148}
-            tick={{ fill: "#71717a", fontSize: 12 }}
-          />
-          <Bar dataKey="value" radius={[6, 6, 6, 6]} isAnimationActive={false} barSize={22}>
-            {data.map((entry) => (
-              <Cell key={entry.label} fill={barColor(entry.platform)} />
-            ))}
-            <LabelList
-              dataKey="value"
-              position="right"
-              className="fill-obsidian"
-              fontSize={12}
-              fontWeight={600}
-            />
-          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>
