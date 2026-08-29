@@ -16,7 +16,19 @@ model User {
   name             String?
   emailVerified    Boolean  @default(false)
   image            String?
-  plan             String   @default("free") // free | pro | agency
+  /// free | boost | pro | agency | demo.
+  ///
+  /// `boost` est posé par le paiement unique du Coup de Boost — il n'y a aucun
+  /// abonnement Stripe derrière, donc rien dans `Subscription` : sans cette
+  /// colonne, le compte retomberait gratuit à la première relecture.
+  ///
+  /// `demo` est posé à la main sur les comptes de démonstration : accès complet,
+  /// aucune facturation. Il ne doit jamais être écrit par un webhook.
+  plan             String   @default("free")
+  /// Date du Coup de Boost, quand il y en a eu un. Elle ouvre la fenêtre de
+  /// rédaction d'une semaine promise par l'offre (cf. `BOOST_ARTICLE_WINDOW_DAYS`) ;
+  /// les corrections de structure, elles, restent acquises.
+  boostGrantedAt   DateTime?
   stripeCustomerId String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

@@ -13,9 +13,18 @@ export type AnalysisViewer = {
   plan: string;
 } | null;
 
-/** Une offre payante (l'analyse d'un abonné est publique, voir plus bas). */
+/**
+ * Une offre qui ouvre les rapports (l'analyse d'un abonné est publique, voir
+ * plus bas).
+ *
+ * Le Coup de Boost en fait partie : il est payé, et il porte précisément sur
+ * l'ouverture d'un rapport et les corrections qui suivent. Les comptes de
+ * démonstration aussi — ils voient ce que voit un abonné.
+ */
+const UNLOCKING_PLANS: readonly PlanKey[] = ["boost", "pro", "agency", "demo"];
+
 function isPaidPlan(plan: string | null | undefined): boolean {
-  return plan === ("pro" satisfies PlanKey) || plan === ("agency" satisfies PlanKey);
+  return plan != null && (UNLOCKING_PLANS as readonly string[]).includes(plan);
 }
 
 /**

@@ -9,7 +9,7 @@ import { createBoostCheckoutAction } from "@/features/billing/actions";
  * Aucun compte requis avant de payer ; il s'ouvre au retour, à l'adresse
  * utilisée pour le paiement.
  *
- * Pas de cycle de facturation à lire ici, contrairement au bouton d'essai :
+ * Pas de cycle de facturation à lire ici, contrairement au bouton d'abonnement :
  * l'offre n'a qu'un seul rythme, et il est écrit sur la carte.
  */
 export function BoostCheckoutButton({

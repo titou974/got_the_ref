@@ -3,14 +3,14 @@ import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { AnalysisCheckoutButton } from "@/components/AnalysisCheckoutButton";
-import { TrialCheckoutButton } from "@/components/TrialCheckoutButton";
+import { SubscriptionCheckoutButton } from "@/components/SubscriptionCheckoutButton";
 import { BrandProof } from "@/components/BrandProof";
 import { PricingOffers } from "@/components/pricing/PricingOffers";
 import { PricingFaq } from "@/components/pricing/PricingFaq";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
-import { BOOST, SUBSCRIPTION_PRICE, TRIAL, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
+import { BOOST, SUBSCRIPTION_PRICE, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
 import { SITE } from "@/constants/site";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -114,34 +114,27 @@ export default async function TarifsPage({ searchParams }: Props) {
 
         <ResultsCarousel className="py-10 sm:py-14" />
 
-        {/* Élargi depuis que les deux offres se posent côte à côte : à 1024 px, les
-            colonnes se serraient au point de casser les lignes de la carte sombre. */}
         <div className="mx-auto w-full max-w-6xl flex-1 px-5 pb-12 sm:pb-16">
-          {/* Les deux offres : l'abonnement (carte sombre, onglets, garantie) et le
-              Coup de Boost, la passe unique, à sa droite. */}
-          <div className="mx-auto w-full max-w-2xl lg:max-w-none">
+          {/* Les deux offres, l'une sous l'autre : le Coup de Boost en carte
+              sombre, puis l'abonnement Tout-en-un. */}
+          <div className="mx-auto w-full">
             <PricingOffers
               analysisId={analyse}
               subscriptionCta={
                 analyse ? (
                   // Venu d'un rapport précis : on le rattache à l'abonnement souscrit.
-                  <AnalysisCheckoutButton
-                    analysisId={analyse}
-                    label={t("trialCta", { days: TRIAL.days })}
-                  />
+                  <AnalysisCheckoutButton analysisId={analyse} label={t("plan.cta")} tone="dark" />
                 ) : (
                   // Sans rapport à rattacher, le bouton part quand même sur Stripe :
                   // renvoyer vers la home faisait reculer d'un cran un visiteur déjà
                   // venu voir le prix.
-                  <TrialCheckoutButton
-                    label={t("plan.cta", { days: TRIAL.days })}
-                  />
+                  <SubscriptionCheckoutButton label={t("plan.cta")} tone="dark" />
                 )
               }
             />
           </div>
 
-          <p className="mt-10 text-sm text-muted">{t("secureNote", { days: TRIAL.days })}</p>
+          <p className="mt-10 text-sm text-muted">{t("secureNote")}</p>
         </div>
       </div>
 

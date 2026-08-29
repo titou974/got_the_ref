@@ -15,6 +15,7 @@
     "gen:lottie": "node scripts/gen-lottie.mjs",
     "recolor:lottie": "node scripts/recolor-lottie.mjs",
     "create:subscriber": "node scripts/create-subscriber.mjs",
+    "set:demo": "node scripts/set-demo-plan.mjs",
     "export:leads": "node scripts/export-leads.mjs",
     "check:dataforseo": "node scripts/check-dataforseo.mjs"
   },

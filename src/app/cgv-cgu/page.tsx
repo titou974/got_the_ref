@@ -5,7 +5,6 @@ import {
   BOOST,
   GUARANTEE_DAYS,
   SUBSCRIPTION_PRICE,
-  TRIAL,
   YEARLY_MONTHLY_PRICE,
   YEARLY_TOTAL_PRICE,
 } from "@/constants/plans";
@@ -296,7 +295,10 @@ export default function CgvCguPage() {
           <strong>Coup de Boost</strong> : la passe unique des agents, payée une seule fois, sans
           reconduction.
         </li>
-        <li><strong>Essai</strong> : la période d'accès complet gratuite précédant la facturation.</li>
+        <li>
+          <strong>Compte gratuit</strong> : l'accès permanent et sans paiement à une partie du
+          Service, sans limite de durée ni engagement.
+        </li>
         <li><strong>Prestations</strong> : tout travail sur mesure fourni sur devis.</li>
       </ul>
 
@@ -316,9 +318,9 @@ export default function CgvCguPage() {
           Le résultat est un aperçu partiel, dont la note est plafonnée.
         </li>
         <li>
-          <strong>Essai</strong> : {TRIAL.days} jours d'accès complet, {TRIAL.todayPrice} € débité à
-          l'ouverture. La facturation ne démarre qu'à l'issue de l'essai, sauf résiliation avant son
-          terme.
+          <strong>Compte gratuit</strong> : accès permanent et sans paiement à la détection de
+          niche du site et aux corrections de contenu associées aux mots-clés relevés. Les autres
+          sections restent fermées jusqu'à la souscription d'une offre payante.
         </li>
         <li>
           <strong>Abonnement mensuel</strong> : {SUBSCRIPTION_PRICE} € par mois, accès complet à la

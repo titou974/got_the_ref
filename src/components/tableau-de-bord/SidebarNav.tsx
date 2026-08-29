@@ -4,6 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ROUTES } from "@/constants/routes";
+import {
+  canOpen,
+  offerFor,
+  type AccessTier,
+  type DashboardSection,
+} from "@/constants/access";
 
 /**
  * La navigation de gauche.
@@ -12,9 +18,15 @@ import { ROUTES } from "@/constants/routes";
  * page : une section de plus n'oblige alors à toucher qu'à ce tableau. Le
  * chemin racine est comparé exactement, sinon « Accueil » resterait allumé
  * partout.
+ *
+ * Une section que l'offre n'ouvre pas reste cliquable, en gris, avec le nom de
+ * l'offre qui l'ouvrirait posé à droite. La retirer de la colonne cacherait ce
+ * qu'on vend ; la désactiver laisserait le client sans le moyen d'aller voir.
+ * Il tombe donc sur l'écran voilé, qui montre la forme du contenu et mène aux
+ * tarifs.
  */
 
-type Item = { href: string; key: string; icon: React.ReactNode };
+type Item = { href: string; key: DashboardSection; icon: React.ReactNode };
 
 const stroke = {
   fill: "none",
@@ -99,8 +111,9 @@ const MAPS_ITEM: Item = {
   ),
 };
 
-export function SidebarNav({ showMaps }: { showMaps: boolean }) {
+export function SidebarNav({ showMaps, tier }: { showMaps: boolean; tier: AccessTier }) {
   const t = useTranslations("dashboard.nav");
+  const tg = useTranslations("dashboard.gate");
   const pathname = usePathname();
   const items = showMaps ? [...ITEMS, MAPS_ITEM] : ITEMS;
 
@@ -114,6 +127,8 @@ export function SidebarNav({ showMaps }: { showMaps: boolean }) {
             ? pathname === ROUTES.dashboard
             : pathname.startsWith(item.href);
 
+        const locked = !canOpen(tier, item.key);
+
         return (
           <Link
             key={item.key}
@@ -122,11 +137,21 @@ export function SidebarNav({ showMaps }: { showMaps: boolean }) {
             className={`flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-200 ${
               active
                 ? "bg-mist font-semibold text-obsidian"
-                : "text-steel hover:bg-mist/70 hover:text-ink"
+                : locked
+                  ? "text-pebble hover:bg-mist/50 hover:text-steel"
+                  : "text-steel hover:bg-mist/70 hover:text-ink"
             }`}
           >
             {item.icon}
             <span className="truncate">{t(item.key)}</span>
+            {locked && (
+              // L'offre qui ouvre l'onglet, en toutes lettres : « Coup de
+              // Boost » ou « Tout-en-un ». Un cadenas seul dirait que c'est
+              // fermé sans dire avec quoi ça s'ouvre.
+              <span className="ml-auto shrink-0 rounded-pill bg-mist px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-steel">
+                {tg(`offers.${offerFor(item.key)}`)}
+              </span>
+            )}
           </Link>
         );
       })}

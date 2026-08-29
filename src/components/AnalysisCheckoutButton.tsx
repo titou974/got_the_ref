@@ -6,9 +6,9 @@ import { createAnalysisCheckoutAction } from "@/features/billing/actions";
 import { useBillingCycle } from "@/components/pricing/BillingCycleContext";
 
 /**
- * Ouvre l'essai got_the_ref pour un rapport précis : le rapport qui a amené le
- * visiteur ici lui est rattaché au moment de la souscription. Vit uniquement sur
- * la page tarifs — c'est le seul endroit où les montants sont annoncés.
+ * Ouvre l'abonnement got_the_ref pour un rapport précis : le rapport qui a amené
+ * le visiteur ici lui est rattaché au moment de la souscription. Vit uniquement
+ * sur la page tarifs — c'est le seul endroit où les montants sont annoncés.
  */
 export function AnalysisCheckoutButton({
   analysisId,

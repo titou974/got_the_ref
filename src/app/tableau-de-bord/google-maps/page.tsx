@@ -5,6 +5,8 @@ import { getDashboardContext, listGooglePosts } from "@/features/dashboard/queri
 import { Card, CardTitle, PageHeader, StatusDot } from "@/components/tableau-de-bord/Card";
 import { GooglePostPlanner } from "@/components/tableau-de-bord/GooglePostPlanner";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
+import { TierGate } from "@/components/tableau-de-bord/TierGate";
+import { canOpen, offerFor } from "@/constants/access";
 
 export const maxDuration = 300;
 
@@ -27,14 +29,16 @@ export default async function GoogleMapsPage() {
 
   const analysis = context.analysis;
   const coherence = analysis.mapsCoherence ?? null;
+
+  // La fiche se tient semaine après semaine : réservée à l'abonnement.
+  const locked = !canOpen(context.tier, "maps");
   const keyword = analysis.trendingKeywords?.keywords[0]?.keyword ?? null;
 
   return (
     <>
-      <PageHeader
-        title={t("pageTitle")}
-      />
+      <PageHeader title={t("pageTitle")} />
 
+      <Gate locked={locked}>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardTitle
@@ -126,7 +130,17 @@ export default async function GoogleMapsPage() {
           scheduledFor: post.scheduledFor?.toISOString() ?? null,
         }))}
       />
-
+      </Gate>
     </>
+  );
+}
+
+/** Le contenu de la page, voilé ou non — écrit une fois, montré des deux façons. */
+function Gate({ locked, children }: { locked: boolean; children: React.ReactNode }) {
+  if (!locked) return <>{children}</>;
+  return (
+    <TierGate offer={offerFor("maps")} item="maps">
+      {children}
+    </TierGate>
   );
 }

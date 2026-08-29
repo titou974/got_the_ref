@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe, resolvePriceId } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
-import { BOOST_CHECKOUT_KIND, unlockAnalysisFromSession } from "@/features/billing/unlock";
+import {
+  BOOST_CHECKOUT_KIND,
+  grantBoostFromSession,
+  unlockAnalysisFromSession,
+} from "@/features/billing/unlock";
 import { BILLING_CYCLES, PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
 
 export const runtime = "nodejs";
@@ -70,10 +74,26 @@ async function syncSubscription(sub: Stripe.Subscription, userId?: string) {
     },
   });
 
-  await prisma.user.update({
+  // L'offre du compte suit l'abonnement, à deux exceptions près. Un compte de
+  // démonstration n'est jamais touché par Stripe : son accès est une décision
+  // prise à la main, pas un encaissement. Et un abonnement qui s'arrête ne
+  // reprend pas un Coup de Boost déjà réglé — le client retombe dessus, pas sur
+  // le gratuit.
+  const current = await prisma.user.findUnique({
     where: { id: resolvedUserId },
-    data: { plan: active && plan ? plan : "free" },
+    select: { plan: true, boostGrantedAt: true },
   });
+
+  const next =
+    current?.plan === "demo"
+      ? "demo"
+      : active && plan
+        ? plan
+        : current?.boostGrantedAt
+          ? "boost"
+          : "free";
+
+  await prisma.user.update({ where: { id: resolvedUserId }, data: { plan: next } });
 }
 
 export async function POST(request: Request) {
@@ -112,14 +132,19 @@ export async function POST(request: Request) {
           }
         } else if (session.mode === "payment" && session.payment_status === "paid") {
           // Déblocage d'une analyse (tunnel principal) : le paiement porte sur
-          // l'analyse, le compte peut être créé après.
+          // l'analyse, le compte peut être créé après. Un Coup de Boost pris
+          // depuis un rapport fait les deux — il ouvre le rapport ET l'offre.
           if (session.metadata?.analysisId) {
-            await unlockAnalysisFromSession(session);
+            const unlocked = await unlockAnalysisFromSession(session);
+            await grantBoostFromSession(session, unlocked?.userId);
             break;
           }
 
-          // Coup de Boost pris sans rapport : rien à ouvrir ni à provisionner —
-          // aucun abonnement n'est créé, la prestation est lancée à la main.
+          // Coup de Boost pris sans rapport : rien à ouvrir, mais l'offre est
+          // posée sur le compte du payeur — c'est elle qui déverrouille la
+          // structure et les articles. Sans compte encore créé, la page de
+          // retour s'en chargera après l'inscription.
+          if (await grantBoostFromSession(session)) break;
           if (session.metadata?.kind === BOOST_CHECKOUT_KIND) break;
 
           // Ancien flux transactionnel lié à un compte : on accorde l'offre.

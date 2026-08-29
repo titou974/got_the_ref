@@ -59,6 +59,16 @@ export type AnalysisContext = {
    * ne lui ressemble pas ne sera pas publié.
    */
   brandTone?: string | null;
+  /**
+   * Les moteurs réellement interrogés. Absent, ils le sont tous.
+   *
+   * C'est ce qui distingue l'analyse d'un compte gratuit : seul Gemini y est
+   * mesuré — son relevé passe par le grounding Google Search — tandis que
+   * ChatGPT, qui consomme un appel à l'outil de recherche d'OpenAI, n'est pas
+   * appelé. Sa note reste alors une estimation du modèle, et le tableau de bord
+   * la garde sous voile plutôt que de la faire passer pour un relevé.
+   */
+  engines?: AiEngine[];
 };
 
 /**
@@ -1663,12 +1673,12 @@ export async function analyzeSite(
       indirect: indirectQuery ?? "(non — commerce non physique ou sans niche distincte)",
     });
     const [directLives, indirectLives] = await Promise.all([
-      gatherLiveEngines(directQuery).catch((err) => {
+      gatherLiveEngines(directQuery, ctx.engines).catch((err) => {
         console.error("Appels moteurs (direct) échoués :", err);
         return [] as LiveEngineResult[];
       }),
       indirectQuery
-        ? gatherLiveEngines(indirectQuery).catch((err) => {
+        ? gatherLiveEngines(indirectQuery, ctx.engines).catch((err) => {
             console.error("Appels moteurs (indirect) échoués :", err);
             return [] as LiveEngineResult[];
           })

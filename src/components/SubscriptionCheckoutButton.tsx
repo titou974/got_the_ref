@@ -2,15 +2,15 @@
 
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
-import { createTrialCheckoutAction } from "@/features/billing/actions";
+import { createSubscriptionCheckoutAction } from "@/features/billing/actions";
 import { useBillingCycle } from "@/components/pricing/BillingCycleContext";
 
 /**
- * Le chemin court vers l'essai : un clic, et on est sur Stripe. Pas de compte à
- * créer avant de payer — il s'ouvre au retour, à l'adresse utilisée pour le
- * paiement.
+ * Le chemin court vers l'abonnement : un clic, et on est sur Stripe. Pas de
+ * compte à créer avant de payer — il s'ouvre au retour, à l'adresse utilisée
+ * pour le paiement.
  */
-export function TrialCheckoutButton({
+export function SubscriptionCheckoutButton({
   label,
   tone = "light",
   className = "",
@@ -23,7 +23,7 @@ export function TrialCheckoutButton({
   const t = useTranslations("pricing");
   // Le cycle vient des onglets de la carte tarif (mensuel hors de la carte).
   const cycle = useBillingCycle();
-  const { execute, isPending, result } = useAction(createTrialCheckoutAction, {
+  const { execute, isPending, result } = useAction(createSubscriptionCheckoutAction, {
     onSuccess: ({ data }) => {
       if (data?.url) window.location.href = data.url;
     },

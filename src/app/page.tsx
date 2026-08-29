@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 import { ProofSection } from "@/components/ProofSection";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
 import { HomeHero, HERO_ID } from "@/components/home/HomeHero";
-import { TrialBottomBar } from "@/components/home/TrialBottomBar";
+import { StickyCtaBar } from "@/components/home/StickyCtaBar";
 import { SectorsMarquee } from "@/components/home/SectorsMarquee";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { FeatureCards } from "@/components/home/FeatureCards";
@@ -16,10 +16,10 @@ import { RankAndMentions } from "@/components/home/RankAndMentions";
 import { PricingComparison } from "@/components/pricing/PricingComparison";
 import { DemoCtaSection } from "@/components/home/DemoCtaSection";
 import { Faq } from "@/components/home/Faq";
-import { TRIAL, hasActiveSubscription } from "@/constants/plans";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
-import { getCurrentUser, getSession } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
+import { resolveAuthDestination } from "@/features/auth/destination";
 import { ROUTES } from "@/constants/routes";
 
 /**
@@ -40,18 +40,17 @@ import { ROUTES } from "@/constants/routes";
  * un sens — l'ancre `#analyser` reste valable pour tous les liens du site.
  *
  * Un client déjà identifié ne voit pas cette page : elle argumente pour une
- * décision qu'il a déjà prise. On l'emmène directement sur son tableau de bord,
- * qui renvoie lui-même vers le tunnel d'accueil s'il ne l'a pas terminé.
+ * décision qu'il a déjà prise. On l'emmène là où il en est — le tunnel d'accueil
+ * tant qu'il n'a pas donné l'adresse de son site, son tableau de bord ensuite.
+ * C'est le même arbitrage qu'après une connexion, et il est écrit au même
+ * endroit (`resolveAuthDestination`) : deux versions de cette règle finiraient
+ * par diverger, et l'une des deux déposerait quelqu'un sur un écran vide.
  */
 export default async function Home() {
-  // if (await getSession()) redirect(ROUTES.dashboard);
+  const user = await getCurrentUser();
+  if (user) redirect(await resolveAuthDestination(user.id, null));
 
   const t = await getTranslations("homeHero");
-
-  // Même arbitrage que dans le hero : abonné ou en essai, la barre basse mène
-  // au tableau de bord plutôt qu'à une inscription déjà faite.
-  const user = await getCurrentUser();
-  const subscribed = hasActiveSubscription(user?.subscription);
 
   return (
     <main className="flex min-h-dvh flex-col">
@@ -95,13 +94,11 @@ export default async function Home() {
       <Faq />
       <Footer />
 
-      {/* Le CTA d'essai revient par le bas dès que le hero est dépassé, pour que
-          l'entrée reste à portée sur toute la longueur de la page. */}
-      <TrialBottomBar
-        label={subscribed ? t("ctaDashboard") : t("trialBarCta", { days: TRIAL.days })}
-        heroId={HERO_ID}
-        href={subscribed ? ROUTES.dashboard : ROUTES.signUp}
-      />
+      {/* Le CTA revient par le bas dès que le hero est dépassé, pour que
+          l'entrée reste à portée sur toute la longueur de la page. Il ne se
+          dédouble plus selon le visiteur : seul un anonyme lit encore cette
+          page, les autres ont été renvoyés chez eux plus haut. */}
+      <StickyCtaBar label={t("trialBarCta")} heroId={HERO_ID} href={ROUTES.signUp} />
     </main>
   );
 }

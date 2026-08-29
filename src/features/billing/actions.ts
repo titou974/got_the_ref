@@ -5,7 +5,7 @@ import { actionClient, authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
 import { getStripe, getCheckoutMode, resolveBoostPriceId, resolvePriceId } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
-import { TRIAL, type BillingCycle } from "@/constants/plans";
+import { type BillingCycle } from "@/constants/plans";
 import { SITE } from "@/constants/site";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
@@ -13,9 +13,13 @@ import {
   analysisCheckoutSchema,
   boostCheckoutSchema,
   checkoutSchema,
-  trialCheckoutSchema,
+  subscriptionCheckoutSchema,
 } from "./schemas";
-import { ANALYSIS_CHECKOUT_KIND, BOOST_CHECKOUT_KIND, TRIAL_CHECKOUT_KIND } from "./unlock";
+import {
+  ANALYSIS_CHECKOUT_KIND,
+  BOOST_CHECKOUT_KIND,
+  SUBSCRIPTION_CHECKOUT_KIND,
+} from "./unlock";
 import { CLAIM_METADATA_KEY, newClaimToken, rememberClaim } from "./claim";
 
 /**
@@ -75,18 +79,6 @@ export const createCheckoutAction = authActionClient
   });
 
 /**
- * L'unique ligne de tout checkout d'essai : l'abonnement — mensuel ou annuel
- * selon l'onglet choisi.
- *
- * L'essai est gratuit : rien n'est encaissé à l'ouverture du checkout. Stripe
- * enregistre le moyen de paiement, puis ne débite l'abonnement qu'à la fin de
- * l'essai (`trial_period_days`), et seulement s'il n'a pas été résilié.
- */
-function trialLineItems(price: string) {
-  return [{ price, quantity: 1 }];
-}
-
-/**
  * Souscription à l'abonnement got_the_ref depuis un rapport précis, **sans compte
  * requis**. C'est le cœur du tunnel : le visiteur lance une analyse gratuite,
  * lit le constat, s'abonne, puis crée son compte au retour de Stripe — le
@@ -126,7 +118,7 @@ export const createAnalysisCheckoutAction = actionClient
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: trialLineItems(price),
+      line_items: [{ price, quantity: 1 }],
       // Connecté : on réutilise son client Stripe. Anonyme : Stripe crée le
       // client à la volée, ce qui nous donne l'e-mail pour la création de compte.
       ...(user?.stripeCustomerId
@@ -135,7 +127,7 @@ export const createAnalysisCheckoutAction = actionClient
       success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE.url}${ROUTES.analysis(analysis.id)}?paiement=annule`,
       metadata,
-      subscription_data: { metadata, trial_period_days: TRIAL.days },
+      subscription_data: { metadata },
       allow_promotion_codes: true,
     });
 
@@ -147,16 +139,16 @@ export const createAnalysisCheckoutAction = actionClient
   });
 
 /**
- * Souscription à l'essai depuis la carte tarif, **sans compte ni analyse**.
+ * Souscription à l'abonnement depuis la carte tarif, **sans compte ni analyse**.
  * C'est le chemin court : le visiteur clique sur le prix et arrive sur Stripe.
  *
- * Même montage que la souscription depuis un rapport — abonnement en essai plus
- * les frais d'activation facturés tout de suite — à ceci près qu'il n'y a rien
- * à débloquer au retour : la page de succès propose alors la création du compte,
- * puis l'espace client.
+ * Même montage que la souscription depuis un rapport, à ceci près qu'il n'y a
+ * rien à débloquer au retour : la page de succès propose alors la création du
+ * compte, puis l'espace client. Il n'y a plus d'essai — le compte gratuit tient
+ * ce rôle, et il n'a besoin d'aucune carte bancaire.
  */
-export const createTrialCheckoutAction = actionClient
-  .inputSchema(trialCheckoutSchema)
+export const createSubscriptionCheckoutAction = actionClient
+  .inputSchema(subscriptionCheckoutSchema)
   .action(async ({ parsedInput }) => {
     const user = await getCurrentUser();
     const stripe = getStripe();
@@ -169,7 +161,7 @@ export const createTrialCheckoutAction = actionClient
     await rememberClaim(claimToken);
 
     const metadata = {
-      kind: TRIAL_CHECKOUT_KIND,
+      kind: SUBSCRIPTION_CHECKOUT_KIND,
       cycle,
       [CLAIM_METADATA_KEY]: claimToken,
       ...(user ? { userId: user.id } : {}),
@@ -177,14 +169,14 @@ export const createTrialCheckoutAction = actionClient
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: trialLineItems(price),
+      line_items: [{ price, quantity: 1 }],
       ...(user?.stripeCustomerId
         ? { customer: user.stripeCustomerId }
         : { customer_email: user?.email }),
       success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE.url}${ROUTES.pricing}?checkout=cancel`,
       metadata,
-      subscription_data: { metadata, trial_period_days: TRIAL.days },
+      subscription_data: { metadata },
       allow_promotion_codes: true,
     });
 

@@ -39,6 +39,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <DashboardShell
         domain={context.domain}
         showMaps={context.isPhysical}
+        tier={context.tier}
         userName={user.name ?? user.email}
       >
         {children}

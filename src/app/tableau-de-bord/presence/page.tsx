@@ -4,6 +4,8 @@ import { getDashboardContext, listProspects } from "@/features/dashboard/queries
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { ProspectTable } from "@/components/tableau-de-bord/ProspectTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
+import { TierGate } from "@/components/tableau-de-bord/TierGate";
+import { canOpen, offerFor } from "@/constants/access";
 
 export const maxDuration = 300;
 
@@ -30,12 +32,15 @@ export default async function PresencePage() {
   const presence = analysis.webPresence;
   const backlinks = analysis.backlinks ?? null;
 
+  // Notoriété et backlinks se travaillent dans la durée : la section est
+  // réservée à l'abonnement, et voilée pour tous les autres.
+  const locked = !canOpen(context.tier, "presence");
+
   return (
     <>
-      <PageHeader
-        title={t("pageTitle")}
-      />
+      <PageHeader title={t("pageTitle")} />
 
+      <Gate locked={locked}>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardTitle title={t("reputation")} hint={presence.summary} />
@@ -105,7 +110,17 @@ export default async function PresencePage() {
           message: prospect.message,
         }))}
       />
-
+      </Gate>
     </>
+  );
+}
+
+/** Le contenu de la page, voilé ou non — écrit une fois, montré des deux façons. */
+function Gate({ locked, children }: { locked: boolean; children: React.ReactNode }) {
+  if (!locked) return <>{children}</>;
+  return (
+    <TierGate offer={offerFor("presence")} item="presence">
+      {children}
+    </TierGate>
   );
 }

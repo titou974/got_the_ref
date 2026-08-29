@@ -1,33 +1,21 @@
 /**
- * Les six étapes de l'accueil client, dans l'ordre où elles se présentent.
+ * L'accueil client tient désormais en une seule question : l'adresse du site.
  *
- * L'ordre n'est pas cosmétique : chaque étape prépare la suivante. On demande
- * le type de commerce avant l'adresse du site (elle décide si la fiche Google
- * Maps a un sens), le site avant le marché (le crawl propose déjà langue, pays
- * et villes), l'activité avant les concurrents (la liste s'en déduit).
+ * Il y en avait six. Chacune se défendait — la forme du commerce, le marché,
+ * l'activité, les concurrents, le ton — mais toutes se dressaient entre
+ * quelqu'un qui vient d'ouvrir un compte et le premier écran qui lui montre
+ * quelque chose. Or ces réponses, le crawl les donne déjà : la lecture du site
+ * en tire la langue, le pays, les villes, un résumé de l'offre et la niche.
  *
- * Les deux dernières sont facultatives : un client pressé doit pouvoir entrer
- * dans son tableau de bord sans avoir choisi une couleur de marque.
- *
- * Le rattachement Google (Search Console et Analytics) ne fait plus partie du
- * tunnel : il se propose depuis le tableau de bord, où il n'est plus une porte
- * de plus entre le paiement et le premier écran utile.
+ * Ce qui reste à corriger à la main se corrige donc **après**, dans les
+ * réglages, devant un tableau de bord déjà rempli — là où le client voit à quoi
+ * sert la question qu'on lui pose.
  */
-export const ONBOARDING_STEPS = [
-  "activite",
-  "site",
-  "marche",
-  "description",
-  "concurrents",
-  "tonalite",
-] as const;
+export const ONBOARDING_STEPS = ["site"] as const;
 
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 export const FIRST_STEP: OnboardingStep = ONBOARDING_STEPS[0];
-
-/** Étapes que l'on peut passer sans rien saisir. */
-export const OPTIONAL_STEPS: readonly OnboardingStep[] = ["concurrents", "tonalite"];
 
 /** La dernière étape : la valider referme le tunnel. */
 export const LAST_STEP: OnboardingStep = ONBOARDING_STEPS[ONBOARDING_STEPS.length - 1];
@@ -38,12 +26,18 @@ export const isOnboardingStep = (value: unknown): value is OnboardingStep =>
 /**
  * Les étapes retirées, et l'étape vivante qui en tient lieu.
  *
- * Une fiche restée sur `search-console` doit reprendre à la tonalité, pas au
- * premier écran : sans cette table, un client à un pas de la fin repartirait
- * pour six questions auxquelles il a déjà répondu.
+ * Une fiche laissée à mi-parcours par l'ancien tunnel doit reprendre sur la
+ * seule question qui reste, pas tomber sur une étape inconnue. Elles y mènent
+ * donc toutes — celles d'avant comme le rattachement Search Console, sorti du
+ * tunnel bien plus tôt.
  */
 const RETIRED_STEPS: Record<string, OnboardingStep> = {
-  "search-console": LAST_STEP,
+  activite: "site",
+  marche: "site",
+  description: "site",
+  concurrents: "site",
+  tonalite: "site",
+  "search-console": "site",
 };
 
 /** L'étape enregistrée, ramenée sur le tunnel actuel — `null` si illisible. */
@@ -52,22 +46,17 @@ export const normalizeStep = (value: unknown): OnboardingStep | null => {
   return typeof value === "string" ? (RETIRED_STEPS[value] ?? null) : null;
 };
 
-/** Rang affiché — « ÉTAPE 03 / 06 ». */
-export const stepNumber = (step: OnboardingStep): number =>
-  ONBOARDING_STEPS.indexOf(step) + 1;
-
-/** L'étape suivante, ou `null` si l'on vient de terminer la dernière. */
-export const nextStep = (step: OnboardingStep): OnboardingStep | null =>
-  ONBOARDING_STEPS[ONBOARDING_STEPS.indexOf(step) + 1] ?? null;
-
-/** L'étape précédente, ou `null` sur la première. */
-export const previousStep = (step: OnboardingStep): OnboardingStep | null =>
-  ONBOARDING_STEPS[ONBOARDING_STEPS.indexOf(step) - 1] ?? null;
-
-/** Les trois formes de commerce proposées à la première étape. */
+/** Les trois formes de commerce, telles que les réglages les proposent. */
 export const BUSINESS_KINDS = ["physical", "online", "both"] as const;
 export type BusinessKind = (typeof BUSINESS_KINDS)[number];
 
-/** Vrai si le commerce a une adresse : la fiche Maps et les villes ont un sens. */
+/**
+ * Vrai si le commerce a une adresse : la fiche Maps et les villes ont un sens.
+ *
+ * La colonne n'est plus renseignée par le tunnel — personne ne pose la question
+ * à l'arrivée. Tant qu'elle est vide, on suppose une adresse : c'est le cas le
+ * plus fréquent chez nos clients, et c'est le seul sens où se tromper n'enlève
+ * rien (un onglet Google Maps de trop, que les réglages referment en un choix).
+ */
 export const hasPhysicalPresence = (kind: string | null | undefined): boolean =>
-  kind === "physical" || kind === "both";
+  kind !== "online";

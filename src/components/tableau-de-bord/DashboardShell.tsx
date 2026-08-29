@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { SignOutButton } from "@/components/SignOutButton";
 import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { ROUTES } from "@/constants/routes";
+import type { AccessTier } from "@/constants/access";
 import { SidebarNav } from "./SidebarNav";
 import { SiteSelect } from "./SiteSelect";
 
@@ -35,11 +36,14 @@ function initials(name: string | null): string {
 export async function DashboardShell({
   domain,
   showMaps,
+  tier,
   userName,
   children,
 }: {
   domain: string | null;
   showMaps: boolean;
+  /** Le niveau du compte : il décide des onglets grisés dans la colonne. */
+  tier: AccessTier;
   userName: string | null;
   children: React.ReactNode;
 }) {
@@ -70,7 +74,7 @@ export async function DashboardShell({
             <SiteSelect domain={domain} />
           </div>
 
-          <SidebarNav showMaps={showMaps} />
+          <SidebarNav showMaps={showMaps} tier={tier} />
 
           <div className="mt-auto hidden border-t border-border pt-4 lg:block">
             {/* Le nom mène aux réglages : c'est là que le client cherche ce qui

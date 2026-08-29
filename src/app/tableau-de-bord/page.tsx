@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { ROUTES } from "@/constants/routes";
 import {
   getDashboardContext,
   listArticles,
@@ -21,11 +19,10 @@ import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysi
 import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
 import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
 import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
-import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
 import { PaidReportCard } from "@/components/dashboard/PaidReportCard";
-import { ProfileHeader } from "@/components/geo/SiteProfile";
-import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
 import { Recommendations } from "@/components/geo/Recommendations";
+import { TierGate } from "@/components/tableau-de-bord/TierGate";
+import { canSee, offerForBlock, tierAtLeast } from "@/constants/access";
 
 /** L'audit d'entrée peut durer plusieurs minutes sur un gros site. */
 export const maxDuration = 300;
@@ -64,6 +61,13 @@ export default async function DashboardHomePage() {
   ]);
 
   const upcoming = articles.filter((article) => article.status !== "published");
+
+  // L'accueil est le seul écran ouvert à tous : le verrou s'y pose bloc par
+  // bloc plutôt que sur la page entière. Reste en clair ce qui montre le
+  // produit sans le donner — le site, sa note, la niche détectée. Le reste
+  // garde sa forme sous un voile, avec l'offre qui l'ouvre.
+  const tier = context.tier;
+  const sees = (block: Parameters<typeof canSee>[1]) => canSee(tier, block);
 
   const date = new Date(analysis.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -117,32 +121,36 @@ export default async function DashboardHomePage() {
       </SiteScreenshot>
 
       {/* 1bis. Le constat écrit à la frappe, comme sur le rapport d'analyse. */}
-      <PaidReportCard
-        result={analysis}
-        diagnostic={diagnostic}
-        scope="dashboard"
-      />
+      <Block block="diagnostic" open={sees("diagnostic")}>
+        <PaidReportCard result={analysis} diagnostic={diagnostic} scope="dashboard" />
+      </Block>
 
       {/* 2. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
              n'est pas rattaché. Les dates sont lues ici, côté serveur, pour que
              le navigateur reçoive le même axe que le rendu initial. */}
-      <AiTrafficCard
-        report={traffic}
-        demo={buildDemoAiTraffic()}
-        domain={context.domain ?? analysis.domain}
-      />
+      <Block block="traffic" open={sees("traffic")}>
+        <AiTrafficCard
+          report={traffic}
+          demo={buildDemoAiTraffic()}
+          domain={context.domain ?? analysis.domain}
+        />
+      </Block>
 
       {/* 2bis. Combien de fois chaque modèle cite le commerce. La mesure précède
              celle du dessus : on est cité avant d'être cliqué, et le relevé
              DataForSEO lit l'archive des réponses plutôt que d'en provoquer. */}
-      <LlmMentionsCard
-        report={mentions}
-        demo={buildDemoLlmMentions(context.domain ?? analysis.domain)}
-        domain={context.domain ?? analysis.domain}
-      />
+      <Block block="mentions" open={sees("mentions")}>
+        <LlmMentionsCard
+          report={mentions}
+          demo={buildDemoLlmMentions(context.domain ?? analysis.domain)}
+          domain={context.domain ?? analysis.domain}
+        />
+      </Block>
 
-      {/* 3. La place du commerce dans ChatGPT et Gemini. */}
-      <RankingsSection engines={analysis.engines} />
+      {/* 3. La place du commerce dans ChatGPT et Gemini. Le voile y est posé
+             moteur par moteur : un compte gratuit fait mesurer Gemini, et voit
+             la carte ChatGPT sous voile — faute d'avoir été exécutée. */}
+      <RankingsSection engines={analysis.engines} tier={tier} />
 
       {/* ---- Ce qui explique les chiffres du haut ---- */}
 
@@ -151,18 +159,26 @@ export default async function DashboardHomePage() {
           <h2 className="text-lg font-bold">{t("priorities")}</h2>
           <p className="text-sm text-muted">{t("prioritiesHint")}</p>
         </div>
-        <Recommendations
-          recommendations={analysis.recommendations}
-          emptyLabel={ta("results.noRecommendations")}
-        />
+        <Block block="recommendations" open={sees("recommendations")}>
+          <Recommendations
+            recommendations={analysis.recommendations}
+            emptyLabel={ta("results.noRecommendations")}
+          />
+        </Block>
       </section>
 
-      <ArticleAgenda articles={upcoming} limit={4} />
+      <Block block="agenda" open={sees("agenda")}>
+        <ArticleAgenda articles={upcoming} limit={4} />
+      </Block>
 
       {/* Tant que le rattachement du site n'est pas ouvert, le prompt est la
           voie d'exécution. Il ne vit plus au bas de la page : la barre fixe le
           porte, et il couvre désormais les six sections d'un coup — le client
           n'a plus à passer d'onglet en onglet pour ramasser ses correctifs. */}
+      {/* La barre est le geste d'exécution : elle n'a de sens que pour qui a
+          payé la passe. Elle est retirée plutôt que voilée — une barre fixe
+          floutée resterait en travers de l'écran sans rien montrer. */}
+      {tierAtLeast(tier, "boost") && (
       <SolveAgentsDock
         result={analysis}
         diagnostic={diagnostic}
@@ -176,6 +192,31 @@ export default async function DashboardHomePage() {
           body: article.body,
         }))}
       />
+      )}
     </>
+  );
+}
+
+/**
+ * Un bloc de l'accueil, en clair ou sous voile.
+ *
+ * Le contenu est écrit une seule fois : c'est le même balisage qui se montre et
+ * qui se cache, sinon le voile finirait par promettre autre chose que ce qu'il
+ * y a dessous.
+ */
+function Block({
+  block,
+  open,
+  children,
+}: {
+  block: Parameters<typeof offerForBlock>[0];
+  open: boolean;
+  children: React.ReactNode;
+}) {
+  if (open) return <>{children}</>;
+  return (
+    <TierGate offer={offerForBlock(block)} item={block}>
+      {children}
+    </TierGate>
   );
 }

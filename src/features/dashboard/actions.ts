@@ -21,6 +21,8 @@ import {
   readSiteCredentials,
 } from "./queries";
 import { ARTICLE_QUOTAS, ON_PAGE_REWRITE_QUOTA } from "@/constants/plans";
+import { FREE_CONTENT_REWRITES, runsEngine, tierAtLeast } from "@/constants/access";
+import { getAccess, requireSection } from "@/features/billing/access";
 import { parseOutline, serializeOutline } from "./outline";
 import {
   draftOutreachMessage,
@@ -121,10 +123,18 @@ export const prepareDashboardAction = authActionClient
 
     const mode = profile.businessKind === "online" ? "online" : "physical";
     const signals = await collectSignals(profile.siteUrl);
+
+    // Un compte gratuit reçoit bien l'audit complet — c'est lui qui détecte la
+    // niche et sort les mots-clés, les deux choses qu'il a le droit de voir —
+    // mais ses classements ne sont relevés que sur Gemini (cf. `FREE_ENGINES`).
+    const { tier } = await getAccess(userId);
+    const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(tier, engine));
+
     const result = await analyzeSite(
       signals,
       {
         mode,
+        engines,
         mapsUrl: profile.mapsUrl ?? null,
         declaredNiche: profile.niche,
         declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
@@ -190,13 +200,21 @@ export const refreshRankingsAction = authActionClient
     }
 
     const isPhysical = profile?.businessKind !== "online";
-    const { engines, liveQuery } = await refreshEngineRankings(stored, {
+
+    // Un compte gratuit ne fait mesurer que Gemini : son relevé passe par le
+    // grounding Google Search, sans appel facturé en plus. ChatGPT consomme un
+    // appel à l'outil de recherche d'OpenAI par passage — il n'est donc pas
+    // exécuté, et sa carte reste voilée plutôt que remplie d'un chiffre inventé.
+    const { tier } = await getAccess(userId);
+    const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(tier, engine));
+
+    const { engines: refreshed, liveQuery } = await refreshEngineRankings(stored, {
       declared: {
         niche: profile?.niche ?? null,
         location: isPhysical ? (profile?.cities[0] ?? null) : null,
         isPhysical,
       },
-      engines: DASHBOARD_ENGINES,
+      engines,
     });
 
     await prisma.analysis.update({
@@ -204,7 +222,7 @@ export const refreshRankingsAction = authActionClient
       data: {
         data: JSON.stringify({
           ...stored,
-          engines,
+          engines: refreshed,
           liveQuery,
           rankingsCheckedAt: new Date().toISOString(),
         }),
@@ -212,7 +230,7 @@ export const refreshRankingsAction = authActionClient
     });
 
     revalidateDashboard();
-    return { measured: engines.filter((engine) => engine.measured).length };
+    return { measured: refreshed.filter((engine) => engine.measured).length };
   });
 
 // ── Mois éditorial d'accueil ─────────────────────────────────────────────────
@@ -550,8 +568,13 @@ export const regenerateOnPageAction = authActionClient
       );
     }
     if (quota[element] <= 0) {
+      // Deux refus différents, parce que ce ne sont pas les mêmes limites : le
+      // compte gratuit a épuisé son unique essai — il n'y a pas de lendemain à
+      // lui promettre —, l'abonné retrouvera son compteur demain matin.
       throw new AppError(
-        `Vous avez utilisé vos ${ON_PAGE_REWRITE_QUOTA.daily} réécritures du jour sur cet élément. Le compteur repart demain.`,
+        tierAtLeast(context.tier, "boost")
+          ? `Vous avez utilisé vos ${ON_PAGE_REWRITE_QUOTA.daily} réécritures du jour sur cet élément. Le compteur repart demain.`
+          : `Votre offre gratuite comprend ${FREE_CONTENT_REWRITES} réécriture. Passez au Coup de Boost pour laisser les agents reprendre tout votre contenu.`,
         "QUOTA_EXCEEDED",
         429,
       );
@@ -592,6 +615,9 @@ export const planArticlesAction = authActionClient
   .inputSchema(planArticlesSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
+    // Le voile posé sur l'onglet est une affaire d'écran ; c'est ce refus-ci qui
+    // ferme réellement la rédaction à qui ne l'a pas payée.
+    await requireSection(userId, "articles");
     const context = await getDashboardContext(userId);
     const topics = await planArticleTopics(context, parsedInput.count);
 
@@ -628,6 +654,7 @@ export const writeArticleAction = authActionClient
   .inputSchema(writeArticleSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
+    await requireSection(userId, "articles");
     const article = await prisma.article.findFirst({ where: { id: parsedInput.id, userId } });
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
 
@@ -635,8 +662,12 @@ export const writeArticleAction = authActionClient
     // refusée ne doit rien coûter.
     const quota = await getArticleQuota(userId);
     if (quota.remaining <= 0) {
+      // Sans date de renouvellement, il n'y a rien à attendre : c'est la semaine
+      // du Coup de Boost qui s'est refermée, et la suite s'appelle l'abonnement.
       throw new AppError(
-        `Vous avez utilisé vos ${ARTICLE_QUOTAS.weekly} rédactions de la semaine. La prochaine se libère ${formatRenewal(quota.renewsAt)}.`,
+        quota.renewsAt
+          ? `Vous avez utilisé vos ${ARTICLE_QUOTAS.weekly} rédactions de la semaine. La prochaine se libère ${formatRenewal(quota.renewsAt)}.`
+          : `Votre semaine de rédaction est terminée : les ${quota.limit} articles du Coup de Boost ont été écrits. L'abonnement Tout-en-un reprend la publication dans la durée.`,
         "ARTICLE_QUOTA",
         429,
       );
@@ -720,6 +751,7 @@ export const publishArticleAction = authActionClient
   .inputSchema(articleIdSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
+    await requireSection(userId, "articles");
     const article = await prisma.article.findFirst({ where: { id: parsedInput.id, userId } });
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
     if (!article.body) throw new AppError("Article encore vide.", "EMPTY_ARTICLE", 400);

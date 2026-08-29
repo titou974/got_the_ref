@@ -23,12 +23,12 @@ export const analysisCheckoutSchema = z.object({
 
 export type AnalysisCheckoutInput = z.infer<typeof analysisCheckoutSchema>;
 
-/** Souscription à l'essai depuis la carte tarif, sans analyse rattachée. */
-export const trialCheckoutSchema = z.object({
+/** Souscription à l'abonnement depuis la carte tarif, sans analyse rattachée. */
+export const subscriptionCheckoutSchema = z.object({
   cycle: billingCycleSchema,
 });
 
-export type TrialCheckoutInput = z.infer<typeof trialCheckoutSchema>;
+export type SubscriptionCheckoutInput = z.infer<typeof subscriptionCheckoutSchema>;
 
 /**
  * « Coup de Boost » : paiement unique, sans cycle de facturation. L'analyse est
