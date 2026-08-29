@@ -34,19 +34,25 @@ export function rateLimit(
  *
  * `X-Forwarded-For` est une liste que le client contrôle à gauche : lire la
  * première entrée laisse n'importe qui se donner une IP neuve à chaque requête
- * et contourner les quotas (analyse anonyme, capture d'écran). On privilégie
- * donc les en-têtes posés par la plateforme, puis la DERNIÈRE entrée de la
- * chaîne — celle ajoutée par le proxy de confiance le plus proche de nous.
+ * et contourner les quotas (analyse anonyme, capture d'écran).
+ *
+ * Ordre de confiance décroissante :
+ *  1. `x-vercel-forwarded-for`, posé par la plateforme et jamais transmis depuis
+ *     le client ;
+ *  2. la DERNIÈRE entrée de `X-Forwarded-For` — celle ajoutée par le proxy de
+ *     confiance le plus proche de nous, donc hors de portée du client ;
+ *  3. `x-real-ip` en dernier recours : un client peut l'envoyer lui-même, seul
+ *     un proxy qui l'écrase le rend fiable.
  */
 export function clientIp(request: Request): string {
-  const trusted =
-    request.headers.get("x-vercel-forwarded-for") ?? request.headers.get("x-real-ip");
-  if (trusted) return trusted.trim();
+  const platform = request.headers.get("x-vercel-forwarded-for");
+  if (platform) return platform.trim();
 
   const xff = request.headers.get("x-forwarded-for");
   if (xff) {
     const hops = xff.split(",").map((h) => h.trim()).filter(Boolean);
     if (hops.length > 0) return hops[hops.length - 1];
   }
-  return "unknown";
+
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
 }

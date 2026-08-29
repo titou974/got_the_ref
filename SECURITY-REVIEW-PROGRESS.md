@@ -98,21 +98,57 @@ Branche de travail : `worktree-security-review-loop`.
 
 ---
 
+## Étape 3 — 2026-08-29 · Composants client, formulaires, exposition des rapports
+
+### Périmètre couvert
+
+- `src/components/UrlAnalyzeForm.tsx`, `PostCheckoutAccountForm.tsx`,
+  `AnalysisCheckoutButton.tsx`, `CheckoutButton.tsx`, `BillingPortalButton.tsx`
+- Payload RSC de `/analyse/[id]` et `/compte` : ce qui franchit réellement la
+  frontière serveur → client
+- `src/app/global-error.tsx`, `not-found.tsx`, `src/app/tarifs/page.tsx`
+- Indexation : `robots.txt`, directives `robots` des métadonnées
+
+### Constats et correctifs appliqués
+
+| # | Sévérité | Fichier | Constat | Correctif |
+|---|----------|---------|---------|-----------|
+| 6 | Moyenne | `src/app/analyse/[id]/page.tsx` | Aucune directive `robots` sur la page de rapport. Or un rapport payé n'est protégé que par son lien : indexé, il devient une page publique, et l'audit d'un client se retrouve dans les résultats de recherche (nom, domaine, score, verdict, et le rapport complet une fois débloqué). | `robots: { index: false, follow: false }` dans `generateMetadata`, y compris sur le cas « analyse introuvable ». |
+| 7 | Moyenne | `src/app/robots.ts` (nouveau) | Aucun `robots.txt` : les crawlers étaient libres d'explorer `/analyse/`, `/compte`, `/paiement/` et `/api/`. | Ajout d'un `robots.ts` : vitrine ouverte, `Disallow` sur `/analyse/`, `/compte`, `/paiement/`, `/api/`. |
+| 8 | Faible | `src/lib/rate-limit.ts` | Correction de l'étape 1 : `x-real-ip` était consulté **avant** `X-Forwarded-For`. Or un client peut envoyer `x-real-ip` lui-même ; seul un proxy qui l'écrase le rend fiable. Sur un hébergement qui ne le pose pas, le contournement de quota restait ouvert. | Ordre de confiance décroissante : `x-vercel-forwarded-for`, puis dernière entrée de `X-Forwarded-For`, puis `x-real-ip` en dernier recours. |
+
+### Points vérifiés — pas de correctif nécessaire
+
+- `/analyse/[id]` : `loadAnalysis` ne renvoie que `result`, `unlocked`, `userId`.
+  `guestEmail`, `stripeSessionId` et `paidAt` ne quittent jamais le serveur.
+- `/compte` : l'historique est rendu intégralement côté serveur, aucune ligne
+  `prisma.analysis` n'est sérialisée dans le payload RSC.
+- `global-error.tsx` : affiche le seul `error.digest`, jamais le message ni la pile.
+- `AnalysisCheckoutButton` : le `window.location.href` reçoit une URL produite
+  par le serveur (Stripe ou `SITE.url`), jamais une valeur du client.
+- `PostCheckoutAccountForm` : l'e-mail est en lecture seule et l'action serveur
+  le relit depuis la session Stripe — le champ du formulaire n'est pas de
+  confiance et n'est d'ailleurs pas transmis.
+- `tarifs?analyse=<id>` : le paramètre n'est qu'un identifiant transmis à une
+  action serveur qui le valide contre la base.
+
+---
+
 ## Prochaine étape
 
-**Étape 3 — Composants client, formulaires, fuites dans les payloads RSC**
+**Étape 4 — Configuration Better Auth, CSP, scripts hors application**
 
-- `src/components/**` : `UrlAnalyzeForm`, `AuthForm`, `PostCheckoutAccountForm`,
-  `AnalysisCheckoutButton`, `CheckoutButton`, `BillingPortalButton`.
-- Vérifier ce que les Server Components sérialisent vers le client (payload RSC)
-  sur `/analyse/[id]` et `/compte` : champs de `prisma.analysis` non nécessaires
-  (`guestEmail`, `stripeSessionId`, `userId`) éventuellement embarqués.
-- `src/app/global-error.tsx`, `not-found.tsx` : fuite d'information sur erreur.
-- Gestion des états d'erreur `next-safe-action` côté client.
+- `src/features/auth/better-auth.config.ts` : durée de session (30 j) et
+  `updateAge`, `cookieCache` de 5 min (une révocation reste-t-elle effective ?),
+  absence de vérification d'e-mail, absence de réinitialisation de mot de passe,
+  `trustedOrigins` implicite, politique de mot de passe (8 caractères, aucune
+  vérification contre les fuites connues).
+- CSP `script-src` à nonce via un middleware : évaluer le coût réel.
+- `scripts/gen-lottie.mjs`, `pgtest.mjs`, `prisma.config.ts` : manipulation de
+  fichiers, chaînes de connexion, exécution hors application.
+- `src/app/api/auth/[...all]/route.ts` : surface exposée par Better Auth.
 
-Étapes suivantes prévues :
+Étape suivante prévue :
 
-- Étape 4 — Configuration Better Auth (durée de session, vérification d'e-mail,
-  réinitialisation de mot de passe), CSP à nonce via middleware, `scripts/`,
-  `pgtest.mjs`.
-- Étape 5 — Dépendances, configuration de déploiement, relecture finale.
+- Étape 5 — Dépendances (44 alertes Dependabot signalées au push : 21 hautes,
+  20 modérées, 3 basses), configuration de déploiement, relecture finale.

@@ -32,14 +32,22 @@ async function loadAnalysis(id: string): Promise<LoadedAnalysis | null> {
   }
 }
 
+/**
+ * Un rapport n'est protégé que par son lien : une fois payé, il s'ouvre à qui
+ * détient l'URL. Le laisser indexer transformerait ce lien en page publique et
+ * exposerait l'audit du client dans les résultats de recherche.
+ */
+const NO_INDEX = { index: false, follow: false } as const;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const analysis = await loadAnalysis(id);
-  if (!analysis) return { title: "Analyse introuvable" };
+  if (!analysis) return { title: "Analyse introuvable", robots: NO_INDEX };
   const { result } = analysis;
   return {
     title: `Analyse GEO de ${result.domain} — Score ${result.overallScore}/100`,
     description: result.verdict,
+    robots: NO_INDEX,
   };
 }
 
