@@ -95,7 +95,7 @@ export function MonthlyMentionsChart({ data }: { data: MonthBar[] }) {
           <YAxis hide domain={[0, "dataMax + 1"]} />
           <Bar
             dataKey="value"
-            fill={EMBER}
+            fill={INK}
             radius={[6, 6, 0, 0]}
             maxBarSize={34}
             isAnimationActive={false}

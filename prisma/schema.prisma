@@ -546,6 +546,16 @@ model LlmMentionSnapshot {
   attemptedAt DateTime  @default(now())
   fetchedAt   DateTime?
 
+  /// L'historique mensuel de la marque, gardé à part du reste.
+  ///
+  /// Ces chiffres sont mensuels : les redemander tous les jours paierait douze
+  /// mois figés pour voir bouger le seul mois en cours. Ils ont donc leur propre
+  /// fraîcheur — une semaine, ou l'entrée dans un nouveau mois — et le relevé
+  /// quotidien les relit en base au lieu de rappeler l'API.
+  historyBrand     String?
+  historyPayload   String?
+  historyFetchedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

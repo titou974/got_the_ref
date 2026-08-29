@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { LlmMentionsReport } from "@/features/dashboard/llmMentions";
-import { Obscured } from "@/components/dashboard/LockedContent";
 import { Card, CardTitle, Delta } from "./Card";
 import {
   ModelMentionsChart,
@@ -21,8 +20,10 @@ import {
  * avant d'être cliqué, et c'est le premier signe qu'un travail GEO prend.
  *
  * Sans compte DataForSEO — ou tant que l'archive ne connaît pas le domaine —
- * la carte montre l'exemple sous voile, avec son bandeau : un zéro et une
- * absence de mesure se ressemblent trop pour être dessinés pareil.
+ * la carte montre un exemple, net et lisible, sous un bandeau « données
+ * d'exemple ». Le voile a été retiré : il cachait justement ce que l'exemple
+ * est là pour montrer, la forme qu'aura l'écran une fois branché. Le bandeau
+ * suffit à dire que ces chiffres sont inventés.
  */
 export function LlmMentionsCard({
   report,
@@ -157,7 +158,7 @@ export function LlmMentionsCard({
         }
       />
 
-      {isDemo ? <Obscured>{body}</Obscured> : body}
+      {body}
 
       <p className="mt-4 text-xs text-ash">
         {isDemo

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { dataForSeoLog } from "./log";
+
 /**
  * Le lien avec DataForSEO, une seule porte pour toute l'application.
  *
@@ -82,6 +84,17 @@ export async function dataForSeoLive<TResult>(
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const startedAt = Date.now();
+  const endpoint = path.split("/").slice(-2).join("/");
+
+  dataForSeoLog(`→ appel ${endpoint}`, {
+    path,
+    cible: task.target,
+    location_code: task.location_code,
+    language_code: task.language_code,
+    platform: task.platform ?? "(toutes)",
+    periode: task.date_from ? `${task.date_from} → ${task.date_to}` : undefined,
+  });
 
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
@@ -97,8 +110,17 @@ export async function dataForSeoLive<TResult>(
     });
 
     if (!res.ok) {
+      // Le corps porte la vraie raison — compte non vérifié, crédit épuisé,
+      // paramètre refusé. Un « HTTP 403 » seul enverrait chercher un bug là où
+      // il n'y a qu'une case à cocher dans le panneau DataForSEO.
+      const body = await res.text().catch(() => "");
+      const reason = body.slice(0, 300);
+      dataForSeoLog(
+        `✗ ${endpoint} — HTTP ${res.status} en ${Date.now() - startedAt} ms`,
+        reason || undefined,
+      );
       throw new DataForSeoError(
-        `DataForSEO a répondu HTTP ${res.status} sur ${path}.`,
+        `DataForSEO a répondu HTTP ${res.status} sur ${path}. ${reason}`.trim(),
         res.status,
       );
     }
@@ -106,14 +128,26 @@ export async function dataForSeoLive<TResult>(
     const payload = (await res.json()) as DataForSeoResponse<TResult>;
 
     if (payload.status_code !== 20000) {
+      dataForSeoLog(`✗ ${endpoint} — ${payload.status_code} ${payload.status_message}`);
       throw new DataForSeoError(payload.status_message, payload.status_code);
     }
 
     const first = payload.tasks?.[0];
-    if (!first) throw new DataForSeoError("Réponse DataForSEO sans tâche.", 500);
+    if (!first) {
+      dataForSeoLog(`✗ ${endpoint} — réponse sans tâche`);
+      throw new DataForSeoError("Réponse DataForSEO sans tâche.", 500);
+    }
     if (first.status_code !== 20000) {
+      dataForSeoLog(`✗ ${endpoint} — tâche ${first.status_code} ${first.status_message}`);
       throw new DataForSeoError(first.status_message, first.status_code);
     }
+
+    // Le coût est la ligne qui compte : c'est elle qu'on retrouvera sur la
+    // facture, et la seule preuve qu'un appel est bien parti.
+    dataForSeoLog(`← ${endpoint} — ${Date.now() - startedAt} ms`, {
+      cout_usd: first.cost ?? payload.cost,
+      resultats: first.result?.length ?? 0,
+    });
 
     return first.result ?? [];
   } finally {

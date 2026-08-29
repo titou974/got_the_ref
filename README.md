@@ -187,9 +187,21 @@ Google, réponses et sources conservées.
   localisation suit le pays relevé pendant l'accueil (France par défaut).
 - **Un relevé par client et par jour**, tenu en base (`LlmMentionSnapshot`, une
   ligne par compte) et non par un cache : un cache s'évapore à chaque
-  déploiement, la facture non. Un relevé = deux requêtes DataForSEO, le décompte
-  par modèle et les douze mois de la marque ; l'historique a le droit d'échouer
-  seul, une marque absente de l'archive n'emporte pas le reste de la carte. La table garde deux dates — `attemptedAt`, la
+  déploiement, la facture non.
+- **L'historique a sa propre fraîcheur : une semaine.** Il est gardé dans ses
+  colonnes à lui (`historyBrand`, `historyPayload`, `historyFetchedAt`) et relu
+  en base par les relevés suivants. Sur douze barres, onze ne bougeront plus
+  jamais : les repayer chaque jour reviendrait à acheter onze chiffres figés
+  pour en rafraîchir un. L'entrée dans un nouveau mois rouvre l'appel sans
+  attendre la semaine, sinon la barre du mois neuf manquerait sept jours. Un
+  relevé coûte donc **une requête par jour, plus une par semaine**.
+- L'historique a le droit d'échouer seul : une marque absente de l'archive
+  n'emporte pas le reste de la carte, et l'ancien historique reste affiché.
+- **Tout passe dans le terminal serveur** (`⚫ [DATAFORSEO]`) : la requête
+  partie avec sa cible et sa période, la réponse avec son coût en dollars et sa
+  durée, et — tout aussi important — les relevés lus en base sans qu'aucun appel
+  ne parte. Un appel qu'on ne voit pas passer est un appel qu'on découvre sur la
+  facture. Couper avec `DATAFORSEO_DEBUG="false"`. La table garde deux dates — `attemptedAt`, la
   dernière tentative réussie **ou ratée**, qui ouvre ou ferme la porte, et
   `fetchedAt`, le dernier relevé exploitable, celui que la carte affiche. Rien
   ne rouvre la porte avant l'heure, pas même un changement de domaine — sinon un

@@ -6,6 +6,7 @@ import {
   isDataForSeoConfigured,
   DataForSeoError,
 } from "@/lib/dataforseo/client";
+import { dataForSeoLog } from "@/lib/dataforseo/log";
 import {
   fetchBrandHistory,
   locationCodeOf,
@@ -38,6 +39,17 @@ import {
  * chaque déploiement — la facture, elle, resterait.
  */
 export const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Le délai entre deux appels d'historique.
+ *
+ * L'archive est mensuelle : sur douze barres, onze ne bougeront plus jamais et
+ * seule celle du mois en cours monte encore. Les redemander chaque jour paierait
+ * onze chiffres figés pour en rafraîchir un. Une semaine suffit donc — et
+ * l'entrée dans un nouveau mois rouvre l'appel sans attendre, sinon la barre du
+ * mois neuf resterait absente jusqu'à sept jours.
+ */
+export const HISTORY_REFRESH_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type LlmModelMentions = {
   /** Le `model_name` brut renvoyé par l'API, ex. « google_ai_overview ». */
@@ -204,6 +216,24 @@ function parseReport(payload: string | null): LlmMentionsReport | null {
   }
 }
 
+function parseHistory(payload: string | null): MonthlyMentionsPoint[] | null {
+  if (!payload) return null;
+  try {
+    const parsed = JSON.parse(payload) as MonthlyMentionsPoint[];
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Le mois en cours au format des points de la série, « 2026-08-01 ». */
+function currentMonthKey(): string {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    .toISOString()
+    .slice(0, 10);
+}
+
 /**
  * Le relevé du compte, appelé au plus une fois par jour.
  *
@@ -238,6 +268,7 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
   if (!clean) return null;
 
   const locationCode = locationCodeOf(country);
+  const brandName = brand?.trim() || null;
 
   // La table est le compteur : sans elle (migration pas encore poussée), on
   // s'abstient plutôt que d'appeler une API facturée sans garde-fou.
@@ -245,11 +276,15 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
   try {
     snapshot = await prisma.llmMentionSnapshot.findUnique({ where: { userId } });
   } catch (error) {
-    console.error(`[llm-mentions] compteur illisible pour ${userId} : ${String(error)}`);
+    dataForSeoLog("✗ compteur illisible — aucun appel", {
+      userId,
+      erreur: String(error),
+    });
     return null;
   }
 
   const stored = parseReport(snapshot?.payload ?? null);
+  const storedHistory = parseHistory(snapshot?.historyPayload ?? null);
   const sameQuestion =
     snapshot?.domain === clean && snapshot?.locationCode === locationCode;
   const nextRefreshAt = snapshot
@@ -257,13 +292,41 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     : null;
   const doorClosed = Boolean(nextRefreshAt && nextRefreshAt.getTime() > Date.now());
 
+  /** Le relevé rendu à l'écran : le décompte par modèle et l'historique gardé. */
+  const compose = (report: LlmMentionsReport, history: MonthlyMentionsPoint[] | null) => ({
+    ...report,
+    brand: snapshot?.historyBrand ?? brandName,
+    history: history ?? [],
+    nextRefreshAt: nextRefreshAt?.toISOString(),
+  });
+
   if (doorClosed) {
-    return sameQuestion && stored
-      ? { ...stored, nextRefreshAt: nextRefreshAt?.toISOString() }
-      : null;
+    dataForSeoLog("⏸ relevé du jour déjà fait — lu en base, aucun appel", {
+      domaine: clean,
+      dernier_releve: snapshot?.fetchedAt?.toISOString() ?? "(aucun)",
+      prochain_appel: nextRefreshAt?.toISOString(),
+      historique_en_base: storedHistory?.length ?? 0,
+    });
+    return sameQuestion && stored ? compose(stored, storedHistory) : null;
   }
 
-  if (!isDataForSeoConfigured()) return sameQuestion ? stored : null;
+  if (!isDataForSeoConfigured()) {
+    dataForSeoLog("⏸ identifiants absents — aucun appel");
+    return sameQuestion && stored ? compose(stored, storedHistory) : null;
+  }
+
+  // L'historique a sa propre fraîcheur : mensuel par nature, il n'a pas à être
+  // repayé tous les jours. Il repart quand la marque change, quand la semaine
+  // est passée, ou quand le mois en cours manque encore à la série.
+  const historyAge = snapshot?.historyFetchedAt
+    ? Date.now() - snapshot.historyFetchedAt.getTime()
+    : Infinity;
+  const historyFresh =
+    storedHistory !== null &&
+    storedHistory.length > 0 &&
+    snapshot?.historyBrand === brandName &&
+    historyAge < HISTORY_REFRESH_INTERVAL_MS &&
+    storedHistory.at(-1)?.month === currentMonthKey();
 
   // La tentative est datée avant l'appel : une requête qui n'aboutit jamais
   // (temps mort, instance recyclée) ne doit pas rouvrir la porte au rechargement
@@ -276,25 +339,40 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
       update: { domain: clean, locationCode, attemptedAt },
     });
   } catch (error) {
-    console.error(`[llm-mentions] compteur non inscriptible pour ${userId} : ${String(error)}`);
+    dataForSeoLog("✗ compteur non inscriptible — aucun appel", {
+      userId,
+      erreur: String(error),
+    });
     return null;
   }
 
-  const brandName = brand?.trim() || null;
+  dataForSeoLog("▶ relevé du jour — départ", {
+    domaine: clean,
+    marque: brandName ?? "(aucune)",
+    location_code: locationCode,
+    appels_prevus: historyFresh || !brandName ? 1 : 2,
+    historique: historyFresh
+      ? `lu en base (${storedHistory?.length ?? 0} mois, relevé il y a ${Math.round(historyAge / 3_600_000)} h)`
+      : "à rappeler",
+  });
 
   try {
-    // Deux relevés dans la même journée d'appel : le décompte par modèle, sur le
-    // domaine, et les douze mois de la marque. L'historique a le droit d'échouer
-    // seul — une marque absente de l'archive ne doit pas emporter le graphique
-    // des modèles avec elle.
+    // Le décompte par modèle part tous les jours ; l'historique seulement quand
+    // sa semaine est écoulée. L'historique a le droit d'échouer seul — une marque
+    // absente de l'archive ne doit pas emporter le graphique des modèles.
     const [page, history] = await Promise.all([
       searchLlmMentions({ domain: clean, locationCode }),
-      brandName
-        ? fetchBrandHistory({ brand: brandName, locationCode }).catch((error) => {
-            console.error(`[llm-mentions] historique impossible pour ${brandName} : ${String(error)}`);
-            return [] as MonthlyMentions[];
-          })
-        : Promise.resolve([] as MonthlyMentions[]),
+      brandName && !historyFresh
+        ? fetchBrandHistory({ brand: brandName, locationCode })
+            .then(withMonthlyDeltas)
+            .catch((error) => {
+              dataForSeoLog("✗ historique impossible — on garde celui de la base", {
+                marque: brandName,
+                erreur: String(error),
+              });
+              return null;
+            })
+        : Promise.resolve(null),
     ]);
 
     const report: LlmMentionsReport = {
@@ -302,10 +380,10 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
       totalMentions: page.totalCount,
       truncated: page.truncated,
       models: groupByModel(page.items),
-      brand: brandName,
-      history: withMonthlyDeltas(history),
       fetchedAt: new Date().toISOString(),
     };
+
+    const freshHistory = history ?? storedHistory;
 
     await prisma.llmMentionSnapshot.update({
       where: { userId },
@@ -313,11 +391,31 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
         payload: JSON.stringify(report),
         fetchedAt: new Date(),
         lastError: null,
+        // L'historique n'est réécrit que s'il vient d'être relevé : sa date de
+        // fraîcheur doit rester celle de l'appel qui l'a produit.
+        ...(history
+          ? {
+              historyBrand: brandName,
+              historyPayload: JSON.stringify(history),
+              historyFetchedAt: new Date(),
+            }
+          : {}),
       },
+    });
+
+    dataForSeoLog("✓ relevé du jour — écrit en base", {
+      domaine: clean,
+      mentions: report.totalMentions,
+      modeles: report.models.length,
+      historique_mois: freshHistory?.length ?? 0,
+      historique_source: history ? "appel" : "base",
+      prochain_appel: new Date(attemptedAt.getTime() + REFRESH_INTERVAL_MS).toISOString(),
     });
 
     return {
       ...report,
+      brand: brandName,
+      history: freshHistory ?? [],
       nextRefreshAt: new Date(attemptedAt.getTime() + REFRESH_INTERVAL_MS).toISOString(),
     };
   } catch (error) {
@@ -325,7 +423,7 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
       error instanceof DataForSeoError
         ? `${error.statusCode} — ${error.message}`
         : String(error);
-    console.error(`[llm-mentions] relevé impossible pour ${clean} : ${detail}`);
+    dataForSeoLog("✗ relevé du jour — échoué", { domaine: clean, erreur: detail });
 
     await prisma.llmMentionSnapshot
       .update({ where: { userId }, data: { lastError: detail.slice(0, 500) } })
@@ -335,6 +433,8 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     return sameQuestion && stored
       ? {
           ...stored,
+          brand: snapshot?.historyBrand ?? brandName,
+          history: storedHistory ?? [],
           nextRefreshAt: new Date(attemptedAt.getTime() + REFRESH_INTERVAL_MS).toISOString(),
         }
       : null;
