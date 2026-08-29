@@ -29,9 +29,24 @@ export function rateLimit(
   return { ok: true, remaining: limit - hit.count, resetAt: hit.reset };
 }
 
-/** Extrait l'IP cliente depuis les en-têtes proxy usuels. */
+/**
+ * Extrait l'IP cliente depuis les en-têtes proxy.
+ *
+ * `X-Forwarded-For` est une liste que le client contrôle à gauche : lire la
+ * première entrée laisse n'importe qui se donner une IP neuve à chaque requête
+ * et contourner les quotas (analyse anonyme, capture d'écran). On privilégie
+ * donc les en-têtes posés par la plateforme, puis la DERNIÈRE entrée de la
+ * chaîne — celle ajoutée par le proxy de confiance le plus proche de nous.
+ */
 export function clientIp(request: Request): string {
+  const trusted =
+    request.headers.get("x-vercel-forwarded-for") ?? request.headers.get("x-real-ip");
+  if (trusted) return trusted.trim();
+
   const xff = request.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  if (xff) {
+    const hops = xff.split(",").map((h) => h.trim()).filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1];
+  }
+  return "unknown";
 }

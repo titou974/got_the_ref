@@ -55,7 +55,15 @@ export async function unlockAnalysisFromSession(
   if (!analysis) return null;
 
   // Le payeur a-t-il déjà un compte ? Si oui, l'analyse lui est rattachée.
+  // `identity.userId` vient de nos métadonnées (posées côté serveur pour un
+  // visiteur connecté) : c'est la seule preuve d'identité fiable ici.
   let ownerId = analysis.userId ?? identity.userId;
+
+  // L'e-mail, lui, est saisi librement dans le formulaire Stripe Checkout : il
+  // désigne un compte, il ne le prouve pas. On s'en sert pour rattacher le
+  // rapport payé (bénin : le payeur a payé pour ce rapport), jamais pour
+  // toucher aux données de facturation d'un compte existant.
+  const ownerProven = ownerId !== null;
   if (!ownerId && identity.email) {
     const existing = await prisma.user.findUnique({
       where: { email: identity.email },
@@ -65,9 +73,12 @@ export async function unlockAnalysisFromSession(
   }
 
   // Conserve le client Stripe sur le compte, pour le portail de facturation.
+  // Sans preuve d'identité, on ne l'écrit que si le compte n'en a pas encore :
+  // sinon, quiconque paie en saisissant l'e-mail d'un tiers redirigerait le
+  // portail de facturation de ce tiers vers SON propre client Stripe.
   if (ownerId && identity.customerId) {
-    await prisma.user.update({
-      where: { id: ownerId },
+    await prisma.user.updateMany({
+      where: ownerProven ? { id: ownerId } : { id: ownerId, stripeCustomerId: null },
       data: { stripeCustomerId: identity.customerId },
     });
   }
