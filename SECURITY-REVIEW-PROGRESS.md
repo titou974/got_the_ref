@@ -58,22 +58,61 @@ Branche de travail : `worktree-security-review-loop`.
 
 ---
 
+## Étape 2 — 2026-08-29 · Moteur d'analyse et traitement des entrées
+
+### Périmètre couvert
+
+- `src/lib/geo/analyzer.ts` : construction des prompts, `extractJson`, appels Claude
+- `src/lib/geo/providers.ts` : appels OpenAI / Gemini, parsing des citations
+- `src/lib/geo/maps.ts` : validation et scraping du lien Google Maps
+- `src/lib/geo/hydrate.ts`, `diagnostic.ts`, `free-report.ts`, `solution-prompts.ts`, `methodology.ts`
+- Recherche globale : tous les `fetch(` du dépôt, tous les `href={` dynamiques
+
+### Constats et correctifs appliqués
+
+| # | Sévérité | Fichier | Constat | Correctif |
+|---|----------|---------|---------|-----------|
+| 5 | Moyenne | `src/lib/geo/maps.ts` | `scrapeMapsListing` appelait `fetch` en `redirect: "follow"` après un simple `assertPublicUrl` sur l'URL de départ. Or les hôtes autorisés incluent des raccourcisseurs (`goo.gl`, `maps.app.goo.gl`, `g.co`) : seul le premier hôte était validé, la cible de redirection ne l'était pas. Un hôte autorisé redirigeant vers `169.254.169.254` ou une adresse privée atteignait le réseau interne, avec exfiltration partielle via `og:title` / `<title>` remontés dans le rapport. | Passage par `safeFetch`, qui suit les redirections manuellement et revalide schéma + hôte à **chaque** saut. `safeFetch` est désormais exporté et accepte en-têtes et budget de temps personnalisés. |
+
+### Points vérifiés — pas de correctif nécessaire
+
+- Tous les `fetch` restants visent un hôte fixe (`api.apiflash.com`,
+  `api.openai.com`, `generativelanguage.googleapis.com`) ou passent par `safeFetch`.
+- Les seuls `href` dynamiques sont `result.url` (forcé en http(s) par
+  `normalizeUrl`) et `mapsUrl` (liste blanche d'hôtes Google) : pas de
+  `javascript:` possible. Aucun rendu de citation en lien cliquable.
+- Le champ `error` des moteurs (`LiveEngineResult.error`) n'appartient pas aux
+  types persistés : les corps d'erreur amont ne remontent jamais au navigateur.
+- La clé Gemini voyage en query string vers Google uniquement ; `postJson` ne
+  journalise que l'hôte, jamais l'URL complète.
+- Aucun rendu HTML brut de sortie de modèle : tout passe par l'échappement React.
+- Le palier `free` n'appelle ni Claude ni les moteurs : un visiteur non payant ne
+  déclenche aucun coût, et `ensurePaidAnalysis` est idempotent (`tier === "paid"`).
+
+### Point ouvert
+
+- **Injection de prompt** depuis le contenu du site audité : le texte scrapé
+  alimente les prompts Claude/OpenAI/Gemini. Impact borné (le résultat est du
+  texte affiché, échappé par React, sans appel d'outil privilégié), mais un site
+  malveillant peut fausser son propre rapport. Pas de correctif prévu.
+
+---
+
 ## Prochaine étape
 
-**Étape 2 — Moteur d'analyse et traitement des entrées**
+**Étape 3 — Composants client, formulaires, fuites dans les payloads RSC**
 
-- `src/lib/geo/analyzer.ts` (≈1 300 lignes) : construction des prompts, parsing
-  des réponses, gestion des erreurs, données renvoyées au client.
-- `src/lib/geo/providers.ts` : appels OpenAI / Gemini, traitement des réponses.
-- `src/lib/geo/maps.ts` : validation de l'URL Google Maps (surface d'entrée).
-- `src/lib/geo/hydrate.ts`, `diagnostic.ts`, `free-report.ts`,
-  `solution-prompts.ts`, `methodology.ts` : ce qui remonte jusqu'au rendu.
-- Vérifier qu'aucune sortie de modèle n'atteint un rendu HTML non échappé.
+- `src/components/**` : `UrlAnalyzeForm`, `AuthForm`, `PostCheckoutAccountForm`,
+  `AnalysisCheckoutButton`, `CheckoutButton`, `BillingPortalButton`.
+- Vérifier ce que les Server Components sérialisent vers le client (payload RSC)
+  sur `/analyse/[id]` et `/compte` : champs de `prisma.analysis` non nécessaires
+  (`guestEmail`, `stripeSessionId`, `userId`) éventuellement embarqués.
+- `src/app/global-error.tsx`, `not-found.tsx` : fuite d'information sur erreur.
+- Gestion des états d'erreur `next-safe-action` côté client.
 
 Étapes suivantes prévues :
 
-- Étape 3 — Composants client, formulaires, `src/components/**`, fuites de
-  données dans les payloads RSC.
 - Étape 4 — Configuration Better Auth (durée de session, vérification d'e-mail,
-  réinitialisation de mot de passe), CSP à nonce, `scripts/`, `pgtest.mjs`.
+  réinitialisation de mot de passe), CSP à nonce via middleware, `scripts/`,
+  `pgtest.mjs`.
 - Étape 5 — Dépendances, configuration de déploiement, relecture finale.

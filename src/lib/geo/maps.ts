@@ -1,6 +1,6 @@
 import "server-only";
 
-import { assertPublicUrl, BlockedUrlError } from "./fetcher";
+import { safeFetch, BlockedUrlError } from "./fetcher";
 import type { MapsListing } from "./types";
 
 /**
@@ -89,21 +89,16 @@ export async function scrapeMapsListing(mapsUrl: string): Promise<MapsListing> {
     /* on garde l'URL telle quelle */
   }
 
+  // Les liens courts autorisés (`goo.gl`, `maps.app.goo.gl`, `g.co`) sont des
+  // redirections : valider le seul hôte de départ ne dit rien de la cible.
+  // `safeFetch` suit les sauts un par un et revalide l'hôte à chacun.
   let html = "";
   try {
-    await assertPublicUrl(target);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), MAPS_TIMEOUT_MS);
-    try {
-      const res = await fetch(target, {
-        headers: { "User-Agent": MAPS_UA, "Accept-Language": "fr-FR,fr;q=0.9" },
-        redirect: "follow",
-        signal: controller.signal,
-      });
-      if (res.ok) html = await res.text();
-    } finally {
-      clearTimeout(timer);
-    }
+    const res = await safeFetch(target, {
+      headers: { "User-Agent": MAPS_UA, "Accept-Language": "fr-FR,fr;q=0.9" },
+      timeoutMs: MAPS_TIMEOUT_MS,
+    });
+    if (res.ok) html = await res.text();
   } catch (err) {
     if (err instanceof BlockedUrlError) return empty;
     return empty;

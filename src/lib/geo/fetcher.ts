@@ -95,11 +95,23 @@ export function normalizeUrl(raw: string): string {
   return parsed.origin + parsed.pathname.replace(/\/$/, "");
 }
 
+/** Options d'un `safeFetch` : mêmes garanties, en-têtes et budget ajustables. */
+export type SafeFetchOptions = {
+  headers?: Record<string, string>;
+  timeoutMs?: number;
+};
+
 /**
  * Fetch protégé contre le SSRF : valide schéma + hôte public à chaque saut,
  * suit les redirections manuellement (revalidation à chaque hop).
+ *
+ * Exporté : tout appel sortant vers une URL fournie par l'utilisateur doit
+ * passer par ici. Un `fetch` natif en `redirect: "follow"` ne validerait que le
+ * premier hôte, et un hôte autorisé qui redirige suffirait à atteindre le
+ * réseau interne.
  */
-async function safeFetch(url: string): Promise<Response> {
+export async function safeFetch(url: string, options?: SafeFetchOptions): Promise<Response> {
+  const timeoutMs = options?.timeoutMs ?? TIMEOUT_MS;
   let current = url;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const u = new URL(current);
@@ -109,11 +121,11 @@ async function safeFetch(url: string): Promise<Response> {
     await assertPublicHost(u.hostname);
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     let res: Response;
     try {
       res = await fetch(current, {
-        headers: { "User-Agent": UA, Accept: "text/html,*/*" },
+        headers: options?.headers ?? { "User-Agent": UA, Accept: "text/html,*/*" },
         redirect: "manual",
         signal: controller.signal,
       });
