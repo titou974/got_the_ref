@@ -1607,7 +1607,7 @@
       "demoNote": "Données d'exemple : le relevé des mentions n'est pas encore branché sur ce compte.",
       "source": "Source : archive DataForSEO des réponses ChatGPT et des aperçus IA de Google. La courbe mensuelle porte sur les aperçus IA de Google, seuls historisés hors États-Unis.",
       "measuredOn": "Relevé du {date}.",
-      "nextRefresh": "Prochain relevé possible le {date} : un appel par jour.",
+      "nextRefresh": "Prochain relevé le {date} : un relevé par mois.",
       "truncated": "Le total dépasse ce que le relevé ramène : le détail par modèle porte sur les mentions les plus recherchées."
     },
     "rankings": {

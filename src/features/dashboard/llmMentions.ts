@@ -31,25 +31,38 @@ import {
  */
 
 /**
- * Le délai entre deux appels DataForSEO pour un même compte.
+ * Le rythme du relevé : une fois par mois calendaire et par compte.
  *
- * Chaque appel est facturé et l'accueil du tableau de bord est rouvert plusieurs
- * fois par jour : la règle est donc « un relevé par client et par jour », tenue
- * en base (`LlmMentionSnapshot`) et non par un cache. Un cache s'évapore à
- * chaque déploiement — la facture, elle, resterait.
+ * Mensuel et non quotidien, parce que la donnée l'est : l'archive DataForSEO
+ * agrège par mois, et sur douze barres onze ne bougeront plus jamais. Repayer
+ * chaque jour revenait à acheter onze chiffres figés pour en rafraîchir un.
+ *
+ * Le mois calendaire plutôt qu'un délai de trente jours : c'est ce qui fait
+ * apparaître la barre du mois neuf le 1er, et non le 12 parce que le relevé
+ * précédent tombait un 12.
+ *
+ * Un compte qui n'a jamais été relevé n'a pas de ligne en base : sa porte est
+ * donc ouverte, et le relevé part à sa première ouverture du tableau de bord.
+ * C'est ce qui rattrape les clients arrivés avant cet écran — ils n'ont rien à
+ * refaire, leur retour suffit.
  */
-export const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Le délai entre deux appels d'historique.
- *
- * L'archive est mensuelle : sur douze barres, onze ne bougeront plus jamais et
- * seule celle du mois en cours monte encore. Les redemander chaque jour paierait
- * onze chiffres figés pour en rafraîchir un. Une semaine suffit donc — et
- * l'entrée dans un nouveau mois rouvre l'appel sans attendre, sinon la barre du
- * mois neuf resterait absente jusqu'à sept jours.
- */
-export const HISTORY_REFRESH_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Le premier jour du mois d'une date, « 2026-08-01 » : la clé de comparaison. */
+function monthKeyOf(date: Date): string {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** Le mois en cours, dans la même forme que les points de la série. */
+function currentMonthKey(): string {
+  return monthKeyOf(new Date());
+}
+
+/** Le 1er du mois suivant : la date à laquelle un nouvel appel redevient possible. */
+function nextMonthStart(from: Date): Date {
+  return new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1));
+}
 
 export type LlmModelMentions = {
   /** Le `model_name` brut renvoyé par l'API, ex. « google_ai_overview ». */
@@ -226,31 +239,28 @@ function parseHistory(payload: string | null): MonthlyMentionsPoint[] | null {
   }
 }
 
-/** Le mois en cours au format des points de la série, « 2026-08-01 ». */
-function currentMonthKey(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-    .toISOString()
-    .slice(0, 10);
-}
-
 /**
- * Le relevé du compte, appelé au plus une fois par jour.
+ * Le relevé du compte, appelé au plus une fois par mois calendaire.
  *
  * Trois situations, dans cet ordre :
  *
- *   1. la dernière tentative a moins de 24 h — on rend ce qui est en base, sans
- *      toucher à l'API, même si cette tentative avait échoué ;
- *   2. la porte est ouverte — un appel part, le résultat est écrit en base ;
+ *   1. une tentative a déjà eu lieu ce mois-ci — on rend ce qui est en base,
+ *      sans toucher à l'API, même si cette tentative avait échoué ;
+ *   2. la porte est ouverte — jamais relevé, ou mois neuf — les appels partent
+ *      et le résultat est écrit en base ;
  *   3. l'appel échoue — l'échec est daté lui aussi, et le relevé précédent, s'il
- *      existe, reprend l'écran. Réessayer à chaque rechargement consommerait la
- *      journée en appels perdus.
+ *      existe, reprend l'écran. Réessayer à chaque rechargement consommerait le
+ *      mois en appels perdus.
+ *
+ * Un compte sans ligne en base a donc la porte ouverte : les clients arrivés
+ * avant cet écran sont relevés à leur première ouverture du tableau de bord,
+ * sans rien avoir à refaire de leur accueil.
  *
  * La porte ne dépend que de la date : changer de domaine ne la rouvre pas,
  * sinon un aller-retour entre deux domaines suffirait à appeler sans limite.
  * Le relevé en base ne ressort alors que s'il porte sur la même question —
  * domaine et localisation identiques ; sinon la carte repasse à l'exemple, le
- * temps que le lendemain rende l'appel possible.
+ * temps que le mois suivant rende l'appel possible.
  *
  * `null` — pas d'identifiants, pas de domaine, aucun relevé jamais réussi — est
  * traité par la carte comme une absence de mesure : elle montre l'exemple.
@@ -287,10 +297,11 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
   const storedHistory = parseHistory(snapshot?.historyPayload ?? null);
   const sameQuestion =
     snapshot?.domain === clean && snapshot?.locationCode === locationCode;
-  const nextRefreshAt = snapshot
-    ? new Date(snapshot.attemptedAt.getTime() + REFRESH_INTERVAL_MS)
-    : null;
-  const doorClosed = Boolean(nextRefreshAt && nextRefreshAt.getTime() > Date.now());
+  // La porte se ferme pour le reste du mois dès qu'une tentative y a eu lieu.
+  const nextRefreshAt = snapshot ? nextMonthStart(snapshot.attemptedAt) : null;
+  const doorClosed = Boolean(
+    snapshot && monthKeyOf(snapshot.attemptedAt) === currentMonthKey(),
+  );
 
   /** Le relevé rendu à l'écran : le décompte par modèle et l'historique gardé. */
   const compose = (report: LlmMentionsReport, history: MonthlyMentionsPoint[] | null) => ({
@@ -301,7 +312,7 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
   });
 
   if (doorClosed) {
-    dataForSeoLog("⏸ relevé du jour déjà fait — lu en base, aucun appel", {
+    dataForSeoLog("⏸ relevé du mois déjà fait — lu en base, aucun appel", {
       domaine: clean,
       dernier_releve: snapshot?.fetchedAt?.toISOString() ?? "(aucun)",
       prochain_appel: nextRefreshAt?.toISOString(),
@@ -315,17 +326,12 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     return sameQuestion && stored ? compose(stored, storedHistory) : null;
   }
 
-  // L'historique a sa propre fraîcheur : mensuel par nature, il n'a pas à être
-  // repayé tous les jours. Il repart quand la marque change, quand la semaine
-  // est passée, ou quand le mois en cours manque encore à la série.
-  const historyAge = snapshot?.historyFetchedAt
-    ? Date.now() - snapshot.historyFetchedAt.getTime()
-    : Infinity;
+  // L'historique garde ses colonnes à lui : quand son appel échoue, le relevé
+  // du mois précédent reste affiché au lieu de laisser un graphique vide.
   const historyFresh =
     storedHistory !== null &&
     storedHistory.length > 0 &&
     snapshot?.historyBrand === brandName &&
-    historyAge < HISTORY_REFRESH_INTERVAL_MS &&
     storedHistory.at(-1)?.month === currentMonthKey();
 
   // La tentative est datée avant l'appel : une requête qui n'aboutit jamais
@@ -346,20 +352,20 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
     return null;
   }
 
-  dataForSeoLog("▶ relevé du jour — départ", {
+  dataForSeoLog("▶ relevé du mois — départ", {
     domaine: clean,
     marque: brandName ?? "(aucune)",
     location_code: locationCode,
     appels_prevus: historyFresh || !brandName ? 1 : 2,
     historique: historyFresh
-      ? `lu en base (${storedHistory?.length ?? 0} mois, relevé il y a ${Math.round(historyAge / 3_600_000)} h)`
-      : "à rappeler",
+      ? `déjà à jour en base (${storedHistory?.length ?? 0} mois)`
+      : "à relever",
+    premier_releve: snapshot ? "non" : "oui — compte jamais relevé",
   });
 
   try {
-    // Le décompte par modèle part tous les jours ; l'historique seulement quand
-    // sa semaine est écoulée. L'historique a le droit d'échouer seul — une marque
-    // absente de l'archive ne doit pas emporter le graphique des modèles.
+    // L'historique a le droit d'échouer seul : une marque absente de l'archive
+    // ne doit pas emporter le graphique des modèles avec elle.
     const [page, history] = await Promise.all([
       searchLlmMentions({ domain: clean, locationCode }),
       brandName && !historyFresh
@@ -403,39 +409,39 @@ export const fetchLlmMentions = cache(async function fetchLlmMentions(
       },
     });
 
-    dataForSeoLog("✓ relevé du jour — écrit en base", {
+    dataForSeoLog("✓ relevé du mois — écrit en base", {
       domaine: clean,
       mentions: report.totalMentions,
       modeles: report.models.length,
       historique_mois: freshHistory?.length ?? 0,
       historique_source: history ? "appel" : "base",
-      prochain_appel: new Date(attemptedAt.getTime() + REFRESH_INTERVAL_MS).toISOString(),
+      prochain_appel: nextMonthStart(attemptedAt).toISOString(),
     });
 
     return {
       ...report,
       brand: brandName,
       history: freshHistory ?? [],
-      nextRefreshAt: new Date(attemptedAt.getTime() + REFRESH_INTERVAL_MS).toISOString(),
+      nextRefreshAt: nextMonthStart(attemptedAt).toISOString(),
     };
   } catch (error) {
     const detail =
       error instanceof DataForSeoError
         ? `${error.statusCode} — ${error.message}`
         : String(error);
-    dataForSeoLog("✗ relevé du jour — échoué", { domaine: clean, erreur: detail });
+    dataForSeoLog("✗ relevé du mois — échoué", { domaine: clean, erreur: detail });
 
     await prisma.llmMentionSnapshot
       .update({ where: { userId }, data: { lastError: detail.slice(0, 500) } })
       .catch(() => undefined);
 
-    // Le relevé de la veille vaut mieux qu'une carte d'exemple : il a été mesuré.
+    // Le relevé du mois passé vaut mieux qu'une carte d'exemple : il a été mesuré.
     return sameQuestion && stored
       ? {
           ...stored,
           brand: snapshot?.historyBrand ?? brandName,
           history: storedHistory ?? [],
-          nextRefreshAt: new Date(attemptedAt.getTime() + REFRESH_INTERVAL_MS).toISOString(),
+          nextRefreshAt: nextMonthStart(attemptedAt).toISOString(),
         }
       : null;
   }

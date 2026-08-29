@@ -185,33 +185,37 @@ Google, réponses et sources conservées.
   de Google, ce que la carte dit.
 - La cible est le domaine de la fiche d'accueil, sous-domaines compris ; la
   localisation suit le pays relevé pendant l'accueil (France par défaut).
-- **Un relevé par client et par jour**, tenu en base (`LlmMentionSnapshot`, une
-  ligne par compte) et non par un cache : un cache s'évapore à chaque
-  déploiement, la facture non.
-- **L'historique a sa propre fraîcheur : une semaine.** Il est gardé dans ses
-  colonnes à lui (`historyBrand`, `historyPayload`, `historyFetchedAt`) et relu
-  en base par les relevés suivants. Sur douze barres, onze ne bougeront plus
-  jamais : les repayer chaque jour reviendrait à acheter onze chiffres figés
-  pour en rafraîchir un. L'entrée dans un nouveau mois rouvre l'appel sans
-  attendre la semaine, sinon la barre du mois neuf manquerait sept jours. Un
-  relevé coûte donc **une requête par jour, plus une par semaine**.
-- L'historique a le droit d'échouer seul : une marque absente de l'archive
-  n'emporte pas le reste de la carte, et l'ancien historique reste affiché.
+- **Un relevé par client et par mois calendaire**, tenu en base
+  (`LlmMentionSnapshot`, une ligne par compte) et non par un cache : un cache
+  s'évapore à chaque déploiement, la facture non. Mensuel parce que la donnée
+  l'est — l'archive agrège par mois, et sur douze barres onze ne bougeront plus
+  jamais. Le mois calendaire plutôt qu'un délai de trente jours : c'est ce qui
+  fait apparaître la barre du mois neuf le 1er, et non le 12 parce que le relevé
+  précédent tombait un 12.
+- **Un compte sans ligne en base a la porte ouverte** : les clients arrivés
+  avant cet écran sont relevés à leur première ouverture du tableau de bord,
+  sans rien avoir à refaire de leur accueil.
+- La table garde deux dates : `attemptedAt`, la dernière tentative réussie **ou
+  ratée**, qui ouvre ou ferme la porte, et `fetchedAt`, le dernier relevé
+  exploitable, celui que la carte affiche. Rien ne rouvre la porte avant
+  l'heure, pas même un changement de domaine — sinon un aller-retour entre deux
+  domaines suffirait à appeler sans limite ; le relevé gardé ne ressort que s'il
+  porte sur le même domaine et la même localisation.
+- L'historique de la marque a ses colonnes à lui (`historyBrand`,
+  `historyPayload`, `historyFetchedAt`) et le droit d'échouer seul : une marque
+  absente de l'archive n'emporte pas le graphique des modèles, et l'historique
+  du mois précédent reste affiché.
 - **Tout passe dans le terminal serveur** (`⚫ [DATAFORSEO]`) : la requête
   partie avec sa cible et sa période, la réponse avec son coût en dollars et sa
   durée, et — tout aussi important — les relevés lus en base sans qu'aucun appel
   ne parte. Un appel qu'on ne voit pas passer est un appel qu'on découvre sur la
-  facture. Couper avec `DATAFORSEO_DEBUG="false"`. La table garde deux dates — `attemptedAt`, la
-  dernière tentative réussie **ou ratée**, qui ouvre ou ferme la porte, et
-  `fetchedAt`, le dernier relevé exploitable, celui que la carte affiche. Rien
-  ne rouvre la porte avant l'heure, pas même un changement de domaine — sinon un
-  aller-retour entre deux domaines suffirait à appeler sans limite ; le relevé
-  gardé ne ressort que s'il porte sur le même domaine et la même localisation.
-  Ajouter la table : `npm run db:push`.
+  facture. Couper avec `DATAFORSEO_DEBUG="false"`.
 - Le relevé est borné à trois pages de 1 000 réponses — au-delà, le total exact
   reste lu dans `total_count` et la carte signale un détail partiel.
-- Sans identifiants, aucun appel ne part : la carte montre l'exemple sous voile,
-  avec son bandeau « données d'exemple ».
+- Sans identifiants, aucun appel ne part : la carte montre un exemple, net, sous
+  son bandeau « données d'exemple ».
+- La table est indispensable au garde-fou : sans elle, aucun appel ne part.
+  `npm run db:push` puis `npm run db:generate`.
 
 Pour vérifier le branchement en ligne de commande — le script parle à DataForSEO
 directement et ne passe pas par le compteur quotidien, chaque exécution est donc
