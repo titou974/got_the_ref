@@ -134,21 +134,72 @@ Branche de travail : `worktree-security-review-loop`.
 
 ---
 
+## Étape 4 — 2026-08-30 · Better Auth, CSP, scripts hors application
+
+### Périmètre couvert
+
+- `src/features/auth/better-auth.config.ts`, `src/app/api/auth/[...all]/route.ts`
+- `prisma.config.ts`, `pgtest.mjs`, `scripts/gen-lottie.mjs`
+- `README.md` : valeurs sensibles éventuellement publiées
+- Faisabilité d'une CSP `script-src` à nonce
+
+### Constats et correctifs appliqués
+
+| # | Sévérité | Fichier | Constat | Correctif |
+|---|----------|---------|---------|-----------|
+| 9 | **CRITIQUE** | `pgtest.mjs` (supprimé) | Mot de passe de la base Supabase de production **en clair dans le dépôt**, avec la référence de projet et les deux noms d'hôte (pooler et direct). Committé dans `1cee1d4`, présent sur `origin/main` et sur une cinquantaine de branches poussées. Accès complet en lecture/écriture à la base : comptes, e-mails, abonnements, analyses. Le script désactivait par ailleurs la vérification du certificat TLS (`rejectUnauthorized: false`). | Fichier supprimé. **Insuffisant à lui seul** : le secret reste dans l'historique Git et sur le remote. Rotation du mot de passe Supabase requise (action propriétaire, cf. ci-dessous). |
+
+### Suites à donner par le propriétaire du dépôt (non automatisables)
+
+1. Réinitialiser le mot de passe de la base dans Supabase (Settings → Database →
+   Reset database password), puis mettre à jour `DATABASE_URL` et `DIRECT_URL`
+   chez l'hébergeur.
+2. Relire les journaux de connexion Supabase à la recherche d'accès inattendus.
+3. Trancher sur le nettoyage de l'historique Git (réécriture + push forcé sur
+   toutes les branches, ou dépôt neuf). Opération destructive, à décider
+   explicitement.
+
+### Points vérifiés — pas de correctif nécessaire
+
+- `secret` Better Auth : la bibliothèque lève une erreur au démarrage en
+  production si aucune variable de secret n'est définie — pas de repli silencieux
+  sur le secret de développement.
+- `trustedOrigins` implicite : par défaut la `baseURL`, ce qui est correct ici.
+- Cookies de session : `httpOnly`, `secure` en production, `sameSite: lax`.
+- `cookieCache` de 5 min : une session révoquée peut rester acceptée jusqu'à
+  5 minutes. Compromis assumé et borné, pas une faille.
+- `README.md` : ne publie que des noms de variables, aucune valeur.
+- `prisma.config.ts` et `scripts/gen-lottie.mjs` : chemins fixes, aucune entrée
+  utilisateur, aucune commande shell.
+- `api/auth/[...all]` : simple délégation à `toNextJsHandler(auth)`, sans
+  traitement maison.
+
+### Points ouverts
+
+- **Vérification d'e-mail absente** (aucun fournisseur d'e-mail branché). Chemin
+  concret : un attaquant enregistre à l'avance un compte avec l'e-mail d'un
+  prospect connu ; quand ce prospect paie une analyse en saisissant cet e-mail
+  chez Stripe, `unlockAnalysisFromSession` retrouve le compte par e-mail et lui
+  rattache le rapport payé. Corriger en gardant le rattachement par e-mail réservé
+  aux comptes vérifiés — impossible tant que l'envoi d'e-mails n'est pas en place
+  (une branche `worktree-resend-password-reset` existe). À reprendre à ce
+  moment-là.
+- **CSP `script-src` à nonce** : évaluée, non appliquée. Elle demande un
+  middleware qui pose un nonce par requête et le propage jusqu'au `<script>` de
+  Next ; sans possibilité de faire tourner l'application ici, le risque de casser
+  le rendu (styles inline de framer-motion, scripts injectés par Next) l'emporte
+  sur le gain. `frame-ancestors` reste en place depuis l'étape 1.
+
+---
+
 ## Prochaine étape
 
-**Étape 4 — Configuration Better Auth, CSP, scripts hors application**
+**Étape 5 — Dépendances, déploiement, relecture finale**
 
-- `src/features/auth/better-auth.config.ts` : durée de session (30 j) et
-  `updateAge`, `cookieCache` de 5 min (une révocation reste-t-elle effective ?),
-  absence de vérification d'e-mail, absence de réinitialisation de mot de passe,
-  `trustedOrigins` implicite, politique de mot de passe (8 caractères, aucune
-  vérification contre les fuites connues).
-- CSP `script-src` à nonce via un middleware : évaluer le coût réel.
-- `scripts/gen-lottie.mjs`, `pgtest.mjs`, `prisma.config.ts` : manipulation de
-  fichiers, chaînes de connexion, exécution hors application.
-- `src/app/api/auth/[...all]/route.ts` : surface exposée par Better Auth.
-
-Étape suivante prévue :
-
-- Étape 5 — Dépendances (44 alertes Dependabot signalées au push : 21 hautes,
-  20 modérées, 3 basses), configuration de déploiement, relecture finale.
+- 44 alertes Dependabot annoncées au push sur la branche par défaut (21 hautes,
+  20 modérées, 3 basses) : établir la liste réelle via `npm audit`, distinguer ce
+  qui est atteignable en production de ce qui ne l'est qu'en outillage de build,
+  appliquer les montées de version sûres.
+- Vérifier que `next` 16.2.9, `better-auth`, `stripe` et `prisma` sont sur des
+  versions sans avis de sécurité connu.
+- Relecture finale : reprendre les points ouverts des étapes 1 à 4 et statuer.
