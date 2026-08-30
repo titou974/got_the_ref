@@ -35,15 +35,12 @@ export const maxDuration = 300;
  * L'accueil du tableau de bord, dans l'ordre où le client se pose ses questions.
  *
  * En haut, ce qu'il vient vérifier : son site tel qu'on le voit, avec la note
- * posée dessus. Puis, immédiatement, les deux réponses qu'il est venu chercher
- * — sa place dans ChatGPT et Gemini, et ce qu'il faut corriger pour la gagner.
- * Ces deux blocs ont été remontés sous l'aperçu parce que c'est le premier
- * écran : ce qui s'y trouve est ce que le client lit, le reste se mérite d'un
- * défilement.
+ * posée dessus, et le constat écrit à la frappe juste en dessous. Les deux ne
+ * se séparent pas : c'est le couple qu'il a découvert en achetant son analyse,
+ * et le texte dit à voix haute ce que la note résume en un chiffre.
  *
- * Le constat écrit vient après, en appui : il raconte ce que les classements et
- * le plan d'action viennent de montrer, et il n'a donc aucune raison de passer
- * devant eux.
+ * Viennent ensuite les deux réponses qu'il est venu chercher — sa place dans
+ * ChatGPT et Gemini, et ce qu'il faut corriger pour la gagner.
  *
  * En bas, ce qui court dans la durée : le trafic amené par les IA et le
  * calendrier de rédaction. Et l'exécution ne vit pas dans la page : elle tient
@@ -159,14 +156,24 @@ export default async function DashboardHomePage() {
         </div>
       </SiteScreenshot>
 
-      {/* 2. La place du commerce dans ChatGPT et Gemini, juste sous l'aperçu.
-             C'est la question qui amène le client ici, et elle passe donc avant
-             tout le reste. Le voile y est posé moteur par moteur : un compte
-             gratuit fait mesurer Gemini, et voit la carte ChatGPT sous voile —
-             faute d'avoir été exécutée. */}
+      {/* 2. Le constat écrit à la frappe, collé à la capture : le client vient
+             de voir son site et sa note, il lit dans la foulée ce qu'on a
+             relevé chez lui. Il n'est jamais voilé. En gratuit, il ne rend
+             compte que de ce qui est ouvert — le contenu, le classement Gemini
+             — et annonce le reste sans le détailler. */}
+      <PaidReportCard
+        result={analysis}
+        diagnostic={diagnostic}
+        scope={tierAtLeast(tier, "boost") ? "dashboard" : "free"}
+      />
+
+      {/* 3. La place du commerce dans ChatGPT et Gemini. C'est la question qui
+             amène le client ici. Le voile y est posé moteur par moteur : un
+             compte gratuit fait mesurer Gemini, et voit la carte ChatGPT sous
+             voile — faute d'avoir été exécutée. */}
       <RankingsSection engines={analysis.engines} tier={tier} />
 
-      {/* 3. Les corrections, dans la foulée du classement : le client vient de
+      {/* 4. Les corrections, dans la foulée du classement : le client vient de
              lire sa place, il doit lire tout de suite ce qui la lui coûte. */}
       <section>
         <div className="mb-3">
@@ -199,17 +206,6 @@ export default async function DashboardHomePage() {
           )}
         </div>
       </section>
-
-      {/* 4. Le constat écrit à la frappe, comme sur le rapport d'analyse. Il
-             n'est jamais voilé : c'est le texte qui dit au client ce qu'on a vu
-             chez lui. En gratuit, il ne rend compte que de ce qui est ouvert —
-             le contenu, le classement Gemini — et annonce le reste sans le
-             détailler. */}
-      <PaidReportCard
-        result={analysis}
-        diagnostic={diagnostic}
-        scope={tierAtLeast(tier, "boost") ? "dashboard" : "free"}
-      />
 
       {/* ---- Ce qui court dans la durée ---- */}
 

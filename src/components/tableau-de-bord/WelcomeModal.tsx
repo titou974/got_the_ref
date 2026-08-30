@@ -17,6 +17,10 @@ import { AiOverview, type OverviewBlock } from "@/components/dashboard/AiOvervie
  *
  * Une seule fois, retenue dans le navigateur. Un mot de bienvenue répété à
  * chaque visite devient une porte à pousser avant d'entrer chez soi.
+ *
+ * Le texte tient en cinq lignes : sur un téléphone, un mot d'accueil qu'il faut
+ * faire défiler pour atteindre son bouton n'est plus un accueil. La formule de
+ * politesse finale est partie avec — le bouton « C'est parti » la porte déjà.
  */
 const SEEN_KEY = "gotref:welcome:v1";
 
@@ -75,7 +79,6 @@ export function WelcomeModal() {
     // La bulle Crisp est montée par le layout du tableau de bord : elle est
     // donc bien là, en bas à droite, au moment où le client lit cette ligne.
     { kind: "bullet", icon: "dot", segments: parseSegments(t("chat")) },
-    { kind: "paragraph", segments: parseSegments(t("closing")) },
   ];
 
   return (
