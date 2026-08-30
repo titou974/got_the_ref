@@ -1566,7 +1566,7 @@
         },
         "traffic": {
           "title": "Les visites que les IA vous envoient",
-          "body": "Le trafic réellement amené par ChatGPT, Gemini et Perplexity, relevé dans votre Analytics. Réservé à l'abonnement Tout-en-un."
+          "body": "Le trafic réellement amené par ChatGPT, Gemini et Perplexity, relevé dans votre Analytics. Le Coup de Boost l'ouvre, et l'abonnement Tout-en-un le tient à jour."
         },
         "agenda": {
           "title": "Votre calendrier de publication",
@@ -1669,6 +1669,9 @@
       "body": "Nous lisons vos pages, testons votre place dans les IA et relevons ce qui manque. Comptez une à trois minutes selon la taille du site.",
       "articlesTitle": "Préparation de votre mois d'articles",
       "articlesBody": "Douze sujets sont planifiés pour les quatre prochaines semaines, à raison de trois par semaine. Les trois premiers sont en cours de rédaction.",
+      "progressAudit": "Lecture du site et relevé dans les IA",
+      "progressArticles": "Planification de vos articles",
+      "progressDone": "Terminé, votre tableau de bord s'ouvre",
       "retry": "Relancer"
     },
     "keywords": {
