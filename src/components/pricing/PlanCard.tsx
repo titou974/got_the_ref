@@ -180,8 +180,6 @@ export function PlanCard({
             }`}
           >
             {cycle === "yearly" ? t("cycle.yearlyTerms") : t("cycle.monthlyTerms")}
-            {" · "}
-            {t("vat")}
           </p>
 
           <div className={compact ? "mt-5" : "mt-7"}>

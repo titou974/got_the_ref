@@ -139,8 +139,6 @@ export async function BoostCard({
             }`}
           >
             {t("boost.terms")}
-            {" · "}
-            {t("vat")}
           </p>
 
           <div className={compact ? "mt-5" : "mt-7"}>

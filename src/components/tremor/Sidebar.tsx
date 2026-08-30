@@ -9,8 +9,10 @@
 // disparaît par rapport à l'original : `SidebarTrigger`, `useSidebar`, le
 // tiroir mobile et le cookie `sidebar:state`.
 //
-// Sous `lg`, la colonne redevient une barre dans le flux, au-dessus du
-// contenu : un rail de 16 rem mangerait la moitié d'un écran de téléphone.
+// Sous `lg`, la colonne ne s'affiche pas du tout : un rail de 16 rem mangerait
+// la moitié d'un écran de téléphone. C'est `MobileNav` qui prend le relais, avec
+// un bandeau collé en haut et un tiroir qui sort du côté gauche — il rejoue les
+// mêmes entrées (`SidebarNav`), donc la liste ne vit qu'à un seul endroit.
 
 import Link from "next/link";
 import * as React from "react";
@@ -49,8 +51,8 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(
         ref={ref}
         data-sidebar="sidebar"
         className={cx(
-          "flex w-full flex-col border-b border-border bg-surface",
-          "lg:fixed lg:inset-y-0 lg:left-0 lg:z-10 lg:h-svh lg:w-[var(--sidebar-width)] lg:border-b-0 lg:border-r",
+          "hidden flex-col border-border bg-surface",
+          "lg:fixed lg:inset-y-0 lg:left-0 lg:z-10 lg:flex lg:h-svh lg:w-[var(--sidebar-width)] lg:border-r",
           className,
         )}
         {...props}
@@ -127,13 +129,10 @@ const SidebarMenu = React.forwardRef<HTMLUListElement, React.ComponentProps<"ul"
     <ul
       ref={ref}
       data-sidebar="menu"
-      // Sur téléphone les entrées s'alignent et défilent : empilées, elles
-      // repousseraient le premier chiffre sous la ligne de flottaison.
-      className={cx(
-        "-mx-1 flex w-full min-w-0 gap-1 overflow-x-auto px-1 pb-1",
-        "lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0",
-        className,
-      )}
+      // Une pile, des deux côtés : la colonne de gauche sur grand écran, le
+      // tiroir sur téléphone. La rangée horizontale à faire défiler du pouce
+      // qui servait sous `lg` a disparu avec elle.
+      className={cx("flex w-full min-w-0 flex-col gap-1", className)}
       {...props}
     />
   ),
@@ -142,7 +141,7 @@ SidebarMenu.displayName = "SidebarMenu";
 
 const SidebarMenuItem = React.forwardRef<HTMLLIElement, React.ComponentProps<"li">>(
   ({ className, ...props }, ref) => (
-    <li ref={ref} className={cx("min-w-0 shrink-0 lg:shrink", className)} {...props} />
+    <li ref={ref} className={cx("min-w-0", className)} {...props} />
   ),
 );
 SidebarMenuItem.displayName = "SidebarMenuItem";

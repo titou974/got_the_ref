@@ -142,7 +142,13 @@ export function SiteScreenshot({
               className="pointer-events-none absolute inset-0 bg-black/65"
               aria-hidden
             />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6 py-8 text-center ">
+            {/* Le contenu superposé reste dans le flux, en enfant flex qui
+                occupe la place restante. Posé en absolu, il était centré dans
+                un cadre de 300 px de haut et tout ce qui dépassait sortait par
+                le haut et par le bas — sur téléphone, l'anneau de note mordait
+                sur la barre du navigateur et le verdict passait sous la
+                découpe. En flux, c'est lui qui fait grandir le cadre. */}
+            <div className="relative flex w-full flex-1 flex-col items-center justify-center gap-4 px-5 py-7 text-center sm:gap-5 sm:px-6 sm:py-8">
               {children}
             </div>
           </>
