@@ -51,11 +51,16 @@ export function TierGate({
   const t = useTranslations("dashboard.gate");
 
   return (
-    <section className={`relative isolate overflow-hidden rounded-[28px] ${className}`}>
+    // Les trois couches partagent une même case de grille au lieu d'être posées
+    // en absolu sur la première : le bloc prend alors la hauteur de la plus
+    // haute des trois. Sur téléphone, l'appel d'une carte resserrée — badge,
+    // logo, titre, phrase et bouton — dépasse la carte floutée qu'il recouvre,
+    // et s'y retrouvait coupé en haut comme en bas.
+    <section className={`relative isolate grid overflow-hidden rounded-[28px] ${className}`}>
       <div
         aria-hidden
         inert
-        className="pointer-events-none select-none blur-[7px] saturate-[0.7]"
+        className="pointer-events-none select-none blur-[7px] saturate-[0.7] [grid-area:1/1]"
       >
         {children}
       </div>
@@ -64,11 +69,11 @@ export function TierGate({
           une donnée qu'on essaierait de deviner à travers le flou. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-bg/40 via-bg/70 to-bg"
+        className="pointer-events-none bg-gradient-to-b from-bg/40 via-bg/70 to-bg [grid-area:1/1]"
       />
 
       <div
-        className={`absolute inset-0 flex flex-col items-center justify-center gap-3 px-5 text-center ${
+        className={`flex flex-col items-center justify-center gap-3 px-5 text-center [grid-area:1/1] ${
           compact ? "py-6" : "py-10"
         }`}
       >
