@@ -34,14 +34,14 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
   const accountLink = user ? (
     <Link
       href={ROUTES.dashboard}
-      className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text"
+      className="cursor-pointer truncate text-sm text-muted transition-colors duration-200 hover:text-text"
     >
       {t("account")}
     </Link>
   ) : (
     <Link
       href={ROUTES.signUp}
-      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-graphite bg-snow px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+      className="inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-full border border-graphite bg-snow px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
     >
       {t("freeTrial")}
     </Link>
@@ -60,7 +60,7 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
       <nav className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 py-2.5">
         {/* Le déclencheur du tiroir se place à gauche du logo — c'est le premier
             geste attendu sur mobile, il vient donc avant la marque. */}
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           {!minimal && (
             <MobileMenu
               links={links}
@@ -98,9 +98,23 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
           {!minimal && <NavCta label={t("analyzeMyBusiness")} />}
         </div>
 
-        {/* Mobile : le tiroir porte déjà la navigation là où il existe, mais le
-            compte reste accessible en un geste partout. */}
-        <div className="flex items-center gap-4 sm:hidden">{accountLink}</div>
+        {/* Mobile : plus de bouton d'inscription dans la barre.
+
+            Il n'y avait pas la place. « Commencer gratuitement » demande 194 px
+            sur une ligne ; à côté du logo (191 px) et de la gouttière, il en
+            faut 350, soit exactement la largeur utile d'un écran de 390 px. Le
+            libellé se repliait donc sur deux lignes, ce qui doublait la hauteur
+            de la barre, et à 320 px l'ensemble débordait de 33 px.
+
+            L'inscription reste atteignable : le tiroir la porte sur la page
+            d'accueil, et ailleurs ce sont les appels de la page elle-même —
+            cartes tarifaires, bandeau de fin de rapport — qui y mènent.
+
+            Un client identifié garde en revanche l'accès à son tableau de bord :
+            c'est un lien de texte, il tient à côté du logo. */}
+        {user && (
+          <div className="flex min-w-0 items-center gap-4 sm:hidden">{accountLink}</div>
+        )}
       </nav>
     </header>
   );
