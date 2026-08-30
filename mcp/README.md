@@ -21,7 +21,14 @@ claude mcp add got_the_ref -- npx -y got-the-ref-mcp
 codex mcp add got_the_ref -- npx -y got-the-ref-mcp
 ```
 
-**Cursor** (`~/.cursor/mcp.json`) **et Hermes** (sa configuration MCP)
+**Cursor** — l'éditeur n'a pas de sous-commande `mcp add` : il a un lien
+d'installation, que la modale de la plateforme donne cliquable.
+
+```text
+cursor://anysphere.cursor-deeplink/mcp/install?name=got_the_ref&config=<configuration en base64>
+```
+
+**Cursor à la main** (`~/.cursor/mcp.json`) **et Hermes** (sa configuration MCP)
 
 ```json
 {
@@ -73,6 +80,45 @@ il n'y a rien à reconstituer.
 | `GOT_THE_REF_CLIENT` | Nom montré au client sur l'écran d'autorisation. |
 
 La clé est rangée dans `~/.got_the_ref/credentials.json`, en `0600`.
+
+## Distribution
+
+Les commandes ci-dessus tiennent sur une ligne parce que `npx` reçoit un nom
+court. Ce nom vient de npm — c'est la seule raison de publier.
+
+**1. npm (ce qui donne la commande courte)**
+
+```bash
+npm run mcp:build
+cd mcp && npm publish --access public
+```
+
+Le nom `got-the-ref-mcp` doit être libre. S'il ne l'est pas, on passe au nom
+d'organisation (`@gottheref/mcp`) et les commandes s'allongent d'autant.
+
+**2. Archive servie par le site (sans npm)**
+
+`npx` accepte aussi bien un nom qu'une URL de tarball.
+
+```bash
+npm run mcp:pack        # dépose public/mcp/got-the-ref-mcp.tgz
+```
+
+Puis, côté plateforme :
+
+```bash
+NEXT_PUBLIC_MCP_SOURCE=https://gottheref.com/mcp/got-the-ref-mcp.tgz
+```
+
+Les commandes affichées dans la modale pointent alors sur l'archive. Elles
+fonctionnent, mais elles sont longues : c'est un canal de transition.
+
+**3. Chemin local (pour développer)**
+
+```bash
+npm run mcp:build
+claude mcp add got_the_ref -- node /chemin/absolu/vers/mcp/dist/index.js
+```
 
 ## Développement
 

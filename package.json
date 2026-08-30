@@ -20,7 +20,8 @@
     "export:leads": "node scripts/export-leads.mjs",
     "check:dataforseo": "node scripts/check-dataforseo.mjs",
     "mcp:build": "npm --prefix mcp run build",
-    "mcp:publish": "npm --prefix mcp publish"
+    "mcp:publish": "npm --prefix mcp publish",
+    "mcp:pack": "npm --prefix mcp run pack"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

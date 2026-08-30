@@ -15,8 +15,9 @@
     "node": ">=20.10"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/index.js",
     "dev": "tsc --watch",
+    "pack": "npm run build && mkdir -p ../public/mcp && npm pack --pack-destination ../public/mcp && mv ../public/mcp/got-the-ref-mcp-*.tgz ../public/mcp/got-the-ref-mcp.tgz",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

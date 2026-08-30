@@ -245,18 +245,54 @@ export function AgentLinkPanel({ locked = false }: { locked?: boolean }) {
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-steel">
           {t("installLabel", { where: setup.where })}
         </p>
-        <div className="flex items-start gap-2 rounded-[18px] bg-obsidian p-3">
-          <pre
-            className={`min-w-0 flex-1 font-mono text-[11px] leading-relaxed text-white/85 ${
-              setup.kind === "cli"
-                ? "whitespace-pre-wrap break-words"
-                : "overflow-x-auto whitespace-pre"
-            }`}
+        {setup.kind === "link" ? (
+          // Cursor n'a pas de sous-commande d'installation : il a un lien, que
+          // le navigateur remet à l'éditeur. On le donne donc comme un lien,
+          // cliquable, plutôt que comme une ligne à recopier.
+          <a
+            href={setup.snippet}
+            className="flex cursor-pointer items-center justify-between gap-3 rounded-[18px] bg-obsidian p-3 text-[13px] font-semibold text-white transition-colors duration-200 hover:bg-graphite focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
           >
-            {setup.snippet}
-          </pre>
-          <CopyButton value={setup.snippet} label={t("copy")} copiedLabel={t("copied")} />
-        </div>
+            {t("openIn", { name: setup.name })}
+            <span aria-hidden className="text-white/60">
+              ↗
+            </span>
+          </a>
+        ) : (
+          <div className="flex items-start gap-2 rounded-[18px] bg-obsidian p-3">
+            <pre
+              className={`min-w-0 flex-1 font-mono text-[11px] leading-relaxed text-white/85 ${
+                setup.kind === "cli"
+                  ? "whitespace-pre-wrap break-words"
+                  : "overflow-x-auto whitespace-pre"
+              }`}
+            >
+              {setup.snippet}
+            </pre>
+            <CopyButton value={setup.snippet} label={t("copy")} copiedLabel={t("copied")} />
+          </div>
+        )}
+
+        {/* Le repli manuel, replié : il n'est utile qu'au client dont le lien
+            n'a pas atteint l'éditeur, et il n'a pas à peser sur les autres. */}
+        {setup.fallback ? (
+          <details className="group mt-2">
+            <summary className="cursor-pointer list-none text-[12px] text-muted transition-colors duration-200 hover:text-text">
+              {t("fallbackLabel", { where: setup.fallback.where })}
+            </summary>
+            <div className="mt-2 flex items-start gap-2 rounded-[18px] border border-fog bg-mist p-3">
+              <pre className="min-w-0 flex-1 overflow-x-auto whitespace-pre font-mono text-[11px] leading-relaxed text-text">
+                {setup.fallback.snippet}
+              </pre>
+              <CopyButton
+                value={setup.fallback.snippet}
+                tone="light"
+                label={t("copy")}
+                copiedLabel={t("copied")}
+              />
+            </div>
+          </details>
+        ) : null}
       </div>
 
       {/* Étape 2 — la phrase à dire, une fois la prise en place. */}

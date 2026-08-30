@@ -224,6 +224,8 @@
           "stepFix": "Corriger",
           "installLabel": "1. La prise got_the_ref — {where}",
           "promptLabel": "2. Dites-le à votre agent",
+          "openIn": "Installer dans {name}",
+          "fallbackLabel": "Ou collez la configuration dans {where}",
           "copy": "Copier",
           "copied": "Copié",
           "waiting": "Aucun agent connecté. Le vôtre affichera un code : confirmez-le pour ouvrir l'accès.",
