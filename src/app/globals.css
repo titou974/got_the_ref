@@ -31,6 +31,10 @@
   --color-accent: #09090b;       /* emphase = sombre (pas d'accent chromatique UI) */
   --color-cta: #09090b;          /* action principale : pilule noire */
   --color-cta-hover: #18181b;
+  /* Surlignage d'un passage clé, à la manière d'un texte sélectionné dans un
+     aperçu IA. Teinte de la palette (obsidian dilué) : lisible sans introduire
+     une couleur étrangère au système. */
+  --color-highlight: #dfe0e4;
   --color-danger: #dc2626;
   --color-warning: #d97706;
 
@@ -235,6 +239,46 @@ h1, h2, h3, h4, h5 {
 }
 @keyframes marquee-slide {
   to { transform: translateX(-50%); }
+}
+
+/* ── Verrou de scroll (overlay d'analyse, modales, tiroir mobile) ─────────────
+   Piloté par `lockScroll()` (src/lib/scroll-lock.ts), qui pose la classe sur
+   <html>. `overflow: hidden` seul laisse iOS Safari faire défiler la page au
+   doigt : on coupe donc aussi le pan tactile et le rebond de fin de course. */
+html.scroll-locked,
+html.scroll-locked body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* ── Anneau de score ────────────────────────────────────────────────────────
+   Diamètre porté par deux variables posées en style inline par le composant :
+   `--ring` (défaut) et `--ring-sm` (sous le point de rupture sm). Le tracé étant
+   en viewBox, il suit la largeur — un seul rendu sert les deux tailles, sans
+   mesurer la fenêtre en JavaScript. */
+.score-ring {
+  width: var(--ring);
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+}
+@media (max-width: 639px) {
+  .score-ring {
+    width: var(--ring-sm);
+  }
+}
+
+/* ── Pas de zoom automatique à la saisie sur mobile ──────────────────────────
+   iOS Safari zoome sur tout champ dont la police descend sous 16px. Les champs
+   du site sont dessinés en 13–15px : on les remonte à 16px sous le point de
+   rupture `sm`, plutôt que de neutraliser le zoom via la balise viewport, ce qui
+   priverait aussi l'utilisateur du zoom manuel. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

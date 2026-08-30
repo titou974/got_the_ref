@@ -43,6 +43,19 @@
     "button": "Découvrir nos services",
     "secondary": "Prendre rendez-vous"
   },
+  "ctaUnlock": {
+    "eyebrow": "Abonnement got_the_ref",
+    "title": "Débloquez tout le rapport et laissez les agents IA corriger",
+    "subtitle": "Classements, recommandations, mots-clés tendances, calendrier d'articles et prompts prêts à coller : tout s'ouvre avec l'abonnement.",
+    "bullet1": "Analyses illimitées",
+    "bullet2": "Prompts solution par section",
+    "bullet3": "Articles générés pour votre niche",
+    "button": "Résoudre gratuitement avec les agents IA",
+    "secondary": "Voir les tarifs",
+    "openTitle": "Gardez la main sur votre visibilité IA",
+    "openSubtitle": "Analyses illimitées, mots-clés suivis mois après mois et articles publiés pour votre niche : votre abonnement couvre tout got_the_ref.",
+    "openButton": "Voir mon offre et les options"
+  },
   "home": {
     "logoOpenaiAlt": "Logo OpenAI",
     "logoGeminiAlt": "Logo Gemini",
@@ -108,11 +121,6 @@
     "modePhysical": "Commerce physique",
     "modeOnline": "Commerce en ligne",
     "modeAriaLabel": "Type de commerce à analyser"
-  },
-  "dashboard": {
-    "ctaAnotherTitle": "Analysez un autre site",
-    "ctaAnotherSubtitle": "Comparez vos concurrents ou suivez votre progression dans le temps.",
-    "ctaUnlimited": "Besoin d'analyses illimitées ?"
   },
   "analysisReport": {
     "heroEyebrow": "Note de visibilité IA",
@@ -243,7 +251,8 @@
       "shareSubject": "Résultats de l'analyse GEO got_the_ref",
       "shareBody": "Voici les résultats de l'analyse de visibilité IA de notre site : {url}",
       "agencyCtaText": "Vous préférez qu'on s'en occupe pour vous ?",
-      "agencyCtaLink": "Découvrir les services de l'agence"
+      "agencyCtaLink": "Découvrir les services de l'agence",
+      "unlockPrompt": "Débloquer le prompt solution gratuitement"
     },
     "maps": {
       "title": "Cohérence Google Maps ↔ site",
@@ -261,7 +270,7 @@
       "findingsTitle": "Constats"
     },
     "paywall": {
-      "cta": "Résoudre avec les agents IA",
+      "cta": "Résoudre gratuitement avec les agents IA",
       "lockedLabel": "Verrouillé",
       "alreadyPaid": "Déjà abonné ?",
       "signIn": "Se connecter",
@@ -294,7 +303,48 @@
         "title": "Cohérence Maps",
         "subtitle": "L'alignement de votre fiche Google avec votre site, vu par les IA.",
         "pitch": "Une fiche qui contredit le site fait perdre des places sur les requêtes locales."
+      },
+      "keywords": {
+        "title": "Mots-clés tendances",
+        "subtitle": "Les requêtes en hausse dans votre niche, et où les écrire.",
+        "pitch": "Les mots-clés du moment sont relevés sur Google, avec le title, la meta description et le H1 réécrits."
+      },
+      "articles": {
+        "title": "Calendrier éditorial",
+        "subtitle": "Les articles SEO générés et publiés pour vous, mois après mois.",
+        "pitch": "Chaque article du calendrier est rédigé puis publié automatiquement sur votre niche."
       }
+    },
+    "keywords": {
+      "title": "Mots-clés tendances de votre niche",
+      "subtitle": "Les requêtes qui montent en ce moment sur votre activité, et l'endroit exact où les placer : balise title, meta description, H1.",
+      "listTitle": "Requêtes à cibler",
+      "sourceMeasured": "Relevé sur Google",
+      "sourceEstimated": "Déduit de la niche",
+      "rewritesTitle": "Vos trois éléments, réécrits",
+      "rewritesSubtitle": "À copier tel quel : chaque version reprend les mots-clés les plus porteurs sans sacrifier la lecture.",
+      "currentLabel": "Actuel",
+      "currentEmpty": "absent du site",
+      "charCount": "{count} caractères",
+      "elements": {
+        "title": "Balise title",
+        "metaDescription": "Meta description",
+        "h1": "Titre H1"
+      },
+      "placements": {
+        "title": "Title",
+        "metaDescription": "Meta",
+        "h1": "H1"
+      }
+    },
+    "articlesPlan": {
+      "title": "Calendrier des articles",
+      "subtitle": "Les articles SEO générés pour votre niche, puis publiés automatiquement aux dates prévues.",
+      "countLabel": "{count} articles programmés",
+      "queueTitle": "À paraître",
+      "queueSubtitle": "Rédigés sur vos mots-clés, relus, puis mis en ligne sans intervention de votre part.",
+      "statusScheduled": "Programmé",
+      "disclaimer": "Aperçu du calendrier : la génération et la publication automatiques arrivent — aucun article n'est encore publié sur votre site."
     }
   },
   "analysisApi": {
@@ -396,12 +446,12 @@
       "Ce que les IA voient de {domain}, et ce qui leur manque pour le citer"
     ],
     "intros": [
-      "Cet aperçu note {score}/100. Il ne regarde que l'ossature du site : ce que les crawlers IA lisent avant même de juger le contenu. C'est un point de départ honnête, pas un verdict.",
-      "Note de l'aperçu : {score}/100. Elle ne porte que sur la structure technique du site — la partie qui décide si une IA peut vous lire, pas si elle décide de vous citer.",
-      "{score}/100 sur l'architecture seule. C'est la seule chose mesurable gratuitement : le reste du dossier, celui qui explique votre position réelle, demande d'interroger les moteurs.",
-      "L'aperçu s'arrête à {score}/100 parce qu'il s'arrête à l'ossature. Les signaux qui font vraiment la différence dans une réponse d'IA n'ont pas encore été mesurés.",
-      "Score de l'aperçu : {score}/100, sur la base des seuls signaux techniques. Une bonne structure ne garantit rien — elle rend juste la citation possible.",
-      "{score}/100 : c'est ce que vaut le site vu de l'extérieur, avant analyse du contenu, de la notoriété et des classements moteurs."
+      "Cet aperçu note {score}/100. Il ne regarde que l'ossature du site : ==ce que les crawlers IA lisent avant même de juger le contenu==. C'est un point de départ honnête, pas un verdict.",
+      "Note de l'aperçu : {score}/100. Elle ne porte que sur la structure technique du site — ==la partie qui décide si une IA peut vous lire, pas si elle décide de vous citer==.",
+      "{score}/100 sur l'architecture seule. C'est la seule chose mesurable gratuitement : ==le reste du dossier, celui qui explique votre position réelle, demande d'interroger les moteurs==.",
+      "L'aperçu s'arrête à {score}/100 parce qu'il s'arrête à l'ossature. ==Les signaux qui font vraiment la différence dans une réponse d'IA== n'ont pas encore été mesurés.",
+      "Score de l'aperçu : {score}/100, sur la base des seuls signaux techniques. ==Une bonne structure ne garantit rien — elle rend juste la citation possible==.",
+      "{score}/100 : c'est ce que vaut le site vu de l'extérieur, ==avant analyse du contenu, de la notoriété et des classements moteurs==."
     ],
     "unmeasured": {
       "keywords": [
@@ -436,18 +486,66 @@
       ]
     },
     "closings": [
-      "Sur ces quatre plans, votre classement sur les IA et sur Google peut être nettement amélioré : les manques relevés ici sont tous corrigeables, et ce sont eux qui vous coûtent des places.",
-      "Chacune de ces parties non mesurées est un levier de classement. Bien traitées, elles remontent votre position sur les IA comme sur Google — le potentiel est largement au-dessus de la note actuelle.",
-      "Il y a de la marge, et elle est concrète : les points listés ci-dessus se corrigent, et chaque correction se traduit en places gagnées sur les IA et sur Google.",
-      "Rien de tout cela n'est définitif. Ces angles non mesurés sont exactement ceux qui font gagner des positions sur les IA et sur Google une fois traités dans le bon ordre.",
-      "Votre visibilité sur les IA et sur Google peut progresser fortement : les leviers sont dans les parties encore fermées, et ils s'actionnent l'un après l'autre.",
-      "Le constat est loin d'être plafonné. Ces mesures manquantes portent l'essentiel du gain possible sur votre classement dans les IA et sur Google."
+      "Sur ces quatre plans, ==votre classement sur les IA et sur Google peut être nettement amélioré== : les manques relevés ici sont tous corrigeables, et ce sont eux qui vous coûtent des places.",
+      "Chacune de ces parties non mesurées est un levier de classement. Bien traitées, elles remontent votre position sur les IA comme sur Google — ==le potentiel est largement au-dessus de la note actuelle==.",
+      "Il y a de la marge, et elle est concrète : ==chaque correction se traduit en places gagnées sur les IA et sur Google==.",
+      "Rien de tout cela n'est définitif. ==Ces angles non mesurés sont exactement ceux qui font gagner des positions== sur les IA et sur Google une fois traités dans le bon ordre.",
+      "Votre visibilité sur les IA et sur Google peut progresser fortement : ==les leviers sont dans les parties encore fermées==, et ils s'actionnent l'un après l'autre.",
+      "Le constat est loin d'être plafonné. ==Ces mesures manquantes portent l'essentiel du gain possible== sur votre classement dans les IA et sur Google."
     ],
     "ctas": [
-      "Résoudre avec les agents IA",
-      "Corriger avec les agents IA",
-      "Confier ces points aux agents IA",
-      "Lancer les agents IA sur ces points"
+      "Résoudre gratuitement avec les agents IA",
+      "Corriger gratuitement avec les agents IA",
+      "Confier ces points aux agents IA, gratuitement",
+      "Lancer gratuitement les agents IA sur ces points"
+    ],
+    "angleLabels": {
+      "keywords": "Mots-clés",
+      "rankings": "Classement IA",
+      "recommendations": "Plan d'action",
+      "content": "Contenu",
+      "presence": "Notoriété",
+      "maps": "Fiche Google"
+    },
+    "sourceChip": "Crawl du site · {count} contrôles d'architecture"
+  },
+  "paidReport": {
+    "headlines": [
+      "Ce que les IA retiennent de {domain}, et ce qui reste à gagner",
+      "{domain} vu par ChatGPT et Gemini : le relevé complet",
+      "Le dossier complet de {domain} : positions, contenu, notoriété",
+      "{domain} : ce qui vous place, ce qui vous freine, chiffres en main",
+      "Audit complet de {domain} — voici où vous en êtes vraiment",
+      "Tout a été mesuré sur {domain} : voici le verdict"
+    ],
+    "intros": [
+      "Note finale : {score}/100, cette fois sur l'ensemble des signaux — ==architecture, contenu, notoriété et positions réellement relevées sur les moteurs==.",
+      "{score}/100 après audit complet. Chaque volet a été mesuré : ==la note ne repose plus sur la seule ossature technique, mais sur ce que les IA font vraiment de votre site==.",
+      "Le rapport complet donne {score}/100. ==Les positions viennent des moteurs eux-mêmes==, les notes éditoriales d'une lecture page par page.",
+      "Score global : {score}/100. Tout ce que l'aperçu laissait fermé est ouvert ici — ==classements, qualité de contenu, autorité hors-site et plan d'action chiffré==.",
+      "{score}/100, audit complet. ==Vous voyez désormais votre place face aux concurrents==, et le détail de ce qui la détermine.",
+      "Résultat consolidé : {score}/100. ==Rien n'est estimé au doigt mouillé== : chaque ligne ci-dessous s'appuie sur une mesure."
+    ],
+    "sourceChip": "Audit complet · {count} moteurs interrogés",
+    "strengthsTitle": "Ce qui tient déjà",
+    "gapsTitle": "Ce qui reste à corriger",
+    "measuredTitle": "Ce que l'audit a mesuré",
+    "rankOn": "{engine} #{rank}",
+    "notRankedOn": "{engine} hors classement",
+    "measured": {
+      "rankings": "**Classement IA** : {detail}. Le détail des concurrents cités devant vous est dans l'onglet Résultats.",
+      "content": "**Contenu** : {score}/100 sur la qualité éditoriale et la citabilité de vos pages — ce qu'une IA peut reprendre tel quel.",
+      "presence": "**Notoriété** : {score}/100 sur les signaux d'autorité hors-site, distinctions et mentions presse comprises.",
+      "keywords": "**Mots-clés** : {count} requêtes tendances relevées sur votre niche, avec la balise title, la meta description et le H1 réécrits.",
+      "recommendations": "**Plan d'action** : {count} correctifs priorisés par impact, chacun accompagné de son prompt prêt à coller.",
+      "recommendationsWithTop": "**Plan d'action** : {count} correctifs priorisés par impact. À traiter d'abord — « {top} ».",
+      "maps": "**Fiche Google** : {score}/100 de cohérence entre votre fiche et le site, sur le nom, la catégorie, l'adresse et les horaires."
+    },
+    "closings": [
+      "Tout est ouvert : les prompts de chaque onglet reprennent ces correctifs, ==prêts à coller dans votre agent IA==.",
+      "Vous avez la mesure et le remède : ==chaque section porte son prompt solution==, à exécuter dans l'ordre d'impact.",
+      "Il ne reste qu'à exécuter. ==Le plan est priorisé== ; commencez par le haut, remesurez ensuite.",
+      "Ce relevé est votre point de départ chiffré : ==relancez l'analyse après les correctifs== pour voir les places gagnées."
     ]
   },
   "postCheckout": {

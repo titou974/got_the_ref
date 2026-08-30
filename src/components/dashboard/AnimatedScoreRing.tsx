@@ -8,6 +8,7 @@ import { scoreColor } from "@/lib/score";
 export function AnimatedScoreRing({
   score,
   size = 180,
+  sizeSm,
   stroke = 14,
   label,
   trackColor = "rgba(9,9,11,0.08)",
@@ -15,6 +16,13 @@ export function AnimatedScoreRing({
 }: {
   score: number;
   size?: number;
+  /**
+   * Diamètre sous le point de rupture `sm`. Par défaut identique à `size`.
+   * Appliqué en CSS (classe `.score-ring`, cf. globals.css) plutôt qu'en
+   * mesurant la fenêtre : pas de JS, donc pas d'écart d'hydratation ni de
+   * premier rendu à la mauvaise taille.
+   */
+  sizeSm?: number;
   stroke?: number;
   label?: string;
   /** Couleur de l'anneau de fond (à éclaircir sur fond sombre). */
@@ -37,10 +45,16 @@ export function AnimatedScoreRing({
 
   return (
     <div
-      className="relative inline-flex items-center justify-center"
-      style={{ width: size, height: size }}
+      className="score-ring relative inline-flex shrink-0 items-center justify-center"
+      style={
+        {
+          "--ring": `${size}px`,
+          "--ring-sm": `${sizeSm ?? size}px`,
+        } as React.CSSProperties
+      }
     >
-      <svg width={size} height={size} className="-rotate-90">
+      {/* Tracé en viewBox : l'anneau suit la largeur imposée par `.score-ring`. */}
+      <svg viewBox={`0 0 ${size} ${size}`} className="h-full w-full -rotate-90">
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -62,7 +76,7 @@ export function AnimatedScoreRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <motion.span className="font-display text-4xl font-bold" style={{ color }}>
+        <motion.span className="font-display text-3xl font-bold sm:text-4xl" style={{ color }}>
           {rounded}
         </motion.span>
         {label && <span className={`mt-0.5 text-xs ${labelClassName}`}>{label}</span>}

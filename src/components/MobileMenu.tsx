@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { SignOutButton } from "./SignOutButton";
+import { lockScroll } from "@/lib/scroll-lock";
 import { ROUTES } from "@/constants/routes";
 
 type NavLink = { href: string; label: string };
@@ -38,11 +39,7 @@ export function MobileMenu({
   // Verrouille le scroll de la page tant que le tiroir est ouvert.
   useEffect(() => {
     if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
+    return lockScroll();
   }, [open]);
 
   return (

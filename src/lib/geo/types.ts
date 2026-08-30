@@ -201,6 +201,38 @@ export type OnPageContent = {
   openingHours: string | null; // horaires d'ouverture lisibles, extraits du site
 };
 
+/**
+ * Un mot-clé tendance de la niche, et les emplacements on-page où il compte.
+ * `placements` dit où l'écrire : balise title, meta description, H1.
+ */
+export type KeywordPlacement = "title" | "metaDescription" | "h1";
+
+export type TrendingKeyword = {
+  keyword: string;
+  /** Intention derrière la requête (ex. « recherche locale », « comparaison »). */
+  intent: string;
+  /** Dynamique observée sur la période. */
+  trend: "montant" | "stable" | "émergent";
+  placements: KeywordPlacement[];
+};
+
+/**
+ * Mots-clés tendances de la niche + réécritures on-page prêtes à coller.
+ * Alimenté par Gemini (grounding Google Search) sur la version payante ; en
+ * gratuit, un repli déterministe fournit la même structure, affichée floutée.
+ */
+export type TrendingKeywordsInsight = {
+  /** true = généré par Gemini avec recherche Google ; false = repli déterministe. */
+  measured: boolean;
+  source: "gemini" | "heuristic";
+  /** Fenêtre de tendance annoncée, ex. « août 2026 ». */
+  period: string;
+  keywords: TrendingKeyword[];
+  /** Titre, meta description et H1 réécrits avec les mots-clés retenus. */
+  suggested: { title: string; metaDescription: string; h1: string };
+  notes: string[];
+};
+
 /** Analyse SEO Google classique (positionnement organique). */
 export type GoogleSeo = {
   score: number; // 0-100
@@ -248,6 +280,7 @@ export type GeoAnalysisResult = {
   mapsCoherence?: MapsCoherence | null; // analyse de cohérence locale (Phase 5)
   liveQuery?: string | null; // requête réellement testée sur les moteurs (Phase 6)
   backlinks?: Backlinks | null; // sources référentes estimées (Phase 6b, recherche web)
+  trendingKeywords?: TrendingKeywordsInsight | null; // mots-clés tendances de la niche (Gemini)
 };
 
 /** Simulation de recherche IA affichée sur le dashboard. */
