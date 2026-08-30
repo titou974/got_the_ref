@@ -69,6 +69,16 @@ export type AnalysisContext = {
    * la garde sous voile plutôt que de la faire passer pour un relevé.
    */
   engines?: AiEngine[];
+  /**
+   * Les relevés hors-site : estimation des backlinks et scraping de la fiche
+   * Google. Absent, ils sont faits.
+   *
+   * Ils alimentent deux onglets réservés à l'abonnement « Tout-en-un ». Sur un
+   * compte gratuit, ces écrans restent sous voile, et on ne dépense pas un
+   * appel de plus pour remplir une donnée que personne ne lira : le voile
+   * s'appuie alors sur les cartes d'exemple.
+   */
+  offsite?: boolean;
 };
 
 /**
@@ -1643,7 +1653,7 @@ export async function analyzeSite(
   // Scraping best-effort de la fiche Maps (gratuit) AVANT l'audit, pour fournir
   // au modèle les vraies note/avis/nom et mesurer la cohérence.
   let mapsListing: MapsListing | null = null;
-  if (ctx.mapsUrl) {
+  if (ctx.mapsUrl && ctx.offsite !== false) {
     mapsListing = await scrapeMapsListing(ctx.mapsUrl);
     geoLog("Fiche Maps — scraping", mapsListing);
   }
@@ -1722,7 +1732,7 @@ export async function analyzeSite(
         return heuristicAnalysis(signals, ctx, profile, "model-failed");
       }
     })(),
-    hasKey
+    hasKey && ctx.offsite !== false
       ? estimateBacklinks(signals, profile).catch((err) => {
           console.error("Estimation backlinks échouée :", err);
           return null;

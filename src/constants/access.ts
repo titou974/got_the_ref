@@ -103,9 +103,19 @@ export const HOME_BLOCK_TIER: Record<HomeBlock, AccessTier> = {
    * faute d'avoir été exécutée.
    */
   rankings: "free",
-  /** Le diagnostic d'architecture, contrôle par contrôle. */
-  diagnostic: "boost",
-  /** Le plan d'action — ce que les agents corrigent. */
+  /**
+   * Le constat « aperçu IA ». Il reste en clair pour tous : c'est le texte qui
+   * dit au visiteur ce qu'on a vu chez lui, et un voile posé dessus ne
+   * vendrait rien — il cacherait justement l'argument. En gratuit, il ne
+   * raconte que ce qui est ouvert (contenu, classement Gemini) et se contente
+   * d'annoncer qu'il reste à redresser ailleurs (cf. `PaidReportCard`).
+   */
+  diagnostic: "free",
+  /**
+   * Le plan d'action. Les correctifs de contenu s'affichent en clair — c'est
+   * l'onglet ouvert au gratuit —, le reste passe sous voile (cf.
+   * `FREE_RECOMMENDATION_CATEGORIES`).
+   */
   recommendations: "boost",
   /** Les mentions dans les IA, mois après mois : une mesure qui court. */
   mentions: "allin",
@@ -165,6 +175,31 @@ export function runsEngine(tier: AccessTier, engine: string): boolean {
  * site. Au-delà, c'est le métier qu'on vend, pas la démonstration.
  */
 export const FREE_CONTENT_REWRITES = 1;
+
+/**
+ * Les familles de correctifs laissées en clair sur un compte gratuit.
+ *
+ * Le plan d'action n'est pas voilé en bloc : les correctifs de contenu sont
+ * lisibles, parce que c'est l'onglet ouvert et qu'un client doit pouvoir agir
+ * dès le premier écran. Tout ce qui touche à l'ossature, aux données
+ * structurées ou aux plateformes reste sous voile — c'est le Coup de Boost.
+ *
+ * Les clés suivent `CategoryKey` (cf. `src/lib/geo/types.ts`), gardées ici en
+ * chaînes pour que ce module reste une donnée pure, importable des deux côtés.
+ */
+export const FREE_RECOMMENDATION_CATEGORIES = ["contentEEAT"] as const;
+
+/**
+ * Combien de ces correctifs s'affichent en clair. « Quelques » : de quoi
+ * démontrer la valeur du plan, pas de quoi le remplacer.
+ */
+export const FREE_RECOMMENDATION_LIMIT = 3;
+
+/** Ce correctif est-il lisible à ce niveau ? */
+export function seesRecommendation(tier: AccessTier, category: string): boolean {
+  if (tierAtLeast(tier, "boost")) return true;
+  return (FREE_RECOMMENDATION_CATEGORIES as readonly string[]).includes(category);
+}
 
 /**
  * La fenêtre de rédaction ouverte par le Coup de Boost, en jours.

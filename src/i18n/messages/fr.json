@@ -635,7 +635,39 @@
       "Vous avez la mesure et le remède : ==chaque section porte son prompt solution==, à exécuter dans l'ordre d'impact.",
       "Il ne reste qu'à exécuter. ==Le plan est priorisé== ; commencez par le haut, remesurez ensuite.",
       "Ce relevé est votre point de départ chiffré : ==relancez l'analyse après les correctifs== pour voir les places gagnées."
-    ]
+    ],
+    "free": {
+      "headlines": [
+        "Ce que Gemini retient déjà de {domain}, et ce qui reste à ouvrir",
+        "{domain} : le contenu est mesuré, la suite vous attend",
+        "Premier relevé sur {domain} : votre contenu, votre place dans Gemini",
+        "{domain} vu par Gemini : ce qui ressort, ce qui reste sous clé"
+      ],
+      "intros": [
+        "Votre contenu obtient {score}/100 : c'est la note de ce qu'une IA peut reprendre tel quel sur vos pages. ==C'est le volet ouvert ici, et celui que vous pouvez corriger tout de suite==.",
+        "Sur le contenu, {score}/100. ==L'analyse gratuite s'arrête à ce volet et au classement Gemini== : le reste a été repéré, pas encore ouvert.",
+        "{score}/100 sur la qualité éditoriale de vos pages. ==Le classement Gemini a été relevé== ; l'ossature technique et les autres moteurs restent à découvrir.",
+        "Note de contenu : {score}/100. ==Vous voyez ici ce qui est mesuré et corrigeable dès maintenant== ; le reste est repéré et attend d'être ouvert."
+      ],
+      "chip": "Analyse gratuite · {count, plural, =0 {aucun moteur interrogé} one {# moteur interrogé} other {# moteurs interrogés}}",
+      "measuredTitle": "Ce qui a été mesuré",
+      "measured": {
+        "rankings": "**Classement Gemini** : {detail}. C'est le seul moteur interrogé sur l'offre gratuite.",
+        "content": "**Contenu** : {score}/100 sur la qualité éditoriale et la citabilité de vos pages. Les correctifs de contenu et leurs mots-clés sont ouverts dans l'onglet Contenu."
+      },
+      "lockedTitle": "Ce qui reste à ouvrir",
+      "locked": {
+        "engines": "**Classement {engines}** : pas interrogé ici. L'estimation laisse voir ==des choses à améliorer== avant d'y être cité — le relevé réel s'obtient avec le Coup de Boost.",
+        "architecture": "**Architecture** : les contrôles techniques ont tourné, ==il y a des choses à améliorer==. Le détail contrôle par contrôle s'ouvre avec le Coup de Boost.",
+        "architectureCount": "**Architecture** : {count, plural, one {# point à améliorer} other {# points à améliorer}} sur l'ossature technique de votre site. ==Le détail contrôle par contrôle== s'ouvre avec le Coup de Boost.",
+        "rest": "**Le reste** : plan d'action complet, calendrier d'articles, notoriété hors-site et fiche Google restent fermés sur l'offre gratuite."
+      },
+      "closings": [
+        "Commencez par ce qui est ouvert : ==l'onglet Contenu porte ses correctifs, prêts à coller==. Le reste s'ouvre d'un coup avec le Coup de Boost.",
+        "Le contenu, vous pouvez le corriger dès aujourd'hui. ==Pour l'architecture, les articles et les autres moteurs==, il faut le Coup de Boost.",
+        "Rien à installer pour la suite : ==le Coup de Boost ouvre l'architecture, les articles et le relevé complet== sur cette même analyse."
+      ]
+    }
   },
   "postCheckout": {
     "metaTitle": "Paiement confirmé",

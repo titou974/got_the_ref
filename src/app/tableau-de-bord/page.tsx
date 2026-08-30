@@ -22,7 +22,13 @@ import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
 import { PaidReportCard } from "@/components/dashboard/PaidReportCard";
 import { Recommendations } from "@/components/geo/Recommendations";
 import { TierGate } from "@/components/tableau-de-bord/TierGate";
-import { canSee, offerForBlock, tierAtLeast } from "@/constants/access";
+import {
+  FREE_RECOMMENDATION_LIMIT,
+  canSee,
+  offerForBlock,
+  seesRecommendation,
+  tierAtLeast,
+} from "@/constants/access";
 
 /** L'audit d'entrée peut durer plusieurs minutes sur un gros site. */
 export const maxDuration = 300;
@@ -54,20 +60,39 @@ export default async function DashboardHomePage() {
 
   const analysis = context.analysis;
   const diagnostic = buildDiagnostic(analysis);
+
+  // L'accueil est le seul écran ouvert à tous : le verrou s'y pose bloc par
+  // bloc plutôt que sur la page entière. Reste en clair ce qui montre le
+  // produit sans le donner — le site, sa note, la niche détectée, le constat
+  // écrit. Le reste garde sa forme sous un voile, avec l'offre qui l'ouvre.
+  const tier = context.tier;
+  const sees = (block: Parameters<typeof canSee>[1]) => canSee(tier, block);
+
+  // Sous le voile, on montre une carte d'exemple, jamais la vraie donnée : les
+  // deux relevés qui coûtent un appel — Analytics et le suivi des mentions —
+  // ne sont donc lancés que pour qui les verra. Les cartes savent déjà quoi
+  // faire d'un rapport absent : elles basculent sur leur version de
+  // démonstration.
   const [traffic, mentions, articles] = await Promise.all([
-    fetchAiTraffic(user.id, 30),
-    fetchLlmMentions(user.id, context.domain ?? analysis.domain, context.country),
+    sees("traffic") ? fetchAiTraffic(user.id, 30) : null,
+    sees("mentions")
+      ? fetchLlmMentions(user.id, context.domain ?? analysis.domain, context.country)
+      : null,
     listArticles(user.id),
   ]);
 
   const upcoming = articles.filter((article) => article.status !== "published");
 
-  // L'accueil est le seul écran ouvert à tous : le verrou s'y pose bloc par
-  // bloc plutôt que sur la page entière. Reste en clair ce qui montre le
-  // produit sans le donner — le site, sa note, la niche détectée. Le reste
-  // garde sa forme sous un voile, avec l'offre qui l'ouvre.
-  const tier = context.tier;
-  const sees = (block: Parameters<typeof canSee>[1]) => canSee(tier, block);
+  // Le plan d'action se coupe en deux sur un compte gratuit : les correctifs de
+  // contenu se lisent — l'onglet qui les exécute est ouvert —, les autres
+  // gardent leur forme sous voile. Les premiers sont bornés : quelques cartes
+  // démontrent, la liste entière remplacerait l'offre.
+  const openRecommendations = analysis.recommendations
+    .filter((r) => seesRecommendation(tier, r.category))
+    .slice(0, sees("recommendations") ? undefined : FREE_RECOMMENDATION_LIMIT);
+  const lockedRecommendations = analysis.recommendations.filter(
+    (r) => !openRecommendations.includes(r),
+  );
 
   const date = new Date(analysis.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -120,10 +145,16 @@ export default async function DashboardHomePage() {
         </div>
       </SiteScreenshot>
 
-      {/* 1bis. Le constat écrit à la frappe, comme sur le rapport d'analyse. */}
-      <Block block="diagnostic" open={sees("diagnostic")}>
-        <PaidReportCard result={analysis} diagnostic={diagnostic} scope="dashboard" />
-      </Block>
+      {/* 1bis. Le constat écrit à la frappe, comme sur le rapport d'analyse. Il
+             n'est jamais voilé : c'est le texte qui dit au client ce qu'on a vu
+             chez lui. En gratuit, il ne rend compte que de ce qui est ouvert —
+             le contenu, le classement Gemini — et annonce le reste sans le
+             détailler. */}
+      <PaidReportCard
+        result={analysis}
+        diagnostic={diagnostic}
+        scope={tierAtLeast(tier, "boost") ? "dashboard" : "free"}
+      />
 
       {/* 2. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
              n'est pas rattaché. Les dates sont lues ici, côté serveur, pour que
@@ -159,12 +190,31 @@ export default async function DashboardHomePage() {
           <h2 className="text-lg font-bold">{t("priorities")}</h2>
           <p className="text-sm text-muted">{t("prioritiesHint")}</p>
         </div>
-        <Block block="recommendations" open={sees("recommendations")}>
-          <Recommendations
-            recommendations={analysis.recommendations}
-            emptyLabel={ta("results.noRecommendations")}
-          />
-        </Block>
+        {/* En clair, les correctifs de contenu ; sous voile, tout le reste. Les
+            deux listes se suivent sans rupture : le client lit trois cartes,
+            puis voit la forme de celles qu'il n'a pas encore. */}
+        <div className="space-y-4">
+          {openRecommendations.length > 0 && (
+            <Recommendations
+              recommendations={openRecommendations}
+              emptyLabel={ta("results.noRecommendations")}
+            />
+          )}
+          {lockedRecommendations.length > 0 && (
+            <Block block="recommendations" open={sees("recommendations")}>
+              <Recommendations
+                recommendations={lockedRecommendations}
+                emptyLabel={ta("results.noRecommendations")}
+              />
+            </Block>
+          )}
+          {openRecommendations.length === 0 && lockedRecommendations.length === 0 && (
+            <Recommendations
+              recommendations={[]}
+              emptyLabel={ta("results.noRecommendations")}
+            />
+          )}
+        </div>
       </section>
 
       <Block block="agenda" open={sees("agenda")}>

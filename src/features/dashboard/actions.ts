@@ -127,6 +127,8 @@ export const prepareDashboardAction = authActionClient
     // Un compte gratuit reçoit bien l'audit complet — c'est lui qui détecte la
     // niche et sort les mots-clés, les deux choses qu'il a le droit de voir —
     // mais ses classements ne sont relevés que sur Gemini (cf. `FREE_ENGINES`).
+    // Et on s'arrête aux appels utiles : les relevés hors-site nourrissent des
+    // onglets qui resteront sous voile, on ne les paie donc pas.
     const { tier } = await getAccess(userId);
     const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(tier, engine));
 
@@ -135,6 +137,7 @@ export const prepareDashboardAction = authActionClient
       {
         mode,
         engines,
+        offsite: tierAtLeast(tier, "allin"),
         mapsUrl: profile.mapsUrl ?? null,
         declaredNiche: profile.niche,
         declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
