@@ -204,6 +204,11 @@ function AgentLogos() {
  * reste nette au-dessus : c'est la démonstration, et la cacher reviendrait à
  * vendre sans montrer.
  *
+ * Sous le voile, un seul élément : le bouton. Le badge et les deux phrases qui
+ * l'accompagnaient redisaient ce que le titre et le corps de la modale, nets
+ * juste au-dessus, venaient déjà d'annoncer — trois fois la même promesse en
+ * un demi-écran.
+ *
  * Le prompt n'est pas seulement flouté, il n'existe pas ici : le serveur ne
  * l'écrit pas pour un compte gratuit (cf. `SolveAgentsDock`). Un voile CSS se
  * contourne avec l'inspecteur ; une chaîne absente, non.
@@ -212,9 +217,7 @@ function LockedActions({ ctaLabel }: { ctaLabel: string }) {
   const t = useTranslations("analysisReport.solve.modal");
 
   return (
-    // La hauteur est posée d'avance : le voile porte plus de texte que les deux
-    // boutons qu'il recouvre, et sans réserve il déborderait du bloc.
-    <div className="relative isolate min-h-[15rem] overflow-hidden rounded-[22px]">
+    <div className="relative isolate overflow-hidden rounded-[22px]">
       <div
         aria-hidden
         inert
@@ -237,24 +240,10 @@ function LockedActions({ ctaLabel }: { ctaLabel: string }) {
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-snow/75 via-snow/92 to-snow"
       />
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 px-4 py-4 text-center">
-        <span className="inline-flex items-center gap-1.5 rounded-pill border border-fog bg-snow px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-obsidian shadow-[var(--shadow-md)]">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
-            <path
-              d="M8 11V8a4 4 0 0 1 8 0v3"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-          {t("lockedOffer")}
-        </span>
-        <p className="text-pretty text-sm font-semibold text-text">{t("lockedTitle")}</p>
-        <p className="text-pretty text-xs leading-relaxed text-muted">{t("lockedBody")}</p>
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
         <Link
           href={ROUTES.pricing}
-          className="mt-0.5 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
           {t("lockedCta")}
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>

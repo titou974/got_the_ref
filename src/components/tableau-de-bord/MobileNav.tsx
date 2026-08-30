@@ -118,18 +118,24 @@ export function MobileNav({
           aria-label={t("openMenu")}
           className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-border bg-surface px-2.5 py-2 text-left transition-colors duration-200 hover:border-pebble focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
-          {/* La marque, pas l'icône de la section : c'est le seul endroit du
-              téléphone où le logo a sa place, et le nom de la section juste à
-              côté dit déjà où l'on est. Le carré noir des icônes de colonne y
-              ressemblait de loin à une pastille sans signification. */}
-          <Image
-            src="/logo.svg"
-            alt=""
-            width={40}
-            height={40}
-            priority
-            className="size-10 shrink-0 rounded-xl"
-          />
+          {/* L'icône du site suivi, comme dans le sélecteur de la colonne de
+              gauche : la poignée dit d'abord de quel site on lit les chiffres.
+              Le logo got_the_ref n'apprenait rien — le client sait chez qui il
+              est —, et l'icône de la section faisait doublon avec son nom,
+              écrit juste à côté. Sans domaine, la marque reprend la place :
+              une pastille vide se lirait comme une image cassée. */}
+          {domain ? (
+            <SiteFavicon domain={domain} className="h-10 w-10 rounded-xl" />
+          ) : (
+            <Image
+              src="/logo.svg"
+              alt=""
+              width={40}
+              height={40}
+              priority
+              className="h-10 w-10 shrink-0 rounded-xl"
+            />
+          )}
 
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[15px] font-semibold leading-tight text-text">

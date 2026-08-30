@@ -156,6 +156,10 @@ export async function Dashboard({
       {/* Rapport ouvert : l'action suivante (faire corriger) reste accessible
           d'un bout à l'autre de la page. */}
       {!locked && (
+        <>
+        {/* La barre flotte au-dessus du bas de l'écran : cette réserve empêche
+            qu'elle recouvre le dernier bloc du rapport une fois défilé. */}
+        <div className="h-40 sm:h-24" aria-hidden />
         <SolveAgentsBar
           domain={result.domain}
           stack={result.signals.stack ?? null}
@@ -165,6 +169,7 @@ export async function Dashboard({
           // même résultat à la main.
           solutionPrompt={buildSolutionPrompt("results", result, diagnostic)}
         />
+        </>
       )}
     </div>
   );

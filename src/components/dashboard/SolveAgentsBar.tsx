@@ -7,10 +7,16 @@ import type { DetectedStack } from "@/lib/geo/types";
 import { ConnectSiteModal } from "./ConnectSiteModal";
 
 /**
- * Barre d'action du rapport payé. Elle reste à portée de pouce en permanence :
- * collée au bas de l'écran sur mobile, flottante au-dessus du contenu sur
- * grand écran. Deux actions, une seule dominante — résoudre ; partager reste
- * volontairement discret.
+ * Barre d'action du rapport. Elle reste à portée de pouce en permanence :
+ * une pilule flottante au-dessus du contenu, à toutes les tailles. Deux
+ * actions, une seule dominante — résoudre ; partager reste volontairement
+ * discret.
+ *
+ * Sur téléphone, elle formait auparavant un bandeau blanc pleine largeur collé
+ * au bord bas. Deux ennuis : ce fond posait une seconde barre d'outils sous
+ * celle du navigateur, et la bulle de discussion, ancrée en bas à droite,
+ * tombait en travers du bouton « partager ». La pilule est donc remontée
+ * au-dessus de la bulle et ne porte plus que sa propre surface.
  */
 
 const COPIED_FEEDBACK_MS = 2200;
@@ -83,17 +89,19 @@ export function SolveAgentsBar({
 
   return (
     <>
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2">
+      {/* La hauteur du décalage bas dégage la bulle de discussion, qui occupe
+          le coin inférieur droit sur toute la largeur d'un téléphone. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-4 sm:bottom-6">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.35, ease: "easeOut" }}
-          className="pointer-events-auto flex items-center gap-2 border-t border-fog bg-snow/95 px-4 py-3 backdrop-blur-md [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))] sm:rounded-full sm:border sm:p-1.5 sm:shadow-[var(--shadow-md)]"
+          className="pointer-events-auto flex max-w-full items-center gap-1.5 rounded-full border border-fog bg-snow/95 p-1.5 shadow-[var(--shadow-md)] backdrop-blur-md"
         >
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:flex-none sm:px-6"
+            className="flex min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:px-6"
           >
             <SparkIcon />
             {t("cta")}
@@ -108,7 +116,7 @@ export function SolveAgentsBar({
             type="button"
             onClick={share}
             aria-label={t("share")}
-            className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-fog px-3.5 py-3 text-sm font-medium text-muted transition-colors duration-200 hover:border-pebble hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:border-transparent sm:px-4"
+            className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-transparent px-3.5 py-3 text-sm font-medium text-muted transition-colors duration-200 hover:border-fog hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:px-4"
           >
             {copied ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>

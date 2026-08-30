@@ -85,9 +85,11 @@ async function Dock({
 
   return (
     <>
-      {/* La barre est fixée au bas de l'écran : sans cette réserve, elle
-          recouvrirait la dernière carte de la page une fois défilée. */}
-      <div className="h-20 sm:h-16" aria-hidden />
+      {/* La barre flotte au-dessus du bas de l'écran : sans cette réserve, elle
+          recouvrirait la dernière carte de la page une fois défilée. La hauteur
+          suit son décalage — pilule comprise, elle occupe environ 140 px sur
+          téléphone, où elle est remontée pour dégager la bulle de discussion. */}
+      <div className="h-40 sm:h-24" aria-hidden />
       <SolveAgentsBar
         domain={result.domain}
         stack={result.signals.stack ?? null}

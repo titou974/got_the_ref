@@ -222,9 +222,6 @@
         "statusFixed": "Corrigé",
         "statusPending": "À corriger",
         "promptPreviewLabel": "À coller dans ChatGPT, Claude ou Cursor",
-        "lockedOffer": "Coup de Boost",
-        "lockedTitle": "Les correctifs sont prêts, l'exécution s'achète",
-        "lockedBody": "Le prompt qui corrige vos six sections d'un seul copier-coller, et le rattachement de votre site aux agents, s'ouvrent avec le Coup de Boost.",
         "lockedCta": "Débloquer avec le Coup de Boost"
       }
     },
