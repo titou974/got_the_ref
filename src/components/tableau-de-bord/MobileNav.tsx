@@ -43,28 +43,6 @@ const SWIPE_CLOSE_PX = 70;
 /** Un geste rapide ferme aussi, même court : c'est le réflexe du pouce. */
 const SWIPE_CLOSE_VELOCITY = -400;
 
-/**
- * Les réglages ne sont pas une section de la colonne — on y entre par l'avatar —
- * mais le bandeau doit quand même dire où l'on est. Sans cette exception, il
- * afficherait « Accueil » pendant qu'on modifie son mot de passe.
- */
-function SettingsIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden className={className}>
-      <g
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-      </g>
-    </svg>
-  );
-}
-
 export function MobileNav({
   domain,
   showMaps,
@@ -86,9 +64,11 @@ export function MobileNav({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
+  // Les réglages ne sont pas une section de la colonne — on y entre par
+  // l'avatar — mais le bandeau doit quand même dire où l'on est. Sans cette
+  // exception, il afficherait « Accueil » pendant qu'on change son mot de passe.
   const onSettings = pathname.startsWith(ROUTES.dashboardSettings);
   const current = currentItem(navItems(showMaps), pathname);
-  const CurrentIcon = onSettings ? SettingsIcon : current.icon;
   const currentLabel = onSettings ? tSettings("title") : t(current.key);
 
   useBodyScrollLock(open);
@@ -138,12 +118,18 @@ export function MobileNav({
           aria-label={t("openMenu")}
           className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-border bg-surface px-2.5 py-2 text-left transition-colors duration-200 hover:border-pebble focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
-          <span
-            aria-hidden
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-obsidian text-white"
-          >
-            <CurrentIcon className="size-[19px]" />
-          </span>
+          {/* La marque, pas l'icône de la section : c'est le seul endroit du
+              téléphone où le logo a sa place, et le nom de la section juste à
+              côté dit déjà où l'on est. Le carré noir des icônes de colonne y
+              ressemblait de loin à une pastille sans signification. */}
+          <Image
+            src="/logo.svg"
+            alt=""
+            width={40}
+            height={40}
+            priority
+            className="size-10 shrink-0 rounded-xl"
+          />
 
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[15px] font-semibold leading-tight text-text">
