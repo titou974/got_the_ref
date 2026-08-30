@@ -18,7 +18,7 @@ import { LockedPill, Obscured } from "@/components/dashboard/LockedContent";
  */
 
 /** Logos des moteurs IA (chemins dans /public), indexés par nom de moteur. */
-const ENGINE_LOGOS: Record<string, string> = {
+export const ENGINE_LOGOS: Record<string, string> = {
   ChatGPT: "/chatgpt.png",
   Gemini: "/gemini.webp",
 };

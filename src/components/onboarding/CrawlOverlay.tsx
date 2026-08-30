@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
-import animation from "@/lottie/fetch.json";
+import { AiKeycaps } from "@/components/AiKeycaps";
 import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
-
-const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
 /**
  * Le voile d'attente pendant la lecture du site.
+ *
+ * Au-dessus des phrases, les trois touches des moteurs — ChatGPT, Perplexity,
+ * Gemini — enfoncées l'une après l'autre, comme sur le loader de l'analyse.
+ * L'attente est la même des deux côtés du produit : elle doit se reconnaître.
+ * Une animation abstraite ne disait pas à qui on allait poser la question.
  *
  * Le crawl prend de vingt secondes à deux minutes selon la taille du site.
  * Aucune barre de progression : nous ne savons pas combien de pages seront
@@ -44,11 +46,9 @@ export function CrawlOverlay() {
       aria-live="polite"
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg/95 px-6 backdrop-blur"
     >
-      <div aria-hidden className="w-56 max-w-[60vw]">
-        <Lottie animationData={animation} loop autoplay className="h-full w-full" />
-      </div>
+      <AiKeycaps className="gap-3" />
 
-      <p className="mt-6 text-center text-lg font-semibold">{STEPS[index]}</p>
+      <p className="mt-8 text-center text-lg font-semibold">{STEPS[index]}</p>
       <p className="mt-2 max-w-xs text-center text-sm text-muted">
         Comptez une minute environ. Gardez cet onglet ouvert : nous vous emmenons à l&apos;étape
         suivante dès que c&apos;est prêt.
