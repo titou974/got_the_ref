@@ -1598,6 +1598,88 @@
       "priorities": "À corriger en premier",
       "prioritiesHint": "Classé par ce que ça rapporte, pas par difficulté."
     },
+    "connect": {
+      "rights": {
+        "publish": "publication d'articles",
+        "edit": "correction des pages",
+        "none": "aucun droit accordé",
+        "join": " et "
+      },
+      "fields": {
+        "siteUrl": "Adresse du site",
+        "username": "Nom d'utilisateur",
+        "applicationPassword": "Mot de passe d'application",
+        "shopDomain": "Domaine de la boutique",
+        "adminAccessToken": "Jeton d'accès admin",
+        "siteId": "Identifiant du site",
+        "apiKey": "Clé d'API",
+        "apiToken": "Jeton d'API",
+        "adminApiKey": "Clé d'API admin",
+        "webserviceKey": "Clé du webservice",
+        "webhookUrl": "Adresse du webhook"
+      },
+      "form": {
+        "platform": "Plateforme",
+        "optional": "(facultatif)",
+        "rights": "Ce rattachement ouvre : {rights}.",
+        "docs": "Documentation de la plateforme",
+        "checking": "Vérification…",
+        "submit": "Rattacher",
+        "cancel": "Annuler"
+      },
+      "panel": {
+        "title": "Rattacher votre site",
+        "body": "Une fois le site rattaché, les agents corrigent vos pages et déposent vos articles à votre place. Vos identifiants sont chiffrés avant d'être enregistrés, et ils ne redescendent jamais dans votre navigateur.",
+        "rightsOpen": "Ce rattachement ouvre : {rights}.",
+        "connectedSince": "Rattaché le {date}.",
+        "edit": "Modifier le rattachement",
+        "remove": "Retirer le rattachement",
+        "removing": "Retrait en cours…",
+        "submit": "Rattacher mon site"
+      },
+      "placeholders": {
+        "siteUrl": "https://votre-site.fr",
+        "username": "Votre identifiant de connexion",
+        "applicationPassword": "abcd EFGH ijkl MNOP qrst UVWX",
+        "shopDomain": "ma-boutique.myshopify.com",
+        "adminAccessToken": "shpat_…",
+        "siteId": "Identifiant affiché dans les réglages du site",
+        "apiKey": "Collez la clé ici",
+        "apiToken": "Collez le jeton ici",
+        "adminApiKey": "identifiant:secret",
+        "webserviceKey": "Collez la clé ici",
+        "webhookUrl": "https://votre-site.fr/api/articles"
+      },
+      "guide": {
+        "pathLabel": "Le chemin dans votre administration",
+        "wordpress": {
+          "label": "Où trouver votre clé",
+          "path": "Utilisateurs › Profil › Mots de passe d'application",
+          "step1": "Connectez-vous à votre WordPress, ouvrez Utilisateurs, puis Profil.",
+          "step2": "Descendez tout en bas de la page, jusqu'à la section « Mots de passe d'application ».",
+          "step3": "Donnez un nom à la clé, par exemple got_the_ref, puis cliquez sur Ajouter.",
+          "step4": "Copiez la clé qui s'affiche et collez-la ci-dessous. WordPress ne la remontrera plus.",
+          "shapeLabel": "Elle ressemble à ceci",
+          "shape": "abcd EFGH ijkl MNOP qrst UVWX",
+          "shapeNote": "Six groupes de quatre caractères. Gardez les espaces, ils font partie de la clé.",
+          "safety": "Ce n'est pas votre mot de passe de connexion. Vous pouvez retirer cette clé quand vous voulez, depuis la même page, sans toucher à votre mot de passe.",
+          "missing": "La section n'apparaît pas ? Votre site doit être en HTTPS, et certaines extensions de sécurité la masquent."
+        },
+        "shopify": {
+          "label": "Où trouver votre jeton",
+          "path": "Paramètres › Applications et canaux de vente › Développer des applications",
+          "step1": "Dans l'administration de votre boutique, ouvrez Paramètres, puis Applications et canaux de vente.",
+          "step2": "Cliquez sur Développer des applications, puis Créer une application, et nommez-la got_the_ref.",
+          "step3": "Dans l'onglet Configuration, section Admin API, cochez read_content et write_content. Ce sont les droits sur les articles, les blogs et les pages.",
+          "step4": "Installez l'application, révélez le jeton d'accès Admin API et collez-le ci-dessous.",
+          "shapeLabel": "Il ressemble à ceci",
+          "shape": "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",
+          "shapeNote": "Il commence toujours par shpat_. Shopify ne l'affiche qu'une seule fois.",
+          "safety": "Ce jeton ne donne accès qu'à ce que vous avez coché. Vous pouvez désinstaller l'application à tout moment pour le révoquer.",
+          "missing": "Vous ne voyez pas Développer des applications ? Demandez à un compte propriétaire de la boutique de vous en donner le droit."
+        }
+      }
+    },
     "traffic": {
       "title": "Trafic amené par les IA",
       "hint": "Les visites arrivées depuis un assistant.",
