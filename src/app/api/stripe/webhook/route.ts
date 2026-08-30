@@ -1,99 +1,22 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe, resolvePriceId } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import {
   BOOST_CHECKOUT_KIND,
   grantBoostFromSession,
   unlockAnalysisFromSession,
 } from "@/features/billing/unlock";
-import { BILLING_CYCLES, PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
+import { syncSubscription, syncSubscriptionFromSession } from "@/features/billing/subscription";
+import { PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
 
 export const runtime = "nodejs";
-
-/**
- * Retrouve l'offre payante correspondant à un Price ID en résolvant le tarif de
- * chaque offre (l'env peut contenir un Product ID, d'où la résolution).
- *
- * Chaque offre est testée sur ses deux cycles : un abonnement annuel porte un
- * price différent du mensuel, et sans ça il ne serait rattaché à aucune offre —
- * l'abonné retomberait en `free` au premier événement Stripe.
- */
-async function planFromPriceId(priceId: string | undefined): Promise<PaidPlanKey | null> {
-  if (!priceId) return null;
-
-  for (const plan of PAID_PLAN_KEYS) {
-    for (const cycle of BILLING_CYCLES) {
-      try {
-        if ((await resolvePriceId(plan, cycle)) === priceId) return plan;
-      } catch {
-        // env d'un cycle absente : on ignore et on continue.
-      }
-    }
-  }
-  return null;
-}
 
 /** Valide qu'une valeur de metadata est bien une offre payante connue. */
 function asPaidPlan(value: string | undefined): PaidPlanKey | null {
   return value && (PAID_PLAN_KEYS as readonly string[]).includes(value)
     ? (value as PaidPlanKey)
     : null;
-}
-
-async function syncSubscription(sub: Stripe.Subscription, userId?: string) {
-  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-  const resolvedUserId =
-    userId ??
-    (sub.metadata?.userId as string | undefined) ??
-    (await prisma.user.findFirst({ where: { stripeCustomerId: customerId } }))?.id;
-
-  if (!resolvedUserId) return;
-
-  const priceId = sub.items.data[0]?.price.id;
-  const plan = await planFromPriceId(priceId);
-  const active = sub.status === "active" || sub.status === "trialing";
-  const periodEnd = sub.items.data[0]?.current_period_end;
-
-  await prisma.subscription.upsert({
-    where: { userId: resolvedUserId },
-    create: {
-      userId: resolvedUserId,
-      stripeCustomerId: customerId,
-      stripeSubscriptionId: sub.id,
-      stripePriceId: priceId,
-      status: sub.status,
-      currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
-    },
-    update: {
-      stripeCustomerId: customerId,
-      stripeSubscriptionId: sub.id,
-      stripePriceId: priceId,
-      status: sub.status,
-      currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
-    },
-  });
-
-  // L'offre du compte suit l'abonnement, à deux exceptions près. Un compte de
-  // démonstration n'est jamais touché par Stripe : son accès est une décision
-  // prise à la main, pas un encaissement. Et un abonnement qui s'arrête ne
-  // reprend pas un Coup de Boost déjà réglé — le client retombe dessus, pas sur
-  // le gratuit.
-  const current = await prisma.user.findUnique({
-    where: { id: resolvedUserId },
-    select: { plan: true, boostGrantedAt: true },
-  });
-
-  const next =
-    current?.plan === "demo"
-      ? "demo"
-      : active && plan
-        ? plan
-        : current?.boostGrantedAt
-          ? "boost"
-          : "free";
-
-  await prisma.user.update({ where: { id: resolvedUserId }, data: { plan: next } });
 }
 
 export async function POST(request: Request) {
@@ -113,17 +36,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const stripe = getStripe();
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode === "subscription" && session.subscription) {
-          const subId =
-            typeof session.subscription === "string"
-              ? session.subscription
-              : session.subscription.id;
-          const sub = await stripe.subscriptions.retrieve(subId);
-          await syncSubscription(sub, session.metadata?.userId);
+        if (session.mode === "subscription") {
+          // Le compte peut ne pas encore exister : l'abonnement se souscrit sans
+          // inscription préalable. `syncSubscriptionFromSession` reste alors sans
+          // effet, et c'est la création de compte qui rejoue le rattachement.
+          await syncSubscriptionFromSession(session);
 
           // Abonnement souscrit depuis un rapport : on le rattache et on l'ouvre,
           // même si le compte n'existe pas encore (il se crée juste après).

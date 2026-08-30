@@ -13,13 +13,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * L'inscription s'intercale entre la home et les tarifs : on sait qui l'on
- * accueille avant de parler d'argent. La destination par défaut est donc la
- * page tarifs — et non le compte.
+ * L'inscription ouvre un compte, puis l'accueil : le questionnaire arme les
+ * agents, et le tableau de bord suit. Elle ne dépose plus personne sur la
+ * grille tarifaire — c'est le compte gratuit qui montre le produit, et l'offre
+ * se vend depuis le tableau de bord (cf. `destination.ts`).
  *
- * Sauf pour qui possède déjà un compte : la grille tarifaire n'a rien à lui
- * dire, et c'est le cas courant depuis que Google ouvre une session au lieu de
- * refuser une adresse connue. `resolveAuthDestination` le renvoie chez lui.
+ * Pour qui possède déjà un compte — le cas courant depuis que Google ouvre une
+ * session au lieu de refuser une adresse connue —, `resolveAuthDestination` le
+ * renvoie chez lui sans repasser par le formulaire.
  */
 export default async function InscriptionPage({
   searchParams,
@@ -27,20 +28,24 @@ export default async function InscriptionPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const next = safeNextPath(params[NEXT_PARAM], ROUTES.pricing);
+  const requested = params[NEXT_PARAM];
+  const next = safeNextPath(requested, ROUTES.dashboard);
 
   // Déjà identifié : inutile de redemander — reste à savoir où l'emmener.
   const session = await getSession();
-  if (session) redirect(await resolveAuthDestination(session.user.id, next));
+  if (session) redirect(await resolveAuthDestination(session.user.id, requested));
 
   const errorKey = oauthErrorKey(params.error);
   const t = await getTranslations("auth");
 
+  // Sans destination demandée, la bascule vers la connexion n'en invente pas :
+  // c'est ce qui envoyait un client de longue date sur `/connexion?suite=/tarifs`,
+  // et donc sur la grille tarifaire, après s'être identifié.
   return (
     <AuthScreen
       mode="signup"
       callbackURL={next}
-      switchHref={signInWithNext(next)}
+      switchHref={requested ? signInWithNext(next) : ROUTES.signIn}
       error={errorKey ? t(errorKey) : null}
     />
   );

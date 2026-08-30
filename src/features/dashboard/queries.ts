@@ -294,7 +294,7 @@ export type OnPageRewriteQuota = Record<OnPageElementKey, number>;
  * horloge donnerait à un client une journée qui commence à 2 h du matin. On
  * relit donc la date du jour dans le fuseau annoncé, et on en refait un instant.
  */
-function startOfDay(): Date {
+export function startOfDay(): Date {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: ON_PAGE_REWRITE_QUOTA.timeZone,
     year: "numeric",

@@ -35,7 +35,7 @@ export const BOOST_CHECKOUT_KIND = "boost_one_shot";
  * compte : le compte n'est créé qu'au retour, et c'est l'e-mail de la session
  * qui les relie.
  */
-async function resolveSessionUserId(
+export async function resolveSessionUserId(
   session: Stripe.Checkout.Session,
   known?: string | null,
 ): Promise<string | null> {
