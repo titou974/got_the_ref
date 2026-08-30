@@ -49,11 +49,13 @@ export function AuthPanel({
   // choisir. On lui ouvre le formulaire plutôt que l'écran de choix.
   const [showEmailForm, setShowEmailForm] = useState(!googleEnabled || Boolean(notice));
 
-  // À l'inscription, Google ne distingue pas un nouveau venu d'un client qui a
-  // déjà un compte : le même clic ouvre une session dans les deux cas.
-  // L'aiguillage de `/bienvenue` tranche au retour, plutôt que d'envoyer un
-  // abonné de longue date sur la grille tarifaire.
-  const googleCallbackURL = isSignup ? afterAuthWithNext(callbackURL) : callbackURL;
+  // Google ne distingue pas un nouveau venu d'un client qui a déjà un compte :
+  // le même clic ouvre une session dans les deux cas, et il rend la main au
+  // navigateur sans savoir à qui il a affaire. Les deux modes repassent donc
+  // par `/bienvenue`, seul endroit où l'on sait qui vient d'entrer — sinon un
+  // compte sans accueil rempli atterrit sur des écrans vides, et un abonné de
+  // longue date sur la grille tarifaire.
+  const googleCallbackURL = afterAuthWithNext(callbackURL);
 
   return (
     <div className="w-full">

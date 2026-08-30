@@ -14,12 +14,13 @@ import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
 import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
+import { getArticleQuota, getDashboardContext, readSiteCredentials } from "./queries";
 import {
-  getArticleQuota,
-  getDashboardContext,
-  getOnPageRewriteQuota,
-  readSiteCredentials,
-} from "./queries";
+  releaseArticleGeneration,
+  releaseOnPageRewrite,
+  reserveArticleGeneration,
+  reserveOnPageRewrite,
+} from "./quota";
 import { ARTICLE_QUOTAS, ON_PAGE_REWRITE_QUOTA } from "@/constants/plans";
 import { FREE_CONTENT_REWRITES, runsEngine, tierAtLeast } from "@/constants/access";
 import { getAccess, requireSection } from "@/features/billing/access";
@@ -493,6 +494,9 @@ export const applyStructureAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
     const userId = ctx.auth.user.id;
+    // Les fichiers de structure sont le livrable du Coup de Boost : le voile
+    // posé sur l'onglet ne les protège pas, la réponse renvoie leur contenu.
+    await requireSection(userId, "architecture");
     const { link, credentials } = await requireEditableLink(userId);
 
     const context = await getDashboardContext(userId);
@@ -539,8 +543,9 @@ export const rewriteOnPageAction = authActionClient
  *
  * Trois par élément et par jour : le plafond est vérifié ici, jamais dans le
  * composant — un bouton grisé côté client n'empêche personne d'appeler l'action.
- * La passe n'est comptée qu'une fois le texte obtenu : un appel au modèle qui
- * échoue ne coûte pas une des trois demandes du client.
+ * La passe est réservée avant l'appel au modèle et rendue s'il échoue : un texte
+ * qui n'arrive pas ne coûte rien, et deux clics simultanés ne peuvent pas
+ * consommer deux fois la même place (cf. `quota.ts`).
  *
  * Le client d'action est celui de tout le tableau de bord, pas
  * `subscriberActionClient` : l'accès à la section est déjà la garde, et exiger
@@ -553,10 +558,7 @@ export const regenerateOnPageAction = authActionClient
     const userId = ctx.auth.user.id;
     const { element } = parsedInput;
 
-    const [context, quota] = await Promise.all([
-      getDashboardContext(userId),
-      getOnPageRewriteQuota(userId),
-    ]);
+    const context = await getDashboardContext(userId);
 
     const analysis = context.analysis;
     if (!analysis || !context.analysisId) {
@@ -570,12 +572,17 @@ export const regenerateOnPageAction = authActionClient
         400,
       );
     }
-    if (quota[element] <= 0) {
+
+    // La place est prise avant l'appel au modèle, pas après : deux clics
+    // simultanés liraient sinon le même compteur et dépenseraient deux passes
+    // pour une seule autorisée.
+    const reservation = await reserveOnPageRewrite(userId, element);
+    if (!reservation.ok) {
       // Deux refus différents, parce que ce ne sont pas les mêmes limites : le
       // compte gratuit a épuisé son unique essai — il n'y a pas de lendemain à
       // lui promettre —, l'abonné retrouvera son compteur demain matin.
       throw new AppError(
-        tierAtLeast(context.tier, "boost")
+        tierAtLeast(reservation.tier, "boost")
           ? `Vous avez utilisé vos ${ON_PAGE_REWRITE_QUOTA.daily} réécritures du jour sur cet élément. Le compteur repart demain.`
           : `Votre offre gratuite comprend ${FREE_CONTENT_REWRITES} réécriture. Passez au Coup de Boost pour laisser les agents reprendre tout votre contenu.`,
         "QUOTA_EXCEEDED",
@@ -583,15 +590,23 @@ export const regenerateOnPageAction = authActionClient
       );
     }
 
-    const rewritten = await regenerateOnPageElement(
-      analysis.profile,
-      analysis.signals,
-      insight.keywords,
-      element,
-      insight.suggested,
-      context.tone.summary,
-    );
+    let rewritten;
+    try {
+      rewritten = await regenerateOnPageElement(
+        analysis.profile,
+        analysis.signals,
+        insight.keywords,
+        element,
+        insight.suggested,
+        context.tone.summary,
+      );
+    } catch (error) {
+      // Un appel qui échoue ne coûte pas une passe : la place est rendue.
+      await releaseOnPageRewrite(reservation.id);
+      throw error;
+    }
     if (!rewritten) {
+      await releaseOnPageRewrite(reservation.id);
       throw new AppError("La réécriture n'a rien donné. Réessayez.", "REWRITE_FAILED", 502);
     }
 
@@ -600,16 +615,13 @@ export const regenerateOnPageAction = authActionClient
       trendingKeywords: { ...insight, suggested: { ...insight.suggested, ...rewritten } },
     };
 
-    await Promise.all([
-      prisma.analysis.update({
-        where: { id: context.analysisId },
-        data: { data: JSON.stringify(updated) },
-      }),
-      prisma.onPageRewrite.create({ data: { userId, element } }),
-    ]);
+    await prisma.analysis.update({
+      where: { id: context.analysisId },
+      data: { data: JSON.stringify(updated) },
+    });
 
     revalidatePath(ROUTES.dashboardContent);
-    return { remaining: quota[element] - 1 };
+    return { remaining: reservation.remaining };
   });
 
 // ── Articles ─────────────────────────────────────────────────────────────────
@@ -661,12 +673,14 @@ export const writeArticleAction = authActionClient
     const article = await prisma.article.findFirst({ where: { id: parsedInput.id, userId } });
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
 
-    // Le quota se vérifie avant l'appel au modèle, pas après : une rédaction
-    // refusée ne doit rien coûter.
-    const quota = await getArticleQuota(userId);
-    if (quota.remaining <= 0) {
+    // La place est prise avant l'appel au modèle, et rendue s'il échoue : une
+    // rédaction qui n'aboutit pas ne coûte rien, et deux demandes lancées en
+    // même temps ne peuvent pas consommer deux fois la dernière passe.
+    const reservation = await reserveArticleGeneration(userId, article.id);
+    if (!reservation.ok) {
       // Sans date de renouvellement, il n'y a rien à attendre : c'est la semaine
       // du Coup de Boost qui s'est refermée, et la suite s'appelle l'abonnement.
+      const quota = await getArticleQuota(userId);
       throw new AppError(
         quota.renewsAt
           ? `Vous avez utilisé vos ${ARTICLE_QUOTAS.weekly} rédactions de la semaine. La prochaine se libère ${formatRenewal(quota.renewsAt)}.`
@@ -676,29 +690,30 @@ export const writeArticleAction = authActionClient
       );
     }
 
-    const context = await getDashboardContext(userId);
-    const outline = parseOutline(article.outline);
-    const draft = await writeArticle(
-      context,
-      { title: article.title, keyword: article.keyword, outline },
-      parsedInput.instruction ?? null,
-    );
+    let draft;
+    try {
+      const context = await getDashboardContext(userId);
+      const outline = parseOutline(article.outline);
+      draft = await writeArticle(
+        context,
+        { title: article.title, keyword: article.keyword, outline },
+        parsedInput.instruction ?? null,
+      );
+    } catch (error) {
+      await releaseArticleGeneration(reservation.id);
+      throw error;
+    }
 
-    await prisma.$transaction([
-      prisma.article.update({
-        where: { id: article.id },
-        data: {
-          title: draft.title,
-          excerpt: draft.excerpt,
-          body: draft.body,
-          status: "drafted",
-          revisions: article.body ? article.revisions + 1 : article.revisions,
-        },
-      }),
-      // La passe n'est décomptée qu'une fois le texte obtenu : un modèle qui
-      // échoue ne doit pas consommer la semaine du client.
-      prisma.articleGeneration.create({ data: { userId, articleId: article.id } }),
-    ]);
+    await prisma.article.update({
+      where: { id: article.id },
+      data: {
+        title: draft.title,
+        excerpt: draft.excerpt,
+        body: draft.body,
+        status: "drafted",
+        revisions: article.body ? article.revisions + 1 : article.revisions,
+      },
+    });
 
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(article.id));
@@ -709,7 +724,7 @@ export const writeArticleAction = authActionClient
       title: draft.title,
       body: draft.body,
       excerpt: draft.excerpt,
-      remaining: quota.remaining - 1,
+      remaining: reservation.remaining,
     };
   });
 
@@ -887,6 +902,9 @@ export const findProspectsAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
     const userId = ctx.auth.user.id;
+    // La recherche coûte un appel au modèle et la liste se relit ensuite en
+    // base : le voile de l'onglet ne suffit pas à la réserver à l'abonnement.
+    await requireSection(userId, "presence");
     const context = await getDashboardContext(userId);
     const sites = await findProspects(context);
 
@@ -913,6 +931,7 @@ export const draftProspectMessageAction = authActionClient
   .inputSchema(prospectIdSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
+    await requireSection(userId, "presence");
     const prospect = await prisma.outreachProspect.findFirst({
       where: { id: parsedInput.id, userId },
     });
@@ -940,8 +959,10 @@ export const draftProspectMessageAction = authActionClient
 export const setProspectStatusAction = authActionClient
   .inputSchema(prospectStatusSchema)
   .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "presence");
     const { count } = await prisma.outreachProspect.updateMany({
-      where: { id: parsedInput.id, userId: ctx.auth.user.id },
+      where: { id: parsedInput.id, userId },
       data: {
         status: parsedInput.status,
         contactedAt: parsedInput.status === "contacted" ? new Date() : undefined,
@@ -959,6 +980,9 @@ export const planGooglePostsAction = authActionClient
   .inputSchema(planGooglePostsSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
+    // Même raison que la présence web : la rédaction des posts coûte un appel
+    // au modèle, et le calendrier produit se relit en base.
+    await requireSection(userId, "maps");
     const context = await getDashboardContext(userId);
     const posts = await planGooglePosts(context, parsedInput.count);
 
@@ -988,8 +1012,10 @@ export const planGooglePostsAction = authActionClient
 export const approveGooglePostAction = authActionClient
   .inputSchema(googlePostIdSchema)
   .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "maps");
     const { count } = await prisma.googlePost.updateMany({
-      where: { id: parsedInput.id, userId: ctx.auth.user.id },
+      where: { id: parsedInput.id, userId },
       data: { status: "approved" },
     });
     if (!count) throw new AppError("Post introuvable.", "NOT_FOUND", 404);
