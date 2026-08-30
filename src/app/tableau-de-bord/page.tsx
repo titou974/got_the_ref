@@ -225,11 +225,15 @@ export default async function DashboardHomePage() {
           voie d'exécution. Il ne vit plus au bas de la page : la barre fixe le
           porte, et il couvre désormais les six sections d'un coup — le client
           n'a plus à passer d'onglet en onglet pour ramasser ses correctifs. */}
-      {/* La barre est le geste d'exécution : elle n'a de sens que pour qui a
-          payé la passe. Elle est retirée plutôt que voilée — une barre fixe
-          floutée resterait en travers de l'écran sans rien montrer. */}
-      {tierAtLeast(tier, "boost") && (
+      {/* La barre est là pour tout le monde : c'est le geste que le produit
+          vend, et une page qui ne le montre pas ne le vend pas. Sur un compte
+          gratuit elle s'ouvre sur la console des agents — les manques relevés
+          chez lui, corrigés ligne à ligne — puis le voile prend le relais :
+          ni rattachement du site, ni prompt de correction tant que la passe
+          n'est pas prise. Le prompt n'est alors même pas écrit côté serveur :
+          ce qui n'arrive pas au navigateur ne se copie pas. */}
       <SolveAgentsDock
+        locked={!tierAtLeast(tier, "boost")}
         result={analysis}
         diagnostic={diagnostic}
         articles={articles.map((article) => ({
@@ -242,7 +246,6 @@ export default async function DashboardHomePage() {
           body: article.body,
         }))}
       />
-      )}
     </>
   );
 }

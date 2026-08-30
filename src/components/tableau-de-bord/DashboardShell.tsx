@@ -11,35 +11,24 @@ import {
 } from "@/components/tremor/Sidebar";
 import { ROUTES } from "@/constants/routes";
 import type { AccessTier } from "@/constants/access";
+import { initials } from "@/lib/initials";
+import { MobileNav } from "./MobileNav";
 import { SidebarNav } from "./SidebarNav";
 import { SiteSelect } from "./SiteSelect";
-
-/**
- * Les initiales de l'avatar : deux lettres au plus.
- *
- * Le nom peut être une adresse e-mail — c'est ce que la coque reçoit quand le
- * compte n'a pas encore de nom. On ne garde alors que ce qui précède l'arobase,
- * sinon tout le monde s'appellerait « G » comme gmail.
- */
-function initials(name: string | null): string {
-  const source = (name ?? "").split("@")[0].trim();
-  if (!source) return "·";
-
-  const words = source.split(/[\s._-]+/).filter(Boolean);
-  if (words.length === 0) return "·";
-  if (words.length === 1) return words[0].slice(0, 2);
-  return words[0][0] + words[1][0];
-}
 
 /**
  * Le cadre commun aux six sections : colonne de navigation à gauche, contenu à
  * droite sur toile claire.
  *
  * La colonne est le composant Tremor, toujours déroulée : fixée au viewport sur
- * grand écran, elle ne défile pas avec le contenu et ne se replie pas. En
- * dessous de `lg` elle repasse dans le flux, en barre horizontale. Le nom du
+ * grand écran, elle ne défile pas avec le contenu et ne se replie pas. Le nom du
  * site est répété en haut : c'est ce que le client vérifie en arrivant, avant
  * même de lire un chiffre.
+ *
+ * En dessous de `lg`, la colonne disparaît au profit de `MobileNav` : un
+ * bandeau collé en haut de l'écran, qui dit la section ouverte et le site suivi,
+ * et déroule le même menu dans un tiroir latéral. Les deux navigations lisent la
+ * même liste (`SidebarNav`) — une section ajoutée apparaît des deux côtés.
  */
 export function DashboardShell({
   domain,
@@ -58,7 +47,7 @@ export function DashboardShell({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader className="hidden lg:flex">
+        <SidebarHeader>
           <Link
             href="/"
             className="inline-flex cursor-pointer items-center gap-2 px-2 pt-1 font-display text-lg font-bold tracking-tight"
@@ -89,7 +78,7 @@ export function DashboardShell({
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="hidden border-t border-border lg:flex">
+        <SidebarFooter className="border-t border-border">
           {/* Le pied de colonne se réduit à qui est connecté : l'avatar et le
               nom, rien d'autre. Le portail de facturation et la déconnexion
               encombraient une colonne dont le rôle est de naviguer ; le premier
@@ -114,9 +103,16 @@ export function DashboardShell({
         </SidebarFooter>
       </Sidebar>
 
-      <main className="mx-auto w-full min-w-0 max-w-[1200px] flex-1 space-y-6 px-4 py-6 lg:px-8 lg:py-8">
-        {children}
-      </main>
+      {/* Le bandeau du téléphone vit dans la colonne de contenu : il y est
+          `sticky`, donc il suit le défilement de la page au lieu de partir avec
+          le premier écran. */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileNav domain={domain} showMaps={showMaps} tier={tier} userName={userName} />
+
+        <main className="mx-auto w-full min-w-0 max-w-[1200px] flex-1 space-y-6 px-4 py-6 lg:px-8 lg:py-8">
+          {children}
+        </main>
+      </div>
     </SidebarProvider>
   );
 }

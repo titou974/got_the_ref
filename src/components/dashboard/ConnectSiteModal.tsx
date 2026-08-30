@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { StackMark } from "@/components/StackMark";
+import { ROUTES } from "@/constants/routes";
 import type { DetectedStack } from "@/lib/geo/types";
 
 /**
@@ -193,12 +195,90 @@ function AgentLogos() {
   );
 }
 
+/**
+ * Ce que le compte gratuit voit à la place des deux actions.
+ *
+ * Le voile est posé au même endroit que partout ailleurs dans le produit : le
+ * contenu réel garde sa forme dessous — deux boutons, la rangée d'agents où le
+ * prompt se colle — et l'appel se lit par-dessus. La console des agents, elle,
+ * reste nette au-dessus : c'est la démonstration, et la cacher reviendrait à
+ * vendre sans montrer.
+ *
+ * Le prompt n'est pas seulement flouté, il n'existe pas ici : le serveur ne
+ * l'écrit pas pour un compte gratuit (cf. `SolveAgentsDock`). Un voile CSS se
+ * contourne avec l'inspecteur ; une chaîne absente, non.
+ */
+function LockedActions({ ctaLabel }: { ctaLabel: string }) {
+  const t = useTranslations("analysisReport.solve.modal");
+
+  return (
+    // La hauteur est posée d'avance : le voile porte plus de texte que les deux
+    // boutons qu'il recouvre, et sans réserve il déborderait du bloc.
+    <div className="relative isolate min-h-[15rem] overflow-hidden rounded-[22px]">
+      <div
+        aria-hidden
+        inert
+        className="pointer-events-none flex select-none flex-col gap-2.5 blur-[6px] saturate-[0.7]"
+      >
+        <span className="flex items-center justify-center gap-2 rounded-full border border-fog bg-mist px-5 py-3 text-sm font-medium text-muted">
+          {t("cta")}
+        </span>
+        <span className="flex items-center justify-center rounded-full bg-cta px-5 py-3 text-sm font-medium text-white">
+          {ctaLabel}
+        </span>
+        <div className="mt-1 flex items-center gap-2">
+          <AgentLogos />
+          <span className="text-xs text-muted">{t("promptPreviewLabel")}</span>
+        </div>
+      </div>
+
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-snow/75 via-snow/92 to-snow"
+      />
+
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 px-4 py-4 text-center">
+        <span className="inline-flex items-center gap-1.5 rounded-pill border border-fog bg-snow px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-obsidian shadow-[var(--shadow-md)]">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
+            <path
+              d="M8 11V8a4 4 0 0 1 8 0v3"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+          {t("lockedOffer")}
+        </span>
+        <p className="text-pretty text-sm font-semibold text-text">{t("lockedTitle")}</p>
+        <p className="text-pretty text-xs leading-relaxed text-muted">{t("lockedBody")}</p>
+        <Link
+          href={ROUTES.pricing}
+          className="mt-0.5 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+        >
+          {t("lockedCta")}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M5 12h14M13 6l6 6-6 6"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function ConnectSiteModal({
   domain,
   stack,
   issues,
   solutionPrompt,
   scope = "report",
+  locked = false,
   onClose,
 }: {
   domain: string;
@@ -213,6 +293,11 @@ export function ConnectSiteModal({
    * change — la promesse n'est pas la même.
    */
   scope?: "report" | "dashboard";
+  /**
+   * Compte gratuit : le rattachement du site et le prompt de correction passent
+   * sous voile, l'appel vers les tarifs prend leur place.
+   */
+  locked?: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("analysisReport.solve.modal");
@@ -317,6 +402,12 @@ export function ConnectSiteModal({
               l'étape à venir ferait croire qu'elle n'existe pas, et un bouton
               qui promet la connexion sans la faire coûte encore plus cher. */}
           <div className="mt-5 flex flex-col gap-2.5">
+            {locked ? (
+              <LockedActions
+                ctaLabel={scope === "dashboard" ? t("promptCtaAll") : t("promptCta")}
+              />
+            ) : (
+              <>
             <button
               type="button"
               disabled
@@ -376,6 +467,8 @@ export function ConnectSiteModal({
             >
               {shared ? t("shareDevDone") : t("shareDev")}
             </button>
+              </>
+            )}
 
             <button
               type="button"

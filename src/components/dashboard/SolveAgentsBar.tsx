@@ -33,6 +33,7 @@ export function SolveAgentsBar({
   issues,
   solutionPrompt,
   scope = "report",
+  locked = false,
 }: {
   domain: string;
   stack: DetectedStack | null;
@@ -42,6 +43,11 @@ export function SolveAgentsBar({
   solutionPrompt: string;
   /** `dashboard` : le prompt couvre les six sections, pas le seul plan d'action. */
   scope?: "report" | "dashboard";
+  /**
+   * Compte gratuit : la barre s'ouvre normalement, mais la modale pose un voile
+   * sur le rattachement du site et sur le prompt.
+   */
+  locked?: boolean;
 }) {
   const t = useTranslations("analysisReport.solve");
   const [open, setOpen] = useState(false);
@@ -144,6 +150,7 @@ export function SolveAgentsBar({
             issues={issues}
             solutionPrompt={solutionPrompt}
             scope={scope}
+            locked={locked}
             onClose={() => setOpen(false)}
           />
         )}

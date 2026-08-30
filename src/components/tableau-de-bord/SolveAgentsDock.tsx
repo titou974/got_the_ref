@@ -23,15 +23,23 @@ export function SolveAgentsDock({
   result,
   diagnostic,
   articles,
+  locked = false,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
   /** Le planning éditorial : les articles rédigés partent dans le prompt. */
   articles: ArticleFact[];
+  /**
+   * Compte gratuit : la barre s'affiche et la modale s'ouvre, mais le
+   * rattachement du site et le prompt passent sous voile. Le prompt n'est alors
+   * pas écrit du tout — c'est un appel au modèle de deux à trois secondes, et
+   * un texte qui n'atteint pas le navigateur ne se copie pas.
+   */
+  locked?: boolean;
 }) {
   return (
     <Suspense fallback={null}>
-      <Dock result={result} diagnostic={diagnostic} articles={articles} />
+      <Dock result={result} diagnostic={diagnostic} articles={articles} locked={locked} />
     </Suspense>
   );
 }
@@ -40,10 +48,12 @@ async function Dock({
   result,
   diagnostic,
   articles,
+  locked,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
   articles: ArticleFact[];
+  locked: boolean;
 }) {
   const t = await getTranslations("analysisReport");
 
@@ -64,12 +74,14 @@ async function Dock({
       : diagnostic.architecture.checks.map((c) => `architecture.checks.${c.key}`)
   ).slice(0, 3);
 
-  const solutionPrompt = await writeSolutionPrompt({
-    tab: "all",
-    result,
-    diagnostic,
-    articles,
-  });
+  const solutionPrompt = locked
+    ? ""
+    : await writeSolutionPrompt({
+        tab: "all",
+        result,
+        diagnostic,
+        articles,
+      });
 
   return (
     <>
@@ -82,6 +94,7 @@ async function Dock({
         issues={issueKeys.map((key) => t(key))}
         solutionPrompt={solutionPrompt}
         scope="dashboard"
+        locked={locked}
       />
     </>
   );

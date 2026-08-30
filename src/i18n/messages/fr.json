@@ -221,7 +221,11 @@
         "fixedCount": "{count}/{total} corrigés",
         "statusFixed": "Corrigé",
         "statusPending": "À corriger",
-        "promptPreviewLabel": "À coller dans ChatGPT, Claude ou Cursor"
+        "promptPreviewLabel": "À coller dans ChatGPT, Claude ou Cursor",
+        "lockedOffer": "Coup de Boost",
+        "lockedTitle": "Les correctifs sont prêts, l'exécution s'achète",
+        "lockedBody": "Le prompt qui corrige vos six sections d'un seul copier-coller, et le rattachement de votre site aux agents, s'ouvrent avec le Coup de Boost.",
+        "lockedCta": "Débloquer avec le Coup de Boost"
       }
     },
     "architecture": {
@@ -699,9 +703,8 @@
     "quotaNote": "Vous avez atteint la limite d'analyses gratuites. Réessayez plus tard ou parlons-en directement.",
     "perMonth": "/mois",
     "perYear": " par an",
-    "vat": "TVA en sus",
     "redirecting": "Redirection…",
-    "secureNote": "Paiement sécurisé par Stripe · Coup de Boost débité une seule fois, abonnement résiliable à tout moment · TVA en sus le cas échéant",
+    "secureNote": "Paiement sécurisé par Stripe · Coup de Boost débité une seule fois, abonnement résiliable à tout moment",
     "plan": {
       "eyebrow": "Accès complet",
       "name": "Tout-en-un",
@@ -806,7 +809,7 @@
         },
         {
           "q": "Combien coûte l'abonnement got_the_ref ?",
-          "a": "79 €/mois au tarif mensuel, ou 59 €/mois en engagement annuel, facturé une fois par an. TVA en sus le cas échéant."
+          "a": "79 €/mois au tarif mensuel, ou 59 €/mois en engagement annuel, facturé une fois par an."
         },
         {
           "q": "Combien coûte le Coup de Boost ?",
@@ -1586,7 +1589,10 @@
       "architecture": "Architecture",
       "articles": "Articles",
       "presence": "Présence web",
-      "maps": "Google Maps"
+      "maps": "Google Maps",
+      "openMenu": "Ouvrir le menu",
+      "closeMenu": "Fermer le menu",
+      "menuLabel": "Sections du tableau de bord"
     },
     "home": {
       "title": "Tableau de bord",
