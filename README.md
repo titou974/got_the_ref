@@ -44,7 +44,8 @@ npm run dev                 # http://localhost:3000
 | `FIRECRAWL_URL` | Instance Firecrawl auto-hébergée (`https://api.firecrawl.dev` par défaut) |
 | `CRAWL_KEEP_HTML` | `true` pour conserver aussi le HTML brut de chaque page |
 | `CRAWL_MAX_AGE_HOURS` | Fraîcheur d'un crawl avant de le relancer (168 h par défaut) |
-| `CREDENTIALS_KEY` | Phrase secrète (32 caractères minimum) qui chiffre les identifiants de plateforme du tableau de bord. Sans elle, le rattachement d'un site est refusé. |
+| `CREDENTIALS_KEY` | Phrase secrète (32 caractères minimum) qui chiffre les identifiants de plateforme du tableau de bord. Sans elle, le rattachement d'un site est refusé. La changer rend illisibles tous les liens déjà enregistrés. |
+| `CRON_SECRET` | Ferme `/api/cron/publish`, la tâche qui dépose les articles arrivés à échéance. Sans lui, la route répond 503 et aucune publication programmée ne part. Vercel l'envoie de lui-même dès qu'il est défini sur le projet. |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | Mots-clés tendances relevés avec la recherche Google (`gemini-flash-latest` par défaut) |
 | `RESEND_API_KEY` | Clé Resend pour les e-mails transactionnels (sans elle, les envois sont journalisés en console) |
 | `RESEND_FROM` | Expéditeur, ex. `got_the_ref <bonjour@votre-domaine.fr>` (`onboarding@resend.dev` par défaut) |
@@ -251,6 +252,65 @@ tierce et n'accordent donc que la correction. Un site fait main passe par
 
 Les identifiants sont chiffrés en AES-256-GCM (`lib/crypto.ts`, clé dérivée de
 `CREDENTIALS_KEY`) avant d'être écrits, et ne repartent jamais vers le navigateur.
+
+Le client rattache son site depuis **Tableau de bord → Réglages → Votre site**.
+Le formulaire se construit à partir du registre : ajouter une plateforme dans
+`constants/site-platforms.ts` suffit à la voir apparaître, à condition que
+`connectors.ts` sache la vérifier.
+
+#### Préflight
+
+```bash
+npm run check:site                                   # les clés d'environnement
+npm run check:site -- --wordpress https://exemple.fr --user titouan --password "abcd EFGH ijkl mnop qrst uvwx"
+npm run check:site -- --shopify ma-boutique.myshopify.com --token shpat_...
+npm run check:site -- --cron https://exemple.fr      # la route est-elle bien fermée
+```
+
+Le script ne lit que : aucun appel facturé, aucune écriture — sauf `--cron --run`,
+qui déclenche un vrai passage de publication.
+
+#### Ce que WordPress demande
+
+- **HTTPS obligatoire.** WordPress désactive les mots de passe d'application sur
+  une connexion en clair ; le rattachement est refusé d'emblée sur `http://`.
+- **Un mot de passe d'application**, pas le mot de passe de connexion :
+  Utilisateurs → Profil → Mots de passe d'application. Les espaces qu'affiche
+  l'écran de création sont retirés avant l'envoi.
+- **Un compte administrateur ou éditeur.** Un compte sans `publish_posts` est
+  rattaché quand même, mais seule la correction de textes lui est annoncée.
+- **`/wp-json` joignable.** Les extensions de sécurité (Wordfence, iThemes) le
+  ferment volontiers, et un permalien réglé sur « simple » le rend inaccessible.
+- **En-tête `Authorization` conservé.** Sur un Apache en CGI ou FastCGI, PHP ne
+  la voit pas : le site répond 401 avec des identifiants valides. Correctif dans
+  le `.htaccess` du client : `CGIPassAuth On`.
+- **Une page d'accueil statique** (Réglages → Lecture) pour que le H1 et le
+  premier paragraphe soient réécrits automatiquement. Sinon ils restent manuels.
+- Les fichiers de racine (`/llms.txt`, `/robots.txt`) ne s'écrivent pas par
+  l'API REST : leur contenu est fourni au client, à déposer lui-même.
+
+#### Ce que Shopify demande
+
+- **L'adresse en `.myshopify.com`**, jamais le domaine de vente : l'API Admin ne
+  répond que là. `admin.shopify.com/store/xxx` est accepté et converti.
+- **Une application personnalisée** (Paramètres → Applications et canaux de
+  vente → Développer des applications) et son jeton `shpat_…`, avec les portées
+  **`read_content`** et **`write_content`**.
+- **Au moins un blog** dans la boutique. Sans blog, le lien reste valable pour
+  les métachamps SEO mais la publication n'est pas annoncée. Le champ « Blog
+  visé » choisit lequel ; laissé vide, c'est le premier.
+- **La version d'API est figée** à `2026-01` dans `connectors.ts`. Shopify retire
+  chaque version au bout d'un an : cette date est à relever une fois par an.
+- La racine appartient à Shopify — `/robots.txt` et `/sitemap.xml` sont générés
+  par la plateforme, aucun fichier arbitraire ne peut y être déposé.
+
+#### Publication programmée
+
+`vercel.json` déclenche `/api/cron/publish` chaque jour à 8 h UTC. Par défaut,
+seuls les articles **validés** partent ; le pilote automatique complet demande
+`autoPublish` sur le rattachement. Chaque passage traite au plus 25 articles et
+s'arrête de lui-même au bout de 240 secondes — la route est coupée à 300 par
+l'hébergeur. Ce qui n'est pas parti repart au passage suivant.
 
 ## Configuration Stripe
 

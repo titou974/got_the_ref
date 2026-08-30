@@ -1957,6 +1957,73 @@
         "banned": "Termes à bannir",
         "bannedPlaceholder": "Un terme par ligne",
         "bannedHint": "Noms de concurrents, mots interdits par votre marque."
+      },
+      "site": {
+        "title": "Votre site",
+        "body": "Le lien par lequel les agents déposent vos articles et corrigent vos textes. Sans lui, tout se prépare ici et se recopie à la main chez vous.",
+        "platform": "Plateforme",
+        "connect": "Rattacher le site",
+        "reconnect": "Mettre le lien à jour",
+        "connecting": "Vérification en cours…",
+        "disconnect": "Détacher",
+        "docs": "Voir la documentation de la plateforme",
+        "statusConnected": "Rattaché",
+        "statusError": "Refusé",
+        "statusPending": "En attente",
+        "connectedOn": "Rattaché le {date}.",
+        "canPublish": "Vos articles partent tout seuls, à la date prévue.",
+        "canEditOnly": "Les corrections de textes passent. Les articles, eux, restent à déposer à la main : cette plateforme ne les ouvre pas à une API.",
+        "noKey": "Le stockage sécurisé des identifiants n'est pas configuré sur ce serveur : le rattachement restera indisponible tant que la clé CREDENTIALS_KEY n'y est pas posée.",
+        "secretHint": "Jamais réaffiché. Pour changer le lien, saisissez-le à nouveau.",
+        "confirmDisconnect": "Détacher ce site ? Les identifiants seront effacés et les publications programmées s'arrêteront.",
+        "fields": {
+          "siteUrl": {
+            "label": "Adresse du site",
+            "placeholder": "https://mon-site.fr"
+          },
+          "username": {
+            "label": "Identifiant WordPress",
+            "hint": "Le compte qui publiera : administrateur ou éditeur."
+          },
+          "applicationPassword": {
+            "label": "Mot de passe d'application",
+            "hint": "Dans WordPress : Utilisateurs → Profil → Mots de passe d'application. Ce n'est pas votre mot de passe de connexion."
+          },
+          "shopDomain": {
+            "label": "Adresse de la boutique",
+            "placeholder": "ma-boutique.myshopify.com",
+            "hint": "L'adresse en « .myshopify.com », pas le domaine de vente."
+          },
+          "adminAccessToken": {
+            "label": "Jeton d'accès Admin",
+            "hint": "Dans Shopify : Paramètres → Applications et canaux de vente → Développer des applications. Portées à cocher : read_content et write_content."
+          },
+          "blogHandle": {
+            "label": "Blog visé",
+            "placeholder": "news",
+            "hint": "Facultatif. Sans indication, les articles vont dans le premier blog de la boutique."
+          },
+          "siteId": {
+            "label": "Identifiant du site"
+          },
+          "apiKey": {
+            "label": "Clé d'API"
+          },
+          "apiToken": {
+            "label": "Jeton d'API"
+          },
+          "adminApiKey": {
+            "label": "Clé d'API Admin"
+          },
+          "webserviceKey": {
+            "label": "Clé du webservice"
+          },
+          "webhookUrl": {
+            "label": "Webhook de publication",
+            "placeholder": "https://mon-site.fr/api/articles",
+            "hint": "Facultatif. Sans lui, les articles restent à déposer à la main."
+          }
+        }
       }
     },
     "siteSelect": {

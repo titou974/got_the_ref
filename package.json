@@ -18,7 +18,8 @@
     "set:demo": "node scripts/set-demo-plan.mjs",
     "set:demo:essais": "node scripts/set-demo-plan.mjs --essais",
     "export:leads": "node scripts/export-leads.mjs",
-    "check:dataforseo": "node scripts/check-dataforseo.mjs"
+    "check:dataforseo": "node scripts/check-dataforseo.mjs",
+    "check:site": "node scripts/check-site-connection.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

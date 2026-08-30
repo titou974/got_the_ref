@@ -63,6 +63,10 @@ export const SITE_CONNECTORS: SiteConnector[] = [
     fields: [
       { name: "shopDomain", kind: "text", required: true },
       { name: "adminAccessToken", kind: "secret", required: true },
+      // Une boutique a souvent plusieurs blogs, et le premier n'est pas
+      // toujours celui que le client tient à jour. Laissé vide, on écrit dans
+      // le premier — ce qui reste le cas courant, avec le seul « News ».
+      { name: "blogHandle", kind: "text", required: false },
     ],
   },
   {

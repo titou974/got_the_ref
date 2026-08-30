@@ -27,6 +27,19 @@ import { publishArticle, type Credentials } from "./connectors";
 /** Plafond par passage : au-delà, la tâche planifiée dépasserait son budget. */
 const BATCH = 25;
 
+/**
+ * Le temps que la passe s'autorise avant de rendre la main.
+ *
+ * L'hébergeur coupe la route au bout de 300 secondes. Vingt-cinq sites qui
+ * mettent chacun quinze secondes à répondre dépasseraient largement : la
+ * coupure tomberait au milieu d'une publication, sans que rien ne soit écrit
+ * ni noté. Mieux vaut s'arrêter de soi-même.
+ *
+ * Ce qui n'est pas parti reste dû : la date est déjà passée, un jour de plus ne
+ * change rien — un article perdu, si.
+ */
+const BUDGET_MS = 240_000;
+
 export type PublishOutcome = {
   articleId: string;
   userId: string;
@@ -39,6 +52,8 @@ export type PublishRun = {
   due: number;
   published: number;
   failed: number;
+  /** Arrivés à échéance mais non traités faute de temps : au prochain passage. */
+  skipped: number;
   outcomes: PublishOutcome[];
 };
 
@@ -77,8 +92,13 @@ export async function publishDueArticles(now: Date = new Date()): Promise<Publis
   });
 
   const outcomes: PublishOutcome[] = [];
+  const startedAt = Date.now();
 
   for (const article of due) {
+    // On s'arrête avant la coupure, pas pendant : un article à moitié déposé
+    // serait publié chez le client sans que la base le sache.
+    if (Date.now() - startedAt > BUDGET_MS) break;
+
     const link = article.user.siteConnection;
     if (!link) continue;
 
@@ -140,6 +160,7 @@ export async function publishDueArticles(now: Date = new Date()): Promise<Publis
     due: due.length,
     published: outcomes.filter((outcome) => outcome.ok).length,
     failed: outcomes.filter((outcome) => !outcome.ok).length,
+    skipped: due.length - outcomes.length,
     outcomes,
   };
 }

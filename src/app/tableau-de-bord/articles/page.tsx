@@ -52,31 +52,30 @@ export default async function ArticlesPage() {
       <PageHeader title={t("pageTitle")} />
 
       <SectionGate section="articles" locked={locked}>
-      {/* La demande de planning est posée sur la page, pas dans l'en-tête : le
-          temps que le modèle réponde, elle laisse place à l'attente annoncée. */}
-      <PlanArticlesButton />
+        {/* La demande de planning est posée sur la page, pas dans l'en-tête :
+            le temps que le modèle réponde, elle laisse place à l'attente
+            annoncée. */}
+        <PlanArticlesButton />
 
         <ArticleQuotaBar quota={quota} />
-      </Gate>
 
-      <ArticleMonth
-        articles={articles.map((article) => ({
-          id: article.id,
-          title: article.title,
-          status: article.status,
-          scheduledFor: article.scheduledFor,
-        }))}
-        locked={locked}
-      />
+        <ArticleMonth
+          articles={articles.map((article) => ({
+            id: article.id,
+            title: article.title,
+            status: article.status,
+            scheduledFor: article.scheduledFor,
+          }))}
+        />
 
-      <ArticleAgenda articles={upcoming} locked={locked} />
+        <ArticleAgenda articles={upcoming} />
 
-      {published.length ? <ArticleAgenda articles={published} variant="published" /> : null}
+        {published.length ? <ArticleAgenda articles={published} variant="published" /> : null}
 
-      <BrandVoicePanel
-        instructions={context.brandVoice?.instructions ?? ""}
-        banned={context.brandVoice?.banned ?? []}
-      />
+        <BrandVoicePanel
+          instructions={context.brandVoice?.instructions ?? ""}
+          banned={context.brandVoice?.banned ?? []}
+        />
       </SectionGate>
     </>
   );
