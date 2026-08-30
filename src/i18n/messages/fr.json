@@ -714,6 +714,7 @@
         "Analyses continues et illimitées, e-commerce, SaaS ou commerce physique (fiche Google Maps comprise.)",
         "Vos positions réelles sur ChatGPT et Gemini, remesurées en continu",
         "Corrections automatiques sur votre site",
+        "Vos backlinks, votre notoriété web et votre fiche Google Maps travaillés semaine après semaine",
         "Aucune compétence technique requise, tout est fait en pilote automatique"
       ],
       "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
@@ -733,6 +734,7 @@
         "measure": "Vos positions sur ChatGPT, Gemini et Google mesurées avant et après corrections",
         "fix": "Les agents IA got_the_ref corrigent automatiquement ce qui vous empêche d'être cité dans les IA et sur Google.",
         "articles": "{count} articles rédigés et publiés pour installer votre visibilité",
+        "traffic": "Le trafic que les IA envoient sur votre site, relevé dans votre Analytics",
         "report": "Un rapport de référencement IA et Google à la fin de la passe, avec les bonnes pratiques à conserver"
       },
       "limit": "Pas de remesure et travaille en continu, pas d'articles programmés dans la durée : ça, c'est l'abonnement.",
@@ -814,7 +816,7 @@
         },
         {
           "q": "Que voit-on sans rien payer ?",
-          "a": "Ouvrez un compte, donnez l'adresse de votre site : nous le lisons et votre tableau de bord s'ouvre avec la niche détectée et les corrections de contenu adossées à vos mots-clés. Les autres sections — structure, articles, backlinks, Google Maps — restent visibles mais voilées, et s'ouvrent avec le Coup de Boost ou l'abonnement Tout-en-un."
+          "a": "Ouvrez un compte, donnez l'adresse de votre site : nous le lisons, et votre tableau de bord s'ouvre avec la niche détectée, votre position mesurée sur Gemini, les corrections de contenu adossées à vos mots-clés et les quatre premiers sujets d'articles de la semaine, datés. Les faire rédiger et publier demande le Coup de Boost. Les autres sections, structure, backlinks et Google Maps, restent visibles mais voilées."
         }
       ]
     }
@@ -835,7 +837,6 @@
     "agendaTitle": "Ce qu'on couvre pendant l'appel",
     "agendaSubtitle": "Un tour complet de votre position dans les moteurs qui répondent à vos clients, et du chemin pour la changer.",
     "agendaItems": [
-      "Suivi de vos mentions dans les IA",
       "Requêtes réelles de vos clients",
       "Audit GEO / SEO de votre site",
       "Fiche Google et ancrage local",
@@ -1537,16 +1538,16 @@
       },
       "items": {
         "architecture": {
-          "title": "Les corrections de structure vous attendent",
-          "body": "Le diagnostic est fait : chaque contrôle raté a son correctif, prêt à être appliqué par les agents. Le Coup de Boost les exécute sur votre site en une passe."
+          "title": "Le diagnostic de structure et ses correctifs",
+          "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Chaque contrôle raté a son correctif, prêt à poser. Le Coup de Boost ouvre la page et laisse les agents faire la passe."
         },
         "articles": {
-          "title": "Une semaine d'articles écrits pour votre niche",
-          "body": "Les sujets sont déjà calés sur vos mots-clés. Le Coup de Boost lance la rédaction pendant une semaine ; l'abonnement Tout-en-un, lui, ne s'arrête pas."
+          "title": "La rédaction et la publication de vos articles",
+          "body": "Les sujets sont déjà au calendrier, datés et calés sur vos mots-clés : vous les voyez, vous ne pouvez pas encore les faire écrire. Le Coup de Boost lance la rédaction pendant une semaine et pose le mois entier au planning. L'abonnement Tout-en-un, lui, ne s'arrête pas."
         },
         "presence": {
           "title": "Vos backlinks et votre notoriété web",
-          "body": "Qui parle de vous, avec quelle autorité, et à qui écrire pour que ça bouge. C'est un travail qui court dans la durée : il est réservé à l'abonnement Tout-en-un."
+          "body": "Qui parle de vous, avec quelle autorité, et à qui écrire pour que ça bouge. Le travail se fait dans la durée, il est donc réservé à l'abonnement Tout-en-un."
         },
         "maps": {
           "title": "Votre fiche Google Maps, tenue à jour",
@@ -1557,24 +1558,16 @@
           "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Le Coup de Boost l'ouvre et corrige dans la foulée."
         },
         "recommendations": {
-          "title": "Le plan d'action, priorisé",
-          "body": "Chaque manque relevé, son correctif et son impact sur votre visibilité. Le Coup de Boost laisse les agents l'appliquer."
-        },
-        "mentions": {
-          "title": "Vos mentions dans les IA, mois après mois",
-          "body": "Combien de fois ChatGPT et Gemini prononcent votre nom, et comment ça bouge. Une mesure qui ne vaut que dans la durée : elle est réservée à l'abonnement Tout-en-un."
+          "title": "Le reste du plan d'action",
+          "body": "Vous lisez déjà les correctifs de contenu. Ceux qui touchent à l'ossature du site, aux données structurées et aux plateformes attendent le Coup de Boost, qui les ouvre et laisse les agents les appliquer."
         },
         "traffic": {
           "title": "Les visites que les IA vous envoient",
-          "body": "Le trafic réellement amené par ChatGPT, Gemini et Perplexity, relevé dans votre Analytics. Le Coup de Boost l'ouvre, et l'abonnement Tout-en-un le tient à jour."
-        },
-        "agenda": {
-          "title": "Votre calendrier de publication",
-          "body": "Les sujets à venir, datés, prêts à être rédigés. Le Coup de Boost ouvre une semaine de rédaction."
+          "body": "Le trafic réellement amené par ChatGPT, Gemini et Perplexity, relevé dans votre Analytics. Le Coup de Boost l'ouvre pour que vous voyiez l'effet de la passe. L'abonnement Tout-en-un le tient à jour ensuite."
         },
         "rankings": {
           "title": "Votre position sur ChatGPT",
-          "body": "Votre compte gratuit fait mesurer Gemini. Le relevé ChatGPT, lui, n'a pas été lancé : il s'ouvre avec le Coup de Boost, sur les deux moteurs."
+          "body": "Votre compte gratuit fait mesurer Gemini. ChatGPT n'a pas été interrogé : chaque relevé lui coûte un appel de recherche, et nous ne le lançons pas pour une carte que vous ne pourriez pas lire. Le Coup de Boost ouvre les deux moteurs, avant et après les corrections."
         }
       }
     },
@@ -1638,7 +1631,9 @@
       "title": "Prochains articles",
       "hint": "Le calendrier tenu par les agents.",
       "all": "Tout voir",
-      "empty": "Aucun sujet au planning. Demandez-en depuis la page Articles.",
+      "unlockAll": "Débloquer la rédaction",
+      "lockedHint": "Ces sujets ont été écrits pour votre niche. Les faire rédiger et publier demande le Coup de Boost ou l'abonnement Tout-en-un.",
+      "empty": "Aucun sujet au planning pour l'instant.",
       "undated": "sans date",
       "publishedTitle": "Articles publiés",
       "publishedHint": "Déposés sur votre site.",
@@ -1672,6 +1667,7 @@
       "body": "Nous lisons vos pages, testons votre place dans les IA et relevons ce qui manque. Comptez une à trois minutes selon la taille du site.",
       "articlesTitle": "Préparation de votre mois d'articles",
       "articlesBody": "Douze sujets sont planifiés pour les quatre prochaines semaines, à raison de trois par semaine. Les trois premiers sont en cours de rédaction.",
+      "articlesBodyFree": "Quatre sujets sont planifiés pour la semaine qui vient, avec leur mot-clé et leur plan. Les faire rédiger demande le Coup de Boost.",
       "progressAudit": "Lecture du site et relevé dans les IA",
       "progressArticles": "Planification de vos articles",
       "progressDone": "Terminé, votre tableau de bord s'ouvre",
@@ -1769,6 +1765,9 @@
       "writing": "Rédaction…",
       "writeCta": "Rédiger l'article",
       "rewriteCta": "Réécrire",
+      "unlockToPublish": "Débloquer pour publier",
+      "unlockToWrite": "Débloquer la rédaction",
+      "lockedQuota": "Le sujet, le mot-clé et le plan sont prêts. La rédaction s'ouvre avec le Coup de Boost, qui écrit vos articles pendant une semaine.",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "approve": "Valider",

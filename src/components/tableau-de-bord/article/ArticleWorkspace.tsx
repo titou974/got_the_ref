@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,7 @@ import {
 import type { OutlineSection } from "@/features/dashboard/outline";
 import { buildArticlePublishPrompt } from "@/lib/geo/article-publish-prompt";
 import { readHeadings } from "@/lib/article-doc";
+import { ROUTES } from "@/constants/routes";
 import { BrandToneBar } from "../BrandToneBar";
 import { PublishPromptPanel } from "../PublishPromptPanel";
 import { SearchLoader } from "@/components/SearchLoader";
@@ -70,6 +72,7 @@ export function ArticleWorkspace({
   tone,
   voice,
   canPublish,
+  locked = false,
   quotaRemaining,
   domain,
   platform,
@@ -78,6 +81,17 @@ export function ArticleWorkspace({
   tone: { summary: string | null; color: string | null; sampleUrl: string | null };
   voice: { instructions: string; banned: string[] } | null;
   canPublish: boolean;
+  /**
+   * L'offre du compte n'ouvre pas la rédaction.
+   *
+   * Le sujet reste lisible — titre, mot-clé, plan : c'est ce qu'on a préparé
+   * pour ce client, et le lui cacher n'aurait rien vendu. Ce qui disparaît,
+   * c'est la rangée d'actions : valider, publier, écarter. Un seul bouton la
+   * remplace, vers les tarifs. Les actions correspondantes sont de toute façon
+   * refusées côté serveur (`requireSection`) ; ce verrou-ci évite au client de
+   * les découvrir par un message d'erreur.
+   */
+  locked?: boolean;
   /** Rédactions encore disponibles cette semaine, lues à l'ouverture de la page. */
   quotaRemaining: number;
   /** Le domaine suivi, nommé dans le prompt de publication. */
@@ -264,6 +278,16 @@ export function ArticleWorkspace({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {locked ? (
+            <Link
+              href={ROUTES.pricing}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
+            >
+              {t("unlockToPublish")}
+            </Link>
+          ) : null}
+
+          {locked ? null : (
           <button
             type="button"
             disabled={busy || !editor}
@@ -272,8 +296,9 @@ export function ArticleWorkspace({
           >
             {save.isPending ? t("saving") : t("save")}
           </button>
+          )}
 
-          {article.status === "drafted" ? (
+          {!locked && article.status === "drafted" ? (
             <button
               type="button"
               disabled={busy}
@@ -284,7 +309,7 @@ export function ArticleWorkspace({
             </button>
           ) : null}
 
-          {article.status === "approved" && canPublish ? (
+          {!locked && article.status === "approved" && canPublish ? (
             <button
               type="button"
               disabled={busy}
@@ -297,7 +322,7 @@ export function ArticleWorkspace({
 
           {/* Site non rattaché : « publier maintenant » ne dépose pas, il écrit
               le prompt qui dépose. Le geste reste le même pour le client. */}
-          {article.status === "approved" && !canPublish ? (
+          {!locked && article.status === "approved" && !canPublish ? (
             <button
               type="button"
               disabled={busy || !editor}
@@ -320,7 +345,7 @@ export function ArticleWorkspace({
             </button>
           ) : null}
 
-          {article.status !== "published" ? (
+          {!locked && article.status !== "published" ? (
             <button
               type="button"
               disabled={busy}
@@ -380,30 +405,46 @@ export function ArticleWorkspace({
               </p>
             ) : null}
 
-            <button
-              type="button"
-              disabled={busy || remaining <= 0}
-              onClick={() =>
-                write.execute({ id: article.id, instruction: instruction.trim() || undefined })
-              }
-              className="mt-3 w-full cursor-pointer rounded-pill bg-obsidian px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {write.isPending
-                ? t("writing")
-                : article.body.trim()
-                  ? t("rewriteCta")
-                  : t("writeCta")}
-            </button>
+            {/* Rédiger est le travail vendu : sur une offre qui ne l'ouvre
+                pas, le bouton mène aux tarifs plutôt qu'à un refus du
+                serveur. Le sujet, lui, reste entier au-dessus. */}
+            {locked ? (
+              <Link
+                href={ROUTES.pricing}
+                className="mt-3 block w-full cursor-pointer rounded-pill bg-cta px-5 py-2.5 text-center text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
+              >
+                {t("unlockToWrite")}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={busy || remaining <= 0}
+                onClick={() =>
+                  write.execute({ id: article.id, instruction: instruction.trim() || undefined })
+                }
+                className="mt-3 w-full cursor-pointer rounded-pill bg-obsidian px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {write.isPending
+                  ? t("writing")
+                  : article.body.trim()
+                    ? t("rewriteCta")
+                    : t("writeCta")}
+              </button>
+            )}
 
             {/* Le budget de la semaine, sous le bouton qui le consomme : c'est
                 là qu'il pèse dans la décision de relancer une reprise. */}
-            <p className="mt-2 text-xs text-muted">
-              {remaining > 0
-                ? `${remaining} rédaction${remaining > 1 ? "s" : ""} restante${
-                    remaining > 1 ? "s" : ""
-                  } cette semaine. Une reprise en consomme une.`
-                : "Rédactions de la semaine épuisées. Votre brouillon reste modifiable à la main."}
-            </p>
+            {locked ? (
+              <p className="mt-2 text-xs text-muted">{t("lockedQuota")}</p>
+            ) : (
+              <p className="mt-2 text-xs text-muted">
+                {remaining > 0
+                  ? `${remaining} rédaction${remaining > 1 ? "s" : ""} restante${
+                      remaining > 1 ? "s" : ""
+                    } cette semaine. Une reprise en consomme une.`
+                  : "Rédactions de la semaine épuisées. Votre brouillon reste modifiable à la main."}
+              </p>
+            )}
 
             {write.isPending ? (
               <SearchLoader kind="writing" compact title={t("writing")} className="mt-3" />

@@ -72,6 +72,7 @@ export async function BoostCard({
         t("boost.features.measure"),
         t("boost.features.fix"),
         t("boost.features.articles", { count: BOOST.articles }),
+        t("boost.features.traffic"),
         t("boost.features.report"),
       ];
 
