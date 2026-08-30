@@ -1,7 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
-import { buildSolutionPrompt } from "@/lib/geo/solution-prompts";
 import { scoreLabel } from "@/lib/score";
 import { AnimatedScoreRing } from "./AnimatedScoreRing";
 import { SiteScreenshot } from "./SiteScreenshot";
@@ -160,14 +159,12 @@ export async function Dashboard({
         {/* La barre flotte au-dessus du bas de l'écran : cette réserve empêche
             qu'elle recouvre le dernier bloc du rapport une fois défilé. */}
         <div className="h-40 sm:h-24" aria-hidden />
+        {/* La modale ouvre le rattachement de l'agent IA du client : c'est lui
+            qui relève les correctifs et les applique, sans prompt à recopier. */}
         <SolveAgentsBar
           domain={result.domain}
           stack={result.signals.stack ?? null}
           issues={issues}
-          // Le rattachement automatique du site n'est pas encore ouvert : en
-          // attendant, la modale remet le prompt de correction, qui produit le
-          // même résultat à la main.
-          solutionPrompt={buildSolutionPrompt("results", result, diagnostic)}
         />
         </>
       )}

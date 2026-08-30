@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { StackMark } from "@/components/StackMark";
+import { AgentLinkPanel } from "@/components/dashboard/AgentLinkPanel";
+import { MCP_FIRST_PROMPT, MCP_PACKAGE } from "@/constants/mcp";
 import { ROUTES } from "@/constants/routes";
 import type { DetectedStack } from "@/lib/geo/types";
 
 /**
- * Première étape du parcours « agents » : connecter le site. La logique de
- * connexion et de résolution viendra ensuite — cet écran pose l'intention et
- * montre, sur les vrais manques du rapport, ce que les agents vont corriger.
+ * Le parcours « agents » : connecter l'agent IA du client à son compte.
+ *
+ * L'écran montre d'abord, sur les vrais manques du rapport, ce que les agents
+ * vont corriger ; puis il donne la prise à installer. Le prompt à copier a
+ * disparu d'ici — c'est `AgentLinkPanel` qui tient désormais l'exécution.
  */
 
 const FIX_INTERVAL_MS = 900; // une correction affichée toutes les 0,9 s
@@ -141,132 +143,24 @@ function AgentConsole({
 }
 
 /**
- * Les agents dans lesquels le prompt se colle. Les montrer évite la question
- * « c'est pour quel outil ? » : le client reconnaît le sien et sait quoi faire.
+ * Ce qu'on envoie au développeur quand le client ne pose pas les mains
+ * lui-même : la prise, la phrase, l'adresse. Trois lignes qui tiennent dans un
+ * SMS et qui suffisent à démarrer sans avoir accès au tableau de bord.
  */
-const AGENTS = [
-  { name: "ChatGPT", logo: "/chatgpt.png" },
-  { name: "Claude", logo: "/claude.svg" },
-  { name: "Cursor", logo: null },
-] as const;
-
-/** Le cube de Cursor, dessiné ici : aucun fichier de marque dans /public. */
-function CursorMark() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 2.6 20.5 7v10L12 21.4 3.5 17V7L12 2.6Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.9 7.3 12 12l8.1-4.7M12 12v9.2"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-    </svg>
-  );
-}
-
-function AgentLogos() {
-  return (
-    <span className="flex items-center gap-1.5" aria-hidden>
-      {AGENTS.map((agent) =>
-        agent.logo ? (
-          <Image
-            key={agent.name}
-            src={agent.logo}
-            alt=""
-            width={16}
-            height={16}
-            className="h-4 w-4 rounded-[4px] bg-white object-contain p-px"
-          />
-        ) : (
-          <span
-            key={agent.name}
-            className="flex h-4 w-4 items-center justify-center"
-          >
-            <CursorMark />
-          </span>
-        ),
-      )}
-    </span>
-  );
-}
-
-/**
- * Ce que le compte gratuit voit à la place des deux actions.
- *
- * Le voile est posé au même endroit que partout ailleurs dans le produit : le
- * contenu réel garde sa forme dessous — deux boutons, la rangée d'agents où le
- * prompt se colle — et l'appel se lit par-dessus. La console des agents, elle,
- * reste nette au-dessus : c'est la démonstration, et la cacher reviendrait à
- * vendre sans montrer.
- *
- * Sous le voile, un seul élément : le bouton. Le badge et les deux phrases qui
- * l'accompagnaient redisaient ce que le titre et le corps de la modale, nets
- * juste au-dessus, venaient déjà d'annoncer — trois fois la même promesse en
- * un demi-écran.
- *
- * Le prompt n'est pas seulement flouté, il n'existe pas ici : le serveur ne
- * l'écrit pas pour un compte gratuit (cf. `SolveAgentsDock`). Un voile CSS se
- * contourne avec l'inspecteur ; une chaîne absente, non.
- */
-function LockedActions({ ctaLabel }: { ctaLabel: string }) {
-  const t = useTranslations("analysisReport.solve.modal");
-
-  return (
-    <div className="relative isolate overflow-hidden rounded-[22px]">
-      <div
-        aria-hidden
-        inert
-        className="pointer-events-none flex select-none flex-col gap-2.5 blur-[6px] saturate-[0.7]"
-      >
-        <span className="flex items-center justify-center gap-2 rounded-full border border-fog bg-mist px-5 py-3 text-sm font-medium text-muted">
-          {t("cta")}
-        </span>
-        <span className="flex items-center justify-center rounded-full bg-cta px-5 py-3 text-sm font-medium text-white">
-          {ctaLabel}
-        </span>
-        <div className="mt-1 flex items-center gap-2">
-          <AgentLogos />
-          <span className="text-xs text-muted">{t("promptPreviewLabel")}</span>
-        </div>
-      </div>
-
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-snow/75 via-snow/92 to-snow"
-      />
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-        <Link
-          href={ROUTES.pricing}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-        >
-          {t("lockedCta")}
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M5 12h14M13 6l6 6-6 6"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
-      </div>
-    </div>
-  );
+function handoffText(domain: string, origin: string): string {
+  return [
+    `Correctifs GEO à appliquer sur ${domain} (got_the_ref).`,
+    "",
+    `1. Installe la prise dans ton agent IA : npx -y ${MCP_PACKAGE}`,
+    `2. Demande-lui : « ${MCP_FIRST_PROMPT} »`,
+    `3. Il affichera un code à confirmer sur ${origin}${ROUTES.agentLink}`,
+  ].join("\n");
 }
 
 export function ConnectSiteModal({
   domain,
   stack,
   issues,
-  solutionPrompt,
-  scope = "report",
   locked = false,
   onClose,
 }: {
@@ -274,48 +168,30 @@ export function ConnectSiteModal({
   stack: DetectedStack | null;
   /** Manques relevés dans le rapport, rejoués dans l'en-tête (3 au plus). */
   issues: string[];
-  /** Le prompt de correction, seule action réellement disponible aujourd'hui. */
-  solutionPrompt: string;
   /**
-   * Depuis le rapport, le prompt ne couvre que le plan d'action ; depuis le
-   * tableau de bord, il couvre les six sections. Seul le libellé du bouton
-   * change — la promesse n'est pas la même.
-   */
-  scope?: "report" | "dashboard";
-  /**
-   * Compte gratuit : le rattachement du site et le prompt de correction passent
-   * sous voile, l'appel vers les tarifs prend leur place.
+   * Compte gratuit. La prise reste offerte — c'est le geste que le produit
+   * vend, et le cacher reviendrait à ne pas le vendre. Ce qui change est ce que
+   * l'agent recevra : le serveur ne lui sert que les chantiers ouverts, et le
+   * panneau le dit en une ligne plutôt que sous un voile.
    */
   locked?: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("analysisReport.solve.modal");
-  const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
 
-  async function copyPrompt() {
-    try {
-      await navigator.clipboard.writeText(solutionPrompt);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* presse-papiers indisponible : rien à signaler, le bouton ne change pas */
-    }
-  }
-
   /**
-   * Passer le travail au développeur, c'est lui passer le prompt — pas un lien
-   * vers un écran auquel il n'a pas accès. Sur mobile, la feuille de partage du
-   * système l'envoie où le client veut ; ailleurs, il n'y a rien à ouvrir et la
-   * copie fait le même travail.
+   * Passer le travail au développeur, c'est lui passer l'installation — pas un
+   * lien vers un écran auquel il n'a pas accès. Sur mobile, la feuille de
+   * partage du système l'envoie où le client veut ; ailleurs, il n'y a rien à
+   * ouvrir et la copie fait le même travail.
    */
   async function shareWithDeveloper() {
+    const text = handoffText(domain, window.location.origin);
+
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({
-          title: t("shareDevTitle", { domain }),
-          text: solutionPrompt,
-        });
+        await navigator.share({ title: t("shareDevTitle", { domain }), text });
         return;
       } catch {
         // Partage annulé ou refusé : on retombe sur la copie.
@@ -323,11 +199,11 @@ export function ConnectSiteModal({
     }
 
     try {
-      await navigator.clipboard.writeText(solutionPrompt);
+      await navigator.clipboard.writeText(text);
       setShared(true);
       window.setTimeout(() => setShared(false), 2600);
     } catch {
-      /* presse-papiers indisponible : le prompt reste copiable à la main */
+      /* presse-papiers indisponible : les commandes restent copiables à la main */
     }
   }
 
@@ -386,17 +262,16 @@ export function ConnectSiteModal({
             </p>
           )}
 
-          {/* Le rattachement automatique arrive ; d'ici là, le prompt fait le
-              travail. Le bouton reste à sa place, désactivé et daté : masquer
-              l'étape à venir ferait croire qu'elle n'existe pas, et un bouton
-              qui promet la connexion sans la faire coûte encore plus cher. */}
+          {/* Le rattachement de l'agent : la seule chose à faire sur cet écran. */}
+          <div className="mt-5">
+            <AgentLinkPanel locked={locked} />
+          </div>
+
+          {/* La publication automatique sur le site arrive après. Le bouton
+              reste à sa place, désactivé et daté : masquer l'étape à venir
+              ferait croire qu'elle n'existe pas, et un bouton qui promet la
+              connexion sans la faire coûte encore plus cher. */}
           <div className="mt-5 flex flex-col gap-2.5">
-            {locked ? (
-              <LockedActions
-                ctaLabel={scope === "dashboard" ? t("promptCtaAll") : t("promptCta")}
-              />
-            ) : (
-              <>
             <button
               type="button"
               disabled
@@ -408,46 +283,6 @@ export function ConnectSiteModal({
                 {t("connectSoon")}
               </span>
             </button>
-            <button
-              type="button"
-              autoFocus
-              onClick={copyPrompt}
-              className="flex cursor-pointer items-center justify-center gap-2.5 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-            >
-              <span className="text-pretty">
-                {copied
-                  ? t("promptCopied")
-                  : scope === "dashboard"
-                    ? t("promptCtaAll")
-                    : t("promptCta")}
-              </span>
-            </button>
-
-            {/* Le début du prompt, sous le bouton.
-                Copier un texte qu'on n'a pas vu demande de la confiance ; en
-                montrer l'entrée coûte quatre lignes et lève la question. Les
-                logos passent au-dessus, à gauche : dans le bouton, ils
-                décalaient un libellé déjà long sans dire à quoi ils servaient.
-                Au-dessus du prompt, ils disent où le coller. */}
-            <div>
-              <div className="mb-2 flex items-center gap-2">
-                <AgentLogos />
-                <span className="text-xs text-muted">
-                  {t("promptPreviewLabel")}
-                </span>
-              </div>
-              <div className="relative">
-                <pre className="max-h-40 overflow-hidden whitespace-pre-wrap break-words rounded-2xl border border-fog bg-mist px-4 py-3 font-sans text-[11px] leading-relaxed text-muted">
-                  {solutionPrompt}
-                </pre>
-                {/* Le texte s'éteint vers le bas : c'est un extrait, et une
-                    coupe nette se lirait comme un prompt tronqué à la copie. */}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-px bottom-px h-16 rounded-b-2xl bg-gradient-to-b from-transparent to-mist"
-                />
-              </div>
-            </div>
 
             <button
               type="button"
@@ -456,8 +291,6 @@ export function ConnectSiteModal({
             >
               {shared ? t("shareDevDone") : t("shareDev")}
             </button>
-              </>
-            )}
 
             <button
               type="button"
@@ -467,6 +300,10 @@ export function ConnectSiteModal({
               {t("later")}
             </button>
           </div>
+
+          <p className="mt-4 text-center text-xs leading-relaxed text-steel">
+            {t("reassurance")}
+          </p>
         </div>
       </motion.div>
     </motion.div>

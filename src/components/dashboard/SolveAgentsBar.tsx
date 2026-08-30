@@ -37,21 +37,15 @@ export function SolveAgentsBar({
   domain,
   stack,
   issues,
-  solutionPrompt,
-  scope = "report",
   locked = false,
 }: {
   domain: string;
   stack: DetectedStack | null;
   /** Manques relevés dans le rapport, rejoués dans la modale (3 au plus). */
   issues: string[];
-  /** Le prompt de correction, servi tant que le rattachement n'est pas ouvert. */
-  solutionPrompt: string;
-  /** `dashboard` : le prompt couvre les six sections, pas le seul plan d'action. */
-  scope?: "report" | "dashboard";
   /**
-   * Compte gratuit : la barre s'ouvre normalement, mais la modale pose un voile
-   * sur le rattachement du site et sur le prompt.
+   * Compte gratuit : la barre et la modale s'ouvrent à l'identique. C'est le
+   * serveur MCP qui borne ensuite ce que l'agent reçoit.
    */
   locked?: boolean;
 }) {
@@ -156,8 +150,6 @@ export function SolveAgentsBar({
             domain={domain}
             stack={stack}
             issues={issues}
-            solutionPrompt={solutionPrompt}
-            scope={scope}
             locked={locked}
             onClose={() => setOpen(false)}
           />

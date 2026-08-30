@@ -221,30 +221,19 @@ export default async function DashboardHomePage() {
         <ArticleAgenda articles={upcoming} limit={4} />
       </Block>
 
-      {/* Tant que le rattachement du site n'est pas ouvert, le prompt est la
-          voie d'exécution. Il ne vit plus au bas de la page : la barre fixe le
-          porte, et il couvre désormais les six sections d'un coup — le client
-          n'a plus à passer d'onglet en onglet pour ramasser ses correctifs. */}
-      {/* La barre est là pour tout le monde : c'est le geste que le produit
-          vend, et une page qui ne le montre pas ne le vend pas. Sur un compte
-          gratuit elle s'ouvre sur la console des agents — les manques relevés
-          chez lui, corrigés ligne à ligne — puis le voile prend le relais :
-          ni rattachement du site, ni prompt de correction tant que la passe
-          n'est pas prise. Le prompt n'est alors même pas écrit côté serveur :
-          ce qui n'arrive pas au navigateur ne se copie pas. */}
+      {/* L'exécution ne passe plus par un prompt à copier : la barre ouvre le
+          rattachement de l'agent IA du client, qui va chercher lui-même les six
+          chantiers et les applique.
+
+          Elle est là pour tout le monde. Un compte gratuit installe la même
+          prise qu'un abonné — c'est le geste que le produit vend, et une page
+          qui ne le montre pas ne le vend pas. Ce que l'offre borne, c'est ce
+          que le serveur MCP sert ensuite à l'agent : les chantiers fermés
+          arrivent nommés et vides, jamais floutés. */}
       <SolveAgentsDock
         locked={!tierAtLeast(tier, "boost")}
         result={analysis}
         diagnostic={diagnostic}
-        articles={articles.map((article) => ({
-          title: article.title,
-          keyword: article.keyword,
-          status: article.status,
-          scheduledFor: article.scheduledFor,
-          excerpt: article.excerpt,
-          outline: article.outline,
-          body: article.body,
-        }))}
       />
     </>
   );

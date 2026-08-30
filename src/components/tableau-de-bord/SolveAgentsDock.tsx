@@ -1,7 +1,4 @@
-import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
-import { writeSolutionPrompt } from "@/features/dashboard/solution-prompt";
-import type { ArticleFact } from "@/lib/geo/solution-facts";
 import type { AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { SolveAgentsBar } from "@/components/dashboard/SolveAgentsBar";
@@ -9,51 +6,26 @@ import { SolveAgentsBar } from "@/components/dashboard/SolveAgentsBar";
 /**
  * La barre « résoudre avec les agents IA » de l'accueil du tableau de bord.
  *
- * C'est la même barre que celle du rapport d'analyse, à une différence près :
- * le prompt qu'elle porte ne couvre pas une section mais les six. Le client
- * n'a plus à passer d'onglet en onglet pour ramasser ses correctifs — il copie
- * une fois, son agent applique tout.
- *
- * L'écriture du prompt prend deux à trois secondes. Derrière une frontière
- * `Suspense` sans repli : la page s'affiche entière tout de suite, la barre
- * arrive après. Un repli qui montrerait la barre avec un prompt provisoire
- * fermerait la modale au moment de la bascule, en pleine lecture.
+ * Elle n'écrit plus rien. Auparavant elle rédigeait, à chaque affichage de la
+ * page, le prompt de correction des six sections — deux à trois secondes
+ * d'appel au modèle, derrière une frontière `Suspense`, pour un texte que le
+ * client copiait ensuite à la main. L'exécution passe désormais par le serveur
+ * MCP : l'agent va chercher lui-même les correctifs, et la barre n'a plus qu'à
+ * ouvrir la modale de rattachement.
  */
-export function SolveAgentsDock({
+export async function SolveAgentsDock({
   result,
   diagnostic,
-  articles,
   locked = false,
 }: {
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
-  /** Le planning éditorial : les articles rédigés partent dans le prompt. */
-  articles: ArticleFact[];
   /**
-   * Compte gratuit : la barre s'affiche et la modale s'ouvre, mais le
-   * rattachement du site et le prompt passent sous voile. Le prompt n'est alors
-   * pas écrit du tout — c'est un appel au modèle de deux à trois secondes, et
-   * un texte qui n'atteint pas le navigateur ne se copie pas.
+   * Compte gratuit : la barre et la modale s'affichent à l'identique. Ce qui
+   * change est ce que l'agent recevra une fois connecté — le serveur ne lui
+   * sert que les chantiers ouverts par l'offre.
    */
   locked?: boolean;
-}) {
-  return (
-    <Suspense fallback={null}>
-      <Dock result={result} diagnostic={diagnostic} articles={articles} locked={locked} />
-    </Suspense>
-  );
-}
-
-async function Dock({
-  result,
-  diagnostic,
-  articles,
-  locked,
-}: {
-  result: GeoAnalysisResult;
-  diagnostic: AnalysisDiagnostic;
-  articles: ArticleFact[];
-  locked: boolean;
 }) {
   const t = await getTranslations("analysisReport");
 
@@ -74,15 +46,6 @@ async function Dock({
       : diagnostic.architecture.checks.map((c) => `architecture.checks.${c.key}`)
   ).slice(0, 3);
 
-  const solutionPrompt = locked
-    ? ""
-    : await writeSolutionPrompt({
-        tab: "all",
-        result,
-        diagnostic,
-        articles,
-      });
-
   return (
     <>
       {/* La barre flotte au-dessus du bas de l'écran : sans cette réserve, elle
@@ -94,8 +57,6 @@ async function Dock({
         domain={result.domain}
         stack={result.signals.stack ?? null}
         issues={issueKeys.map((key) => t(key))}
-        solutionPrompt={solutionPrompt}
-        scope="dashboard"
         locked={locked}
       />
     </>

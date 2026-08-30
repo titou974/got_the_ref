@@ -51,3 +51,7 @@ next-env.d.ts
 
 # Dépôts de référence clonés en local (documentation Tiptap, etc.)
 .reference/
+
+# Paquet MCP (dépendances et build du serveur publié sur npm)
+/mcp/node_modules
+/mcp/dist
