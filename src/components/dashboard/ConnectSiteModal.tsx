@@ -196,68 +196,45 @@ function AgentLogos() {
 }
 
 /**
- * Ce que le compte gratuit voit à la place des deux actions.
+ * Ce que le compte gratuit voit à la place des deux actions : le bouton qui
+ * mène aux tarifs, et rien d'autre.
  *
- * Le voile est posé au même endroit que partout ailleurs dans le produit : le
- * contenu réel garde sa forme dessous — deux boutons, la rangée d'agents où le
- * prompt se colle — et l'appel se lit par-dessus. La console des agents, elle,
- * reste nette au-dessus : c'est la démonstration, et la cacher reviendrait à
- * vendre sans montrer.
+ * Il n'y a plus de voile ici. Les boutons floutés qu'on posait dessous se
+ * lisaient comme une salissure derrière le bouton — la pilule noire du décor
+ * bavait autour de la vraie —, et ils ne montraient rien qu'on ne sache déjà :
+ * la console des agents, nette juste au-dessus, a fait la démonstration, et le
+ * titre de la modale a dit ce qui s'achète.
  *
- * Sous le voile, un seul élément : le bouton. Le badge et les deux phrases qui
- * l'accompagnaient redisaient ce que le titre et le corps de la modale, nets
- * juste au-dessus, venaient déjà d'annoncer — trois fois la même promesse en
- * un demi-écran.
- *
- * Le prompt n'est pas seulement flouté, il n'existe pas ici : le serveur ne
- * l'écrit pas pour un compte gratuit (cf. `SolveAgentsDock`). Un voile CSS se
- * contourne avec l'inspecteur ; une chaîne absente, non.
+ * Le prompt, lui, n'est pas seulement absent de l'écran : le serveur ne l'écrit
+ * pas pour un compte gratuit (cf. `SolveAgentsDock`). Un voile CSS se contourne
+ * avec l'inspecteur ; une chaîne absente, non.
  */
-function LockedActions({ ctaLabel }: { ctaLabel: string }) {
+function LockedActions() {
   const t = useTranslations("analysisReport.solve.modal");
 
   return (
-    <div className="relative isolate overflow-hidden rounded-[22px]">
-      <div
+    <Link
+      href={ROUTES.pricing}
+      className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-center text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+    >
+      {t("lockedCta")}
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
         aria-hidden
-        inert
-        className="pointer-events-none flex select-none flex-col gap-2.5 blur-[6px] saturate-[0.7]"
+        className="shrink-0"
       >
-        <span className="flex items-center justify-center gap-2 rounded-full border border-fog bg-mist px-5 py-3 text-sm font-medium text-muted">
-          {t("cta")}
-        </span>
-        <span className="flex items-center justify-center rounded-full bg-cta px-5 py-3 text-sm font-medium text-white">
-          {ctaLabel}
-        </span>
-        <div className="mt-1 flex items-center gap-2">
-          <AgentLogos />
-          <span className="text-xs text-muted">{t("promptPreviewLabel")}</span>
-        </div>
-      </div>
-
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-snow/75 via-snow/92 to-snow"
-      />
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-        <Link
-          href={ROUTES.pricing}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-        >
-          {t("lockedCta")}
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M5 12h14M13 6l6 6-6 6"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
-      </div>
-    </div>
+        <path
+          d="M5 12h14M13 6l6 6-6 6"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </Link>
   );
 }
 
@@ -392,9 +369,7 @@ export function ConnectSiteModal({
               qui promet la connexion sans la faire coûte encore plus cher. */}
           <div className="mt-5 flex flex-col gap-2.5">
             {locked ? (
-              <LockedActions
-                ctaLabel={scope === "dashboard" ? t("promptCtaAll") : t("promptCta")}
-              />
+              <LockedActions />
             ) : (
               <>
             <button
