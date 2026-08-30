@@ -22,7 +22,7 @@ export default async function ContenuPage() {
     getTranslations("dashboard.content"),
   ]);
 
-  if (!context.analysis) return <PreparingAnalysis />;
+  if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
 
   const analysis = context.analysis;
 

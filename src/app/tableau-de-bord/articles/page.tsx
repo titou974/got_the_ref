@@ -37,8 +37,14 @@ export default async function ArticlesPage() {
   const published = articles.filter((article) => article.status === "published");
 
   // La rédaction s'achète : avec le Coup de Boost pour une semaine, avec
-  // l'abonnement pour la durée. Le planning reste visible sous voile — c'est
-  // exactement ce qu'on vend.
+  // l'abonnement pour la durée.
+  //
+  // Ce qui reste en clair, quel que soit le niveau, c'est le planning lui-même —
+  // les sujets datés, les mêmes que l'accueil montre. Il n'y a rien à cacher
+  // là-dedans : ce sont des titres, et les voir est justement ce qui donne
+  // envie de les faire écrire. Le voile se resserre donc sur ce qui coûte un
+  // appel au modèle — la demande de planning, le budget de rédaction, la voix
+  // de marque — et les sujets, eux, mènent aux tarifs plutôt qu'à l'atelier.
   const locked = !canOpen(context.tier, "articles");
 
   return (
@@ -50,7 +56,8 @@ export default async function ArticlesPage() {
           temps que le modèle réponde, elle laisse place à l'attente annoncée. */}
       <PlanArticlesButton />
 
-      <ArticleQuotaBar quota={quota} />
+        <ArticleQuotaBar quota={quota} />
+      </Gate>
 
       <ArticleMonth
         articles={articles.map((article) => ({
@@ -59,9 +66,10 @@ export default async function ArticlesPage() {
           status: article.status,
           scheduledFor: article.scheduledFor,
         }))}
+        locked={locked}
       />
 
-      <ArticleAgenda articles={upcoming} />
+      <ArticleAgenda articles={upcoming} locked={locked} />
 
       {published.length ? <ArticleAgenda articles={published} variant="published" /> : null}
 

@@ -22,7 +22,15 @@ import {
   reserveOnPageRewrite,
 } from "./quota";
 import { ARTICLE_QUOTAS, ON_PAGE_REWRITE_QUOTA } from "@/constants/plans";
-import { FREE_CONTENT_REWRITES, runsEngine, tierAtLeast } from "@/constants/access";
+import {
+  FREE_CONTENT_REWRITES,
+  analysisNeedsUpgrade,
+  articleTopicsFor,
+  draftsSeedArticles,
+  runsEngine,
+  tierAtLeast,
+  type AccessTier,
+} from "@/constants/access";
 import { getAccess, requireSection } from "@/features/billing/access";
 import { parseOutline, serializeOutline } from "./outline";
 import {
@@ -84,12 +92,21 @@ const revalidateDashboard = () => {
 // ── Analyse d'entrée ─────────────────────────────────────────────────────────
 
 /**
- * L'analyse du site, lancée avant la première ouverture du tableau de bord.
+ * L'analyse du site, lancée avant la première ouverture du tableau de bord —
+ * et rejouée une fois, le jour où le compte achète.
  *
  * Le tunnel d'accueil a déjà crawlé le site ; ce qui manque ici, c'est l'audit
  * GEO complet, celui qui alimente les onglets Contenu et Architecture. Refaire
  * l'analyse à chaque visite n'aurait pas de sens : elle n'est déclenchée que
  * lorsque le compte n'en a aucune sur son domaine.
+ *
+ * Avec une exception, et c'est tout l'objet du niveau inscrit dans l'analyse.
+ * Celle d'un compte gratuit est volontairement étroite : un seul moteur
+ * interrogé, aucun relevé hors-site — on ne paie pas des appels dont le
+ * résultat finira sous un voile. Le jour où ce compte prend le Coup de Boost ou
+ * l'abonnement, ces appels-là ont enfin un écran où s'afficher : l'analyse est
+ * donc refaite une fois, à son nouveau niveau, et remplace la précédente.
+ * Ensuite elle est de nouveau à jour, et plus rien ne repart.
  */
 export const prepareDashboardAction = authActionClient
   .inputSchema(disconnectSiteSchema)
@@ -116,15 +133,6 @@ export const prepareDashboardAction = authActionClient
       );
     }
 
-    const existing = await prisma.analysis.findFirst({
-      where: { userId, ...(profile.domain ? { domain: profile.domain } : {}) },
-      select: { id: true },
-    });
-    if (existing) return { id: existing.id };
-
-    const mode = profile.businessKind === "online" ? "online" : "physical";
-    const signals = await collectSignals(profile.siteUrl);
-
     // Un compte gratuit reçoit bien l'audit complet — c'est lui qui détecte la
     // niche et sort les mots-clés, les deux choses qu'il a le droit de voir —
     // mais ses classements ne sont relevés que sur Gemini (cf. `FREE_ENGINES`).
@@ -132,6 +140,22 @@ export const prepareDashboardAction = authActionClient
     // onglets qui resteront sous voile, on ne les paie donc pas.
     const { tier } = await getAccess(userId);
     const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(tier, engine));
+
+    const existing = await prisma.analysis.findFirst({
+      where: { userId, ...(profile.domain ? { domain: profile.domain } : {}) },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, data: true },
+    });
+
+    // Une analyse déjà faite au niveau du compte n'a aucune raison d'être
+    // refaite : elle a coûté ce qu'elle devait coûter, et rejouer l'audit à
+    // chaque ouverture reviendrait à repayer le même rapport.
+    if (existing && !analysisNeedsUpgrade(readAnalysisTier(existing.data), tier)) {
+      return { id: existing.id };
+    }
+
+    const mode = profile.businessKind === "online" ? "online" : "physical";
+    const signals = await collectSignals(profile.siteUrl);
 
     const result = await analyzeSite(
       signals,
@@ -150,24 +174,53 @@ export const prepareDashboardAction = authActionClient
       "paid",
     );
 
-    const record = await prisma.analysis.create({
-      data: {
-        url: result.url,
-        domain: result.domain,
-        businessName: result.businessName,
-        businessType: result.businessType,
-        mapsUrl: profile.mapsUrl ?? null,
-        overallScore: result.overallScore,
-        data: JSON.stringify({ ...result, mapsUrl: profile.mapsUrl ?? null, tier: "paid" }),
-        unlocked: true,
-        userId,
-      },
-      select: { id: true },
+    // Le niveau est écrit dans l'analyse elle-même : c'est lui qui dira, à la
+    // prochaine ouverture, si les appels qu'on vient de sauter ont désormais un
+    // écran où s'afficher.
+    const data = JSON.stringify({
+      ...result,
+      mapsUrl: profile.mapsUrl ?? null,
+      tier: "paid",
+      accessTier: tier,
     });
+
+    const columns = {
+      url: result.url,
+      domain: result.domain,
+      businessName: result.businessName,
+      businessType: result.businessType,
+      mapsUrl: profile.mapsUrl ?? null,
+      overallScore: result.overallScore,
+      data,
+      unlocked: true,
+    };
+
+    // Mise à jour plutôt que création quand l'analyse existait déjà : le client
+    // garde le même identifiant d'un bout à l'autre, et rien ne pointe vers un
+    // rapport devenu orphelin.
+    const record = existing
+      ? await prisma.analysis.update({
+          where: { id: existing.id },
+          data: columns,
+          select: { id: true },
+        })
+      : await prisma.analysis.create({
+          data: { ...columns, userId },
+          select: { id: true },
+        });
 
     revalidateDashboard();
     return { id: record.id };
   });
+
+/** Le niveau d'accès inscrit dans une analyse enregistrée, s'il l'a été. */
+function readAnalysisTier(raw: string): AccessTier | null {
+  try {
+    return (JSON.parse(raw) as { accessTier?: AccessTier }).accessTier ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Relève à nouveau la place du commerce dans ChatGPT et Gemini.
@@ -243,7 +296,6 @@ export const refreshRankingsAction = authActionClient
 const SEED_WEEKDAYS = [1, 3, 5] as const;
 /** Quatre semaines : le mois entier est posé avant la première visite. */
 const SEED_WEEKS = 4;
-const SEED_COUNT = SEED_WEEKDAYS.length * SEED_WEEKS;
 /** Publication à 9 h : l'heure où le planning se lit comme un agenda. */
 const SEED_HOUR = 9;
 
@@ -273,35 +325,54 @@ function seedSchedule(from: Date): Date[] {
 }
 
 /**
- * Le mois d'articles posé avant la première ouverture du tableau de bord.
+ * Les sujets d'articles posés avant la première ouverture du tableau de bord,
+ * et complétés le jour de l'achat.
  *
  * Un calendrier vide, à l'arrivée, demande au client de deviner quoi écrire :
- * c'est exactement le travail qu'il vient de déléguer. Douze sujets sont donc
- * planifiés d'un coup — trois par semaine sur quatre semaines — et les trois de
- * la première semaine sont rédigés dans la foulée, pour qu'il ait du texte à
- * lire, pas seulement des titres.
+ * c'est exactement le travail qu'il vient de déléguer. On en pose donc d'entrée,
+ * mais pas la même quantité selon ce que le compte a payé.
  *
- * Ces trois rédactions ne sont pas décomptées du quota hebdomadaire : elles
- * sont offertes avec la mise en route, et un client qui arriverait à zéro
- * passe ne pourrait plus rien reprendre de sa semaine.
+ *   — gratuit : quatre sujets, la semaine qui vient. Ils sont datés, ils
+ *     portent le mot-clé et l'angle, et ils s'affichent en clair sur l'accueil.
+ *     Aucun n'est rédigé : écrire est le travail vendu, et trois appels au
+ *     grand modèle pour un onglet resté sous voile ne servent personne. Cette
+ *     planification-là tient en UN appel — le même qu'il rende quatre sujets ou
+ *     douze —, c'est ce qui la rend tenable sur un compte qui ne paie rien.
+ *   — Coup de Boost et abonnement : le mois entier, douze sujets à raison de
+ *     trois par semaine, dont les trois premiers rédigés dans la foulée.
  *
- * L'action est sans effet si le compte a déjà des articles : elle est appelée
- * juste après l'analyse d'entrée, qui peut être rejouée.
+ * L'action est donc appelée deux fois dans la vie d'un compte gratuit qui
+ * achète : à la mise en route, puis derrière l'écran d'attente de l'achat. Le
+ * second passage ne refait pas ce qui existe — il complète jusqu'au volume du
+ * nouveau niveau, en reprenant le planning là où le précédent s'était arrêté,
+ * et rédige la première semaine.
+ *
+ * Ces rédactions offertes ne sont pas décomptées du quota hebdomadaire : elles
+ * viennent avec la mise en route, et un client qui arriverait à zéro passe ne
+ * pourrait plus rien reprendre de sa semaine.
  */
 export const seedEditorialMonthAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
     const userId = ctx.auth.user.id;
 
+    const { tier } = await getAccess(userId);
+    const target = articleTopicsFor(tier);
+
     const existing = await prisma.article.count({ where: { userId } });
-    if (existing > 0) return { planned: 0, written: 0 };
+    if (existing >= target) return { planned: 0, written: 0 };
 
     const context = await getDashboardContext(userId);
-    const topics = await planArticleTopics(context, SEED_COUNT);
-    const dates = seedSchedule(new Date());
+    const missing = target - existing;
+    const topics = await planArticleTopics(context, missing);
+    // Le planning complet est calculé d'un bloc, puis on n'en prend que les
+    // dates encore libres : les quatre sujets du compte gratuit gardent leur
+    // place, et les suivants s'ajoutent derrière eux au lieu de tomber le même
+    // jour.
+    const dates = seedSchedule(new Date()).slice(existing);
 
     await prisma.article.createMany({
-      data: topics.slice(0, SEED_COUNT).map((topic, index) => ({
+      data: topics.slice(0, missing).map((topic, index) => ({
         userId,
         title: topic.title,
         keyword: topic.keyword,
@@ -314,11 +385,18 @@ export const seedEditorialMonthAction = authActionClient
       })),
     });
 
-    // Les trois premiers du planning, rédigés ensemble : trois appels en
-    // parallèle tiennent dans le budget de la préparation, trois à la suite
-    // non.
+    // Un compte gratuit s'arrête là : ses sujets sont au calendrier, lisibles,
+    // et le bouton de publication mène aux tarifs.
+    if (!draftsSeedArticles(tier)) {
+      revalidateDashboard();
+      return { planned: topics.length, written: 0 };
+    }
+
+    // Les trois premiers du planning encore à l'état de sujet, rédigés
+    // ensemble : trois appels en parallèle tiennent dans le budget de la
+    // préparation, trois à la suite non.
     const firstWeek = await prisma.article.findMany({
-      where: { userId },
+      where: { userId, status: "planned" },
       orderBy: { scheduledFor: "asc" },
       take: SEED_WEEKDAYS.length,
     });
@@ -451,6 +529,7 @@ export const applyOnPageAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
     const userId = ctx.auth.user.id;
+    await requireSection(userId, "architecture");
     const { link, credentials } = await requireEditableLink(userId);
 
     const context = await getDashboardContext(userId);
@@ -533,6 +612,10 @@ export const applyStructureAction = authActionClient
 export const rewriteOnPageAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
+    // Une réécriture complète du on-page, sans compteur : c'est un appel au
+    // modèle par clic. L'élément par élément, lui, a son quota
+    // (`regenerateOnPageAction`) et reste ouvert au compte gratuit.
+    await requireSection(ctx.auth.user.id, "architecture");
     const context = await getDashboardContext(ctx.auth.user.id);
     if (!context.analysis) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
     return rewriteOnPage(context);

@@ -78,16 +78,19 @@ export function canOpen(tier: AccessTier, section: DashboardSection): boolean {
  * qu'on le voit, sa note, et surtout la niche détectée — c'est la première
  * chose qu'il vient vérifier, et celle qui prouve que la lecture a eu lieu.
  *
- * Tout le reste — corrections de structure, trafic envoyé par les IA,
- * calendrier de rédaction, suivi des mentions — passe sous un voile surmonté
- * d'un appel vers les tarifs.
+ * Le calendrier de rédaction reste lui aussi en clair : un compte gratuit
+ * reçoit les premiers sujets de la semaine, datés, et voit donc l'atelier
+ * tourner avant d'avoir payé. Ce qu'il ne peut pas faire, c'est publier —
+ * le bouton mène alors aux tarifs.
+ *
+ * Tout le reste — corrections de structure, trafic envoyé par les IA — passe
+ * sous un voile surmonté d'un appel vers les tarifs.
  */
 export const HOME_BLOCKS = [
   "profile",
   "rankings",
   "diagnostic",
   "recommendations",
-  "mentions",
   "traffic",
   "agenda",
 ] as const;
@@ -117,8 +120,6 @@ export const HOME_BLOCK_TIER: Record<HomeBlock, AccessTier> = {
    * `FREE_RECOMMENDATION_CATEGORIES`).
    */
   recommendations: "boost",
-  /** Les mentions dans les IA, mois après mois : une mesure qui court. */
-  mentions: "allin",
   /**
    * Les visites envoyées par les IA, relevées dans Analytics. Ouvertes dès le
    * Coup de Boost : c'est la preuve que la passe a servi à quelque chose, et la
@@ -126,8 +127,16 @@ export const HOME_BLOCK_TIER: Record<HomeBlock, AccessTier> = {
    * jamais lui en montrer l'effet.
    */
   traffic: "boost",
-  /** Le calendrier de rédaction. */
-  agenda: "boost",
+  /**
+   * Le calendrier de rédaction, ouvert à tous les niveaux.
+   *
+   * C'est la seule pièce du produit qui se montre bien mieux qu'elle ne se
+   * raconte : des sujets datés, écrits pour la niche du client, posés sur les
+   * jours qui viennent. Un compte gratuit en reçoit les premiers
+   * (`FREE_ARTICLE_TOPICS`) ; la rédaction et la publication, elles, restent
+   * derrière l'onglet Articles, qui s'achète.
+   */
+  agenda: "free",
 };
 
 /** Le bloc d'accueil est-il en clair à ce niveau ? */
@@ -215,6 +224,63 @@ export function seesRecommendation(tier: AccessTier, category: string): boolean 
  * frontière annoncée sur la carte tarifaire.
  */
 export const BOOST_ARTICLE_WINDOW_DAYS = 7;
+
+/**
+ * Combien de sujets d'articles sont planifiés à la mise en route, par niveau.
+ *
+ * Un compte gratuit en reçoit quatre : la semaine qui vient, datée, visible sur
+ * son accueil. C'est une seule demande au modèle — le même appel qu'il en
+ * rende quatre ou douze — et c'est ce qui rend le calendrier crédible sans rien
+ * offrir de ce qui se vend : aucun de ces quatre sujets n'est rédigé, et le
+ * bouton de publication mène aux tarifs.
+ *
+ * Dès le Coup de Boost, le mois entier est posé — douze sujets, trois par
+ * semaine — et la première semaine est rédigée dans la foulée. C'est ce
+ * complément qui part au moment de l'achat, sans que le client ait à redemander
+ * quoi que ce soit.
+ */
+export const FREE_ARTICLE_TOPICS = 4;
+
+/** Le mois éditorial complet, posé dès le Coup de Boost. */
+export const PAID_ARTICLE_TOPICS = 12;
+
+/** Combien de sujets ce niveau fait planifier à la mise en route. */
+export function articleTopicsFor(tier: AccessTier): number {
+  return tierAtLeast(tier, "boost") ? PAID_ARTICLE_TOPICS : FREE_ARTICLE_TOPICS;
+}
+
+/**
+ * Les sujets planifiés sont-ils rédigés dans la foulée ?
+ *
+ * Non en gratuit : la rédaction est le travail vendu, et écrire trois articles
+ * que le client ne pourra ni lire en entier ni publier reviendrait à payer trois
+ * appels au grand modèle pour un onglet resté sous voile.
+ */
+export function draftsSeedArticles(tier: AccessTier): boolean {
+  return tierAtLeast(tier, "boost");
+}
+
+/**
+ * L'analyse enregistrée a-t-elle été faite à un niveau plus étroit que celui du
+ * compte aujourd'hui ?
+ *
+ * C'est la question posée après un achat. L'analyse d'un compte gratuit est
+ * volontairement partielle : un seul moteur interrogé, aucun relevé hors-site.
+ * Le jour où ce compte prend le Coup de Boost ou l'abonnement, ces appels-là
+ * doivent partir — sinon le client paie pour des cartes qui restent vides. On
+ * compare donc le niveau inscrit dans l'analyse à celui du compte, et l'accueil
+ * relance la préparation derrière son écran d'attente habituel.
+ *
+ * Une analyse sans niveau inscrit est une analyse d'avant cette règle : on la
+ * lit comme gratuite, ce qui la fait rejouer une fois pour un compte payant et
+ * la laisse tranquille pour un compte gratuit.
+ */
+export function analysisNeedsUpgrade(
+  storedTier: AccessTier | null | undefined,
+  tier: AccessTier,
+): boolean {
+  return RANK[tier] > RANK[storedTier ?? "free"];
+}
 
 /**
  * Le niveau d'un compte, déduit de son offre et de son abonnement.

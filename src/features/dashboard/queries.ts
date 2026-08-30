@@ -29,7 +29,22 @@ import { getAccess } from "@/features/billing/access";
  * rendu qui, de toute façon, montre la barre latérale complète.
  */
 
-export type DashboardAnalysis = GeoAnalysisResult & { tier?: "free" | "paid" };
+export type DashboardAnalysis = GeoAnalysisResult & {
+  tier?: "free" | "paid";
+  /**
+   * Le niveau d'accès du compte au moment où l'analyse a été faite.
+   *
+   * Il ne dit pas ce que le compte a le droit de voir aujourd'hui — c'est
+   * `DashboardContext.tier` qui le dit — mais quels appels sont réellement
+   * partis ce jour-là. Une analyse faite en gratuit n'a interrogé qu'un moteur
+   * et sauté les relevés hors-site ; comparer les deux niveaux est ce qui
+   * déclenche la reprise après un achat (cf. `analysisNeedsUpgrade`).
+   *
+   * Absent sur les analyses d'avant cette règle : elles se lisent comme
+   * gratuites, ce qui les fait rejouer une fois pour un compte payant.
+   */
+  accessTier?: AccessTier;
+};
 
 export type SiteLink = {
   platform: string;
