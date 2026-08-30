@@ -49,6 +49,8 @@ npm run dev                 # http://localhost:3000
 | `RESEND_API_KEY` | Clé Resend pour les e-mails transactionnels (sans elle, les envois sont journalisés en console) |
 | `RESEND_FROM` | Expéditeur, ex. `got_the_ref <bonjour@votre-domaine.fr>` (`onboarding@resend.dev` par défaut) |
 | `RESEND_REPLY_TO` | Adresse de réponse (par défaut, le contact du site) |
+| `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` | Identifiants DataForSEO ([api-access](https://app.dataforseo.com/api-access)) pour le relevé des mentions dans les IA. Sans eux, la carte reste en mode exemple. |
+| `DATAFORSEO_AUTH` | Variante à variable unique : base64 de `login:password` |
 
 ## Tunnel d'accueil et crawl
 
@@ -159,6 +161,84 @@ paramètre d'URL :
   couvre que les clics depuis l'application. Les liens des aperçus IA de Google
   partent de `google.com` et restent mêlés au référencement classique. L'interface
   le dit plutôt que de gonfler le chiffre.
+
+### Mentions dans les IA (DataForSEO)
+
+La carte « Mentions dans les IA » montre comment les citations du commerce
+évoluent, modèle par modèle et mois par mois. Elle lit l'archive DataForSEO
+(`/v3/ai_optimization/llm_mentions/timeseries_delta/live`) : des millions de
+questions grand public rejouées en continu sur ChatGPT et sur les aperçus IA de
+Google, réponses et sources conservées.
+
+- **Une seule route**, sur les **douze derniers mois** glissants. `search_mentions`,
+  qui liste les réponses une à une, a été retiré : sur un commerce local il rend
+  le plus souvent une liste vide — l'archive garde les réponses détaillées bien
+  plus parcimonieusement qu'elle ne compte les mentions — et une carte qui
+  affiche « aucune mention » alors que le mouvement mensuel existe ment sur la
+  mesure.
+- La fenêtre glisse sur douze mois plutôt que de suivre l'année civile : en
+  janvier, cette dernière ne montrerait qu'une seule barre.
+- Le graphique est en **barres groupées** : une couleur par modèle d'IA, côte à
+  côte à chaque mois. Cela se lit à deux niveaux — la marche du mois, et lequel
+  des modèles la produit. La liste sous le graphique reprend la même couleur en
+  pastille, avec le mouvement net de chaque modèle sur la fenêtre.
+- La cible est le **domaine seul**, jamais le nom de la marque : c'est le site du
+  commerce qu'on suit, et lui seul s'écrit sans ambiguïté d'orthographe.
+  `search_filter: "include"` est écrit explicitement, l'API exigeant qu'au moins
+  une cible le porte.
+- Un appel par plateforme : `platform` ne prend qu'une valeur par requête, et
+  sans ce champ la route mélangerait les deux modèles dans une seule série.
+- Ce que rend cette route est `delta_mentions` : **l'écart avec le mois
+  précédent, pas un total**. Une barre peut donc descendre sous zéro, d'où la
+  ligne de base tracée à 0 ; l'interface écrit le signe partout plutôt que
+  d'appeler « nombre de mentions » un chiffre qui n'en est pas un. Les mois
+  absents de la réponse sont rétablis à zéro : un axe qui saute de mars à juin
+  ment sur l'allure.
+- L'archive ne remonte pas avant **2025-08-01** : `date_from` ne descend jamais
+  sous cette date. ChatGPT n'est historisé qu'aux États-Unis et en anglais — sa
+  série est donc toujours relevée sur `location_code: 2840` et
+  `language_code: "en"`, faute de quoi elle rendrait un vide qu'on lirait comme
+  une absence de mentions. La carte écrit la localisation de chaque série.
+- La cible est le domaine de la fiche d'accueil, sous-domaines compris ; la
+  localisation suit le pays relevé pendant l'accueil (France par défaut).
+- **Un relevé par client et par mois calendaire**, tenu en base
+  (`LlmMentionSnapshot`, une ligne par compte) et non par un cache : un cache
+  s'évapore à chaque déploiement, la facture non. Mensuel parce que la donnée
+  l'est — l'archive agrège par mois, et sur douze barres onze ne bougeront plus
+  jamais. Le mois calendaire plutôt qu'un délai de trente jours : c'est ce qui
+  fait apparaître la barre du mois neuf le 1er, et non le 12 parce que le relevé
+  précédent tombait un 12.
+- **Un compte sans ligne en base a la porte ouverte** : les clients arrivés
+  avant cet écran sont relevés à leur première ouverture du tableau de bord,
+  sans rien avoir à refaire de leur accueil.
+- La table garde deux dates : `attemptedAt`, la dernière tentative réussie **ou
+  ratée**, qui ouvre ou ferme la porte, et `fetchedAt`, le dernier relevé
+  exploitable, celui que la carte affiche. Rien ne rouvre la porte avant
+  l'heure, pas même un changement de domaine — sinon un aller-retour entre deux
+  domaines suffirait à appeler sans limite ; le relevé gardé ne ressort que s'il
+  porte sur le même domaine et la même localisation.
+- **Tout passe dans le terminal serveur** (`⚫ [DATAFORSEO]`) : la requête
+  partie avec sa cible et sa période, la réponse avec son coût en dollars et sa
+  durée, et — tout aussi important — les relevés lus en base sans qu'aucun appel
+  ne parte. Un appel qu'on ne voit pas passer est un appel qu'on découvre sur la
+  facture. Couper avec `DATAFORSEO_DEBUG="false"`.
+- Un relevé écrit par une version antérieure de cet écran n'a pas la forme
+  attendue : il est traité comme absent — la carte repasse à l'exemple — plutôt
+  que rendu à moitié. Pour forcer un nouveau relevé avant le mois prochain,
+  supprimer la ligne du compte dans `LlmMentionSnapshot`.
+- Sans identifiants, aucun appel ne part : la carte montre un exemple, net, sous
+  son bandeau « données d'exemple ».
+- La table est indispensable au garde-fou : sans elle, aucun appel ne part.
+  `npm run db:push` puis `npm run db:generate`.
+
+Pour vérifier le branchement en ligne de commande — le script parle à DataForSEO
+directement et ne passe pas par le compteur mensuel, chaque exécution est donc
+facturée :
+
+```bash
+npm run check:dataforseo -- exemple.fr        # France (2250) par défaut
+npm run check:dataforseo -- exemple.be 2056   # autre localisation
+```
 
 ### Rattachement du site
 

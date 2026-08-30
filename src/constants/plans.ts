@@ -3,12 +3,27 @@
  * Données numériques / techniques uniquement — les libellés sont dans l'i18n.
  */
 
-export type PlanKey = "free" | "pro" | "agency";
+/**
+ * Ce que porte la colonne `User.plan`.
+ *
+ * Deux d'entre eux ne correspondent à aucun abonnement Stripe : `boost`, posé
+ * par le paiement unique du Coup de Boost, et `demo`, posé à la main sur les
+ * comptes de démonstration — ils voient tout sans rien payer. La table des
+ * droits, elle, vit dans `constants/access.ts` : ici on ne décrit que les
+ * offres et leurs tarifs.
+ */
+export type PlanKey = "free" | "boost" | "pro" | "agency" | "demo";
 
-/** Plans payants (exclut le gratuit). */
-export type PaidPlanKey = Exclude<PlanKey, "free">;
+/** Offres vendues comme abonnement Stripe récurrent. */
+export type PaidPlanKey = "pro" | "agency";
 
-export const PLAN_KEYS: readonly PlanKey[] = ["free", "pro", "agency"] as const;
+export const PLAN_KEYS: readonly PlanKey[] = [
+  "free",
+  "boost",
+  "pro",
+  "agency",
+  "demo",
+] as const;
 
 export const PAID_PLAN_KEYS: readonly PaidPlanKey[] = ["pro", "agency"] as const;
 
@@ -19,10 +34,14 @@ export const PAID_PLAN_KEYS: readonly PaidPlanKey[] = ["pro", "agency"] as const
  */
 export const PLAN_PRICING: Record<PlanKey, { amount: number | null; recurring: boolean }> = {
   free: { amount: 0, recurring: true },
+  /** Coup de Boost : une passe des agents, payée une seule fois. */
+  boost: { amount: 49, recurring: false },
   /** Offre unique : abonnement mensuel, accès total à got_the_ref. */
   pro: { amount: 79, recurring: true },
   /** Ancien plan agence : conservé pour les comptes existants, plus commercialisé. */
   agency: { amount: null, recurring: true },
+  /** Compte de démonstration : accès complet, rien à facturer. */
+  demo: { amount: 0, recurring: false },
 };
 
 /** Prix public de l'abonnement got_the_ref, en euros par mois. */
@@ -36,7 +55,7 @@ export const SUBSCRIPTION_PRICE = PLAN_PRICING.pro.amount as number;
  */
 export const BOOST = {
   /** Prix public, en euros, débité une seule fois. */
-  price: 49,
+  price: PLAN_PRICING.boost.amount as number,
   /** Articles rédigés pendant la passe — le seul volume promis. */
   articles: 10,
   /**
@@ -48,14 +67,15 @@ export const BOOST = {
 } as const;
 
 /**
- * Essai : accès complet quelques jours, **gratuit**. Rien n'est débité à
- * l'ouverture du checkout (`todayPrice` à 0) ; la facturation récurrente ne
- * démarre qu'à la fin de l'essai, et seulement si l'abonnement n'est pas résilié.
+ * Il n'y a plus d'essai gratuit.
  *
- * `todayPrice` reste une donnée plutôt qu'un littéral : c'est le montant affiché
- * en grand sur la carte tarif, face au tarif plein barré.
+ * Ce qui en tenait lieu — regarder le produit avant de payer — est désormais le
+ * compte gratuit lui-même : on ouvre un compte, on donne l'adresse de son site,
+ * et le tableau de bord s'ouvre avec sa mesure, un classement et une correction
+ * de contenu (cf. `constants/access.ts`). Rien à résilier, rien à débiter, et
+ * aucune date d'expiration à surveiller — donc plus de `trial_period_days` sur
+ * les checkouts Stripe.
  */
-export const TRIAL = { days: 3, todayPrice: 0 } as const;
 
 /**
  * Tarif mensuel de l'abonnement engagé à l'année. Toujours affiché **par mois**
@@ -123,10 +143,14 @@ export const ANALYSIS_QUOTAS = {
   anon: { limit: 1, windowMs: 30 * 24 * 60 * 60 * 1000 },
   /** Compte gratuit : une analyse à vie, l'abonnement ouvre le reste. */
   free: { lifetime: 1 },
+  /** Coup de Boost : la passe payée, donc la remesure qui va avec. */
+  boost: { lifetime: null },
   /** Abonné : illimité. */
   pro: { lifetime: null },
   /** Ancien plan agence : illimité. */
   agency: { lifetime: null },
+  /** Compte de démonstration : illimité, comme un abonné. */
+  demo: { lifetime: null },
 } as const;
 
 /**

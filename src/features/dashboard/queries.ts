@@ -7,10 +7,18 @@ import { decryptJson } from "@/lib/crypto";
 import type { SiteCapability } from "@/constants/site-platforms";
 import {
   ARTICLE_QUOTAS,
+  BOOST,
   ON_PAGE_ELEMENTS,
   ON_PAGE_REWRITE_QUOTA,
   type OnPageElementKey,
 } from "@/constants/plans";
+import {
+  BOOST_ARTICLE_WINDOW_DAYS,
+  FREE_CONTENT_REWRITES,
+  tierAtLeast,
+  type AccessTier,
+} from "@/constants/access";
+import { getAccess } from "@/features/billing/access";
 
 /**
  * Tout ce que le tableau de bord relit avant d'afficher quoi que ce soit.
@@ -49,8 +57,22 @@ export type DashboardContext = {
   mapsUrl: string | null;
   niche: string | null;
   cities: string[];
+  /**
+   * Le pays relevé pendant l'accueil, en code ISO à deux lettres. Il choisit la
+   * localisation interrogée chez DataForSEO : les mentions d'un commerce belge
+   * ne se cherchent pas dans l'archive française.
+   */
+  country: string | null;
   analysisId: string | null;
   analysis: DashboardAnalysis | null;
+  /**
+   * Ce que l'offre du compte ouvre. Porté par le contexte plutôt que relu page
+   * par page : chaque écran du tableau de bord s'en sert, et la coque en a
+   * besoin avant même de dessiner la colonne de gauche.
+   */
+  tier: AccessTier;
+  /** Fin de la semaine de rédaction du Coup de Boost, si elle court encore. */
+  boostArticlesUntil: Date | null;
   google: GoogleLinkState;
   site: SiteLink | null;
   brandVoice: { instructions: string; banned: string[] } | null;
@@ -77,7 +99,8 @@ function parseAnalysis(raw: string): DashboardAnalysis | null {
 export const getDashboardContext = cache(async function getDashboardContext(
   userId: string,
 ): Promise<DashboardContext> {
-  const [profile, googleLink, siteLink, voice] = await Promise.all([
+  const [access, profile, googleLink, siteLink, voice] = await Promise.all([
+    getAccess(userId),
     prisma.onboardingProfile.findUnique({
       where: { userId },
       include: { competitors: { orderBy: { rank: "asc" } } },
@@ -103,6 +126,8 @@ export const getDashboardContext = cache(async function getDashboardContext(
 
   return {
     userId,
+    tier: access.tier,
+    boostArticlesUntil: access.boostArticlesUntil,
     domain,
     siteUrl: profile?.siteUrl ?? null,
     businessName: record?.businessName ?? profile?.domain ?? "",
@@ -110,6 +135,7 @@ export const getDashboardContext = cache(async function getDashboardContext(
     mapsUrl: profile?.mapsUrl ?? null,
     niche: profile?.niche ?? analysis?.profile.niche ?? null,
     cities: profile?.cities ?? [],
+    country: profile?.detectedCountry ?? null,
     analysisId: record?.id ?? null,
     analysis,
     google: {
@@ -197,6 +223,30 @@ export type ArticleQuota = {
  * sortira la première.
  */
 export async function getArticleQuota(userId: string): Promise<ArticleQuota> {
+  const access = await getAccess(userId);
+
+  // Le Coup de Boost n'achète pas un rythme, il achète une semaine : les agents
+  // écrivent le volume promis à partir du paiement, puis s'arrêtent. Passé ce
+  // délai, il ne reste rien à attendre — d'où `renewsAt` à null, qui dit « c'est
+  // fini » là où une date dirait « revenez lundi ».
+  if (access.tier === "boost") {
+    const until = access.boostArticlesUntil;
+    if (!until || until.getTime() <= Date.now()) {
+      return { used: BOOST.articles, remaining: 0, limit: BOOST.articles, renewsAt: null };
+    }
+
+    const since = new Date(until.getTime() - BOOST_ARTICLE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const used = await prisma.articleGeneration.count({
+      where: { userId, createdAt: { gte: since } },
+    });
+    return {
+      used,
+      remaining: Math.max(0, BOOST.articles - used),
+      limit: BOOST.articles,
+      renewsAt: null,
+    };
+  }
+
   const since = new Date(Date.now() - ARTICLE_QUOTAS.windowMs);
   const [used, oldest] = await Promise.all([
     prisma.articleGeneration.count({ where: { userId, createdAt: { gte: since } } }),
@@ -252,8 +302,24 @@ function startOfDay(): Date {
  *
  * Les trois compteurs sont lus d'un coup : la page affiche les trois boutons,
  * et trois requêtes pour trois nombres seraient trois allers-retours pour rien.
+ *
+ * Un compte gratuit sort de ce calcul : il n'a pas trois passes par jour et par
+ * élément, mais **une seule** réécriture dans toute sa vie, sur l'élément de son
+ * choix (cf. `FREE_CONTENT_REWRITES`). C'est l'échantillon — il voit un agent
+ * réécrire son propre titre, et il décide. Le même crédit est donc affiché sur
+ * les trois boutons : le premier consommé ferme les deux autres.
  */
 export async function getOnPageRewriteQuota(userId: string): Promise<OnPageRewriteQuota> {
+  const { tier } = await getAccess(userId);
+
+  if (!tierAtLeast(tier, "boost")) {
+    const used = await prisma.onPageRewrite.count({ where: { userId } });
+    const left = Math.max(0, FREE_CONTENT_REWRITES - used);
+    return Object.fromEntries(
+      ON_PAGE_ELEMENTS.map((element) => [element, left]),
+    ) as OnPageRewriteQuota;
+  }
+
   const runs = await prisma.onPageRewrite.groupBy({
     by: ["element"],
     where: { userId, createdAt: { gte: startOfDay() } },

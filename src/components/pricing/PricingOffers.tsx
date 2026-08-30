@@ -3,17 +3,18 @@ import { BoostCard } from "./BoostCard";
 import { PlanCard } from "./PlanCard";
 
 /**
- * Les deux offres, côte à côte : l'abonnement qui ne s'arrête jamais, et la
- * passe unique. Une seule mise en page pour la page tarifs et le bas de la home,
+ * Les deux offres, l'une sous l'autre : la passe unique d'abord, l'abonnement
+ * ensuite. Une seule mise en page pour la page tarifs et le bas de la home,
  * pour que le couple se lise partout pareil.
  *
- * L'abonnement prend la colonne la plus large et garde la seule surface sombre
- * du site : c'est lui qu'on recommande. En dessous de `lg`, les deux cartes
- * s'empilent — abonnement d'abord, Coup de Boost ensuite.
+ * Elles étaient côte à côte, et l'abonnement tenait la colonne la plus large et
+ * la seule surface sombre. Deux offres en vis-à-vis se comparent ; empilées,
+ * elles se lisent dans l'ordre — c'est ce qu'on veut. Le Coup de Boost est la
+ * marche d'entrée : on la propose en premier, en noir, et l'abonnement attend
+ * juste dessous celui qui, ayant lu la note de périmètre, veut que ça continue.
  *
- * Côte à côte, les deux cartes montent à la même hauteur : chacune pousse son
- * bloc de pied (le roster d'agents, la note de périmètre) vers le bas, et
- * l'espace en trop se pose là plutôt qu'entre deux lignes.
+ * La colonne reste étroite (`max-w-2xl`) : une carte tarifaire pleine largeur
+ * étire ses lignes de texte sur trente mots et n'est plus lisible.
  */
 export function PricingOffers({
   subscriptionCta,
@@ -33,16 +34,14 @@ export function PricingOffers({
   className?: string;
 }) {
   return (
-    <div
-      className={`grid gap-6 lg:grid-cols-[1.06fr_0.94fr] lg:gap-7 ${className}`}
-    >
+    <div className={`mx-auto flex w-full max-w-2xl flex-col gap-10 ${className}`}>
+      <BoostCard analysisId={analysisId} compact={compact} showAgents={showAgents} />
       <PlanCard
         compact={compact}
         showAgents={showAgents}
         ctaNote={subscriptionCtaNote}
         cta={subscriptionCta}
       />
-      <BoostCard analysisId={analysisId} compact={compact} />
     </div>
   );
 }

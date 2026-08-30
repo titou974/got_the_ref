@@ -59,6 +59,26 @@ export type AnalysisContext = {
    * ne lui ressemble pas ne sera pas publié.
    */
   brandTone?: string | null;
+  /**
+   * Les moteurs réellement interrogés. Absent, ils le sont tous.
+   *
+   * C'est ce qui distingue l'analyse d'un compte gratuit : seul Gemini y est
+   * mesuré — son relevé passe par le grounding Google Search — tandis que
+   * ChatGPT, qui consomme un appel à l'outil de recherche d'OpenAI, n'est pas
+   * appelé. Sa note reste alors une estimation du modèle, et le tableau de bord
+   * la garde sous voile plutôt que de la faire passer pour un relevé.
+   */
+  engines?: AiEngine[];
+  /**
+   * Les relevés hors-site : estimation des backlinks et scraping de la fiche
+   * Google. Absent, ils sont faits.
+   *
+   * Ils alimentent deux onglets réservés à l'abonnement « Tout-en-un ». Sur un
+   * compte gratuit, ces écrans restent sous voile, et on ne dépense pas un
+   * appel de plus pour remplir une donnée que personne ne lira : le voile
+   * s'appuie alors sur les cartes d'exemple.
+   */
+  offsite?: boolean;
 };
 
 /**
@@ -1633,7 +1653,7 @@ export async function analyzeSite(
   // Scraping best-effort de la fiche Maps (gratuit) AVANT l'audit, pour fournir
   // au modèle les vraies note/avis/nom et mesurer la cohérence.
   let mapsListing: MapsListing | null = null;
-  if (ctx.mapsUrl) {
+  if (ctx.mapsUrl && ctx.offsite !== false) {
     mapsListing = await scrapeMapsListing(ctx.mapsUrl);
     geoLog("Fiche Maps — scraping", mapsListing);
   }
@@ -1663,12 +1683,12 @@ export async function analyzeSite(
       indirect: indirectQuery ?? "(non — commerce non physique ou sans niche distincte)",
     });
     const [directLives, indirectLives] = await Promise.all([
-      gatherLiveEngines(directQuery).catch((err) => {
+      gatherLiveEngines(directQuery, ctx.engines).catch((err) => {
         console.error("Appels moteurs (direct) échoués :", err);
         return [] as LiveEngineResult[];
       }),
       indirectQuery
-        ? gatherLiveEngines(indirectQuery).catch((err) => {
+        ? gatherLiveEngines(indirectQuery, ctx.engines).catch((err) => {
             console.error("Appels moteurs (indirect) échoués :", err);
             return [] as LiveEngineResult[];
           })
@@ -1712,7 +1732,7 @@ export async function analyzeSite(
         return heuristicAnalysis(signals, ctx, profile, "model-failed");
       }
     })(),
-    hasKey
+    hasKey && ctx.offsite !== false
       ? estimateBacklinks(signals, profile).catch((err) => {
           console.error("Estimation backlinks échouée :", err);
           return null;

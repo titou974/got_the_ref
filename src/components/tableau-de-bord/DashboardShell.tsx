@@ -10,6 +10,7 @@ import {
   SidebarProvider,
 } from "@/components/tremor/Sidebar";
 import { ROUTES } from "@/constants/routes";
+import type { AccessTier } from "@/constants/access";
 import { SidebarNav } from "./SidebarNav";
 import { SiteSelect } from "./SiteSelect";
 
@@ -43,11 +44,14 @@ function initials(name: string | null): string {
 export function DashboardShell({
   domain,
   showMaps,
+  tier,
   userName,
   children,
 }: {
   domain: string | null;
   showMaps: boolean;
+  /** Le niveau du compte : il décide des onglets grisés dans la colonne. */
+  tier: AccessTier;
   userName: string | null;
   children: React.ReactNode;
 }) {
@@ -80,7 +84,7 @@ export function DashboardShell({
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
-              <SidebarNav showMaps={showMaps} />
+              <SidebarNav showMaps={showMaps} tier={tier} />
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>

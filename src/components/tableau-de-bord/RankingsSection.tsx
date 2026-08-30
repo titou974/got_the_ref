@@ -7,6 +7,8 @@ import { refreshRankingsAction } from "@/features/dashboard/actions";
 import { EngineCard } from "@/components/geo/EngineRankings";
 import { SearchLoader } from "@/components/SearchLoader";
 import { DASHBOARD_ENGINES, type EngineScore } from "@/lib/geo/types";
+import { runsEngine, type AccessTier } from "@/constants/access";
+import { TierGate } from "./TierGate";
 
 /**
  * La place du commerce dans les moteurs suivis, et le bouton qui la reprend.
@@ -20,8 +22,19 @@ import { DASHBOARD_ENGINES, type EngineScore } from "@/lib/geo/types";
  * indirect qu'ils portent vient de leur propre réponse : ChatGPT par son outil
  * de recherche, Gemini par le grounding Google Search. Aucun modèle de service
  * ne fabrique un classement à leur place.
+ *
+ * Un compte gratuit ne fait mesurer que Gemini : la carte ChatGPT est bien à sa
+ * place, à la bonne taille, mais sous voile — elle porte l'estimation du modèle,
+ * pas un relevé, et la faire passer pour une position serait mentir. Le voile
+ * dit ce qu'il en est et mène aux tarifs.
  */
-export function RankingsSection({ engines }: { engines: EngineScore[] }) {
+export function RankingsSection({
+  engines,
+  tier,
+}: {
+  engines: EngineScore[];
+  tier: AccessTier;
+}) {
   const t = useTranslations("analysisReport.results");
   const tr = useTranslations("dashboard.rankings");
   const router = useRouter();
@@ -67,14 +80,18 @@ export function RankingsSection({ engines }: { engines: EngineScore[] }) {
         // deux, la rangée redevient une pile — trois demi-largeurs tronqueraient
         // les noms de concurrents.
         <div className={shown.length === 2 ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
-          {shown.map((engine, i) => (
-            <EngineCard
-              key={engine.engine}
-              engine={engine}
-              delay={i * 0.05}
-              compact={shown.length === 2}
-            />
-          ))}
+          {shown.map((engine, i) => {
+            const card = (
+              <EngineCard engine={engine} delay={i * 0.05} compact={shown.length === 2} />
+            );
+            return runsEngine(tier, engine.engine) ? (
+              <div key={engine.engine}>{card}</div>
+            ) : (
+              <TierGate key={engine.engine} offer="boost" item="rankings" compact>
+                {card}
+              </TierGate>
+            );
+          })}
         </div>
       )}
     </section>

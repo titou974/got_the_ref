@@ -8,6 +8,12 @@ import {
   SidebarMenuItem,
 } from "@/components/tremor/Sidebar";
 import { ROUTES } from "@/constants/routes";
+import {
+  canOpen,
+  offerFor,
+  type AccessTier,
+  type DashboardSection,
+} from "@/constants/access";
 import { cx } from "@/lib/utils";
 
 /**
@@ -17,9 +23,15 @@ import { cx } from "@/lib/utils";
  * page : une section de plus n'oblige alors à toucher qu'à ce tableau. Le
  * chemin racine est comparé exactement, sinon « Accueil » resterait allumé
  * partout.
+ *
+ * Une section que l'offre n'ouvre pas reste cliquable, en gris, avec le nom de
+ * l'offre qui l'ouvrirait posé à droite. La retirer de la colonne cacherait ce
+ * qu'on vend ; la désactiver laisserait le client sans le moyen d'aller voir.
+ * Il tombe donc sur l'écran voilé, qui montre la forme du contenu et mène aux
+ * tarifs.
  */
 
-type Item = { href: string; key: string; icon: React.ElementType };
+type Item = { href: string; key: DashboardSection; icon: React.ElementType };
 
 const stroke = {
   fill: "none",
@@ -114,8 +126,9 @@ const MAPS_ITEM: Item = {
   ),
 };
 
-export function SidebarNav({ showMaps }: { showMaps: boolean }) {
+export function SidebarNav({ showMaps, tier }: { showMaps: boolean; tier: AccessTier }) {
   const t = useTranslations("dashboard.nav");
+  const tg = useTranslations("dashboard.gate");
   const pathname = usePathname();
   const items = showMaps ? [...ITEMS, MAPS_ITEM] : ITEMS;
 
@@ -127,9 +140,26 @@ export function SidebarNav({ showMaps }: { showMaps: boolean }) {
             ? pathname === ROUTES.dashboard
             : pathname.startsWith(item.href);
 
+        const locked = !canOpen(tier, item.key);
+
         return (
           <SidebarMenuItem key={item.key}>
-            <SidebarLink href={item.href} icon={item.icon} isActive={active}>
+            <SidebarLink
+              href={item.href}
+              icon={item.icon}
+              isActive={active}
+              className={cx(locked && !active && "text-pebble hover:bg-mist/50 hover:text-steel")}
+              badge={
+                locked ? (
+                  // L'offre qui ouvre l'onglet, en toutes lettres : « Coup de
+                  // Boost » ou « Tout-en-un ». Un cadenas seul dirait que c'est
+                  // fermé sans dire avec quoi ça s'ouvre.
+                  <span className="shrink-0 rounded-pill bg-mist px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-steel">
+                    {tg(`offers.${offerFor(item.key)}`)}
+                  </span>
+                ) : undefined
+              }
+            >
               {t(item.key)}
             </SidebarLink>
           </SidebarMenuItem>

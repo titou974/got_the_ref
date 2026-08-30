@@ -23,7 +23,7 @@ function faqJsonLd(items: Item[]) {
  * ligne de JavaScript. Les questions reprennent les objections réelles —
  * compétence, délai, réseau, contenu IA, plateforme, commerce physique.
  *
- * Aucun montant et aucune condition d'essai ici : la home vend l'essai, la page
+ * Aucun montant et aucune condition ici : la home ouvre un compte, la page
  * tarifs porte les chiffres.
  */
 export async function Faq() {

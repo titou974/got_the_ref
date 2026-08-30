@@ -9,7 +9,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   BOOST_CHECKOUT_KIND,
-  TRIAL_CHECKOUT_KIND,
+  SUBSCRIPTION_CHECKOUT_KIND,
+  grantBoostFromSession,
   unlockAnalysisFromSession,
 } from "@/features/billing/unlock";
 import { ensurePaidAnalysis } from "@/features/analysis/service";
@@ -20,8 +21,8 @@ import { ROUTES } from "@/constants/routes";
 type Props = { searchParams: Promise<{ session_id?: string }> };
 
 /**
- * Les trois retours possibles de Stripe : un rapport débloqué, un essai ouvert,
- * un Coup de Boost payé. Même page, même formulaire — seules les phrases
+ * Les trois retours possibles de Stripe : un rapport débloqué, un abonnement
+ * souscrit, un Coup de Boost payé. Même page, même formulaire — seules les phrases
  * changent, et elles doivent nommer ce qui vient d'être acheté.
  */
 const SUBTITLES = {
@@ -31,17 +32,17 @@ const SUBTITLES = {
     otherDevice: "otherDeviceSubtitle",
     skip: "skip",
   },
-  trial: {
-    fresh: "trialSubtitle",
-    existing: "trialExistingSubtitle",
-    otherDevice: "trialOtherDeviceSubtitle",
-    skip: "trialSkip",
+  subscription: {
+    fresh: "subscriptionSubtitle",
+    existing: "subscriptionExistingSubtitle",
+    otherDevice: "subscriptionOtherDeviceSubtitle",
+    skip: "subscriptionSkip",
   },
   boost: {
     fresh: "boostSubtitle",
     existing: "boostExistingSubtitle",
     otherDevice: "boostOtherDeviceSubtitle",
-    skip: "trialSkip",
+    skip: "subscriptionSkip",
   },
 } as const;
 
@@ -67,22 +68,27 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
 
   const unlocked = session ? await unlockAnalysisFromSession(session) : null;
 
+  // Coup de Boost : l'offre est posée sur le compte du payeur dès le retour,
+  // sans attendre le webhook — le client enchaîne souvent sur son tableau de
+  // bord, et il doit y trouver la structure ouverte.
+  if (session) await grantBoostFromSession(session, unlocked?.userId);
+
   // Lance l'audit complet (DeepSeek + moteurs live) dès maintenant : le visiteur
   // patiente ici de toute façon, autant qu'il découvre le vrai rapport tout de
   // suite plutôt qu'au prochain chargement de la page d'analyse.
   if (unlocked) await ensurePaidAnalysis(unlocked.analysisId);
 
-  // Payé depuis la carte tarif — essai ou Coup de Boost : aucun rapport à
+  // Payé depuis la carte tarif — abonnement ou Coup de Boost : aucun rapport à
   // ouvrir, mais le paiement vaut engagement, il reste à créer le compte.
   const kind = session?.metadata?.kind;
   const paidWithoutReport =
     !unlocked &&
-    (kind === TRIAL_CHECKOUT_KIND || kind === BOOST_CHECKOUT_KIND) &&
+    (kind === SUBSCRIPTION_CHECKOUT_KIND || kind === BOOST_CHECKOUT_KIND) &&
     session?.payment_status !== "unpaid";
 
   // Ce qu'on vient d'acheter décide de la phrase d'accueil : un rapport ouvert
   // prime toujours, sinon c'est l'offre réglée qui parle.
-  const variant = unlocked ? "report" : kind === BOOST_CHECKOUT_KIND ? "boost" : "trial";
+  const variant = unlocked ? "report" : kind === BOOST_CHECKOUT_KIND ? "boost" : "subscription";
   const copy = SUBTITLES[variant];
 
   const payerEmail = unlocked?.email ?? session?.customer_details?.email ?? null;

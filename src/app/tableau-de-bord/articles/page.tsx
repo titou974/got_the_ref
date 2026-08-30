@@ -7,6 +7,8 @@ import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 import { PlanArticlesButton } from "@/components/tableau-de-bord/PlanArticlesButton";
 import { ArticleQuotaBar } from "@/components/tableau-de-bord/ArticleQuotaBar";
 import { BrandVoicePanel } from "@/components/tableau-de-bord/BrandVoicePanel";
+import { TierGate } from "@/components/tableau-de-bord/TierGate";
+import { canOpen, offerFor } from "@/constants/access";
 
 export const maxDuration = 300;
 
@@ -34,12 +36,16 @@ export default async function ArticlesPage() {
   const upcoming = articles.filter((article) => article.status !== "published");
   const published = articles.filter((article) => article.status === "published");
 
+  // La rédaction s'achète : avec le Coup de Boost pour une semaine, avec
+  // l'abonnement pour la durée. Le planning reste visible sous voile — c'est
+  // exactement ce qu'on vend.
+  const locked = !canOpen(context.tier, "articles");
+
   return (
     <>
-      <PageHeader
-        title={t("pageTitle")}
-      />
+      <PageHeader title={t("pageTitle")} />
 
+      <Gate locked={locked}>
       {/* La demande de planning est posée sur la page, pas dans l'en-tête : le
           temps que le modèle réponde, elle laisse place à l'attente annoncée. */}
       <PlanArticlesButton />
@@ -63,6 +69,17 @@ export default async function ArticlesPage() {
         instructions={context.brandVoice?.instructions ?? ""}
         banned={context.brandVoice?.banned ?? []}
       />
+      </Gate>
     </>
+  );
+}
+
+/** Le contenu de la page, voilé ou non — écrit une fois, montré des deux façons. */
+function Gate({ locked, children }: { locked: boolean; children: React.ReactNode }) {
+  if (!locked) return <>{children}</>;
+  return (
+    <TierGate offer={offerFor("articles")} item="articles">
+      {children}
+    </TierGate>
   );
 }

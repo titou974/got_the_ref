@@ -12,7 +12,7 @@
     "signIn": "Connexion",
     "signUp": "Inscription",
     "account": "Mon tableau de bord",
-    "freeTrial": "Essai gratuit",
+    "freeTrial": "Ouvrir un compte gratuit",
     "analyzeMyBusiness": "Analyser mon commerce",
     "menu": "Menu",
     "closeMenu": "Fermer le menu",
@@ -402,7 +402,7 @@
     "invalidUrl": "URL invalide. Saisissez une adresse comme exemple.fr.",
     "invalidMapsUrl": "Lien Google Maps invalide. Collez l'adresse de votre fiche Google Maps.",
     "anonQuota": "Limite d'analyses gratuites atteinte. Créez un compte pour continuer.",
-    "alreadyUsed": "Vous avez déjà utilisé votre analyse gratuite. Ouvrez votre rapport, ou démarrez l'essai pour analyser un autre site.",
+    "alreadyUsed": "Vous avez déjà utilisé votre analyse gratuite. Ouvrez votre rapport, ou prenez une offre pour analyser un autre site.",
     "quotaFree": "Votre analyse gratuite a déjà été utilisée. L'abonnement ouvre les analyses suivantes.",
     "quotaPro": "Limite mensuelle d'analyses atteinte.",
     "failed": "L'analyse a échoué. Vérifiez l'URL et réessayez."
@@ -635,7 +635,39 @@
       "Vous avez la mesure et le remède : ==chaque section porte son prompt solution==, à exécuter dans l'ordre d'impact.",
       "Il ne reste qu'à exécuter. ==Le plan est priorisé== ; commencez par le haut, remesurez ensuite.",
       "Ce relevé est votre point de départ chiffré : ==relancez l'analyse après les correctifs== pour voir les places gagnées."
-    ]
+    ],
+    "free": {
+      "headlines": [
+        "Ce que Gemini retient déjà de {domain}, et ce qui reste à ouvrir",
+        "{domain} : le contenu est mesuré, la suite vous attend",
+        "Premier relevé sur {domain} : votre contenu, votre place dans Gemini",
+        "{domain} vu par Gemini : ce qui ressort, ce qui reste sous clé"
+      ],
+      "intros": [
+        "Votre contenu obtient {score}/100 : c'est la note de ce qu'une IA peut reprendre tel quel sur vos pages. ==C'est le volet ouvert ici, et celui que vous pouvez corriger tout de suite==.",
+        "Sur le contenu, {score}/100. ==L'analyse gratuite s'arrête à ce volet et au classement Gemini== : le reste a été repéré, pas encore ouvert.",
+        "{score}/100 sur la qualité éditoriale de vos pages. ==Le classement Gemini a été relevé== ; l'ossature technique et les autres moteurs restent à découvrir.",
+        "Note de contenu : {score}/100. ==Vous voyez ici ce qui est mesuré et corrigeable dès maintenant== ; le reste est repéré et attend d'être ouvert."
+      ],
+      "chip": "Analyse gratuite · {count, plural, =0 {aucun moteur interrogé} one {# moteur interrogé} other {# moteurs interrogés}}",
+      "measuredTitle": "Ce qui a été mesuré",
+      "measured": {
+        "rankings": "**Classement Gemini** : {detail}. C'est le seul moteur interrogé sur l'offre gratuite.",
+        "content": "**Contenu** : {score}/100 sur la qualité éditoriale et la citabilité de vos pages. Les correctifs de contenu et leurs mots-clés sont ouverts dans l'onglet Contenu."
+      },
+      "lockedTitle": "Ce qui reste à ouvrir",
+      "locked": {
+        "engines": "**Classement {engines}** : pas interrogé ici. L'estimation laisse voir ==des choses à améliorer== avant d'y être cité — le relevé réel s'obtient avec le Coup de Boost.",
+        "architecture": "**Architecture** : les contrôles techniques ont tourné, ==il y a des choses à améliorer==. Le détail contrôle par contrôle s'ouvre avec le Coup de Boost.",
+        "architectureCount": "**Architecture** : {count, plural, one {# point à améliorer} other {# points à améliorer}} sur l'ossature technique de votre site. ==Le détail contrôle par contrôle== s'ouvre avec le Coup de Boost.",
+        "rest": "**Le reste** : plan d'action complet, calendrier d'articles, notoriété hors-site et fiche Google restent fermés sur l'offre gratuite."
+      },
+      "closings": [
+        "Commencez par ce qui est ouvert : ==l'onglet Contenu porte ses correctifs, prêts à coller==. Le reste s'ouvre d'un coup avec le Coup de Boost.",
+        "Le contenu, vous pouvez le corriger dès aujourd'hui. ==Pour l'architecture, les articles et les autres moteurs==, il faut le Coup de Boost.",
+        "Rien à installer pour la suite : ==le Coup de Boost ouvre l'architecture, les articles et le relevé complet== sur cette même analyse."
+      ]
+    }
   },
   "postCheckout": {
     "metaTitle": "Paiement confirmé",
@@ -649,18 +681,18 @@
     "pendingTitle": "Paiement en cours de confirmation",
     "pendingBody": "Votre paiement n'est pas encore confirmé par Stripe. Patientez quelques secondes puis rechargez cette page. Si le problème persiste, contactez-nous.",
     "backHome": "← Retour à l'accueil",
-    "trialSubtitle": "Créez votre mot de passe pour ouvrir votre espace et lancer votre première analyse.",
-    "trialExistingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous pour retrouver votre abonnement.",
-    "trialOtherDeviceSubtitle": "Votre essai est ouvert. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous.",
-    "trialSkip": "Retour à l'accueil",
+    "subscriptionSubtitle": "Créez votre mot de passe pour ouvrir votre espace et lancer votre première analyse.",
+    "subscriptionExistingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous pour retrouver votre abonnement.",
+    "subscriptionOtherDeviceSubtitle": "Votre abonnement est ouvert. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous.",
+    "subscriptionSkip": "Retour à l'accueil",
     "boostSubtitle": "Créez votre mot de passe : c'est là que vous retrouverez le rapport et les corrections de votre Coup de Boost.",
     "boostExistingSubtitle": "Un compte existe déjà avec cet e-mail : connectez-vous, votre Coup de Boost y est rattaché.",
     "boostOtherDeviceSubtitle": "Votre Coup de Boost est payé. Pour créer votre compte, revenez sur le navigateur qui a servi au paiement, ou connectez-vous."
   },
   "pricing": {
     "metaTitle": "Tarifs",
-    "metaDescription": "got_the_ref : 79€/mois pour des agents IA qui mesurent et corrigent en continu votre visibilité sur ChatGPT, Gemini et Google, ou 49€ en une passe unique avec le Coup de Boost. 3 jours d'essai gratuit.",
-    "keywords": "tarifs GEO, prix référencement IA, abonnement visibilité IA, coût agence GEO, prix ChatGPT SEO, essai gratuit GEO",
+    "metaDescription": "got_the_ref : 49 € en une passe unique avec le Coup de Boost — analyse, corrections et articles publiés —, ou 79 €/mois avec l'abonnement Tout-en-un pour des agents IA qui mesurent et corrigent en continu votre visibilité sur ChatGPT, Gemini et Google.",
+    "keywords": "tarifs GEO, prix référencement IA, abonnement visibilité IA, coût agence GEO, prix ChatGPT SEO, audit GEO sans abonnement",
     "eyebrow": "Tarifs",
     "headingBefore": "Des agents qui travaillent votre visibilité ",
     "headingHighlight": "en continu",
@@ -668,15 +700,14 @@
     "perMonth": "/mois",
     "perYear": " par an",
     "vat": "TVA en sus",
-    "trialCta": "Essayer {days} jours gratuits",
     "redirecting": "Redirection…",
-    "secureNote": "Paiement sécurisé par Stripe · Essai de {days} jours gratuit, résiliable avant la fin sans être débité de l'abonnement · TVA en sus le cas échéant",
+    "secureNote": "Paiement sécurisé par Stripe · Coup de Boost débité une seule fois, abonnement résiliable à tout moment · TVA en sus le cas échéant",
     "plan": {
       "eyebrow": "Accès complet",
       "name": "Tout-en-un",
-      "terms": "{days} jours d'accès complet gratuits, puis {price}/mois. Résiliable à tout moment.",
-      "cta": "Essayer {days} jours gratuits",
-      "ctaNote": "Accès complet gratuit pendant {days} jours · résiliable avant la fin de l'essai",
+      "terms": "{price}/mois, accès complet. Résiliable à tout moment.",
+      "cta": "Prendre l'abonnement Tout-en-un",
+      "ctaNote": "Sans engagement · résiliable à tout moment depuis votre espace",
       "features": [
         "Un tableau de bord simple à comprendre qui détaille toutes vos statistiques de référencement",
         "Agents IA entraînés sur les données de votre niche qui travaillent 24h/24",
@@ -686,11 +717,12 @@
         "Aucune compétence technique requise, tout est fait en pilote automatique"
       ],
       "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
-      "ctaStripe": "Démarrer {days} jours gratuits",
-      "ctaStripeNote": "Sans engagement · résiliable avant la fin de l'essai"
+      "ctaStripe": "Prendre l'abonnement Tout-en-un",
+      "ctaStripeNote": "Sans engagement · résiliable à tout moment"
     },
     "boost": {
       "rhythm": "Payé une seule fois",
+      "badge": "Le plus pris pour démarrer",
       "eyebrow": "Intervention unique",
       "name": "Coup de Boost",
       "tagline": "Une passe complète unique des agents IA sur votre site qui mesurent, corrigent et publient pour vous.",
@@ -744,7 +776,7 @@
       },
       "ours": {
         "name": "got_the_ref",
-        "trial": "{days} jours d'accès complet gratuits",
+        "entry": "{boost} pour une passe complète, ou {monthly} par mois pour le suivi continu",
         "points": [
           "Résiliable à tout moment, sans frais de setup",
           "Premier constat immédiat et corrections automatiques dans la foulée",
@@ -781,8 +813,8 @@
           "a": "49 € en un seul paiement, sans abonnement : une analyse complète, les corrections des agents, 10 articles rédigés et publiés, puis un rapport final."
         },
         {
-          "q": "Comment fonctionne l'essai gratuit de 3 jours ?",
-          "a": "3 jours d'accès complet et gratuit à l'abonnement, puis le tarif choisi prend le relais. Résiliable avant la fin de l'essai sans être débité."
+          "q": "Que voit-on sans rien payer ?",
+          "a": "Ouvrez un compte, donnez l'adresse de votre site : nous le lisons et votre tableau de bord s'ouvre avec la niche détectée et les corrections de contenu adossées à vos mots-clés. Les autres sections — structure, articles, backlinks, Google Maps — restent visibles mais voilées, et s'ouvrent avec le Coup de Boost ou l'abonnement Tout-en-un."
         }
       ]
     }
@@ -881,9 +913,9 @@
       "Google"
     ],
     "subtitle": "On apporte de la visibilité aux commerces français, locaux comme en ligne, en les référençant dans les IA et sur Google. Sans qu’ils aient à payer une agence ni à lever le petit doigt !",
-    "cta": "Démarrer {days} jours gratuits",
+    "cta": "Ouvrir mon compte gratuit",
     "ctaDashboard": "Ouvrir mon tableau de bord",
-    "trialBarCta": "Démarrer l'essai de {days} jours",
+    "trialBarCta": "Ouvrir mon compte gratuit",
     "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
     "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
     "scrollHint": "Analyser mon site",
@@ -1507,8 +1539,8 @@
   },
   "homePricing": {
     "eyebrow": "Tarifs",
-    "title": "En continu, ou en une seule passe",
-    "subtitle": "L'abonnement met des agents IA qui travaillent 24h/24 sur le référencement de votre entreprise. Le Coup de Boost fait la même passe une seule fois.",
+    "title": "En une seule passe, ou en continu",
+    "subtitle": "Le Coup de Boost lance une passe complète des agents IA sur votre site, payée une fois. L'abonnement Tout-en-un les laisse travailler 24 h/24 sur votre référencement.",
     "allDetails": "Voir le détail des tarifs"
   },
   "homeDemoCta": {
@@ -1557,6 +1589,58 @@
     }
   },
   "dashboard": {
+    "gate": {
+      "offers": {
+        "boost": "Coup de Boost",
+        "allin": "Tout-en-un"
+      },
+      "cta": {
+        "boost": "Débloquer avec le Coup de Boost",
+        "allin": "Passer au Tout-en-un"
+      },
+      "items": {
+        "architecture": {
+          "title": "Les corrections de structure vous attendent",
+          "body": "Le diagnostic est fait : chaque contrôle raté a son correctif, prêt à être appliqué par les agents. Le Coup de Boost les exécute sur votre site en une passe."
+        },
+        "articles": {
+          "title": "Une semaine d'articles écrits pour votre niche",
+          "body": "Les sujets sont déjà calés sur vos mots-clés. Le Coup de Boost lance la rédaction pendant une semaine ; l'abonnement Tout-en-un, lui, ne s'arrête pas."
+        },
+        "presence": {
+          "title": "Vos backlinks et votre notoriété web",
+          "body": "Qui parle de vous, avec quelle autorité, et à qui écrire pour que ça bouge. C'est un travail qui court dans la durée : il est réservé à l'abonnement Tout-en-un."
+        },
+        "maps": {
+          "title": "Votre fiche Google Maps, tenue à jour",
+          "body": "Cohérence avec le site, avis, posts programmés : la fiche se travaille semaine après semaine. Elle est réservée à l'abonnement Tout-en-un."
+        },
+        "diagnostic": {
+          "title": "Le diagnostic complet de votre site",
+          "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Le Coup de Boost l'ouvre et corrige dans la foulée."
+        },
+        "recommendations": {
+          "title": "Le plan d'action, priorisé",
+          "body": "Chaque manque relevé, son correctif et son impact sur votre visibilité. Le Coup de Boost laisse les agents l'appliquer."
+        },
+        "mentions": {
+          "title": "Vos mentions dans les IA, mois après mois",
+          "body": "Combien de fois ChatGPT et Gemini prononcent votre nom, et comment ça bouge. Une mesure qui ne vaut que dans la durée : elle est réservée à l'abonnement Tout-en-un."
+        },
+        "traffic": {
+          "title": "Les visites que les IA vous envoient",
+          "body": "Le trafic réellement amené par ChatGPT, Gemini et Perplexity, relevé dans votre Analytics. Réservé à l'abonnement Tout-en-un."
+        },
+        "agenda": {
+          "title": "Votre calendrier de publication",
+          "body": "Les sujets à venir, datés, prêts à être rédigés. Le Coup de Boost ouvre une semaine de rédaction."
+        },
+        "rankings": {
+          "title": "Votre position sur ChatGPT",
+          "body": "Votre compte gratuit fait mesurer Gemini. Le relevé ChatGPT, lui, n'a pas été lancé : il s'ouvre avec le Coup de Boost, sur les deux moteurs."
+        }
+      }
+    },
     "metaTitle": "Tableau de bord",
     "noProject": "Aucun site",
     "nav": {
@@ -1592,6 +1676,19 @@
         "tagManager": "Connecter Google Tag Manager",
         "soon": "Les deux rattachements ouvrent dans quelques jours."
       }
+    },
+    "mentions": {
+      "title": "Mentions dans les IA",
+      "hint": "Comment les citations de {domain} évoluent, modèle par modèle.",
+      "subtitle": "citations gagnées sur les {months} derniers mois",
+      "searchVolume": "{value} recherches/mois",
+      "platformScope": "Relevé sur {location}",
+      "empty": "Aucune évolution relevée pour l'instant sur ce domaine.",
+      "demoBadge": "Données d'exemple",
+      "demoNote": "Données d'exemple : le relevé des mentions n'est pas encore branché sur ce compte.",
+      "source": "Source : archive DataForSEO des réponses ChatGPT et des aperçus IA de Google. Les barres disent l'écart avec le mois précédent, pas un total ; celles de ChatGPT sont relevées sur l'archive américaine, la seule historisée pour ce modèle.",
+      "measuredOn": "Relevé du {date}.",
+      "nextRefresh": "Prochain relevé le {date} : un relevé par mois."
     },
     "rankings": {
       "refresh": "Reprendre le relevé",
@@ -1877,7 +1974,8 @@
       "back": "Retour",
       "plans": {
         "free": "Gratuit",
-        "pro": "Abonnement",
+        "boost": "Coup de Boost",
+        "pro": "Abonnement Tout-en-un",
         "agency": "Agence"
       },
       "identity": {

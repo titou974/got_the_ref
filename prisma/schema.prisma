@@ -16,7 +16,19 @@ model User {
   name             String?
   emailVerified    Boolean  @default(false)
   image            String?
-  plan             String   @default("free") // free | pro | agency
+  /// free | boost | pro | agency | demo.
+  ///
+  /// `boost` est posé par le paiement unique du Coup de Boost — il n'y a aucun
+  /// abonnement Stripe derrière, donc rien dans `Subscription` : sans cette
+  /// colonne, le compte retomberait gratuit à la première relecture.
+  ///
+  /// `demo` est posé à la main sur les comptes de démonstration : accès complet,
+  /// aucune facturation. Il ne doit jamais être écrit par un webhook.
+  plan             String   @default("free")
+  /// Date du Coup de Boost, quand il y en a eu un. Elle ouvre la fenêtre de
+  /// rédaction d'une semaine promise par l'offre (cf. `BOOST_ARTICLE_WINDOW_DAYS`) ;
+  /// les corrections de structure, elles, restent acquises.
+  boostGrantedAt   DateTime?
   stripeCustomerId String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -34,6 +46,7 @@ model User {
   onPageRewrites     OnPageRewrite[]
   prospects          OutreachProspect[]
   googlePosts        GooglePost[]
+  llmMentions        LlmMentionSnapshot?
 }
 
 /// Une passe de réécriture demandée depuis l'onglet Contenu.
@@ -512,4 +525,50 @@ model GooglePost {
   updatedAt DateTime @updatedAt
 
   @@index([userId, scheduledFor])
+}
+
+/// Le dernier relevé des mentions dans les IA, un par compte.
+///
+/// La table n'est pas qu'un cache : c'est le compteur qui tient la règle « un
+/// relevé DataForSEO par mois calendaire et par client ». Chaque appel est
+/// facturé, et l'accueil du tableau de bord est rechargé plusieurs fois par
+/// jour — sans garde-fou, une visite tous les quarts d'heure ferait autant de
+/// factures.
+///
+/// D'où deux dates plutôt qu'une : `attemptedAt` retient la dernière tentative,
+/// réussie ou non, et c'est elle qui ouvre ou ferme la porte ; `fetchedAt`
+/// retient le dernier relevé exploitable, celui que la carte affiche. Une panne
+/// DataForSEO ne doit pas rendre la main pour réessayer à chaque rechargement :
+/// elle consommerait le mois en appels perdus.
+model LlmMentionSnapshot {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le domaine et la localisation interrogés. Un changement de l'un des deux
+  /// rouvre le droit d'appel : la question posée n'est plus la même.
+  domain       String
+  locationCode Int
+
+  /// Le rapport sérialisé en JSON : une série mensuelle par modèle d'IA, le
+  /// mouvement net de la fenêtre, et la date du relevé.
+  payload String?
+
+  /// Le message d'erreur de la dernière tentative ratée, effacé au succès.
+  lastError String?
+
+  attemptedAt DateTime  @default(now())
+  fetchedAt   DateTime?
+
+  /// Vestiges de l'historique de marque, relevé à part quand la carte tenait
+  /// deux routes DataForSEO. Elle n'en tient plus qu'une, et l'évolution est
+  /// désormais dans `payload` avec le reste. Ces colonnes ne sont plus écrites ;
+  /// elles restent là parce que les supprimer coûterait une migration
+  /// destructive pour ne rien gagner.
+  historyBrand     String?
+  historyPayload   String?
+  historyFetchedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -8,7 +8,7 @@ import { auth } from "@/features/auth/better-auth.config";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
-import { unlockAnalysisFromSession } from "@/features/billing/unlock";
+import { grantBoostFromSession, unlockAnalysisFromSession } from "@/features/billing/unlock";
 import { CLAIM_METADATA_KEY, claimMatches, clearClaim } from "@/features/billing/claim";
 import { PASSWORD_RESET_PARAM, ROUTES, safeNextPath } from "@/constants/routes";
 import { SITE } from "@/constants/site";
@@ -129,8 +129,11 @@ export const createAccountAfterCheckoutAction = actionClient
       });
     }
 
-    // Rattache l'analyse payée au compte fraîchement créé, s'il y en a une.
-    await unlockAnalysisFromSession(session);
+    // Rattache l'analyse payée au compte fraîchement créé, s'il y en a une, et
+    // pose le Coup de Boost sur ce compte quand c'est lui qui vient d'être
+    // réglé : le paiement a précédé l'inscription, l'offre doit la rattraper.
+    const unlocked = await unlockAnalysisFromSession(session);
+    await grantBoostFromSession(session, unlocked?.userId);
     // Jeton à usage unique : il ne doit pas resservir.
     await clearClaim();
 

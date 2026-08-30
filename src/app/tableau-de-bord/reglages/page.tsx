@@ -5,10 +5,19 @@ import type { PlanKey } from "@/constants/plans";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { SettingsForm } from "@/components/tableau-de-bord/SettingsForm";
 
-const PLAN_KEY: Record<PlanKey, "free" | "pro" | "agency"> = {
+/**
+ * Le libellé d'offre affiché dans les réglages.
+ *
+ * Il y a plus d'offres en base que de phrases à montrer : `demo` se lit comme un
+ * accès complet — c'en est un — et l'ancien plan agence garde le sien, puisque
+ * des comptes le portent encore.
+ */
+const PLAN_KEY: Record<PlanKey, "free" | "boost" | "pro" | "agency"> = {
   free: "free",
+  boost: "boost",
   pro: "pro",
   agency: "agency",
+  demo: "pro",
 };
 
 const BUSINESS_KINDS = ["physical", "online", "both"] as const;

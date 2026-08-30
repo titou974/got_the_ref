@@ -161,8 +161,14 @@ const SidebarLink = React.forwardRef<
     icon?: React.ElementType;
     isActive?: boolean;
     notifications?: number | boolean;
+    /**
+     * Pastille posée à droite de l'entrée, à la place du compteur : elle nomme
+     * l'offre qui ouvrirait une section fermée (« Coup de Boost »,
+     * « Tout-en-un »).
+     */
+    badge?: React.ReactNode;
   }
->(({ children, href, isActive, icon, notifications, className, ...props }, ref) => {
+>(({ children, href, isActive, icon, notifications, badge, className, ...props }, ref) => {
   const Icon = icon;
   return (
     <Link
@@ -183,7 +189,8 @@ const SidebarLink = React.forwardRef<
         {Icon && <Icon className="size-[18px] shrink-0" aria-hidden="true" />}
         <span className="truncate">{children}</span>
       </span>
-      {notifications && (
+      {badge}
+      {!badge && notifications && (
         <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-obsidian text-xs font-medium text-white">
           {notifications}
         </span>

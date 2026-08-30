@@ -10,7 +10,7 @@ import { ROUTES } from "@/constants/routes";
 const FALLBACK_THRESHOLD = 520;
 
 /**
- * La barre d'essai en bas de la home. Elle reste absente tant que le hero est à
+ * La barre d'appel en bas de la home. Elle reste absente tant que le hero est à
  * l'écran — le CTA du haut de page y suffit, deux boutons identiques côte à côte
  * ne feraient que se voler l'attention — puis se glisse par le bas dès qu'on
  * passe dessous, et suit le visiteur jusqu'en bas de page.
@@ -25,14 +25,14 @@ const FALLBACK_THRESHOLD = 520;
  * aucun ancêtre n'établit de bloc conteneur, et la home en compte plusieurs
  * (cartes qui se soulèvent au survol, calques floutés).
  */
-export function TrialBottomBar({
+export function StickyCtaBar({
   label,
   heroId,
   href = ROUTES.signUp,
 }: {
   label: string;
   heroId: string;
-  /** Le tableau de bord pour un abonné ou un essai en cours ; l'inscription sinon. */
+  /** Le tableau de bord pour qui en a déjà un ; l'inscription sinon. */
   href?: string;
 }) {
   const [visible, setVisible] = useState(false);

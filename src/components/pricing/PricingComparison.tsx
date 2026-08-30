@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { AGENCY_BENCHMARK_YEARLY, BOOST, SUBSCRIPTION_PRICE, TRIAL } from "@/constants/plans";
+import { AGENCY_BENCHMARK_YEARLY, BOOST, SUBSCRIPTION_PRICE } from "@/constants/plans";
 
 /** Montant formaté à la française, sans décimales (20 000 €). */
 const euros = (amount: number) => `${amount.toLocaleString("fr-FR")} €`;
@@ -50,10 +50,7 @@ export async function PricingComparison({ cta }: { cta?: React.ReactNode }) {
     ...(t.raw("agency.points") as string[]),
   ];
   const ourPoints = [
-    t("ours.trial", {
-      days: TRIAL.days,
-      monthly: euros(SUBSCRIPTION_PRICE),
-    }),
+    t("ours.entry", { boost: euros(BOOST.price), monthly: euros(SUBSCRIPTION_PRICE) }),
     ...(t.raw("ours.points") as string[]),
   ];
 
