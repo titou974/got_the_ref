@@ -26,7 +26,7 @@
     "framer-motion": "^12.40.0",
     "jose": "^6.2.3",
     "lottie-react": "^2.4.1",
-    "next": "16.2.9",
+    "next": "16.3.3",
     "next-intl": "^4.13.0",
     "next-safe-action": "^8.5.4",
     "pg": "^8.22.0",
@@ -44,7 +44,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "eslint-config-next": "16.3.3",
     "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "typescript": "^5"

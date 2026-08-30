@@ -192,14 +192,65 @@ Branche de travail : `worktree-security-review-loop`.
 
 ---
 
-## Prochaine étape
+## Étape 5 — 2026-08-30 · Dépendances
 
-**Étape 5 — Dépendances, déploiement, relecture finale**
+### État de départ
 
-- 44 alertes Dependabot annoncées au push sur la branche par défaut (21 hautes,
-  20 modérées, 3 basses) : établir la liste réelle via `npm audit`, distinguer ce
-  qui est atteignable en production de ce qui ne l'est qu'en outillage de build,
-  appliquer les montées de version sûres.
-- Vérifier que `next` 16.2.9, `better-auth`, `stripe` et `prisma` sont sur des
-  versions sans avis de sécurité connu.
-- Relecture finale : reprendre les points ouverts des étapes 1 à 4 et statuer.
+`npm audit` : 17 vulnérabilités (12 hautes, 5 modérées).
+
+### Correctifs appliqués
+
+| # | Sévérité | Constat | Correctif |
+|---|----------|---------|-----------|
+| 10 | Haute | `better-auth` 1.6.19 : prise de contrôle de compte par pré-enregistrement sur les connexions par lien magique et code à usage unique (GHSA-qq9h-g4jm-xgf3). Non exploitable ici — ces greffons ne sont pas activés — mais la version est vulnérable. | `npm audit fix --package-lock-only` : montée en 1.7.2 (dans la plage `^1.6.19`). |
+| 11 | Haute | `next` 16.2.9 : neuf avis, dont trois qui touchent directement cette application — divulgation non authentifiée des points d'entrée internes de Server Function (GHSA-955p-x3mx-jcvp), confusion de cache sur les corps de réponse (GHSA-68g3-v927-f742 et GHSA-4633-3j49-mh5q), et contournement de middleware sous Turbopack en locale unique (GHSA-6gpp-xcg3-4w24). Entraîne aussi `postcss` (lecture de fichiers arbitraires via `sourceMappingURL`) et `sharp` (CVE libvips). | Montée explicite de `next` et `eslint-config-next` en 16.3.3. |
+| 12 | Haute/modérée | Chaîne transitive : `undici` (12 avis, dont injection d'en-tête et divulgation entre utilisateurs via le cache), `js-yaml`, `nanoid`, `brace-expansion`, `fast-uri` (confusion d'hôte), `hono` / `@hono/node-server` (traversée de chemin, XSS SSR), `valibot`. | Résolus par le même `npm audit fix --package-lock-only`. `prisma` passe de 7.8.0 à 7.10.0. |
+
+**Résultat : 17 → 3 vulnérabilités**, toutes le même avis.
+
+### Reste ouvert, volontairement
+
+- `deepmerge-ts` < 8 (épuisement de pile) via `@prisma/config`, donc via la CLI
+  `prisma`. C'est une `devDependency` : elle ne tourne qu'au build et aux
+  migrations, jamais sur le chemin d'une requête, et l'avis est de classe déni de
+  service. Le seul correctif proposé rétrograde `prisma` de 7.10 à 6.12 —
+  changement cassant, disproportionné. À revoir quand Prisma publiera un 7.x
+  corrigé.
+
+### Vérification
+
+`npm install` puis `npm run build` complets dans le worktree, avec les nouvelles
+versions : build réussi (18 routes, `/robots.txt` bien émis), `npm run lint`
+propre, `tsc --noEmit` propre. Les deux erreurs de type signalées aux étapes
+précédentes venaient de l'absence du client Prisma généré et ont disparu.
+
+Better Auth 1.7 refuse de démarrer sur le secret par défaut : `BETTER_AUTH_SECRET`
+doit être défini dans l'environnement de production (comportement fail-closed,
+confirmé au build).
+
+---
+
+## Bilan de la revue
+
+Cinq étapes, douze correctifs appliqués sur la branche
+`worktree-security-review-loop`.
+
+Le plus grave, de loin : le mot de passe de la base de production en clair dans
+le dépôt (étape 4). **Sa rotation n'est pas faite** et n'est pas automatisable —
+c'est la seule action restante qui ne peut pas attendre.
+
+Points ouverts, par ordre d'importance :
+
+1. **Rotation du mot de passe Supabase** et décision sur le nettoyage de
+   l'historique Git (étape 4).
+2. **Vérification d'e-mail** absente : permet de capter le rapport payé d'un tiers
+   en pré-enregistrant son adresse (étape 4). À traiter avec le branchement d'un
+   fournisseur d'e-mail.
+3. **CSP `script-src`** à nonce, non appliquée (étape 4).
+4. **Rebinding DNS** sur `assertPublicHost` (étape 1) et **`cuid()` v1** pour les
+   identifiants d'analyse (étape 1) : risques faibles, correctifs coûteux.
+5. **Injection de prompt** depuis le site audité (étape 2) : impact borné au
+   rapport du site concerné.
+
+Avant fusion : `npm install && npm run build` sur la machine cible, les montées
+de version de l'étape 5 n'ayant été vérifiées que dans ce worktree.
