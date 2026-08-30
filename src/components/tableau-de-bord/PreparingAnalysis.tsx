@@ -8,20 +8,30 @@ import {
   prepareDashboardAction,
   seedEditorialMonthAction,
 } from "@/features/dashboard/actions";
+import { draftsSeedArticles, type AccessTier } from "@/constants/access";
 import { Card } from "./Card";
 import { AiKeysAnimation } from "./AiKeysAnimation";
 
 /**
- * L'analyse lancée à la première ouverture du tableau de bord, puis le mois
- * d'articles posé dans la foulée.
+ * L'analyse lancée à la première ouverture du tableau de bord — et rejouée le
+ * jour de l'achat —, puis les sujets d'articles posés dans la foulée.
  *
- * Deux passes, une seule attente : l'audit GEO, puis douze sujets planifiés
- * dont les trois de la première semaine sont rédigés. Le client n'arrive donc
- * jamais sur un calendrier vide — c'est le travail qu'il vient de déléguer.
+ * Deux passes, une seule attente : l'audit GEO, puis les sujets planifiés. Le
+ * client n'arrive donc jamais sur un calendrier vide — c'est le travail qu'il
+ * vient de déléguer. Le volume dépend de son offre : quatre sujets sur un compte
+ * gratuit, le mois entier dès le Coup de Boost, avec la première semaine rédigée.
  *
- * Elle part toute seule : le client vient de finir le tunnel d'accueil, lui
- * demander un clic de plus pour obtenir ce qu'il attend n'apporterait rien. Le
- * garde-fou `started` évite qu'un double rendu en déclenche deux.
+ * Le même écran sert deux fois. À la mise en route, il fait l'analyse d'entrée.
+ * Le jour où le compte achète, il la refait — le gratuit n'avait fait mesurer
+ * qu'un moteur et sauté les relevés hors-site, et ces appels-là ont enfin un
+ * écran où s'afficher — puis complète le calendrier. Le client voit donc
+ * exactement la même barre qu'à son arrivée, ce qui est le but : il sait ce que
+ * ça veut dire.
+ *
+ * Elle part toute seule : le client vient de finir le tunnel d'accueil, ou de
+ * payer ; lui demander un clic de plus pour obtenir ce qu'il attend
+ * n'apporterait rien. Le garde-fou `started` évite qu'un double rendu en
+ * déclenche deux.
  *
  * La barre de progression n'est pas un pourcentage mesuré — personne ne sait à
  * l'avance combien de pages a un site. C'est une avance dans le temps, bornée
@@ -53,8 +63,12 @@ function ease(from: number, to: number, elapsed: number, tau: number): number {
   return from + (to - from) * (1 - Math.exp(-elapsed / tau));
 }
 
-export function PreparingAnalysis() {
+export function PreparingAnalysis({ tier = "free" }: { tier?: AccessTier }) {
   const t = useTranslations("dashboard.preparing");
+  // Le texte de la seconde passe annonce ce qui part vraiment : sur un compte
+  // gratuit, des sujets planifiés et rien de rédigé. Promettre trois brouillons
+  // à qui n'en recevra aucun serait le seul vrai mensonge de cet écran.
+  const drafts = draftsSeedArticles(tier);
   const router = useRouter();
   const started = useRef(false);
 
@@ -152,7 +166,7 @@ export function PreparingAnalysis() {
       <div className="text-center">
         <h1 className="text-xl font-bold">{seedPending ? t("articlesTitle") : t("title")}</h1>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-          {seedPending ? t("articlesBody") : t("body")}
+          {seedPending ? t(drafts ? "articlesBody" : "articlesBodyFree") : t("body")}
         </p>
       </div>
 

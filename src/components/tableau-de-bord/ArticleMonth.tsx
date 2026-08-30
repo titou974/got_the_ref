@@ -61,7 +61,17 @@ function pickMonth(articles: MonthArticle[]): { year: number; month: number } {
   return { year: ref.getUTCFullYear(), month: ref.getUTCMonth() };
 }
 
-export async function ArticleMonth({ articles }: { articles: MonthArticle[] }) {
+export async function ArticleMonth({
+  articles,
+  locked = false,
+}: {
+  articles: MonthArticle[];
+  /**
+   * L'offre du compte n'ouvre pas la rédaction : les cases restent lisibles —
+   * la grille est ce qu'on vend — mais elles mènent aux tarifs, pas à l'atelier.
+   */
+  locked?: boolean;
+}) {
   const t = await getTranslations("dashboard.calendar");
   const { year, month } = pickMonth(articles);
 
@@ -123,7 +133,7 @@ export async function ArticleMonth({ articles }: { articles: MonthArticle[] }) {
                 {dayArticles.map((article) => (
                   <Link
                     key={article.id}
-                    href={ROUTES.dashboardArticle(article.id)}
+                    href={locked ? ROUTES.pricing : ROUTES.dashboardArticle(article.id)}
                     className={`block cursor-pointer overflow-hidden rounded-lg border px-1.5 py-1 text-[10px] leading-snug text-text transition-colors duration-200 hover:bg-snow ${
                       STATUS_TINT[article.status] ?? "border-fog bg-surface"
                     }`}
