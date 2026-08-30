@@ -1643,7 +1643,6 @@
     },
     "metaTitle": "Tableau de bord",
     "noProject": "Aucun site",
-    "accountLink": "Gérer la facturation",
     "nav": {
       "home": "Accueil",
       "content": "Contenu",
@@ -1966,7 +1965,6 @@
       "dismiss": "C'est parti",
       "dismissAria": "Fermer le mot de bienvenue"
     },
-    "settingsLink": "Réglages",
     "settings": {
       "title": "Réglages",
       "subtitle": "Votre compte, la fiche de votre commerce et le ton de vos textes.",
