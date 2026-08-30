@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
 import { refreshRankingsAction } from "@/features/dashboard/actions";
-import { EngineCard } from "@/components/geo/EngineRankings";
+import { EngineCard, ENGINE_LOGOS } from "@/components/geo/EngineRankings";
 import { SearchLoader } from "@/components/SearchLoader";
 import { DASHBOARD_ENGINES, type EngineScore } from "@/lib/geo/types";
 import { runsEngine, type AccessTier } from "@/constants/access";
@@ -87,7 +87,17 @@ export function RankingsSection({
             return runsEngine(tier, engine.engine) ? (
               <div key={engine.engine}>{card}</div>
             ) : (
-              <TierGate key={engine.engine} offer="boost" item="rankings" compact>
+              // Le logo du moteur est repris net sur le voile : sous le flou,
+              // celui de la carte n'est plus lisible, et l'appel doit dire de
+              // quel moteur il parle avant de dire ce qu'il coûte.
+              <TierGate
+                key={engine.engine}
+                offer="boost"
+                item="rankings"
+                compact
+                logo={ENGINE_LOGOS[engine.engine]}
+                logoAlt={engine.engine}
+              >
                 {card}
               </TierGate>
             );

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ROUTES } from "@/constants/routes";
@@ -20,6 +21,10 @@ import type { UpsellOffer } from "@/constants/access";
  * Le contenu flouté est retiré du focus clavier et de l'arbre d'accessibilité
  * (`inert`, `aria-hidden`) : ce qui est illisible à l'œil doit l'être aussi au
  * lecteur d'écran, sinon le voile ne verrouille rien.
+ *
+ * Un voile posé sur un moteur précis porte son logo, net, au-dessus du titre :
+ * sous le flou, la carte ChatGPT n'est plus reconnaissable, et le client doit
+ * voir de quel moteur on lui parle avant de lire l'offre qui l'ouvre.
  */
 export function TierGate({
   offer,
@@ -27,6 +32,8 @@ export function TierGate({
   children,
   compact = false,
   className = "",
+  logo,
+  logoAlt = "",
 }: {
   /** L'offre à prendre pour ouvrir : elle donne le badge et la phrase. */
   offer: UpsellOffer;
@@ -37,6 +44,9 @@ export function TierGate({
   /** Version resserrée, pour un bloc posé dans une grille. */
   compact?: boolean;
   className?: string;
+  /** Logo du moteur concerné (chemin dans /public), posé net sur le voile. */
+  logo?: string;
+  logoAlt?: string;
 }) {
   const t = useTranslations("dashboard.gate");
 
@@ -75,6 +85,18 @@ export function TierGate({
           {t(`offers.${offer}`)}
         </span>
 
+        {logo && (
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-fog bg-snow p-2.5 shadow-[var(--shadow-md)]">
+            <Image
+              src={logo}
+              alt={logoAlt}
+              width={32}
+              height={32}
+              className="h-full w-full object-contain"
+            />
+          </span>
+        )}
+
         <h3 className={`font-bold ${compact ? "text-base" : "text-lg"}`}>
           {t(`items.${item}.title`)}
         </h3>
@@ -110,13 +132,17 @@ export function TierGatePage({
   offer,
   item,
   children,
+  logo,
+  logoAlt = "",
 }: {
   offer: UpsellOffer;
   item: string;
   children: React.ReactNode;
+  logo?: string;
+  logoAlt?: string;
 }) {
   return (
-    <TierGate offer={offer} item={item} className="min-h-[60vh]">
+    <TierGate offer={offer} item={item} className="min-h-[60vh]" logo={logo} logoAlt={logoAlt}>
       {children}
     </TierGate>
   );

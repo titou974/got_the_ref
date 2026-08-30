@@ -78,9 +78,9 @@ export function canOpen(tier: AccessTier, section: DashboardSection): boolean {
  * qu'on le voit, sa note, et surtout la niche détectée — c'est la première
  * chose qu'il vient vérifier, et celle qui prouve que la lecture a eu lieu.
  *
- * Tout le reste — corrections de structure, suivi des mentions, trafic envoyé
- * par les IA, calendrier de rédaction — passe sous un voile surmonté d'un appel
- * vers les tarifs.
+ * Tout le reste — corrections de structure, trafic envoyé par les IA,
+ * calendrier de rédaction, suivi des mentions — passe sous un voile surmonté
+ * d'un appel vers les tarifs.
  */
 export const HOME_BLOCKS = [
   "profile",
@@ -119,8 +119,13 @@ export const HOME_BLOCK_TIER: Record<HomeBlock, AccessTier> = {
   recommendations: "boost",
   /** Les mentions dans les IA, mois après mois : une mesure qui court. */
   mentions: "allin",
-  /** Les visites envoyées par les IA, relevées dans Analytics. */
-  traffic: "allin",
+  /**
+   * Les visites envoyées par les IA, relevées dans Analytics. Ouvertes dès le
+   * Coup de Boost : c'est la preuve que la passe a servi à quelque chose, et la
+   * cacher à qui vient de la payer revenait à lui vendre des correctifs sans
+   * jamais lui en montrer l'effet.
+   */
+  traffic: "boost",
   /** Le calendrier de rédaction. */
   agenda: "boost",
 };
