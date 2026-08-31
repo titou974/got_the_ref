@@ -14,7 +14,6 @@ import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 import { DashboardNotices } from "@/components/tableau-de-bord/DashboardNotices";
 import { NicheBand } from "@/components/tableau-de-bord/NicheBand";
-import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
 import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
@@ -198,6 +197,7 @@ export default async function DashboardHomePage() {
         niche={context.niche ?? analysis.profile.niche ?? null}
         location={analysis.profile.location ?? context.cities[0] ?? null}
         isPhysical={context.isPhysical && analysis.profile.isPhysical}
+        query={analysis.liveQuery ?? null}
       />
 
       {/* 4. La place du commerce dans ChatGPT et Gemini. C'est la question qui
@@ -264,47 +264,28 @@ export default async function DashboardHomePage() {
         }
       />
 
-      {/* 7. Le calendrier de rédaction, en clair à tous les niveaux, et posé sur
-             sa grille de jours plutôt qu'en liste des quatre prochains titres :
-             un mois entier montre le rythme de publication d'un coup d'œil, là
-             où quatre lignes ressemblaient à une liste de tâches. Ce que le
-             client ne peut pas faire, c'est publier — l'onglet Articles
-             s'achète, et les cases mènent alors aux tarifs. */}
+      {/* 7. Le calendrier de rédaction, en clair à tous les niveaux. Sur grand
+             écran, le mois entier sur sa grille de jours — vingt-deux
+             publications alignées du lundi au vendredi disent le rythme d'un
+             coup d'œil, là où quatre lignes ressemblaient à une liste de
+             tâches — et les flèches font défiler les mois. Sur téléphone, la
+             grille cède la place aux sept jours qui viennent, un par ligne,
+             avec le sujet écrit en toutes lettres. Ce que le client ne peut pas
+             faire, c'est publier — l'onglet Articles s'achète, et les sujets
+             mènent alors aux tarifs.
+
+             La journée en cours est lue ici, côté serveur : elle sert de
+             repère au rail du téléphone, et un `new Date()` appelé dans le
+             navigateur ferait diverger le premier rendu de l'hydratation. */}
       <ArticleMonth
+        today={new Date().toISOString().slice(0, 10)}
         articles={articles.map((article) => ({
           id: article.id,
           title: article.title,
           status: article.status,
-          scheduledFor: article.scheduledFor,
+          scheduledFor: article.scheduledFor?.toISOString() ?? null,
         }))}
         locked={!tierAtLeast(tier, "boost")}
-      />
-
-      {/* L'exécution ne vit pas au bas de la page : la barre fixe la porte, et
-          elle mène aux deux voies. Rattacher le site — les agents publient et
-          corrigent alors eux-mêmes — ou repartir avec le prompt, qui couvre les
-          six sections d'un coup et s'applique à la main. */}
-      {/* La barre est là pour tout le monde : c'est le geste que le produit
-          vend, et une page qui ne le montre pas ne le vend pas. Sur un compte
-          gratuit elle s'ouvre sur la console des agents — les manques relevés
-          chez lui, corrigés ligne à ligne —, le rattachement du site reste
-          ouvert, et seul le prompt attend la passe. Il n'est alors même pas
-          écrit côté serveur : ce qui n'arrive pas au navigateur ne se copie
-          pas. */}
-      <SolveAgentsDock
-        userId={user.id}
-        locked={!tierAtLeast(tier, "boost")}
-        result={analysis}
-        diagnostic={diagnostic}
-        articles={articles.map((article) => ({
-          title: article.title,
-          keyword: article.keyword,
-          status: article.status,
-          scheduledFor: article.scheduledFor,
-          excerpt: article.excerpt,
-          outline: article.outline,
-          body: article.body,
-        }))}
       />
     </>
   );

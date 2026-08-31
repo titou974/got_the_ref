@@ -201,7 +201,8 @@ function AgentLogos() {
 
 /**
  * Ce que le compte gratuit voit à la place du prompt : le bouton qui mène aux
- * tarifs, et rien d'autre. Le rattachement du site reste au-dessus, ouvert.
+ * tarifs, et rien d'autre — le rattachement du site n'est pas non plus proposé
+ * à ce niveau.
  *
  * Il n'y a plus de voile ici. Les boutons floutés qu'on posait dessous se
  * lisaient comme une salissure derrière le bouton — la pilule noire du décor
@@ -313,10 +314,10 @@ export function ConnectSiteModal({
    */
   scope?: "report" | "dashboard";
   /**
-   * Compte gratuit : le prompt de correction passe sous voile et l'appel vers
-   * les tarifs prend sa place. Le rattachement du site, lui, reste ouvert : il
-   * ne donne accès à rien de payant par lui-même, et c'est l'étape qu'on veut
-   * voir faite avant l'abonnement, pas après.
+   * Compte gratuit : le prompt de correction laisse la place à l'appel vers les
+   * tarifs, et le rattachement du site disparaît avec lui. La modale se réduit
+   * alors à sa démonstration — la console qui rejoue les manques du site — et à
+   * l'offre qui l'ouvre.
    */
   locked?: boolean;
   /**
@@ -451,7 +452,17 @@ export function ConnectSiteModal({
               </>
             ) : (
               <>
-            <ConnectAction connect={connect} onOpen={() => setConnecting(true)} />
+            {/* Le rattachement du site ne se propose pas à un compte gratuit.
+                Il n'ouvre rien pour lui : les agents ne publient qu'à partir du
+                Coup de Boost, et lui demander le mot de passe d'application de
+                son site pour ne rien y déposer ensuite est une demande sans
+                contrepartie. La modale du gratuit ne porte donc qu'une chose :
+                la console qui montre ce qui sera corrigé, et l'offre qui
+                l'ouvre. Le rattachement l'attend dans les réglages le jour où
+                il achète. */}
+            {locked ? null : (
+              <ConnectAction connect={connect} onOpen={() => setConnecting(true)} />
+            )}
 
             {locked ? (
               <LockedActions />

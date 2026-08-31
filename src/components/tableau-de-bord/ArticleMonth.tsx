@@ -1,18 +1,33 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
+import { RiArrowLeftSLine, RiArrowRightSLine } from "@remixicon/react";
 import { ROUTES } from "@/constants/routes";
 import { Card, CardTitle } from "./Card";
 
 /**
- * Le calendrier éditorial du mois, posé sur une grille de jours.
+ * Le calendrier éditorial, sur deux formats qui ne montrent pas la même chose.
  *
- * C'est la vue du rapport d'analyse, avec une différence qui change tout : les
- * cases ne portent plus une projection de titres possibles mais les articles
- * réellement programmés, et chaque case mène à l'atelier de son article.
+ * Sur grand écran, le mois entier posé sur sa grille de jours : vingt-deux
+ * publications alignées du lundi au vendredi, le rythme se lit d'un coup d'œil,
+ * et les flèches font défiler les mois — le planning ne s'arrête pas au
+ * trentième.
  *
- * La grille se calcule en UTC. Les constructeurs `Date` locaux donneraient un
- * jour de la semaine différent selon le fuseau du serveur et celui du
- * navigateur, et le premier du mois glisserait d'une colonne à la relecture.
+ * Sur téléphone, la grille ne tenait pas : sept colonnes sur trois cent
+ * cinquante pixels laissent quarante pixels par case, où un titre d'article se
+ * réduit à deux mots coupés. Le client voyait des cases pleines sans jamais
+ * savoir ce qui y était prévu. Le format change donc de nature plutôt que de
+ * taille : sept jours à partir d'aujourd'hui, un par ligne, le jour tenu à
+ * gauche sur son rail et le sujet écrit en toutes lettres à droite. On perd la
+ * vue du mois — elle ne se lisait pas — et on gagne la seule chose qu'un
+ * calendrier doit dire : ce qui sort, et quand.
+ *
+ * Tout le calcul de dates passe en UTC. Les constructeurs `Date` locaux
+ * donneraient un jour de la semaine différent selon le fuseau, et le premier du
+ * mois glisserait d'une colonne entre le rendu du serveur et celui du
+ * navigateur.
  */
 
 const MONTHS = [
@@ -20,13 +35,30 @@ const MONTHS = [
   "juillet", "août", "septembre", "octobre", "novembre", "décembre",
 ];
 
+/**
+ * Les mêmes mois abrégés, pour la fenêtre de sept jours du téléphone. Ils sont
+ * écrits à la main : une troncature mécanique rendrait « avri. » et « déce. ».
+ */
+const MONTHS_SHORT = [
+  "janv.", "févr.", "mars", "avr.", "mai", "juin",
+  "juil.", "août", "sept.", "oct.", "nov.", "déc.",
+];
+
+/** Lundi en tête : la semaine de travail commence là, le planning aussi. */
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
+
+/** Les mêmes jours écrits pour le rail du téléphone, où la place ne manque pas. */
+const WEEKDAYS_SHORT = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"];
+
+/** Sept jours : la fenêtre du rail, et le pas de ses flèches. */
+const WEEK_DAYS = 7;
 
 export type MonthArticle = {
   id: string;
   title: string;
   status: string;
-  scheduledFor: Date | null;
+  /** Date de publication en ISO, ou `null` si le sujet n'est pas encore daté. */
+  scheduledFor: string | null;
 };
 
 const STATUS_TINT: Record<string, string> = {
@@ -36,6 +68,11 @@ const STATUS_TINT: Record<string, string> = {
   published: "border-success/40 bg-success/[0.07]",
   rejected: "border-danger/30 bg-danger/[0.05]",
 };
+
+/** Le jour d'une date, ramené à sa seule journée UTC : « 2026-09-01 ». */
+function dayKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
 
 /** Décalage du 1ᵉʳ du mois dans une grille commençant le lundi (0 = lundi). */
 function mondayOffset(year: number, month: number): number {
@@ -47,51 +84,62 @@ function daysInMonthUtc(year: number, month: number): number {
   return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
 }
 
-/**
- * Le mois à afficher : celui de la première publication programmée, sinon le
- * mois en cours. Ouvrir sur un mois vide alors que le planning commence trois
- * semaines plus tard donnerait l'impression que rien n'est prévu.
- */
-function pickMonth(articles: MonthArticle[]): { year: number; month: number } {
-  const dated = articles
-    .map((a) => a.scheduledFor)
-    .filter((d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()))
-    .sort((a, b) => a.getTime() - b.getTime());
-  const ref = dated[0] ?? new Date();
-  return { year: ref.getUTCFullYear(), month: ref.getUTCMonth() };
-}
-
-export async function ArticleMonth({
+export function ArticleMonth({
   articles,
+  today,
   locked = false,
 }: {
   articles: MonthArticle[];
   /**
-   * L'offre du compte n'ouvre pas la rédaction : les cases restent lisibles —
-   * la grille est ce qu'on vend — mais elles mènent aux tarifs, pas à l'atelier.
+   * La journée en cours, lue par le serveur et transmise en « AAAA-MM-JJ ».
+   * Un `new Date()` appelé ici ferait diverger le premier rendu de l'hydratation
+   * dès qu'un client ouvre la page à cheval sur minuit.
+   */
+  today: string;
+  /**
+   * L'offre du compte n'ouvre pas la rédaction : les sujets restent lisibles —
+   * la grille est ce qu'on vend — mais ils mènent aux tarifs, pas à l'atelier.
    */
   locked?: boolean;
 }) {
-  const t = await getTranslations("dashboard.calendar");
-  const { year, month } = pickMonth(articles);
+  const t = useTranslations("dashboard.calendar");
 
-  const offset = mondayOffset(year, month);
-  const daysInMonth = daysInMonthUtc(year, month);
+  /** Les articles rangés par journée, une bonne fois : « 2026-09-01 » → sujets. */
+  const byDay = useMemo(() => {
+    const map = new Map<string, MonthArticle[]>();
+    for (const article of articles) {
+      if (!article.scheduledFor) continue;
+      const date = new Date(article.scheduledFor);
+      if (Number.isNaN(date.getTime())) continue;
+      const key = dayKey(date);
+      map.set(key, [...(map.get(key) ?? []), article]);
+    }
+    return map;
+  }, [articles]);
 
-  // Un jour peut porter plusieurs articles : la case les empile.
-  const byDay = new Map<number, MonthArticle[]>();
-  for (const article of articles) {
-    const date = article.scheduledFor;
-    if (!date || Number.isNaN(date.getTime())) continue;
-    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month) continue;
-    const day = date.getUTCDate();
-    byDay.set(day, [...(byDay.get(day) ?? []), article]);
-  }
+  /**
+   * Le mois d'ouverture : celui de la première publication programmée, sinon le
+   * mois en cours. Ouvrir sur un mois vide alors que le planning commence trois
+   * semaines plus tard donnerait l'impression que rien n'est prévu.
+   */
+  const opening = useMemo(() => {
+    const first = [...byDay.keys()].sort()[0] ?? today;
+    const [year, month] = first.split("-").map(Number);
+    return { year, month: month - 1 };
+  }, [byDay, today]);
+
+  // Deux navigations pour deux vues : les mois sur grand écran, la fenêtre de
+  // sept jours sur téléphone. Elles ne se croisent jamais — un seul des deux
+  // blocs est à l'écran à la fois — et garder deux compteurs évite de traduire
+  // un mois en semaine à chaque bascule de format.
+  const [monthShift, setMonthShift] = useState(0);
+  const [dayShift, setDayShift] = useState(0);
+
+  const shown = new Date(Date.UTC(opening.year, opening.month + monthShift, 1));
+  const year = shown.getUTCFullYear();
+  const month = shown.getUTCMonth();
 
   const placed = [...byDay.values()].reduce((total, list) => total + list.length, 0);
-  const cells = Array.from({ length: offset + daysInMonth }, (_, i) =>
-    i < offset ? null : i - offset + 1,
-  );
 
   return (
     <Card>
@@ -105,49 +153,293 @@ export async function ArticleMonth({
         }
       />
 
-      <p className="mb-3 text-sm font-semibold capitalize">
-        {MONTHS[month]} {year}
-      </p>
+      {/* ---- Grand écran : le mois entier ---- */}
+      <div className="hidden sm:block">
+        <Stepper
+          label={<span className="capitalize">{`${MONTHS[month]} ${year}`}</span>}
+          prevLabel={t("prevMonth")}
+          nextLabel={t("nextMonth")}
+          onPrev={() => setMonthShift((s) => s - 1)}
+          onNext={() => setMonthShift((s) => s + 1)}
+          onReset={monthShift === 0 ? null : () => setMonthShift(0)}
+          resetLabel={t("backToday")}
+        />
 
-      <div className="grid grid-cols-7 gap-1.5">
-        {WEEKDAYS.map((d, i) => (
-          <div
-            key={`${d}-${i}`}
-            className="pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-steel"
-          >
-            {d}
-          </div>
-        ))}
-        {cells.map((day, i) => {
-          if (day == null) return <div key={`empty-${i}`} />;
-          const dayArticles = byDay.get(day) ?? [];
-          return (
-            <div
-              key={day}
-              className={`min-h-[68px] rounded-xl border p-1.5 ${
-                dayArticles.length ? "border-pebble/70 bg-mist" : "border-fog bg-surface"
-              }`}
-            >
-              <span className="block text-[11px] font-semibold tabular-nums text-steel">{day}</span>
-              <span className="mt-1 flex flex-col gap-1">
-                {dayArticles.map((article) => (
-                  <Link
-                    key={article.id}
-                    href={locked ? ROUTES.pricing : ROUTES.dashboardArticle(article.id)}
-                    className={`block cursor-pointer overflow-hidden rounded-lg border px-1.5 py-1 text-[10px] leading-snug text-text transition-colors duration-200 hover:bg-snow ${
-                      STATUS_TINT[article.status] ?? "border-fog bg-surface"
-                    }`}
-                  >
-                    <span className="line-clamp-2">{article.title}</span>
-                  </Link>
-                ))}
-              </span>
-            </div>
-          );
-        })}
+        <MonthGrid year={year} month={month} byDay={byDay} today={today} locked={locked} />
+      </div>
+
+      {/* ---- Téléphone : les sept jours qui viennent ---- */}
+      <div className="sm:hidden">
+        <WeekRail
+          today={today}
+          shift={dayShift}
+          byDay={byDay}
+          locked={locked}
+          onPrev={() => setDayShift((s) => s - WEEK_DAYS)}
+          onNext={() => setDayShift((s) => s + WEEK_DAYS)}
+          onReset={dayShift === 0 ? null : () => setDayShift(0)}
+        />
       </div>
 
       {placed === 0 ? <p className="mt-4 text-sm text-muted">{t("empty")}</p> : null}
     </Card>
+  );
+}
+
+/**
+ * La barre de navigation commune aux deux vues : la période au centre de la
+ * lecture, ses deux flèches de part et d'autre, et le retour au présent qui
+ * n'apparaît qu'une fois qu'on s'en est éloigné.
+ */
+function Stepper({
+  label,
+  prevLabel,
+  nextLabel,
+  onPrev,
+  onNext,
+  onReset,
+  resetLabel,
+}: {
+  /**
+   * Le nom de la période. Un nœud, pas une chaîne : le mois se met en capitale
+   * initiale, la fenêtre de sept jours — « Du 31 août au 6 sept. » — non, et
+   * une classe `capitalize` posée ici les capitaliserait mot par mot.
+   */
+  label: React.ReactNode;
+  prevLabel: string;
+  nextLabel: string;
+  onPrev: () => void;
+  onNext: () => void;
+  onReset: (() => void) | null;
+  resetLabel: string;
+}) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <p className="min-w-0 flex-1 truncate text-sm font-semibold">{label}</p>
+
+      {onReset ? (
+        <button
+          type="button"
+          onClick={onReset}
+          className="cursor-pointer rounded-pill px-2.5 py-1 text-[11px] font-semibold text-muted transition-colors duration-200 hover:bg-mist hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+        >
+          {resetLabel}
+        </button>
+      ) : null}
+
+      <div className="flex shrink-0 items-center gap-1">
+        <StepButton label={prevLabel} onClick={onPrev}>
+          <RiArrowLeftSLine className="size-4" aria-hidden />
+        </StepButton>
+        <StepButton label={nextLabel} onClick={onNext}>
+          <RiArrowRightSLine className="size-4" aria-hidden />
+        </StepButton>
+      </div>
+    </div>
+  );
+}
+
+function StepButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-border text-steel transition-colors duration-200 hover:border-pebble hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Le mois sur sa grille de jours, tel qu'il se lit sur un grand écran. */
+function MonthGrid({
+  year,
+  month,
+  byDay,
+  today,
+  locked,
+}: {
+  year: number;
+  month: number;
+  byDay: Map<string, MonthArticle[]>;
+  today: string;
+  locked: boolean;
+}) {
+  const offset = mondayOffset(year, month);
+  const daysInMonth = daysInMonthUtc(year, month);
+  const cells = Array.from({ length: offset + daysInMonth }, (_, i) =>
+    i < offset ? null : i - offset + 1,
+  );
+
+  return (
+    <div className="grid grid-cols-7 gap-1.5">
+      {WEEKDAYS.map((d, i) => (
+        <div
+          key={`${d}-${i}`}
+          className="pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-steel"
+        >
+          {d}
+        </div>
+      ))}
+      {cells.map((day, i) => {
+        if (day == null) return <div key={`empty-${i}`} />;
+        const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const dayArticles = byDay.get(key) ?? [];
+        const isToday = key === today;
+        return (
+          <div
+            key={day}
+            className={`min-h-[84px] rounded-xl border p-1.5 ${
+              dayArticles.length ? "border-pebble/70 bg-mist" : "border-fog bg-surface"
+            }`}
+          >
+            {/* Aujourd'hui porte une pastille pleine plutôt qu'une bordure de
+                plus : la grille est déjà faite de cadres, un cadre supplémentaire
+                se serait confondu avec eux. */}
+            <span
+              className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums ${
+                isToday ? "bg-obsidian text-white" : "text-steel"
+              }`}
+            >
+              {day}
+            </span>
+            <span className="mt-1 flex flex-col gap-1">
+              {dayArticles.map((article) => (
+                <Link
+                  key={article.id}
+                  href={locked ? ROUTES.pricing : ROUTES.dashboardArticle(article.id)}
+                  className={`block cursor-pointer overflow-hidden rounded-lg border px-1.5 py-1 text-[10px] leading-snug text-text transition-colors duration-200 hover:bg-snow ${
+                    STATUS_TINT[article.status] ?? "border-fog bg-surface"
+                  }`}
+                >
+                  <span className="line-clamp-3">{article.title}</span>
+                </Link>
+              ))}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Les sept jours qui viennent, un par ligne.
+ *
+ * La fenêtre roule à partir d'aujourd'hui plutôt que de se caler sur un lundi :
+ * le client ouvre son tableau de bord un jeudi et veut savoir ce qui sort d'ici
+ * jeudi prochain, pas ce qu'il a manqué lundi.
+ */
+function WeekRail({
+  today,
+  shift,
+  byDay,
+  locked,
+  onPrev,
+  onNext,
+  onReset,
+}: {
+  today: string;
+  shift: number;
+  byDay: Map<string, MonthArticle[]>;
+  locked: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+  onReset: (() => void) | null;
+}) {
+  const t = useTranslations("dashboard.calendar");
+  const ts = useTranslations("dashboard.agenda.status");
+
+  const [y, m, d] = today.split("-").map(Number);
+  const start = new Date(Date.UTC(y, m - 1, d + shift));
+
+  const days = Array.from({ length: WEEK_DAYS }, (_, i) => {
+    const date = new Date(Date.UTC(y, m - 1, d + shift + i));
+    return { date, key: dayKey(date), articles: byDay.get(dayKey(date)) ?? [] };
+  });
+
+  const last = days[days.length - 1].date;
+  const range = t("range", {
+    from: `${start.getUTCDate()} ${MONTHS_SHORT[start.getUTCMonth()]}`,
+    to: `${last.getUTCDate()} ${MONTHS_SHORT[last.getUTCMonth()]}`,
+  });
+
+  const count = days.reduce((total, day) => total + day.articles.length, 0);
+
+  return (
+    <>
+      <Stepper
+        label={range}
+        prevLabel={t("prevWeek")}
+        nextLabel={t("nextWeek")}
+        onPrev={onPrev}
+        onNext={onNext}
+        onReset={onReset}
+        resetLabel={t("backToday")}
+      />
+
+      {/* Un rail plutôt qu'une pile de cartes : le filet vertical tient les sept
+          jours ensemble et donne au regard une seule colonne à descendre. */}
+      <ul className="divide-y divide-border border-y border-border">
+        {days.map((day) => {
+          const isToday = day.key === today;
+          const weekday = WEEKDAYS_SHORT[(day.date.getUTCDay() + 6) % 7];
+
+          return (
+            <li key={day.key} className="flex items-stretch gap-3 py-2.5">
+              <div className="flex w-11 shrink-0 flex-col items-center border-r border-border pr-3">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-steel">
+                  {weekday}
+                </span>
+                <span
+                  className={`mt-0.5 flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[13px] font-semibold tabular-nums ${
+                    isToday ? "bg-obsidian text-white" : "text-text"
+                  }`}
+                >
+                  {day.date.getUTCDate()}
+                </span>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                {day.articles.length === 0 ? (
+                  <p className="py-1.5 text-[13px] text-ash">{t("dayEmpty")}</p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {day.articles.map((article) => (
+                      <Link
+                        key={article.id}
+                        href={locked ? ROUTES.pricing : ROUTES.dashboardArticle(article.id)}
+                        className={`block cursor-pointer rounded-xl border px-3 py-2 transition-colors duration-200 hover:bg-snow ${
+                          STATUS_TINT[article.status] ?? "border-fog bg-surface"
+                        }`}
+                      >
+                        <span className="block text-[13px] font-medium leading-snug text-text">
+                          {article.title}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-steel">
+                          {ts(article.status)}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="mt-3 text-[13px] text-muted">{t("weekCount", { count })}</p>
+    </>
   );
 }

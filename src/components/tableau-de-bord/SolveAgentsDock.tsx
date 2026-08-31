@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { isCredentialsKeySet } from "@/lib/crypto";
+import { ROUTES } from "@/constants/routes";
 import { connectorForStack } from "@/constants/site-platforms";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { writeSolutionPrompt } from "@/features/dashboard/solution-prompt";
@@ -11,12 +12,17 @@ import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { SolveAgentsBar } from "@/components/dashboard/SolveAgentsBar";
 
 /**
- * La barre « résoudre avec les agents IA » de l'accueil du tableau de bord.
+ * La barre « résoudre avec les agents IA » du tableau de bord.
  *
  * C'est la même barre que celle du rapport d'analyse, à une différence près :
  * le prompt qu'elle porte ne couvre pas une section mais les six. Le client
  * n'a plus à passer d'onglet en onglet pour ramasser ses correctifs — il copie
  * une fois, son agent applique tout.
+ *
+ * Elle est posée dans la coque, pas dans une page : c'est le geste que le
+ * produit vend, et il doit rester à portée de pouce sur les six onglets. Elle
+ * n'était montée que sur l'accueil, et le client qui descendait dans le détail
+ * d'une section perdait en route le bouton qui l'applique.
  *
  * L'écriture du prompt prend deux à trois secondes. Derrière une frontière
  * `Suspense` sans repli : la page s'affiche entière tout de suite, la barre
@@ -37,10 +43,10 @@ export function SolveAgentsDock({
   /** Le planning éditorial : les articles rédigés partent dans le prompt. */
   articles: ArticleFact[];
   /**
-   * Compte gratuit : la barre s'affiche, la modale s'ouvre et le site se
-   * rattache, mais le prompt passe sous voile. Il n'est alors pas écrit du
-   * tout — c'est un appel au modèle de deux à trois secondes, et un texte qui
-   * n'atteint pas le navigateur ne se copie pas.
+   * Compte gratuit : la barre s'affiche et la modale s'ouvre, mais le prompt
+   * comme le rattachement du site en sont retirés. Le prompt n'est alors pas
+   * écrit du tout — c'est un appel au modèle de deux à trois secondes, et un
+   * texte qui n'atteint pas le navigateur ne se copie pas.
    */
   locked?: boolean;
 }) {
@@ -145,6 +151,10 @@ async function Dock({
         scope="dashboard"
         locked={locked}
         connect={connect}
+        // Le compte gratuit passe par l'onglet Contenu avant d'ouvrir la
+        // console : c'est le seul travail que son offre lui ouvre, et la barre
+        // l'y emmène tant qu'il n'y est pas.
+        contentHref={locked ? ROUTES.dashboardContent : null}
       />
     </>
   );

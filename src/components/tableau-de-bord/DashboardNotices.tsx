@@ -20,6 +20,12 @@ import { tierAtLeast, type AccessTier } from "@/constants/access";
  * rangé après un seul refus ne rappelle plus rien. Une fois traité, il se tait
  * jusqu'au lendemain.
  *
+ * Il ne s'adresse qu'aux comptes qui peuvent réellement le suivre : les comptes
+ * de démonstration et l'abonnement Tout-en-un. Un relevé quotidien n'a de sens
+ * que si les moteurs sont tous interrogés et que rien ne s'arrête au bout d'une
+ * semaine ; le proposer à un compte gratuit ou à une passe de Coup de Boost,
+ * c'est vendre une habitude que l'offre ne tient pas.
+ *
  * Le second ne s'adresse qu'aux comptes gratuits, ceux qui découvrent l'écran :
  * il dit où le produit se lit le mieux et laisse repartir en un lien. Refusé
  * une fois, il ne revient pas — ce n'est pas un rappel, c'est un conseil.
@@ -61,19 +67,23 @@ export function DashboardNotices({ tier }: { tier: AccessTier }) {
   const [showDesktop, setShowDesktop] = useState(false);
 
   const free = !tierAtLeast(tier, "boost");
+  // Le relevé quotidien ne se propose qu'aux niveaux qui l'exécutent en entier
+  // et dans la durée : l'abonnement Tout-en-un, et les comptes de
+  // démonstration qui passent devant lui (cf. `RANK` dans `constants/access`).
+  const daily = tierAtLeast(tier, "allin");
 
   useEffect(() => {
     // Le mot se pose une fois la page arrivée, plutôt que de sauter au premier
     // rendu : sur téléphone, un bloc qui apparaît sous le doigt pendant qu'on
     // commence à faire défiler déplace tout ce qu'on lisait.
     const timer = setTimeout(() => {
-      setShowDaily(read(DAILY_KEY) !== today());
+      setShowDaily(daily && read(DAILY_KEY) !== today());
       setShowDesktop(read(DESKTOP_KEY) !== "1");
       setMounted(true);
     }, APPEAR_MS);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [daily]);
 
   if (!mounted) return null;
   if (!showDaily && !(free && showDesktop)) return null;

@@ -200,6 +200,7 @@
     },
     "solve": {
       "cta": "Résoudre avec les agents IA",
+      "ctaContent": "Corriger le contenu",
       "share": "Partager",
       "copied": "Lien copié",
       "shareTitle": "Analyse GEO de {domain}",
@@ -1676,7 +1677,15 @@
       "title": "Calendrier des publications",
       "hint": "Ce que les agents déposent sur votre site, jour par jour.",
       "count": "{count} au planning",
-      "empty": "Aucune date de publication sur ce mois. Demandez un planning depuis la page Articles."
+      "empty": "Aucune date de publication sur ce mois. Demandez un planning depuis la page Articles.",
+      "prevMonth": "Mois précédent",
+      "nextMonth": "Mois suivant",
+      "prevWeek": "Semaine précédente",
+      "nextWeek": "Semaine suivante",
+      "backToday": "Aujourd'hui",
+      "range": "Du {from} au {to}",
+      "dayEmpty": "Rien de prévu",
+      "weekCount": "{count, plural, =0 {Aucune publication sur ces sept jours} one {# publication sur ces sept jours} other {# publications sur ces sept jours}}"
     },
     "checks": {
       "allGood": "Tous les contrôles passent.",
