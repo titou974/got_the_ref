@@ -1533,42 +1533,46 @@
         "boost": "Coup de Boost",
         "allin": "Tout-en-un"
       },
-      "cta": {
-        "boost": "Débloquer avec le Coup de Boost",
-        "allin": "Passer au Tout-en-un"
-      },
       "items": {
         "architecture": {
           "title": "Le diagnostic de structure et ses correctifs",
-          "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Chaque contrôle raté a son correctif, prêt à poser. Le Coup de Boost ouvre la page et laisse les agents faire la passe."
+          "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Chaque contrôle raté a son correctif, prêt à poser. Le Coup de Boost ouvre la page et laisse les agents faire la passe.",
+          "cta": "Voir ma structure"
         },
         "articles": {
           "title": "La rédaction et la publication de vos articles",
-          "body": "Les sujets sont déjà au calendrier, datés et calés sur vos mots-clés : vous les voyez, vous ne pouvez pas encore les faire écrire. Le Coup de Boost lance la rédaction pendant une semaine et pose le mois entier au planning. L'abonnement Tout-en-un, lui, ne s'arrête pas."
+          "body": "Les sujets sont déjà au calendrier, datés et calés sur vos mots-clés : vous les voyez, vous ne pouvez pas encore les faire écrire. Le Coup de Boost lance la rédaction pendant une semaine et pose le mois entier au planning. L'abonnement Tout-en-un, lui, ne s'arrête pas.",
+          "cta": "Voir mes articles"
         },
         "presence": {
           "title": "Vos backlinks et votre notoriété web",
-          "body": "Qui parle de vous, avec quelle autorité, et à qui écrire pour que ça bouge. Le travail se fait dans la durée, il est donc réservé à l'abonnement Tout-en-un."
+          "body": "Qui parle de vous, avec quelle autorité, et à qui écrire pour que ça bouge. Le travail se fait dans la durée, il est donc réservé à l'abonnement Tout-en-un.",
+          "cta": "Voir ma notoriété"
         },
         "maps": {
           "title": "Votre fiche Google Maps, tenue à jour",
-          "body": "Cohérence avec le site, avis, posts programmés : la fiche se travaille semaine après semaine. Elle est réservée à l'abonnement Tout-en-un."
+          "body": "Cohérence avec le site, avis, posts programmés : la fiche se travaille semaine après semaine. Elle est réservée à l'abonnement Tout-en-un.",
+          "cta": "Voir ma fiche Google"
         },
         "diagnostic": {
           "title": "Le diagnostic complet de votre site",
-          "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Le Coup de Boost l'ouvre et corrige dans la foulée."
+          "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Le Coup de Boost l'ouvre et corrige dans la foulée.",
+          "cta": "Voir mon diagnostic"
         },
         "recommendations": {
-          "title": "Le reste du plan d'action",
-          "body": "Vous lisez déjà les correctifs de contenu. Ceux qui touchent à l'ossature du site, aux données structurées et aux plateformes attendent le Coup de Boost, qui les ouvre et laisse les agents les appliquer."
+          "title": "+{count} corrections critiques pour votre classement",
+          "body": "Nous avons relevé {count} corrections à faire pour monter votre site en haut des réponses IA. Le Coup de Boost les ouvre une par une et les agents les appliquent.",
+          "cta": "Voir mes corrections"
         },
         "traffic": {
-          "title": "Les visites que les IA vous envoient",
-          "body": "Le trafic réellement amené par ChatGPT, Gemini et Perplexity, relevé dans votre Analytics. Le Coup de Boost l'ouvre pour que vous voyiez l'effet de la passe. L'abonnement Tout-en-un le tient à jour ensuite."
+          "title": "X visites amenées par les IA",
+          "body": "Le compte exact, jour par jour, pour ChatGPT, Gemini et Perplexity, relevé dans votre Analytics. Le Coup de Boost l'ouvre, l'abonnement Tout-en-un le tient à jour.",
+          "cta": "Voir ma visibilité"
         },
         "rankings": {
           "title": "Votre position sur ChatGPT",
-          "body": "Votre compte gratuit fait mesurer Gemini. ChatGPT n'a pas été interrogé : chaque relevé lui coûte un appel de recherche, et nous ne le lançons pas pour une carte que vous ne pourriez pas lire. Le Coup de Boost ouvre les deux moteurs, avant et après les corrections."
+          "body": "Votre compte gratuit fait mesurer Gemini. ChatGPT n'a pas été interrogé : chaque relevé lui coûte un appel de recherche. Le Coup de Boost ouvre les deux moteurs, avant et après les corrections.",
+          "cta": "Voir ma position sur ChatGPT"
         }
       }
     },
@@ -1597,6 +1601,7 @@
       "hint": "Les visites arrivées depuis un assistant.",
       "period": "{days} derniers jours",
       "share": "soit {value} % de vos visites",
+      "shareMasked": "soit X % de vos visites",
       "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique.",
       "demoBadge": "Données d'exemple",
       "periodFilter": "Période",

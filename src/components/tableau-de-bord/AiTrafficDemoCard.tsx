@@ -10,7 +10,7 @@ import {
   type DemoEngine,
   type DemoEngineSummary,
 } from "@/features/dashboard/demoTraffic";
-import { Obscured } from "@/components/dashboard/LockedContent";
+import { Obscured, Redacted } from "@/components/dashboard/LockedContent";
 import { useIsCompact } from "@/lib/useIsCompact";
 import { cx } from "@/lib/utils";
 import { Card, CardTitle, Delta } from "./Card";
@@ -53,9 +53,20 @@ const changeOf = (engine: DemoEngineSummary) =>
 export function AiTrafficDemoCard({
   demo,
   domain,
+  veiled = false,
 }: {
   demo: DemoAiTraffic;
   domain: string | null;
+  /**
+   * La carte est posée sous une offre qui ne l'ouvre pas encore.
+   *
+   * Elle garde alors tout ce qui la rend lisible — le titre, la barre de
+   * période, les trois onglets avec leurs logos, l'axe des dates — et ne retient
+   * que deux choses : les totaux, écrits « X », et la courbe, floutée. C'est la
+   * seule part qui répond vraiment à la question posée, et la seule qui
+   * s'achète. L'appel, lui, est en pied de carte : la carte n'en porte pas.
+   */
+  veiled?: boolean;
 }) {
   const t = useTranslations("dashboard.traffic");
   const compact = useIsCompact();
@@ -82,12 +93,13 @@ export function AiTrafficDemoCard({
         }
       />
 
-      {/* Tout ce qui vient de l'exemple passe sous le voile : les onglets, la
-          courbe, et la barre de filtres qui les commande. Laisser la barre
-          active au-dessus d'un graphique flouté donnerait des boutons qui
-          répondent sans que rien de lisible ne change. */}
+      {/* Sans offre pour l'ouvrir, la carte reste entière et seule la courbe se
+          floute : le client lit la période, les trois assistants suivis et la
+          forme de l'écran, sans lire un chiffre. En attente de rattachement,
+          c'est l'inverse — l'exemple est inventé de bout en bout, donc tout
+          passe sous le voile, et le panneau de rattachement se pose dessus. */}
       <div className="relative isolate mt-4">
-        <Obscured>
+        <Veiled on={!veiled}>
           <TrafficFilterBar
             domain={domain}
             period={period}
@@ -99,11 +111,12 @@ export function AiTrafficDemoCard({
               engines={view.engines}
               selected={selected}
               onSelect={setSelected}
+              redacted={veiled}
             />
 
             <div className="p-4 sm:p-5">
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-                <Delta value={changeOf(engine)} />
+                {veiled ? null : <Delta value={changeOf(engine)} />}
                 <span>{t("vsPrevious", { days: view.days })}</span>
                 {/* Sur téléphone, la part passe à la ligne : la puce y ouvrirait
                     la ligne comme une liste à points. */}
@@ -111,38 +124,50 @@ export function AiTrafficDemoCard({
                   ·
                 </span>
                 <span>
-                  {t("share", {
-                    value:
-                      share < 1 ? share.toFixed(1) : String(Math.round(share)),
-                  })}
+                  {veiled
+                    ? t("shareMasked")
+                    : t("share", {
+                        value:
+                          share < 1
+                            ? share.toFixed(1)
+                            : String(Math.round(share)),
+                      })}
                 </span>
               </p>
 
               {/* Sur téléphone, la courbe perd ce qui ne tient pas dans la
                   largeur : l'axe des ordonnées et toutes les dates sauf les
                   deux bouts. */}
-              <AreaChart
-                data={view.series}
-                index="date"
-                categories={[engine.name]}
-                colors={[ENGINES[engine.name].color]}
-                valueFormatter={formatVisits}
-                showLegend={false}
-                showYAxis={!compact}
-                startEndOnly={compact}
-                yAxisWidth={44}
-                className={compact ? "mt-4 h-56" : "mt-4 h-72"}
-              />
+              <Veiled on={veiled}>
+                <AreaChart
+                  data={view.series}
+                  index="date"
+                  categories={[engine.name]}
+                  colors={[ENGINES[engine.name].color]}
+                  valueFormatter={formatVisits}
+                  showLegend={false}
+                  showYAxis={!compact}
+                  startEndOnly={compact}
+                  yAxisWidth={44}
+                  className={compact ? "mt-4 h-56" : "mt-4 h-72"}
+                />
+              </Veiled>
             </div>
           </div>
-        </Obscured>
+        </Veiled>
 
-        <ConnectOverlay />
+        {veiled ? null : <ConnectOverlay />}
       </div>
 
       <p className="mt-4 text-xs text-ash">{t("geminiNote")}</p>
     </Card>
   );
+}
+
+/** Floute son contenu, ou le laisse tel quel. Deux états, un seul balisage. */
+function Veiled({ on, children }: { on: boolean; children: React.ReactNode }) {
+  if (!on) return <>{children}</>;
+  return <Obscured>{children}</Obscured>;
 }
 
 /**
@@ -232,10 +257,13 @@ function EngineTabs({
   engines,
   selected,
   onSelect,
+  redacted = false,
 }: {
   engines: DemoEngineSummary[];
   selected: DemoEngine;
   onSelect: (engine: DemoEngine) => void;
+  /** Le total de chaque assistant est retenu : « X » prend sa place. */
+  redacted?: boolean;
 }) {
   const move = (step: number) => {
     const index = engines.findIndex((item) => item.name === selected);
@@ -292,7 +320,11 @@ function EngineTabs({
               </span>
             </span>
             <span className="mt-1 block text-xl font-bold tabular-nums sm:text-2xl">
-              {formatVisits(item.sessions)}
+              {redacted ? (
+                <Redacted label={`visites depuis ${item.name}, masquées`} />
+              ) : (
+                formatVisits(item.sessions)
+              )}
             </span>
           </button>
         );

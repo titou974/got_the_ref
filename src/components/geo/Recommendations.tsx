@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { CATEGORY_META, type Recommendation } from "@/lib/geo/types";
 import { priorityColor } from "@/lib/score";
 import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
+import { Obscured } from "@/components/dashboard/LockedContent";
 
 /**
  * Le plan d'action, une carte par correctif.
@@ -15,9 +16,19 @@ import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
 export function Recommendations({
   recommendations,
   emptyLabel,
+  veiled = false,
 }: {
   recommendations: Recommendation[];
   emptyLabel: string;
+  /**
+   * Correctifs que l'offre du compte n'ouvre pas encore.
+   *
+   * La carte garde ce qui la situe — le rang de priorité, sa couleur, la
+   * famille de contrôles — et retient ce qui se vend : le titre du correctif et
+   * la marche à suivre. Voir « critique » sur « Contenu & E-E-A-T » sans pouvoir
+   * lire lequel, c'est exactement l'information qu'on veut donner.
+   */
+  veiled?: boolean;
 }) {
   const t = useTranslations("analysisReport.results");
 
@@ -43,14 +54,26 @@ export function Recommendations({
           >
             {r.priority}
           </span>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
-              <h4 className="font-semibold">{r.title}</h4>
+              {veiled ? (
+                <Obscured strength="md" className="min-w-0 flex-1">
+                  <h4 className="truncate font-semibold">{r.title}</h4>
+                </Obscured>
+              ) : (
+                <h4 className="font-semibold">{r.title}</h4>
+              )}
               <span className="shrink-0 text-xs text-muted">
-                {t("impact", { value: r.impact })}
+                {t("impact", { value: veiled ? "X" : r.impact })}
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted">{r.description}</p>
+            {veiled ? (
+              <Obscured strength="md">
+                <p className="mt-1 line-clamp-2 text-sm text-muted">{r.description}</p>
+              </Obscured>
+            ) : (
+              <p className="mt-1 text-sm text-muted">{r.description}</p>
+            )}
             <span className="mt-2 inline-block text-xs text-steel">
               {CATEGORY_META[r.category].label}
             </span>

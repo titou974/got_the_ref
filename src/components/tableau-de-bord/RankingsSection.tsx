@@ -105,14 +105,16 @@ export function RankingsSection({
             return open ? (
               <div key={engine.engine}>{card}</div>
             ) : (
-              // Le logo du moteur est repris net sur le voile : sous le flou,
-              // celui de la carte n'est plus lisible, et l'appel doit dire de
-              // quel moteur il parle avant de dire ce qu'il coûte.
+              // La carte reste lisible : on doit voir quel moteur a été
+              // interrogé, sur quelles requêtes, et qu'un top 10 existe. Seules
+              // les bandes du classement et la note sont retenues. Le logo est
+              // repris sur la barre d'appel, qui dit de quel moteur elle parle
+              // avant de dire ce qu'il en coûte.
               <TierGate
                 key={engine.engine}
                 offer="boost"
                 item="rankings"
-                compact
+                reveal
                 logo={ENGINE_LOGOS[engine.engine]}
                 logoAlt={engine.engine}
               >

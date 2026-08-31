@@ -6,7 +6,7 @@ import type { EngineRanking, EngineScore } from "@/lib/geo/types";
 import { decoyRanking } from "@/lib/geo/decoy-ranking";
 import { scoreColor, visibilityColor } from "@/lib/score";
 import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
-import { LockedPill, Obscured } from "@/components/dashboard/LockedContent";
+import { LockedPill, Obscured, Redacted } from "@/components/dashboard/LockedContent";
 
 /**
  * Le classement d'un commerce dans chaque moteur, carte par carte.
@@ -101,9 +101,10 @@ export function RankingList({
           <p className="mt-1 truncate text-xs text-muted">{ranking.label}</p>
         </div>
         {locked ? (
-          // Même « non classé » est une information : on n'en dit rien.
+          // Même « non classé » est une information : on n'en dit rien. Le rang
+          // s'écrit « #X », comme partout ailleurs où une valeur est retenue.
           <span className="shrink-0 rounded-lg bg-fog px-2 py-0.5 text-sm font-bold text-ash">
-            #?
+            #<Redacted label="rang masqué" />
           </span>
         ) : ranking.targetRank != null ? (
           <span className="shrink-0 rounded-lg bg-obsidian/10 px-2 py-0.5 text-sm font-bold text-obsidian">
@@ -116,7 +117,11 @@ export function RankingList({
         )}
       </div>
       {locked ? (
-        <DecoyBands seedKey={`${ranking.label}|${ranking.scope}`} count={decoyCount} />
+        // Les bandes sont fictives, et elles se floutent quand même : nettes,
+        // elles se liraient comme le classement réel du client.
+        <Obscured strength="sm">
+          <DecoyBands seedKey={`${ranking.label}|${ranking.scope}`} count={decoyCount} />
+        </Obscured>
       ) : ranking.competitors.length > 0 ? (
         <ol className="space-y-0.5">
           {ranking.competitors.map((c) => (
@@ -220,7 +225,13 @@ export function EngineCard({
   // Tout ce qui constitue la mesure elle-même : c'est cette part qui se floute.
   const body = (
     <div className="space-y-3">
-      {compact ? null : <p className="text-xs text-muted">{engine.summary}</p>}
+      {compact ? null : preview ? (
+        <Obscured strength="md">
+          <p className="text-xs text-muted">{engine.summary}</p>
+        </Obscured>
+      ) : (
+        <p className="text-xs text-muted">{engine.summary}</p>
+      )}
       {engine.rankings.length > 0 && (
         <div
           className={`grid grid-cols-1 gap-3 ${
@@ -255,7 +266,10 @@ export function EngineCard({
             />
           )}
           <span className="text-base font-semibold">{engine.engine}</span>
-          {locked ? (
+          {/* Sur une carte de démonstration, la note et la mention « mesuré »
+              viennent d'un moteur qui n'a pas été interrogé : les afficher
+              ferait passer une estimation pour un relevé. */}
+          {locked || preview ? (
             <LockedPill />
           ) : (
             <>
@@ -282,10 +296,8 @@ export function EngineCard({
         {/* La note du moteur ne suit pas la carte resserrée : sur le tableau de
             bord, le seul chiffre qui compte est le rang, et il est écrit sur la
             ligne du commerce dans le classement. */}
-        {compact ? null : locked ? (
-          <span className="shrink-0 text-lg font-bold text-pebble" aria-hidden>
-            ••
-          </span>
+        {compact ? null : locked || preview ? (
+          <Redacted className="shrink-0 text-lg font-bold" label="note masquée" />
         ) : (
           <span className="shrink-0 text-lg font-bold" style={{ color: scoreColor(engine.score) }}>
             {engine.score}
