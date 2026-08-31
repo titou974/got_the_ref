@@ -1963,6 +1963,37 @@
         "title": "Votre site",
         "body": "Le lien par lequel les agents déposent vos articles et corrigent vos textes. Sans lui, tout se prépare ici et se recopie à la main chez vous.",
         "platform": "Plateforme",
+        "pickTitle": "Sur quoi tourne votre site ?",
+        "pickBody": "Choisissez votre plateforme : on vous montre ensuite où prendre les identifiants qu'elle demande.",
+        "pickSoon": "Bientôt",
+        "pickDetected": "Détecté",
+        "pickChosen": "Plateforme : {name}",
+        "pickChange": "Changer",
+        "guideTitle": "Rattacher un site {name}, pas à pas",
+        "guides": {
+          "wordpress": {
+            "steps": [
+              "Connectez-vous à votre site WordPress avec un compte administrateur.",
+              "Ouvrez « Utilisateurs → Profil », puis descendez jusqu'à la section « Mots de passe d'application ».",
+              "Saisissez le nom « got_the_ref », puis cliquez sur « Ajouter un nouveau mot de passe d'application ».",
+              "Copiez le mot de passe affiché : WordPress ne le montrera plus. Les espaces qu'il contient sont sans importance.",
+              "Votre identifiant est celui affiché en haut du même écran, sous « Nom d'utilisateur ».",
+              "Collez l'adresse de votre site, cet identifiant et ce mot de passe dans les champs ci-dessous."
+            ],
+            "caution": "Le site doit être en HTTPS : WordPress désactive les mots de passe d'application sur une connexion en clair. Si le rattachement est refusé alors que le mot de passe est bon, votre hébergeur retire l'en-tête « Authorization » — la directive « CGIPassAuth On » dans le fichier .htaccess le rétablit."
+          },
+          "shopify": {
+            "steps": [
+              "Dans l'administration Shopify, ouvrez « Paramètres → Applications et canaux de vente ».",
+              "Cliquez sur « Développer des applications », puis « Créer une application ». Nommez-la got_the_ref.",
+              "Onglet « Configuration » → « Admin API » : cochez les portées read_content et write_content, puis enregistrez.",
+              "Cliquez sur « Installer l'application » pour l'activer sur la boutique.",
+              "Onglet « Identifiants API » : révélez le « Jeton d'accès Admin API » et copiez-le. Shopify ne l'affiche qu'une seule fois.",
+              "L'adresse de la boutique est celle en « .myshopify.com » (Paramètres → Domaines), pas votre domaine de vente."
+            ],
+            "caution": "Le champ « Blog visé » est facultatif : sans indication, les articles vont dans le premier blog de la boutique. Une boutique sans aucun blog reste rattachable, mais ses articles resteront à déposer à la main."
+          }
+        },
         "connect": "Rattacher le site",
         "reconnect": "Mettre le lien à jour",
         "connecting": "Vérification en cours…",

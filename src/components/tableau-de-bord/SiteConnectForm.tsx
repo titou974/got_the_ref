@@ -5,16 +5,18 @@ import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
 import { connectSiteAction, disconnectSiteAction } from "@/features/dashboard/actions";
-import {
-  SITE_CONNECTORS,
-  connectorFor,
-  type SiteCapability,
-  type SiteConnector,
-} from "@/constants/site-platforms";
-import { TextField, SelectField } from "./Field";
+import { connectorFor, type SiteCapability, type SiteConnector } from "@/constants/site-platforms";
+import { TextField } from "./Field";
+import { SitePlatformPicker } from "./SitePlatformPicker";
+import { SiteConnectGuide } from "./SiteConnectGuide";
 
 /**
- * Le formulaire de rattachement du site, seul.
+ * Le rattachement du site, en deux temps.
+ *
+ * D'abord la plateforme, choisie dans des tuiles ; ensuite le mode d'emploi de
+ * cette plateforme et les champs qu'il fait remplir. C'est l'ordre dans lequel
+ * le client se pose la question, et cela évite le formulaire nu qui demande un
+ * « jeton d'accès Admin » sans dire où le prendre.
  *
  * Il vit à deux endroits : la page des réglages, où il occupe une colonne, et
  * la modale « résoudre avec les agents IA », où le client le rencontre au
@@ -23,9 +25,10 @@ import { TextField, SelectField } from "./Field";
  * `dense` resserre la grille pour la modale, c'est toute la différence.
  *
  * Le formulaire n'est pas écrit plateforme par plateforme : il se construit
- * depuis `constants/site-platforms`, qui dit pour chacune les champs à demander
- * et les droits qu'elle ouvre. Ajouter un connecteur là-bas suffit à le voir
- * apparaître ici, et à ce que le serveur sache le vérifier.
+ * depuis `constants/site-platforms`, qui dit pour chacune les champs à demander,
+ * les droits qu'elle ouvre et si elle est ouverte aux clients. Ajouter un
+ * connecteur là-bas suffit à le voir apparaître ici, et à ce que le serveur
+ * sache le vérifier.
  *
  * Deux règles tiennent l'écran :
  *
@@ -51,7 +54,7 @@ export type SiteLinkView = {
 /** Tout ce qu'il faut au formulaire, rassemblé côté serveur en un objet. */
 export type SiteConnectSetup = {
   link: SiteLinkView | null;
-  /** La plateforme reconnue au crawl, proposée d'emblée. */
+  /** La plateforme reconnue au crawl, signalée dans les tuiles. */
   suggestedPlatform: string;
   /** L'adresse déjà connue du compte, pour ne pas la faire retaper. */
   suggestedSiteUrl: string | null;
@@ -74,7 +77,10 @@ export function SiteConnectForm({
   const t = useTranslations("dashboard.settings.site");
   const router = useRouter();
 
-  const [platform, setPlatform] = useState(link?.platform ?? suggestedPlatform);
+  // Nul tant que la plateforme n'est pas choisie : ce sont les tuiles qui
+  // s'affichent. Un compte déjà rattaché reprend la sienne — il vient corriger
+  // un mot de passe, pas rechoisir son CMS.
+  const [platform, setPlatform] = useState<string | null>(link?.platform ?? null);
   const [values, setValues] = useState<Record<string, string>>(() => ({
     siteUrl: link?.siteUrl ?? suggestedSiteUrl ?? "",
   }));
@@ -87,29 +93,19 @@ export function SiteConnectForm({
   });
   const disconnect = useAction(disconnectSiteAction, { onSuccess: () => router.refresh() });
 
-  const connector: SiteConnector = connectorFor(platform) ?? SITE_CONNECTORS[0];
-
   // Changer de plateforme ne garde que l'adresse : un jeton Shopify n'a rien à
   // faire dans un champ WordPress, et le laisser traîner le renverrait au
   // serveur au prochain envoi.
-  function choosePlatform(next: string) {
+  function choosePlatform(next: string | null) {
     setPlatform(next);
-    setValues((current) => ({ siteUrl: current.siteUrl ?? "" }));
+    setValues({ siteUrl: link?.siteUrl ?? suggestedSiteUrl ?? "" });
+    connect.reset();
   }
 
   const set = (name: string) => (value: string) =>
     setValues((current) => ({ ...current, [name]: value }));
 
-  const missing = connector.fields.some(
-    (field) => field.required && !values[field.name]?.trim(),
-  );
-
-  // Le refus d'une plateforme revient dans la réponse, pas en exception : un
-  // mot de passe faux n'est pas une panne du serveur.
-  const refusal = connect.result.data?.ok === false ? connect.result.data.error : null;
-  const problem = connect.result.serverError ?? refusal ?? null;
-
-  const cell = dense ? "col-span-full" : "col-span-full sm:col-span-3";
+  const connector: SiteConnector | undefined = platform ? connectorFor(platform) : undefined;
 
   return (
     <>
@@ -121,34 +117,111 @@ export function SiteConnectForm({
         </p>
       ) : null}
 
+      {connector ? (
+        <ConnectFields
+          connector={connector}
+          hasLink={Boolean(link)}
+          values={values}
+          set={set}
+          dense={dense}
+          credentialsKeyReady={credentialsKeyReady}
+          connecting={connect.isPending}
+          problem={
+            connect.result.serverError ??
+            (connect.result.data?.ok === false ? connect.result.data.error : null) ??
+            null
+          }
+          onSubmit={(credentials) => connect.execute({ platform: connector.id, credentials })}
+          onBack={() => choosePlatform(null)}
+          onDisconnect={
+            link
+              ? () => {
+                  if (window.confirm(t("confirmDisconnect"))) disconnect.execute({});
+                }
+              : undefined
+          }
+          disconnecting={disconnect.isPending}
+        />
+      ) : (
+        <SitePlatformPicker
+          detected={suggestedPlatform}
+          dense={dense}
+          onPick={choosePlatform}
+        />
+      )}
+    </>
+  );
+}
+
+/** Le mode d'emploi de la plateforme choisie, puis ses champs. */
+function ConnectFields({
+  connector,
+  hasLink,
+  values,
+  set,
+  dense,
+  credentialsKeyReady,
+  connecting,
+  problem,
+  onSubmit,
+  onBack,
+  onDisconnect,
+  disconnecting,
+}: {
+  connector: SiteConnector;
+  hasLink: boolean;
+  values: Record<string, string>;
+  set: (name: string) => (value: string) => void;
+  dense: boolean;
+  credentialsKeyReady: boolean;
+  connecting: boolean;
+  problem: string | null;
+  onSubmit: (credentials: Record<string, string>) => void;
+  onBack: () => void;
+  onDisconnect?: () => void;
+  disconnecting: boolean;
+}) {
+  const t = useTranslations("dashboard.settings.site");
+
+  const missing = connector.fields.some(
+    (field) => field.required && !values[field.name]?.trim(),
+  );
+
+  const cell = dense ? "col-span-full" : "col-span-full sm:col-span-3";
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-text">
+          {t("pickChosen", { name: connector.name })}
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="cursor-pointer text-sm font-medium text-graphite underline underline-offset-4 transition-colors duration-200 hover:text-obsidian"
+        >
+          {t("pickChange")}
+        </button>
+      </div>
+
+      <SiteConnectGuide connector={connector} />
+
       <form
         onSubmit={(event) => {
           event.preventDefault();
           // Un champ facultatif laissé vide ne part pas : le serveur enregistre
           // les identifiants tels quels, et une chaîne vide y vaudrait un
           // réglage explicite.
-          const credentials = Object.fromEntries(
-            connector.fields
-              .map((field) => [field.name, values[field.name]?.trim() ?? ""] as const)
-              .filter(([, value]) => value.length > 0),
+          onSubmit(
+            Object.fromEntries(
+              connector.fields
+                .map((field) => [field.name, values[field.name]?.trim() ?? ""] as const)
+                .filter(([, value]) => value.length > 0),
+            ),
           );
-          connect.execute({ platform: connector.id, credentials });
         }}
         className="grid grid-cols-1 gap-4 sm:grid-cols-6"
       >
-        <div className={cell}>
-          <SelectField
-            name="platform"
-            label={t("platform")}
-            value={platform}
-            onChange={(event) => choosePlatform(event.target.value)}
-            options={SITE_CONNECTORS.map((entry) => ({
-              value: entry.id,
-              label: entry.name,
-            }))}
-          />
-        </div>
-
         {connector.fields.map((field) => (
           <div key={`${connector.id}.${field.name}`} className={cell}>
             <TextField
@@ -170,33 +243,16 @@ export function SiteConnectForm({
           </div>
         ))}
 
-        {/* La documentation de la plateforme suit le choix du select : c'est la
-            page où le client va chercher le jeton qu'on lui demande. */}
-        {connector.docsUrl ? (
-          <div className="col-span-full">
-            <a
-              href={connector.docsUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="text-sm font-medium text-graphite underline underline-offset-4 transition-colors duration-200 hover:text-obsidian"
-            >
-              {t("docs")}
-            </a>
-          </div>
-        ) : null}
-
         <div
           className={`col-span-full flex flex-wrap items-center gap-4 ${dense ? "" : "justify-end"}`}
         >
           {problem ? <p className="mr-auto text-sm text-danger">{problem}</p> : null}
 
-          {link ? (
+          {onDisconnect ? (
             <button
               type="button"
-              disabled={disconnect.isPending}
-              onClick={() => {
-                if (window.confirm(t("confirmDisconnect"))) disconnect.execute({});
-              }}
+              disabled={disconnecting}
+              onClick={onDisconnect}
               className="cursor-pointer whitespace-nowrap rounded-pill px-4 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist hover:text-obsidian disabled:opacity-60"
             >
               {t("disconnect")}
@@ -205,16 +261,16 @@ export function SiteConnectForm({
 
           <button
             type="submit"
-            disabled={connect.isPending || missing || !credentialsKeyReady}
+            disabled={connecting || missing || !credentialsKeyReady}
             className={`cursor-pointer whitespace-nowrap rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover disabled:opacity-60 ${
               dense ? "flex-1" : ""
             }`}
           >
-            {connect.isPending ? t("connecting") : link ? t("reconnect") : t("connect")}
+            {connecting ? t("connecting") : hasLink ? t("reconnect") : t("connect")}
           </button>
         </div>
       </form>
-    </>
+    </div>
   );
 }
 
