@@ -12,6 +12,8 @@ import type { Recommendation } from "@/lib/geo/types";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
+import { DashboardNotices } from "@/components/tableau-de-bord/DashboardNotices";
+import { NicheBand } from "@/components/tableau-de-bord/NicheBand";
 import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
@@ -19,7 +21,7 @@ import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
 import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
 import { PaidReportCard } from "@/components/dashboard/PaidReportCard";
 import { Recommendations } from "@/components/geo/Recommendations";
-import { TierGate } from "@/components/tableau-de-bord/TierGate";
+import { GatePanel, TierGate } from "@/components/tableau-de-bord/TierGate";
 import {
   FREE_RECOMMENDATION_LIMIT,
   PENDING_FIXES_RANGE,
@@ -131,6 +133,10 @@ export default async function DashboardHomePage() {
 
   return (
     <>
+      {/* Ce qui se dit avant la première carte, et seulement sur téléphone : le
+          relevé du jour, et l'écran où le produit se lit le mieux. */}
+      <DashboardNotices tier={tier} />
+
       <PageHeader />
 
       {/* 1. La fenêtre du site, assombrie, avec la note posée dessus. */}
@@ -185,13 +191,22 @@ export default async function DashboardHomePage() {
         scope={tierAtLeast(tier, "boost") ? "dashboard" : "free"}
       />
 
-      {/* 3. La place du commerce dans ChatGPT et Gemini. C'est la question qui
+      {/* 3. Sur quoi et où nous l'avons interrogé. Les classements qui suivent
+             ne veulent rien dire sans ces deux mots-là : c'est la requête
+             elle-même, écrite en clair juste avant son résultat. */}
+      <NicheBand
+        niche={context.niche ?? analysis.profile.niche ?? null}
+        location={analysis.profile.location ?? context.cities[0] ?? null}
+        isPhysical={context.isPhysical && analysis.profile.isPhysical}
+      />
+
+      {/* 4. La place du commerce dans ChatGPT et Gemini. C'est la question qui
              amène le client ici. Le voile y est posé moteur par moteur : un
              compte gratuit fait mesurer Gemini, et voit la carte ChatGPT sous
              voile — faute d'avoir été exécutée. */}
       <RankingsSection engines={analysis.engines} tier={tier} />
 
-      {/* 4. Les corrections, dans la foulée du classement : le client vient de
+      {/* 5. Les corrections, dans la foulée du classement : le client vient de
              lire sa place, il doit lire tout de suite ce qui la lui coûte. */}
       <section>
         <div className="mb-3">
@@ -234,27 +249,22 @@ export default async function DashboardHomePage() {
 
       {/* ---- Ce qui court dans la durée ---- */}
 
-      {/* 5. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
+      {/* 6. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
              n'est pas rattaché. Les dates sont lues ici, côté serveur, pour que
              le navigateur reçoive le même axe que le rendu initial. */}
-      {sees("traffic") ? (
-        <AiTrafficCard
-          report={traffic}
-          demo={buildDemoAiTraffic()}
-          domain={context.domain ?? analysis.domain}
-        />
-      ) : (
-        <TierGate offer={offerForBlock("traffic")} item="traffic" reveal>
-          <AiTrafficCard
-            report={traffic}
-            demo={buildDemoAiTraffic()}
-            domain={context.domain ?? analysis.domain}
-            veiled
-          />
-        </TierGate>
-      )}
+      <AiTrafficCard
+        report={traffic}
+        demo={buildDemoAiTraffic()}
+        domain={context.domain ?? analysis.domain}
+        veiled={!sees("traffic")}
+        overlay={
+          sees("traffic") ? undefined : (
+            <GatePanel offer={offerForBlock("traffic")} item="traffic" />
+          )
+        }
+      />
 
-      {/* 6. Le calendrier de rédaction, en clair à tous les niveaux, et posé sur
+      {/* 7. Le calendrier de rédaction, en clair à tous les niveaux, et posé sur
              sa grille de jours plutôt qu'en liste des quatre prochains titres :
              un mois entier montre le rythme de publication d'un coup d'œil, là
              où quatre lignes ressemblaient à une liste de tâches. Ce que le

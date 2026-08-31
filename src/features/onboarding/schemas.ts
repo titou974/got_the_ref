@@ -1,10 +1,19 @@
 import { z } from "zod";
+import { ONBOARDING_BUSINESS_KINDS } from "./steps";
 
 /**
- * Ce que l'accueil accepte. Le schéma reste volontairement tolérant sur la forme
- * — une URL peut arriver sans « https:// » — et strict sur le fond : l'adresse
- * du site est la seule chose sans laquelle rien ne peut commencer.
+ * Ce que l'accueil accepte. Les schémas restent volontairement tolérants sur la
+ * forme — une URL peut arriver sans « https:// » — et stricts sur le fond :
+ * la forme du commerce et l'adresse du site sont les deux réponses sans
+ * lesquelles rien ne peut commencer.
  */
+
+/** Première étape : une adresse où l'on vous trouve, ou pas d'adresse du tout. */
+export const businessKindSchema = z.object({
+  businessKind: z.enum(ONBOARDING_BUSINESS_KINDS),
+});
+
+export type BusinessKindInput = z.infer<typeof businessKindSchema>;
 
 /** Une URL saisie à la main : on complète le schéma manquant avant de valider. */
 export const looseUrl = z
@@ -37,9 +46,9 @@ const optionalUrl = z
   .default("");
 
 /**
- * L'unique question de l'accueil : le site, et la fiche Google Maps pour un
- * commerce qui reçoit du public. La fiche reste facultative — tout le monde n'en
- * a pas, et la réclamer bloquerait le tunnel sur un lien introuvable.
+ * Deuxième étape : le site, et la fiche Google Maps pour un commerce qui reçoit
+ * du public. La fiche reste facultative — tout le monde n'en a pas, et la
+ * réclamer bloquerait le tunnel sur un lien introuvable.
  */
 export const siteSchema = z.object({
   siteUrl: looseUrl,

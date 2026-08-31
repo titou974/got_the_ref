@@ -54,6 +54,7 @@ export function AiTrafficDemoCard({
   demo,
   domain,
   veiled = false,
+  overlay,
 }: {
   demo: DemoAiTraffic;
   domain: string | null;
@@ -64,9 +65,13 @@ export function AiTrafficDemoCard({
    * période, les trois onglets avec leurs logos, l'axe des dates — et ne retient
    * que deux choses : les totaux, écrits « X », et la courbe, floutée. C'est la
    * seule part qui répond vraiment à la question posée, et la seule qui
-   * s'achète. L'appel, lui, est en pied de carte : la carte n'en porte pas.
+   * s'achète. L'appel de l'offre, lui, arrive par `overlay` et se pose sur la
+   * courbe : c'est là que le voile se voit, donc là qu'il faut dire comment le
+   * lever.
    */
   veiled?: boolean;
+  /** L'appel de l'offre, posé par-dessus la courbe floutée. */
+  overlay?: React.ReactNode;
 }) {
   const t = useTranslations("dashboard.traffic");
   const compact = useIsCompact();
@@ -138,20 +143,27 @@ export function AiTrafficDemoCard({
               {/* Sur téléphone, la courbe perd ce qui ne tient pas dans la
                   largeur : l'axe des ordonnées et toutes les dates sauf les
                   deux bouts. */}
-              <Veiled on={veiled}>
-                <AreaChart
-                  data={view.series}
-                  index="date"
-                  categories={[engine.name]}
-                  colors={[ENGINES[engine.name].color]}
-                  valueFormatter={formatVisits}
-                  showLegend={false}
-                  showYAxis={!compact}
-                  startEndOnly={compact}
-                  yAxisWidth={44}
-                  className={compact ? "mt-4 h-56" : "mt-4 h-72"}
-                />
-              </Veiled>
+              {/* L'appel se pose sur la courbe, la seule part retenue : le
+                  titre, la période et les onglets restent lisibles au-dessus.
+                  La hauteur minimale lui garde sa place : sur un téléphone, la
+                  courbe fait 224 px et le panneau y serait à l'étroit. */}
+              <div className={`relative isolate ${veiled ? "min-h-[17rem]" : ""}`}>
+                <Veiled on={veiled}>
+                  <AreaChart
+                    data={view.series}
+                    index="date"
+                    categories={[engine.name]}
+                    colors={[ENGINES[engine.name].color]}
+                    valueFormatter={formatVisits}
+                    showLegend={false}
+                    showYAxis={!compact}
+                    startEndOnly={compact}
+                    yAxisWidth={44}
+                    className={compact ? "mt-4 h-56" : "mt-4 h-72"}
+                  />
+                </Veiled>
+                {veiled ? overlay : null}
+              </div>
             </div>
           </div>
         </Veiled>

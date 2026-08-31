@@ -22,6 +22,7 @@ export function AiTrafficCard({
   demo,
   domain,
   veiled = false,
+  overlay,
 }: {
   report: AiTrafficReport | null;
   demo: DemoAiTraffic;
@@ -32,10 +33,16 @@ export function AiTrafficCard({
    * les totaux s'écrivent « X » et la courbe se floute.
    */
   veiled?: boolean;
+  /** L'appel de l'offre, posé par-dessus la courbe floutée. */
+  overlay?: React.ReactNode;
 }) {
   const t = useTranslations("dashboard.traffic");
 
-  if (!report) return <AiTrafficDemoCard demo={demo} domain={domain} veiled={veiled} />;
+  if (!report) {
+    return (
+      <AiTrafficDemoCard demo={demo} domain={domain} veiled={veiled} overlay={overlay} />
+    );
+  }
 
   const data: Point[] = report.series.map((point) => ({
     date: point.date,
@@ -77,12 +84,16 @@ export function AiTrafficCard({
       </div>
 
       {/* Seule la courbe se floute : l'axe des dates et la hauteur de la carte
-          restent les mêmes, et le client voit qu'il y a une mesure à lire. */}
-      <div className="mt-4">
+          restent les mêmes, et le client voit qu'il y a une mesure à lire.
+          L'appel de l'offre se pose dessus, là où le voile se voit. */}
+      <div className={`relative isolate mt-4 ${veiled ? "min-h-[17rem]" : ""}`}>
         {veiled ? (
-          <Obscured>
-            <TrafficChart data={data} labels={labels} />
-          </Obscured>
+          <>
+            <Obscured>
+              <TrafficChart data={data} labels={labels} />
+            </Obscured>
+            {overlay}
+          </>
         ) : (
           <TrafficChart data={data} labels={labels} />
         )}

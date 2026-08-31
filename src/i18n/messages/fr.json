@@ -1566,7 +1566,7 @@
         },
         "traffic": {
           "title": "X visites amenées par les IA",
-          "body": "Le compte exact, jour par jour, pour ChatGPT, Gemini et Perplexity, relevé dans votre Analytics. Le Coup de Boost l'ouvre, l'abonnement Tout-en-un le tient à jour.",
+          "body": "Le compte exact, jour par jour, relevé dans votre Analytics. Le Coup de Boost l'ouvre.",
           "cta": "Voir ma visibilité"
         },
         "rankings": {
@@ -1595,6 +1595,26 @@
       "health": "Note de visibilité",
       "priorities": "À corriger en premier",
       "prioritiesHint": "Classé par ce que ça rapporte, pas par difficulté."
+    },
+    "niche": {
+      "nicheLabel": "Niche détectée",
+      "zoneLabel": "Zone détectée",
+      "zoneLabelOnline": "Zone couverte",
+      "zoneOnline": "Tout le web",
+      "note": "C'est la requête que nous envoyons à ChatGPT et Gemini."
+    },
+    "notices": {
+      "dailyTitle": "Faites une analyse tous les jours",
+      "dailyBody": "Les IA ne répondent pas la même chose d'un jour à l'autre. Un relevé quotidien montre si vos corrections vous font monter, et à partir de quand.",
+      "dailyCta": "Relancer l'analyse",
+      "dailyPending": "Relevé en cours, environ 30 secondes…",
+      "dailyLater": "Plus tard",
+      "desktopTitle": "Ouvrez votre tableau de bord sur ordinateur",
+      "desktopBody": "Les classements se lisent côte à côte, la courbe de trafic tient en entier et le calendrier montre le mois complet. Sur téléphone, tout s'empile et vous faites défiler trois fois plus.",
+      "desktopCta": "Copier le lien",
+      "desktopCopied": "Lien copié",
+      "desktopDismiss": "Continuer sur téléphone",
+      "close": "Fermer"
     },
     "traffic": {
       "title": "Trafic amené par les IA",

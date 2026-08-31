@@ -191,6 +191,7 @@ export function EngineCard({
   locked = false,
   compact = false,
   preview = false,
+  overlay,
 }: {
   engine: EngineScore;
   delay: number;
@@ -209,6 +210,13 @@ export function EngineCard({
    * demi-largeur tronquerait les noms de concurrents.
    */
   compact?: boolean;
+  /**
+   * L'appel de l'offre, posé par-dessus la mesure floutée.
+   *
+   * Il vient d'en haut plutôt que d'ici : la carte sait où son flou commence,
+   * elle ne sait pas ce qu'il faut acheter pour le lever.
+   */
+  overlay?: React.ReactNode;
   /**
    * Carte de démonstration, posée sous le voile d'une offre.
    *
@@ -305,7 +313,18 @@ export function EngineCard({
         )}
       </div>
 
-      {locked ? <Obscured strength="sm">{body}</Obscured> : body}
+      {/* L'appel se pose sur la mesure floutée, jamais sur l'en-tête : le nom du
+          moteur et son logo restent lisibles au-dessus de lui. */}
+      {overlay ? (
+        <div className="relative isolate">
+          {body}
+          {overlay}
+        </div>
+      ) : locked ? (
+        <Obscured strength="sm">{body}</Obscured>
+      ) : (
+        body
+      )}
     </AnimatedCard>
   );
 }

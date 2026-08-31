@@ -143,6 +143,47 @@ function GateBar({
   );
 }
 
+/**
+ * L'appel posé **par-dessus** la zone floutée d'une carte restée lisible.
+ *
+ * C'est la troisième forme, et la plus juste quand une carte n'a qu'une part
+ * retenue — la courbe du trafic, les bandes d'un classement. Une barre en pied
+ * de carte oblige à faire le lien soi-même entre le flou du milieu et l'offre du
+ * bas ; le panneau, lui, est posé exactement sur ce qui manque. On lit le titre
+ * de la carte, on descend, on tombe sur le voile et sur ce qu'il faut prendre
+ * pour le lever, au même endroit.
+ *
+ * Il se pose dans un parent `relative isolate` : c'est la carte qui décide de
+ * quelle zone il couvre, elle seule sait où son flou commence.
+ */
+export function GatePanel({
+  offer,
+  item,
+  logo,
+  logoAlt = "",
+  values,
+}: {
+  offer: UpsellOffer;
+  item: string;
+  logo?: string;
+  logoAlt?: string;
+  values?: Record<string, string | number>;
+}) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm rounded-3xl border border-fog bg-snow/95 p-5 text-center shadow-[var(--shadow-md)] backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-2.5">
+          <OfferBadge offer={offer} />
+          {logo && <GateLogo logo={logo} logoAlt={logoAlt} size="sm" />}
+          <GateCopy item={item} values={values} align="center" size="sm" />
+        </div>
+
+        <GateLink offer={offer} item={item} className="mt-4 w-full" />
+      </div>
+    </div>
+  );
+}
+
 /** Le nom de l'offre qui ouvre la porte, sous cadenas. */
 function OfferBadge({ offer }: { offer: UpsellOffer }) {
   const t = useTranslations("dashboard.gate");
