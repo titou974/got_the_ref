@@ -56,11 +56,16 @@ export function TierGate({
     // haute des trois. Sur téléphone, l'appel d'une carte resserrée — badge,
     // logo, titre, phrase et bouton — dépasse la carte floutée qu'il recouvre,
     // et s'y retrouvait coupé en haut comme en bas.
+    //
+    // L'ordre de peinture, lui, doit être écrit : `blur` fait de la couche du
+    // contenu un contexte d'empilement, peint APRÈS ses frères restés en flux.
+    // Sans `z-index` explicite, la carte floutée repassait donc par-dessus le
+    // dégradé et par-dessus l'appel — voile invisible, texte disparu.
     <section className={`relative isolate grid overflow-hidden rounded-[28px] ${className}`}>
       <div
         aria-hidden
         inert
-        className="pointer-events-none select-none blur-[7px] saturate-[0.7] [grid-area:1/1]"
+        className="pointer-events-none relative z-0 select-none blur-[7px] saturate-[0.7] [grid-area:1/1]"
       >
         {children}
       </div>
@@ -69,11 +74,11 @@ export function TierGate({
           une donnée qu'on essaierait de deviner à travers le flou. */}
       <div
         aria-hidden
-        className="pointer-events-none bg-gradient-to-b from-bg/40 via-bg/70 to-bg [grid-area:1/1]"
+        className="pointer-events-none relative z-10 bg-gradient-to-b from-bg/40 via-bg/70 to-bg [grid-area:1/1]"
       />
 
       <div
-        className={`flex flex-col items-center justify-center gap-3 px-5 text-center [grid-area:1/1] ${
+        className={`relative z-20 flex flex-col items-center justify-center gap-3 px-5 text-center [grid-area:1/1] ${
           compact ? "py-6" : "py-10"
         }`}
       >

@@ -7,6 +7,7 @@ import { refreshRankingsAction } from "@/features/dashboard/actions";
 import { EngineCard, ENGINE_LOGOS } from "@/components/geo/EngineRankings";
 import { SearchLoader } from "@/components/SearchLoader";
 import { DASHBOARD_ENGINES, type EngineScore } from "@/lib/geo/types";
+import { decoyEngine } from "@/lib/geo/decoy-ranking";
 import { runsEngine, type AccessTier } from "@/constants/access";
 import { TierGate } from "./TierGate";
 
@@ -27,6 +28,12 @@ import { TierGate } from "./TierGate";
  * place, à la bonne taille, mais sous voile — elle porte l'estimation du modèle,
  * pas un relevé, et la faire passer pour une position serait mentir. Le voile
  * dit ce qu'il en est et mène aux tarifs.
+ *
+ * Sous ce voile, la carte ne montre donc rien du client : `decoyEngine` lui
+ * reprend la forme de la carte ouverte — mêmes blocs, mêmes intitulés — et la
+ * remplit d'un top 10 fictif, sans ligne surlignée. C'est ce qui lui donne
+ * exactement la hauteur de sa jumelle : les deux cartes de la rangée se
+ * terminent au même endroit, voile compris.
  */
 export function RankingsSection({
   engines,
@@ -40,6 +47,11 @@ export function RankingsSection({
   const router = useRouter();
 
   const shown = engines.filter((engine) => DASHBOARD_ENGINES.includes(engine.engine));
+
+  // La carte ouverte sert de patron aux cartes voilées : c'est elle qui dit
+  // combien de blocs de classement afficher, et sous quels intitulés.
+  const reference =
+    shown.find((engine) => runsEngine(tier, engine.engine) && engine.rankings.length > 0) ?? null;
 
   const { execute, isPending, result } = useAction(refreshRankingsAction, {
     onSuccess: () => router.refresh(),
@@ -81,10 +93,16 @@ export function RankingsSection({
         // les noms de concurrents.
         <div className={shown.length === 2 ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
           {shown.map((engine, i) => {
+            const open = runsEngine(tier, engine.engine);
             const card = (
-              <EngineCard engine={engine} delay={i * 0.05} compact={shown.length === 2} />
+              <EngineCard
+                engine={open ? engine : decoyEngine(engine, reference)}
+                delay={i * 0.05}
+                compact={shown.length === 2}
+                preview={!open}
+              />
             );
-            return runsEngine(tier, engine.engine) ? (
+            return open ? (
               <div key={engine.engine}>{card}</div>
             ) : (
               // Le logo du moteur est repris net sur le voile : sous le flou,

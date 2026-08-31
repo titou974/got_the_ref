@@ -17,6 +17,13 @@ import { LockedPill, Obscured } from "@/components/dashboard/LockedContent";
  * voir QUEL moteur a répondu — et ne floute que la mesure.
  */
 
+/**
+ * Le nombre de bandes fictives d'une carte de démonstration : un top 10 entier,
+ * la longueur d'un vrai classement. Une liste plus courte se verrait à travers
+ * le voile — la carte serait plus basse que sa jumelle ouverte.
+ */
+const PREVIEW_DECOY_COUNT = 10;
+
 /** Logos des moteurs IA (chemins dans /public), indexés par nom de moteur. */
 export const ENGINE_LOGOS: Record<string, string> = {
   ChatGPT: "/chatgpt.png",
@@ -66,9 +73,12 @@ function RankingSource({ ranking }: { ranking: EngineRanking }) {
 export function RankingList({
   ranking,
   locked = false,
+  decoyCount,
 }: {
   ranking: EngineRanking;
   locked?: boolean;
+  /** Nombre de bandes fictives une fois verrouillé. Par défaut, celui du lib. */
+  decoyCount?: number;
 }) {
   const t = useTranslations("analysisReport.results");
   const scopeLabel = ranking.scope === "direct" ? t("directScope") : t("indirectScope");
@@ -106,7 +116,7 @@ export function RankingList({
         )}
       </div>
       {locked ? (
-        <DecoyBands seedKey={`${ranking.label}|${ranking.scope}`} />
+        <DecoyBands seedKey={`${ranking.label}|${ranking.scope}`} count={decoyCount} />
       ) : ranking.competitors.length > 0 ? (
         <ol className="space-y-0.5">
           {ranking.competitors.map((c) => (
@@ -151,8 +161,8 @@ export function RankingList({
  * Bandes de classement fictives : des rangs, des noms, aucune ligne « vous ».
  * C'est ce qui remplace le classement réel sur l'aperçu gratuit.
  */
-function DecoyBands({ seedKey }: { seedKey: string }) {
-  const entries = decoyRanking(seedKey);
+function DecoyBands({ seedKey, count }: { seedKey: string; count?: number }) {
+  const entries = decoyRanking(seedKey, count);
   return (
     <ol className="space-y-0.5">
       {entries.map((e) => (
@@ -175,6 +185,7 @@ export function EngineCard({
   delay,
   locked = false,
   compact = false,
+  preview = false,
 }: {
   engine: EngineScore;
   delay: number;
@@ -193,6 +204,15 @@ export function EngineCard({
    * demi-largeur tronquerait les noms de concurrents.
    */
   compact?: boolean;
+  /**
+   * Carte de démonstration, posée sous le voile d'une offre.
+   *
+   * Le classement affiché est alors entièrement fictif — dix bandes tirées d'une
+   * graine stable, sans ligne « vous » —, ce qui donne à la carte la hauteur de
+   * sa jumelle ouverte : le voile couvre la même surface des deux côtés. Le flou
+   * vient du voile lui-même, pas d'ici : la carte n'ajoute donc pas le sien.
+   */
+  preview?: boolean;
 }) {
   const t = useTranslations("analysisReport.results");
   const vis = visibilityColor(engine.visibility);
@@ -208,7 +228,12 @@ export function EngineCard({
           }`}
         >
           {engine.rankings.map((r) => (
-            <RankingList key={r.scope} ranking={r} locked={locked} />
+            <RankingList
+              key={r.scope}
+              ranking={r}
+              locked={locked || preview}
+              decoyCount={preview ? PREVIEW_DECOY_COUNT : undefined}
+            />
           ))}
         </div>
       )}
