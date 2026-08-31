@@ -62,16 +62,6 @@ export const GAIN_ENGINE_META: Record<GainEngine, { label: string; logo: string 
 };
 
 /**
- * La note d'un site qui n'a jamais été travaillé pour les IA.
- *
- * Elle sert aux écrans qui n'ont pas d'analyse sous la main — la page des
- * tarifs, ouverte à un visiteur sans compte. On y annonce donc ce qu'un site
- * type peut gagner, pas ce que gagnera celui du visiteur : c'est la seule
- * projection honnête quand on n'a rien lu de son site.
- */
-export const REFERENCE_SCORE = 38;
-
-/**
  * La part du chemin couverte par les seules corrections de contenu, quand
  * l'analyse ne permet pas de la calculer.
  *
@@ -168,14 +158,4 @@ export function totalGainFor(analysis: GeoAnalysisResult): TrafficGain {
 /** Le gain des seules corrections de contenu d'une analyse. */
 export function contentGainFor(analysis: GeoAnalysisResult): TrafficGain {
   return estimateTrafficGain(analysis.overallScore, contentCoverage(analysis.recommendations));
-}
-
-/**
- * Le gain annoncé sur la page des tarifs, où l'on ne connaît pas le visiteur.
- *
- * C'est le gain d'un site type — note de référence, toutes corrections — et la
- * carte le dit en toutes lettres plutôt que de laisser croire à une mesure.
- */
-export function referenceGain(): TrafficGain {
-  return estimateTrafficGain(REFERENCE_SCORE);
 }

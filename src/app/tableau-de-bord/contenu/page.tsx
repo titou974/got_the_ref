@@ -48,7 +48,6 @@ export default async function ContenuPage() {
         gain={contentGainFor(analysis)}
         title={tg("contentTitle")}
         caption={tg("contentCaption")}
-        note={tg("contentNote")}
       />
 
       <ContentCompare

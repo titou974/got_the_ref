@@ -19,22 +19,22 @@ import type { TrafficGain } from "@/lib/geo/traffic-gain";
  * un pourcentage à côté de chacun ne dit rien de plus que ce que l'œil fait
  * déjà en les comparant.
  *
- * Rien n'est présenté comme relevé : le mot « estimées » est dans le titre, et
- * la note sous la rangée dit d'où sort le calcul (cf. `lib/geo/traffic-gain`).
+ * Rien n'est présenté comme relevé : le mot « estimées » est dans le titre de
+ * chaque rangée, et c'est le seul endroit où il ait besoin d'être. Le détail
+ * du calcul vit dans `lib/geo/traffic-gain`, pas sous la rangée : une ligne de
+ * méthode posée là allongeait trois écrans pour répéter ce que le titre dit
+ * déjà en un mot.
  */
 export async function TrafficGainCards({
   gain,
   title,
   caption,
-  note,
 }: {
   gain: TrafficGain;
-  /** L'intitulé porté par la carte sombre, au-dessus du total. */
+  /** L'intitulé de la rangée, au-dessus du total. */
   title: string;
   /** Ce qui déclenche ce gain : les corrections de contenu, toutes, l'offre. */
   caption: string;
-  /** D'où sort le calcul. Une ligne, sous la rangée. */
-  note: string;
 }) {
   const t = await getTranslations("trafficGain");
 
@@ -95,8 +95,6 @@ export async function TrafficGainCards({
           </div>
         ))}
       </dl>
-
-      <p className="mt-3 text-xs leading-relaxed text-muted">{note}</p>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { RiArrowLeftLine } from "@remixicon/react";
 import { Logo } from "./Logo";
 import { SignOutButton } from "./SignOutButton";
 import { NavCta } from "./NavCta";
@@ -7,7 +8,25 @@ import { MobileMenu } from "./MobileMenu";
 import { getCurrentUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 
-export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
+export async function Nav({
+  minimal = false,
+  backTo = null,
+}: {
+  minimal?: boolean;
+  /**
+   * D'où vient le client identifié, et où la flèche le ramène.
+   *
+   * Sur les tarifs, il arrive de son tableau de bord pour comparer deux offres,
+   * puis il veut y retourner. La barre lui tendait « Tableau de bord » et
+   * « Déconnexion » côte à côte, à droite : deux liens de même poids dont l'un
+   * ferme sa session, au moment précis où il hésite sur un prix. La flèche les
+   * remplace tous les deux, à gauche, où se trouve le retour partout ailleurs.
+   *
+   * Sans session, rien ne s'affiche : un visiteur qui découvre la page n'a pas
+   * de tableau de bord d'où revenir.
+   */
+  backTo?: string | null;
+} = {}) {
   const user = await getCurrentUser();
   const t = await getTranslations("common");
 
@@ -61,6 +80,16 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
         {/* Le déclencheur du tiroir se place à gauche du logo — c'est le premier
             geste attendu sur mobile, il vient donc avant la marque. */}
         <div className="flex shrink-0 items-center gap-3">
+          {backTo && user && (
+            <Link
+              href={backTo}
+              aria-label={t("backToDashboard")}
+              title={t("backToDashboard")}
+              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-fog text-steel transition-colors duration-200 hover:border-pebble hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+            >
+              <RiArrowLeftLine className="size-5" aria-hidden />
+            </Link>
+          )}
           {!minimal && (
             <MobileMenu
               links={links}
@@ -88,10 +117,15 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
             </Link>
           ))}
           {user ? (
-            <>
-              {accountLink}
-              <SignOutButton />
-            </>
+            // La flèche de retour porte déjà la sortie : répéter le lien du
+            // tableau de bord à droite, et poser la déconnexion à côté, ferait
+            // trois issues pour un écran qui n'en demande qu'une.
+            backTo ? null : (
+              <>
+                {accountLink}
+                <SignOutButton />
+              </>
+            )
           ) : (
             accountLink
           )}
@@ -112,7 +146,7 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
 
             Un client identifié garde en revanche l'accès à son tableau de bord :
             c'est un lien de texte, il tient à côté du logo. */}
-        {user && (
+        {user && !backTo && (
           <div className="flex min-w-0 items-center gap-4 sm:hidden">{accountLink}</div>
         )}
       </nav>

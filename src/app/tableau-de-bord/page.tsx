@@ -227,7 +227,6 @@ export default async function DashboardHomePage() {
             gain={totalGainFor(analysis)}
             title={tg("homeTitle")}
             caption={tg("homeCaption")}
-            note={tg("homeNote")}
           />
         </div>
 
