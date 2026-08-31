@@ -1,12 +1,19 @@
 import "server-only";
 import { SITE } from "@/constants/site";
+import { ROUTES } from "@/constants/routes";
+import {
+  button,
+  escapeHtml,
+  layout,
+  type EmailContent,
+} from "@/lib/email-layout";
 
 /**
- * Les e-mails d'authentification, en HTML de messagerie : tableaux, styles en
- * ligne, aucune feuille externe — les clients lourds (Outlook, Gmail) ignorent
- * le reste. Le rendu reste celui de la marque : fond gris pâle, carte blanche,
- * bouton pilule noire.
+ * Les e-mails d'authentification. L'habillage est commun à tous les messages
+ * transactionnels (cf. `@/lib/email-layout`) ; seul le contenu vit ici.
  */
+
+export type { EmailContent };
 
 /**
  * Durée de validité du lien de réinitialisation. Une heure : assez pour
@@ -15,56 +22,6 @@ import { SITE } from "@/constants/site";
  * le message corresponde à la réalité du jeton.
  */
 export const RESET_PASSWORD_TOKEN_TTL_SECONDS = 60 * 60;
-
-/** Échappe le texte inséré dans le HTML (le nom vient de l'utilisateur). */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-/** Enveloppe commune : la carte blanche, le logotype et le pied de page. */
-function layout(bodyHtml: string): string {
-  return `<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light" />
-  </head>
-  <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#09090b;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #ececee;border-radius:20px;padding:32px;">
-            <tr>
-              <td style="padding-bottom:24px;font-size:18px;font-weight:700;letter-spacing:-0.01em;">
-                ${escapeHtml(SITE.name)}
-              </td>
-            </tr>
-            <tr>
-              <td>${bodyHtml}</td>
-            </tr>
-          </table>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
-            <tr>
-              <td style="padding:20px 8px 0;font-size:12px;line-height:18px;color:#71717a;">
-                ${escapeHtml(SITE.tagline)}<br />
-                <a href="${SITE.url}" style="color:#71717a;">${escapeHtml(SITE.url.replace(/^https?:\/\//, ""))}</a>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
-}
-
-export type EmailContent = { subject: string; html: string; text: string };
 
 /**
  * L'e-mail de réinitialisation de mot de passe.
@@ -94,15 +51,7 @@ export function resetPasswordEmail({
       Vous avez demandé un nouveau mot de passe pour votre compte ${escapeHtml(SITE.name)}.
       Ce lien est valable ${validity}.
     </p>
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-      <tr>
-        <td style="border-radius:9999px;background:#09090b;">
-          <a href="${url}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:500;color:#ffffff;text-decoration:none;border-radius:9999px;">
-            Choisir un nouveau mot de passe
-          </a>
-        </td>
-      </tr>
-    </table>
+    ${button(url, "Choisir un nouveau mot de passe")}
     <p style="margin:0 0 8px;font-size:13px;line-height:20px;color:#71717a;">
       Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :
     </p>
@@ -127,6 +76,64 @@ export function resetPasswordEmail({
 
   return {
     subject: `Réinitialiser votre mot de passe ${SITE.name}`,
+    html,
+    text,
+  };
+}
+
+/**
+ * L'e-mail de bienvenue, expédié à la création du compte.
+ *
+ * Il arrive pendant que le client remplit le tunnel d'accueil, ou juste après :
+ * ce n'est donc pas le moment de lui vendre quoi que ce soit, ni de lui faire
+ * la leçon sur le GEO. Il dit trois choses et s'arrête — ce qu'on est en train
+ * de faire de son site, ce qu'il recevra, et par où revenir. Le second e-mail,
+ * celui de l'analyse terminée, portera les chiffres ; celui-ci n'en a aucun à
+ * donner, et en inventer serait le rendre inutile.
+ *
+ * Il part à toutes les inscriptions, par mot de passe comme par Google : le
+ * déclencheur est la création de l'utilisateur, pas le formulaire emprunté.
+ */
+export function welcomeEmail({ userName }: { userName?: string | null }): EmailContent {
+  const hello = userName ? `Bonjour ${escapeHtml(userName)},` : "Bonjour,";
+  const url = `${SITE.url}${ROUTES.dashboard}`;
+
+  const html = layout(`
+    <p style="margin:0 0 16px;font-size:22px;font-weight:700;line-height:1.3;">
+      Bienvenue sur ${escapeHtml(SITE.name)}
+    </p>
+    <p style="margin:0 0 12px;font-size:15px;line-height:24px;">${hello}</p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:24px;">
+      Votre compte est ouvert. Dès que vous nous aurez donné l'adresse de votre
+      site, nous lisons vos pages et nous posons à ChatGPT et à Gemini les
+      questions que vos clients leur posent déjà — pour voir si votre nom sort,
+      et à quelle place.
+    </p>
+    <p style="margin:0 0 24px;font-size:15px;line-height:24px;">
+      Comptez une à trois minutes d'analyse. Vous recevrez vos résultats par
+      e-mail : votre note, votre place dans les réponses IA et ce qu'il faut
+      corriger en premier.
+    </p>
+    ${button(url, "Ouvrir mon tableau de bord")}
+    <p style="margin:0;font-size:13px;line-height:20px;color:#71717a;">
+      Une question ? Répondez à cet e-mail, il arrive directement chez nous.
+    </p>
+  `);
+
+  const text = [
+    userName ? `Bonjour ${userName},` : "Bonjour,",
+    "",
+    "Votre compte est ouvert. Dès que vous nous aurez donné l'adresse de votre site, nous lisons vos pages et nous posons à ChatGPT et à Gemini les questions que vos clients leur posent déjà — pour voir si votre nom sort, et à quelle place.",
+    "",
+    "Comptez une à trois minutes d'analyse. Vous recevrez vos résultats par e-mail : votre note, votre place dans les réponses IA et ce qu'il faut corriger en premier.",
+    "",
+    `Ouvrir votre tableau de bord : ${url}`,
+    "",
+    "Une question ? Répondez à cet e-mail, il arrive directement chez nous.",
+  ].join("\n");
+
+  return {
+    subject: `Bienvenue sur ${SITE.name}`,
     html,
     text,
   };

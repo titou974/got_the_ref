@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { authActionClient } from "@/lib/safe-action";
+import { sendEmail } from "@/lib/email";
+import { analysisReadyEmail } from "./emails";
 import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
@@ -213,6 +216,28 @@ export const prepareDashboardAction = authActionClient
           data: { ...columns, userId },
           select: { id: true },
         });
+
+    // Les résultats partent aussi par e-mail. Beaucoup de clients ferment
+    // l'onglet pendant les trois minutes d'audit ; sans ce message, ils ne
+    // reviennent pas voir ce qu'ils ont demandé. Il est expédié après la
+    // réponse — le tableau de bord n'a pas à attendre Resend — et son échec ne
+    // remet pas en cause l'analyse, qui est écrite.
+    const { subject, html, text } = analysisReadyEmail({
+      userName: ctx.auth.user.name,
+      analysis: result,
+    });
+    after(() =>
+      sendEmail({
+        to: ctx.auth.user.email,
+        subject,
+        html,
+        text,
+        // Adossée à l'analyse : la reprise après achat en réécrit une nouvelle
+        // et mérite son e-mail, un double rendu de l'écran d'attente n'en
+        // mérite pas un second.
+        idempotencyKey: `analysis-ready/${record.id}/${tier}`,
+      }),
+    );
 
     revalidateDashboard();
     return { id: record.id };
