@@ -1531,7 +1531,6 @@
   "trafficGain": {
     "perMonth": "par mois",
     "unit": "visites / mois",
-    "share": "{share} %",
     "contentTitle": "Visites supplémentaires estimées",
     "contentCaption": "Ce que les corrections de cette page rapportent une fois posées sur votre site : balise title, meta description, H1 et paragraphe d'introduction réécrits avec les mots-clés de votre niche.",
     "contentNote": "Ce chiffre est estimé. Il part de votre note de visibilité actuelle et de la part du plan d'action que porte le contenu. Vos visites réelles se lisent sur la carte de trafic de l'accueil, une fois Analytics rattaché.",

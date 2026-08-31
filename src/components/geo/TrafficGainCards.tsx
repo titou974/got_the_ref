@@ -12,12 +12,12 @@ import type { TrafficGain } from "@/lib/geo/traffic-gain";
  * en haut, le détail en dessous, et une seule tache d'encre pour dire lequel
  * des deux compte.
  *
- * Les cartes de moteur ne portent pas de pastille de variation. Une pastille
- * verte « +12 % » annonce une mesure comparée à la période précédente, et il
- * n'y a rien à comparer ici : ce sont des visites qui n'existent pas encore.
- * À sa place, un filet de répartition — la part de ce moteur dans le total.
- * Les quatre filets côte à côte forment une distribution, ce qui est
- * exactement ce que les quatre chiffres racontent.
+ * Une carte de moteur ne porte que quatre choses : le nom, le logo, le nombre
+ * de visites et son unité. Pas de pastille de variation, il n'y a pas de
+ * période précédente à comparer. Pas de pourcentage de répartition non plus :
+ * les quatre nombres sont déjà dans la même unité, à l'écran en même temps, et
+ * un pourcentage à côté de chacun ne dit rien de plus que ce que l'œil fait
+ * déjà en les comparant.
  *
  * Rien n'est présenté comme relevé : le mot « estimées » est dans le titre, et
  * la note sous la rangée dit d'où sort le calcul (cf. `lib/geo/traffic-gain`).
@@ -92,21 +92,6 @@ export async function TrafficGainCards({
             <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-steel">
               {t("unit")}
             </p>
-
-            {/* La part de ce moteur dans le total. Quatre filets remplis à des
-                hauteurs différentes disent la répartition sans qu'on ait à
-                lire les quatre chiffres. */}
-            <div className="mt-3.5 flex items-center gap-2">
-              <span aria-hidden className="h-1 min-w-0 flex-1 rounded-full bg-mist">
-                <span
-                  className="block h-1 rounded-full bg-obsidian"
-                  style={{ width: `${engine.share}%` }}
-                />
-              </span>
-              <span className="shrink-0 text-[11px] font-semibold tabular-nums text-steel">
-                {t("share", { share: engine.share })}
-              </span>
-            </div>
           </div>
         ))}
       </dl>
