@@ -250,19 +250,26 @@ export const BOOST_ARTICLE_WINDOW_DAYS = 7;
  *
  * Un compte gratuit en reçoit quatre : la semaine qui vient, datée, visible sur
  * son accueil. C'est une seule demande au modèle — le même appel qu'il en
- * rende quatre ou douze — et c'est ce qui rend le calendrier crédible sans rien
- * offrir de ce qui se vend : aucun de ces quatre sujets n'est rédigé, et le
+ * rende quatre ou vingt-deux — et c'est ce qui rend le calendrier crédible sans
+ * rien offrir de ce qui se vend : aucun de ces quatre sujets n'est rédigé, et le
  * bouton de publication mène aux tarifs.
  *
- * Dès le Coup de Boost, le mois entier est posé — douze sujets, trois par
- * semaine — et la première semaine est rédigée dans la foulée. C'est ce
- * complément qui part au moment de l'achat, sans que le client ait à redemander
- * quoi que ce soit.
+ * Dès le Coup de Boost, le mois entier est posé — vingt-deux sujets, un par jour
+ * ouvré — et la première semaine est rédigée dans la foulée. C'est ce complément
+ * qui part au moment de l'achat, sans que le client ait à redemander quoi que ce
+ * soit.
  */
 export const FREE_ARTICLE_TOPICS = 4;
 
-/** Le mois éditorial complet, posé dès le Coup de Boost. */
-export const PAID_ARTICLE_TOPICS = 12;
+/**
+ * Le mois éditorial complet, posé dès le Coup de Boost.
+ *
+ * Vingt-deux, c'est le nombre de jours ouvrés d'un mois : la grille se remplit
+ * du lundi au vendredi, sans trou au milieu de la semaine. Un calendrier à
+ * trois publications hebdomadaires laissait le mardi et le jeudi vides, et une
+ * grille à moitié blanche se lit comme un planning qu'on n'a pas fini d'écrire.
+ */
+export const PAID_ARTICLE_TOPICS = 22;
 
 /** Combien de sujets ce niveau fait planifier à la mise en route. */
 export function articleTopicsFor(tier: AccessTier): number {

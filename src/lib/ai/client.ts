@@ -122,7 +122,13 @@ function modelFor(config: ProviderConfig, tier: AiTier): string {
  * du palier. Changer d'avis sur « qui écrit les articles » se fait donc ici, en
  * une ligne, sans relire six prompts.
  *
- * - `topics`, `article` : ce que le client lit mot pour mot. `gpt-5.4-mini`.
+ * - `article` : ce que le client lit mot pour mot. `gpt-5.4-mini`.
+ * - `topics` : le calendrier éditorial du mois — vingt-deux sujets, chacun avec
+ *   son titre, son mot-clé, son angle et son plan, rendus en un seul appel.
+ *   C'est un travail de liste, pas de rédaction : rien de ce qui en sort n'est
+ *   publié tel quel, chaque sujet retenu repasse par `article` avant d'atteindre
+ *   le site. DeepSeek Flash le rend pour une fraction du prix du grand modèle,
+ *   et un mois entier tient dans une seule demande.
  * - `overview` : l'audit complet, dont sort le résumé « aperçu IA » affiché sur
  *   la carte de rapport. Même modèle, pour la même raison : c'est du texte lu
  *   tel quel, et DeepSeek dépassait le budget de temps sur cet appel-là.
@@ -152,7 +158,7 @@ export type AiRole =
 type Route = { provider: AiProvider; tier: AiTier };
 
 const ROLE_ROUTING: Record<AiRole, Route> = {
-  topics: { provider: "openai", tier: "strong" },
+  topics: { provider: "deepseek", tier: "fast" },
   article: { provider: "openai", tier: "strong" },
   overview: { provider: "openai", tier: "strong" },
   tone: { provider: "openai", tier: "fast" },

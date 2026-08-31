@@ -101,7 +101,10 @@ const topicsSchema = z.object({
       }),
     )
     .min(1)
-    .max(12),
+    // Le mois éditorial complet tient dans une seule demande : vingt-deux
+    // sujets, un par jour ouvré. La borne laisse deux places au-dessus, un
+    // modèle rendant parfois un sujet de plus que le compte demandé.
+    .max(24),
 });
 
 export type PlannedTopic = z.infer<typeof topicsSchema>["articles"][number];
@@ -135,9 +138,14 @@ export async function planArticleTopics(
       "formulés comme des questions ou des promesses précises, dans l'ordre de lecture.",
       "Deux sujets ne doivent jamais répondre à la même question : varie l'intention (comparer, choisir, entretenir, comprendre un prix, préparer une visite).",
       "Écarte tout sujet auquel ce commerce ne peut pas répondre depuis son expérience réelle : un article générique n'est cité par aucune IA.",
+      "Rends exactement ce nombre de sujets, tous différents : le calendrier a une case par sujet, et une case vide se voit.",
       "Réponds en JSON : { \"articles\": [{ \"title\", \"keyword\", \"angle\", \"outline\": [] }] }",
     ].join("\n"),
     role: "topics",
+    // Un mois entier — vingt-deux sujets, chacun avec son angle et son plan de
+    // trois à huit sections — ne tient pas dans le plafond par défaut : la
+    // liste revenait coupée au douzième sujet, JSON tronqué en pleine chaîne.
+    maxTokens: 12_000,
   });
 
   return result.articles;

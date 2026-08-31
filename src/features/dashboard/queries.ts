@@ -188,12 +188,20 @@ export async function readSiteCredentials<T = Record<string, string>>(
   return decryptJson<T>(link?.credentials);
 }
 
-export async function listArticles(userId: string) {
+/**
+ * Le planning éditorial du compte, du plus proche au plus lointain.
+ *
+ * Mémorisé le temps de la requête : la coque du tableau de bord le lit pour
+ * nourrir le prompt de la barre d'exécution, et l'accueil comme l'onglet
+ * Articles le relisent pour leur calendrier. Sans cette mémoire, la même liste
+ * partirait deux fois en base à chaque affichage de page.
+ */
+export const listArticles = cache(async function listArticles(userId: string) {
   return prisma.article.findMany({
     where: { userId },
     orderBy: [{ scheduledFor: "asc" }, { createdAt: "desc" }],
   });
-}
+});
 
 export async function getArticle(userId: string, id: string) {
   return prisma.article.findFirst({ where: { id, userId } });

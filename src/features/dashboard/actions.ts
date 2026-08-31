@@ -292,21 +292,33 @@ export const refreshRankingsAction = authActionClient
 
 // ── Mois éditorial d'accueil ─────────────────────────────────────────────────
 
-/** Trois publications par semaine : lundi, mercredi, vendredi. */
-const SEED_WEEKDAYS = [1, 3, 5] as const;
-/** Quatre semaines : le mois entier est posé avant la première visite. */
-const SEED_WEEKS = 4;
+/** Une publication par jour ouvré : du lundi au vendredi, samedi et dimanche off. */
+const SEED_WEEKDAYS = [1, 2, 3, 4, 5] as const;
 /** Publication à 9 h : l'heure où le planning se lit comme un agenda. */
 const SEED_HOUR = 9;
+/**
+ * Combien d'articles sont rédigés dans la foulée de la planification.
+ *
+ * Trois, et pas les cinq jours de la semaine ouvrée : ces rédactions partent en
+ * parallèle derrière l'écran d'attente, et cinq appels au grand modèle lancés
+ * ensemble dépassent le budget de la préparation. Le reste du mois attend la
+ * demande du client, article par article.
+ */
+const SEED_DRAFTS = 3;
 
 /**
- * Les douze dates du mois, à partir du lundi qui vient.
+ * Les dates du mois éditorial, à partir du lundi qui vient.
  *
  * On part toujours d'un lundi, jamais d'« aujourd'hui plus sept jours » : un
  * planning qui tombe le mardi puis le jeudi puis le samedi ne se lit pas comme
  * un calendrier éditorial, et le client ne sait plus quel jour il publie.
+ *
+ * Les dates sont produites au compte demandé, pas à un nombre de semaines fixe :
+ * le volume du planning est une décision d'offre (`articleTopicsFor`), et cette
+ * fonction n'a qu'à poser autant de jours ouvrés qu'il y a de sujets. Vingt-deux
+ * sujets couvrent ainsi quatre semaines pleines plus deux jours.
  */
-function seedSchedule(from: Date): Date[] {
+function seedSchedule(from: Date, count: number): Date[] {
   const monday = new Date(from);
   monday.setHours(SEED_HOUR, 0, 0, 0);
   // getDay() : 0 = dimanche. Le lundi suivant est à 1..7 jours d'ici, jamais
@@ -314,12 +326,12 @@ function seedSchedule(from: Date): Date[] {
   monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7));
 
   const dates: Date[] = [];
-  for (let week = 0; week < SEED_WEEKS; week += 1) {
-    for (const weekday of SEED_WEEKDAYS) {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + week * 7 + (weekday - 1));
-      dates.push(date);
-    }
+  for (let index = 0; index < count; index += 1) {
+    const week = Math.floor(index / SEED_WEEKDAYS.length);
+    const weekday = SEED_WEEKDAYS[index % SEED_WEEKDAYS.length];
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + week * 7 + (weekday - 1));
+    dates.push(date);
   }
   return dates;
 }
@@ -337,9 +349,9 @@ function seedSchedule(from: Date): Date[] {
  *     Aucun n'est rédigé : écrire est le travail vendu, et trois appels au
  *     grand modèle pour un onglet resté sous voile ne servent personne. Cette
  *     planification-là tient en UN appel — le même qu'il rende quatre sujets ou
- *     douze —, c'est ce qui la rend tenable sur un compte qui ne paie rien.
- *   — Coup de Boost et abonnement : le mois entier, douze sujets à raison de
- *     trois par semaine, dont les trois premiers rédigés dans la foulée.
+ *     vingt-deux —, c'est ce qui la rend tenable sur un compte qui ne paie rien.
+ *   — Coup de Boost et abonnement : le mois entier, vingt-deux sujets à raison
+ *     d'un par jour ouvré, dont les trois premiers rédigés dans la foulée.
  *
  * L'action est donc appelée deux fois dans la vie d'un compte gratuit qui
  * achète : à la mise en route, puis derrière l'écran d'attente de l'achat. Le
@@ -369,7 +381,7 @@ export const seedEditorialMonthAction = authActionClient
     // dates encore libres : les quatre sujets du compte gratuit gardent leur
     // place, et les suivants s'ajoutent derrière eux au lieu de tomber le même
     // jour.
-    const dates = seedSchedule(new Date()).slice(existing);
+    const dates = seedSchedule(new Date(), target).slice(existing);
 
     await prisma.article.createMany({
       data: topics.slice(0, missing).map((topic, index) => ({
@@ -398,7 +410,7 @@ export const seedEditorialMonthAction = authActionClient
     const firstWeek = await prisma.article.findMany({
       where: { userId, status: "planned" },
       orderBy: { scheduledFor: "asc" },
-      take: SEED_WEEKDAYS.length,
+      take: SEED_DRAFTS,
     });
 
     const drafts = await Promise.allSettled(

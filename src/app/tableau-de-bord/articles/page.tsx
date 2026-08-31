@@ -61,11 +61,12 @@ export default async function ArticlesPage() {
       </SectionGate>
 
         <ArticleMonth
+          today={new Date().toISOString().slice(0, 10)}
           articles={articles.map((article) => ({
             id: article.id,
             title: article.title,
             status: article.status,
-            scheduledFor: article.scheduledFor,
+            scheduledFor: article.scheduledFor?.toISOString() ?? null,
           }))}
         />
 

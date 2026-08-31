@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import type { DetectedStack } from "@/lib/geo/types";
@@ -42,6 +44,7 @@ export function SolveAgentsBar({
   scope = "report",
   locked = false,
   connect = null,
+  contentHref = null,
 }: {
   domain: string;
   stack: DetectedStack | null;
@@ -61,10 +64,30 @@ export function SolveAgentsBar({
    * qui n'a pas de session : le bouton y mène aux réglages.
    */
   connect?: SiteConnectSetup | null;
+  /**
+   * L'onglet Contenu, quand la barre doit y ramener avant d'ouvrir la modale.
+   *
+   * C'est le parcours du compte gratuit : la seule chose qu'il peut faire
+   * corriger, c'est son contenu, et l'écran qui le montre est l'onglet Contenu.
+   * La barre y mène donc d'abord — « corriger le contenu » —, et c'est une fois
+   * arrivé, devant ses propres textes, qu'elle redevient « résoudre avec les
+   * agents IA » et ouvre la console. Proposer les agents depuis l'accueil
+   * revenait à ouvrir une modale sur un travail que le compte ne voit pas
+   * encore.
+   *
+   * Nul pour un compte payant, et depuis le rapport public : la barre y ouvre
+   * la modale partout.
+   */
+  contentHref?: string | null;
 }) {
   const t = useTranslations("analysisReport.solve");
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Le renvoi ne vaut que hors de l'onglet Contenu : une fois dessus, un bouton
+  // qui recharge la page où l'on est déjà ne ferait rien de visible.
+  const redirect = contentHref && pathname !== contentHref ? contentHref : null;
 
   /**
    * Sur un écran tactile, le partage passe par la feuille système (SMS, mail,
@@ -105,19 +128,38 @@ export function SolveAgentsBar({
           transition={{ delay: 0.35, duration: 0.35, ease: "easeOut" }}
           className="pointer-events-auto flex max-w-full items-center gap-1.5 rounded-full border border-fog bg-snow/95 p-1.5 shadow-[var(--shadow-md)] backdrop-blur-md"
         >
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="flex min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:px-6"
-          >
-            <SparkIcon />
-            {t("cta")}
-            {issues.length > 0 && (
-              <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold tabular-nums">
-                {issues.length}
-              </span>
-            )}
-          </button>
+          {redirect ? (
+            /* Hors de l'onglet Contenu, sur un compte gratuit : la barre ne
+               promet que ce que le compte peut réellement faire aujourd'hui, et
+               elle emmène à l'endroit où ça se fait. Le compte de corrections
+               reste affiché — c'est lui qui donne envie d'y aller. */
+            <Link
+              href={redirect}
+              className="flex min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:px-6"
+            >
+              <SparkIcon />
+              {t("ctaContent")}
+              {issues.length > 0 && (
+                <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold tabular-nums">
+                  {issues.length}
+                </span>
+              )}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="flex min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:px-6"
+            >
+              <SparkIcon />
+              {t("cta")}
+              {issues.length > 0 && (
+                <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold tabular-nums">
+                  {issues.length}
+                </span>
+              )}
+            </button>
+          )}
 
           <button
             type="button"
