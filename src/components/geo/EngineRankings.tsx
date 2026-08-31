@@ -28,6 +28,8 @@ const PREVIEW_DECOY_COUNT = 10;
 export const ENGINE_LOGOS: Record<string, string> = {
   ChatGPT: "/chatgpt.png",
   Gemini: "/gemini.webp",
+  Perplexity: "/perplexity.png",
+  Claude: "/claude.svg",
 };
 
 /**

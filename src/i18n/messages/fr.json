@@ -165,7 +165,7 @@
       "diagnosisTitle": "Diagnostic d'architecture",
       "diagnosisSubtitle": "L'ossature technique que les IA lisent en premier.",
       "engineScoresTitle": "Score et position par moteur IA",
-      "engineScoresSubtitle": "Ce que ChatGPT et Gemini répondent quand on cherche votre activité.",
+      "engineScoresSubtitle": "Ce que ChatGPT, Gemini, Perplexity et Claude répondent quand on cherche votre activité.",
       "testedOn": "Position mesurée sur la requête « {query} »",
       "measured": "Mesuré",
       "estimated": "Estimé",
@@ -331,7 +331,7 @@
       "signIn": "Se connecter",
       "rankings": {
         "title": "Classements IA",
-        "subtitle": "Votre position réelle sur ChatGPT et Gemini, face à vos concurrents.",
+        "subtitle": "Votre position réelle sur ChatGPT, Gemini, Perplexity et Claude, face à vos concurrents.",
         "pitch": "Les moteurs ont été interrogés, mais les positions restent fermées sur l'aperçu gratuit."
       },
       "recommendations": {
@@ -553,8 +553,8 @@
         "L'analyse des mots-clés page par page : leur pertinence, ceux qui manquent, et la formulation à reprendre pour être trouvé sur les requêtes qui comptent."
       ],
       "rankings": [
-        "Votre position réelle dans ChatGPT et Gemini sur les requêtes de votre activité, et le nom des concurrents cités avant vous.",
-        "Ce que répondent réellement ChatGPT et Gemini quand un client cherche ce que vous vendez, et à quel rang vous apparaissez, si vous apparaissez.",
+        "Votre position réelle dans ChatGPT, Gemini, Perplexity et Claude sur les requêtes de votre activité, et le nom des concurrents cités avant vous.",
+        "Ce que répondent réellement ChatGPT, Gemini, Perplexity et Claude quand un client cherche ce que vous vendez, et à quel rang vous apparaissez, si vous apparaissez.",
         "Le classement mesuré, moteur par moteur, avec les établissements qui occupent les places devant vous."
       ],
       "recommendations": [
@@ -1582,9 +1582,9 @@
           "cta": "Voir ma visibilité"
         },
         "rankings": {
-          "title": "Votre position sur ChatGPT",
-          "body": "Votre compte gratuit fait mesurer Gemini. ChatGPT n'a pas été interrogé : chaque relevé lui coûte un appel de recherche. Le Coup de Boost ouvre les deux moteurs, avant et après les corrections.",
-          "cta": "Voir ma position sur ChatGPT"
+          "title": "Votre position sur {engine}",
+          "body": "Votre compte gratuit fait mesurer Gemini. {engine} n'a pas été interrogé : chaque relevé lui coûte un appel de recherche. Le Coup de Boost ouvre les quatre moteurs, avant et après les corrections.",
+          "cta": "Voir ma position sur {engine}"
         }
       }
     },
