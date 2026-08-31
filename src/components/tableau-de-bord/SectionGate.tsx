@@ -1,4 +1,4 @@
-import { TierGatePage } from "./TierGate";
+import { TierGate, TierGatePage } from "./TierGate";
 import { offerFor, type DashboardSection } from "@/constants/access";
 
 /**
@@ -15,24 +15,58 @@ import { offerFor, type DashboardSection } from "@/constants/access";
  * sans une valeur du client. C'est ce que le voile a toujours voulu montrer :
  * un tableau, une courbe, une grille de contrôles. Il le montre maintenant sans
  * rien donner.
+ *
+ * Deux tailles, parce que toutes les sections ne se ferment pas en bloc. Une
+ * page entière verrouillée (structure, présence, Maps) prend le grand voile ;
+ * un seul bloc au milieu d'une page ouverte — la demande de planning et la voix
+ * de marque, sur l'onglet Articles, où les sujets restent en clair — prend le
+ * voile compact, sans hauteur imposée.
  */
 export function SectionGate({
   section,
   locked,
+  compact = false,
   children,
 }: {
   /** La section verrouillée : elle donne l'offre à vendre et le texte du voile. */
   section: DashboardSection;
   locked: boolean;
+  /** Voile d'un bloc posé dans une page ouverte, plutôt que de la page entière. */
+  compact?: boolean;
   /** Le contenu réel, rendu seulement si la section est ouverte. */
   children: React.ReactNode;
 }) {
   if (!locked) return <>{children}</>;
 
+  const offer = offerFor(section);
+
+  if (compact) {
+    return (
+      <TierGate offer={offer} item={section} compact className="mt-4">
+        <BlockPreview />
+      </TierGate>
+    );
+  }
+
   return (
-    <TierGatePage offer={offerFor(section)} item={section}>
+    <TierGatePage offer={offer} item={section}>
       <SectionPreview />
     </TierGatePage>
+  );
+}
+
+/** La maquette d'un bloc isolé : une carte, un bouton, une jauge. */
+function BlockPreview() {
+  return (
+    <div aria-hidden className="rounded-[28px] border border-fog bg-snow p-6">
+      <Bar className="h-4 w-1/3" />
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <span className="h-10 w-44 rounded-pill bg-mist" />
+        <span className="h-10 w-32 rounded-pill bg-mist" />
+      </div>
+      <Bar className="mt-5 h-3 w-full" />
+      <Bar className="mt-2 h-3 w-2/3" />
+    </div>
   );
 }
 
