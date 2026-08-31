@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import type { DetectedStack } from "@/lib/geo/types";
+import type { SiteConnectSetup } from "@/components/tableau-de-bord/SiteConnectForm";
 import { ConnectSiteModal } from "./ConnectSiteModal";
 
 /**
@@ -40,6 +41,7 @@ export function SolveAgentsBar({
   solutionPrompt,
   scope = "report",
   locked = false,
+  connect = null,
 }: {
   domain: string;
   stack: DetectedStack | null;
@@ -51,9 +53,14 @@ export function SolveAgentsBar({
   scope?: "report" | "dashboard";
   /**
    * Compte gratuit : la barre s'ouvre normalement, mais la modale pose un voile
-   * sur le rattachement du site et sur le prompt.
+   * sur le prompt. Le rattachement du site, lui, reste ouvert.
    */
   locked?: boolean;
+  /**
+   * De quoi rattacher le site depuis la modale. Nul depuis le rapport public,
+   * qui n'a pas de session : le bouton y mène aux réglages.
+   */
+  connect?: SiteConnectSetup | null;
 }) {
   const t = useTranslations("analysisReport.solve");
   const [open, setOpen] = useState(false);
@@ -159,6 +166,7 @@ export function SolveAgentsBar({
             solutionPrompt={solutionPrompt}
             scope={scope}
             locked={locked}
+            connect={connect}
             onClose={() => setOpen(false)}
           />
         )}

@@ -231,18 +231,19 @@ export default async function DashboardHomePage() {
              les liens mènent alors aux tarifs. */}
       <ArticleAgenda articles={upcoming} limit={4} locked={!tierAtLeast(tier, "boost")} />
 
-      {/* Tant que le rattachement du site n'est pas ouvert, le prompt est la
-          voie d'exécution. Il ne vit plus au bas de la page : la barre fixe le
-          porte, et il couvre désormais les six sections d'un coup — le client
-          n'a plus à passer d'onglet en onglet pour ramasser ses correctifs. */}
+      {/* L'exécution ne vit pas au bas de la page : la barre fixe la porte, et
+          elle mène aux deux voies. Rattacher le site — les agents publient et
+          corrigent alors eux-mêmes — ou repartir avec le prompt, qui couvre les
+          six sections d'un coup et s'applique à la main. */}
       {/* La barre est là pour tout le monde : c'est le geste que le produit
           vend, et une page qui ne le montre pas ne le vend pas. Sur un compte
           gratuit elle s'ouvre sur la console des agents — les manques relevés
-          chez lui, corrigés ligne à ligne — puis le voile prend le relais :
-          ni rattachement du site, ni prompt de correction tant que la passe
-          n'est pas prise. Le prompt n'est alors même pas écrit côté serveur :
-          ce qui n'arrive pas au navigateur ne se copie pas. */}
+          chez lui, corrigés ligne à ligne —, le rattachement du site reste
+          ouvert, et seul le prompt attend la passe. Il n'est alors même pas
+          écrit côté serveur : ce qui n'arrive pas au navigateur ne se copie
+          pas. */}
       <SolveAgentsDock
+        userId={user.id}
         locked={!tierAtLeast(tier, "boost")}
         result={analysis}
         diagnostic={diagnostic}

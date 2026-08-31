@@ -6,7 +6,11 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { StackMark } from "@/components/StackMark";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES, signInWithNext } from "@/constants/routes";
+import {
+  SiteConnectForm,
+  type SiteConnectSetup,
+} from "@/components/tableau-de-bord/SiteConnectForm";
 import type { DetectedStack } from "@/lib/geo/types";
 
 /**
@@ -196,8 +200,8 @@ function AgentLogos() {
 }
 
 /**
- * Ce que le compte gratuit voit à la place des deux actions : le bouton qui
- * mène aux tarifs, et rien d'autre.
+ * Ce que le compte gratuit voit à la place du prompt : le bouton qui mène aux
+ * tarifs, et rien d'autre. Le rattachement du site reste au-dessus, ouvert.
  *
  * Il n'y a plus de voile ici. Les boutons floutés qu'on posait dessous se
  * lisaient comme une salissure derrière le bouton — la pilule noire du décor
@@ -238,6 +242,54 @@ function LockedActions() {
   );
 }
 
+/**
+ * L'entrée du rattachement, dans la modale.
+ *
+ * Depuis le tableau de bord, elle ouvre le formulaire sur place : le client
+ * vient de voir ses manques, il n'a pas à aller les chercher ailleurs. Depuis
+ * le rapport public, il n'y a pas de compte où poser un identifiant — le bouton
+ * mène aux réglages, en passant par la connexion.
+ *
+ * Quand le lien existe déjà, le bouton le dit et sert à le corriger : un
+ * « connecter le site » sur un site rattaché ferait douter de ce qui est en
+ * place.
+ */
+function ConnectAction({
+  connect,
+  onOpen,
+}: {
+  connect: SiteConnectSetup | null;
+  onOpen: () => void;
+}) {
+  const t = useTranslations("analysisReport.solve.modal");
+
+  const style =
+    "flex cursor-pointer items-center justify-center gap-2 rounded-full bg-obsidian px-5 py-3 text-center text-sm font-medium text-white transition-colors duration-200 hover:bg-obsidian/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40";
+
+  if (!connect) {
+    return (
+      <Link href={signInWithNext(ROUTES.dashboardSettings)} className={style}>
+        {t("cta")}
+      </Link>
+    );
+  }
+
+  const connected = connect.link?.status === "connected";
+
+  return (
+    <>
+      <button type="button" onClick={onOpen} className={style}>
+        {connected ? t("connectManage") : t("cta")}
+      </button>
+      {connected ? (
+        <p className="text-center text-xs text-muted">
+          {t("connectedNote", { site: connect.link?.siteUrl ?? "" })}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export function ConnectSiteModal({
   domain,
   stack,
@@ -245,13 +297,14 @@ export function ConnectSiteModal({
   solutionPrompt,
   scope = "report",
   locked = false,
+  connect = null,
   onClose,
 }: {
   domain: string;
   stack: DetectedStack | null;
   /** Manques relevés dans le rapport, rejoués dans l'en-tête (3 au plus). */
   issues: string[];
-  /** Le prompt de correction, seule action réellement disponible aujourd'hui. */
+  /** Le prompt de correction, pour qui préfère faire appliquer à la main. */
   solutionPrompt: string;
   /**
    * Depuis le rapport, le prompt ne couvre que le plan d'action ; depuis le
@@ -260,15 +313,24 @@ export function ConnectSiteModal({
    */
   scope?: "report" | "dashboard";
   /**
-   * Compte gratuit : le rattachement du site et le prompt de correction passent
-   * sous voile, l'appel vers les tarifs prend leur place.
+   * Compte gratuit : le prompt de correction passe sous voile et l'appel vers
+   * les tarifs prend sa place. Le rattachement du site, lui, reste ouvert : il
+   * ne donne accès à rien de payant par lui-même, et c'est l'étape qu'on veut
+   * voir faite avant l'abonnement, pas après.
    */
   locked?: boolean;
+  /**
+   * De quoi rattacher le site sans quitter la modale. Nul depuis le rapport
+   * public : il n'y a pas de session, donc pas de compte où enregistrer un
+   * identifiant — le bouton mène alors à la page des réglages.
+   */
+  connect?: SiteConnectSetup | null;
   onClose: () => void;
 }) {
   const t = useTranslations("analysisReport.solve.modal");
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
+  const [connecting, setConnecting] = useState(false);
 
   async function copyPrompt() {
     try {
@@ -363,26 +425,38 @@ export function ConnectSiteModal({
             </p>
           )}
 
-          {/* Le rattachement automatique arrive ; d'ici là, le prompt fait le
-              travail. Le bouton reste à sa place, désactivé et daté : masquer
-              l'étape à venir ferait croire qu'elle n'existe pas, et un bouton
-              qui promet la connexion sans la faire coûte encore plus cher. */}
+          {/* Deux voies, et le client choisit : rattacher son site — les agents
+              publient alors eux-mêmes — ou repartir avec le prompt et le faire
+              appliquer à la main. Le rattachement passait auparavant par un
+              bouton désactivé marqué « bientôt » ; il est ouvert, donc il
+              s'ouvre ici, au moment où la console vient de montrer ce qu'il y a
+              à corriger. */}
           <div className="mt-5 flex flex-col gap-2.5">
+            {connecting && connect ? (
+              <>
+                <SiteConnectForm
+                  setup={connect}
+                  dense
+                  // Le lien accepté, on revient sur les actions : l'état du
+                  // rattachement s'y lit désormais sous le bouton.
+                  onConnected={() => setConnecting(false)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setConnecting(false)}
+                  className="cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+                >
+                  {t("connectBack")}
+                </button>
+              </>
+            ) : (
+              <>
+            <ConnectAction connect={connect} onOpen={() => setConnecting(true)} />
+
             {locked ? (
               <LockedActions />
             ) : (
               <>
-            <button
-              type="button"
-              disabled
-              aria-disabled
-              className="flex cursor-not-allowed items-center justify-center gap-2 rounded-full border border-fog bg-mist px-5 py-3 text-sm font-medium text-muted"
-            >
-              {t("cta")}
-              <span className="rounded-full bg-obsidian/10 px-2 py-0.5 text-[11px] font-semibold text-graphite">
-                {t("connectSoon")}
-              </span>
-            </button>
             <button
               type="button"
               autoFocus
@@ -441,6 +515,8 @@ export function ConnectSiteModal({
             >
               {t("later")}
             </button>
+              </>
+            )}
           </div>
         </div>
       </motion.div>
