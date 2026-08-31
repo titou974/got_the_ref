@@ -102,8 +102,8 @@ export const HOME_BLOCK_TIER: Record<HomeBlock, AccessTier> = {
   profile: "free",
   /**
    * Les classements restent à l'écran en gratuit, mais seul Gemini y est
-   * réellement mesuré (cf. `FREE_ENGINES`) : la carte ChatGPT reste sous voile,
-   * faute d'avoir été exécutée.
+   * réellement mesuré (cf. `FREE_ENGINES`) : les cartes ChatGPT, Perplexity et
+   * Claude restent sous voile, faute d'avoir été exécutées.
    */
   rankings: "free",
   /**
@@ -167,10 +167,14 @@ export function offerForBlock(block: HomeBlock): UpsellOffer {
  * Les moteurs réellement interrogés à ce niveau.
  *
  * Un compte gratuit n'a que Gemini : son relevé passe par le grounding Google
- * Search, qui ne coûte rien de plus que l'appel. ChatGPT, lui, consomme un
- * appel à l'outil de recherche d'OpenAI par relevé — il n'est donc pas exécuté
- * pour un compte gratuit, et sa carte reste floutée plutôt que vide. Montrer un
- * classement fabriqué serait pire que ne rien montrer.
+ * Search, qui ne coûte rien de plus que l'appel. Les trois autres se paient à
+ * chaque relevé — la recherche web d'OpenAI, l'appel Perplexity, l'outil
+ * `web_search` de Claude — et ils partent deux fois par passage, une fois sur
+ * la niche et une fois sur la catégorie. Ils ne sont donc pas exécutés pour un
+ * compte gratuit, et leurs cartes restent floutées plutôt que vides : montrer
+ * un classement fabriqué serait pire que ne rien montrer.
+ *
+ * Le Coup de Boost les ouvre tous les quatre (cf. `runsEngine`).
  */
 export const FREE_ENGINES = ["Gemini"] as const;
 

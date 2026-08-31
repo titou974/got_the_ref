@@ -46,7 +46,7 @@ export const maxDuration = 300;
  * et le texte dit à voix haute ce que la note résume en un chiffre.
  *
  * Viennent ensuite les deux réponses qu'il est venu chercher — sa place dans
- * ChatGPT et Gemini, et ce qu'il faut corriger pour la gagner.
+ * les moteurs suivis, et ce qu'il faut corriger pour la gagner.
  *
  * En bas, ce qui court dans la durée : le trafic amené par les IA et le
  * calendrier de rédaction, posé sur sa grille de jours. Et l'exécution ne vit
@@ -202,10 +202,10 @@ export default async function DashboardHomePage() {
         isPhysical={context.isPhysical && analysis.profile.isPhysical}
       />
 
-      {/* 4. La place du commerce dans ChatGPT et Gemini. C'est la question qui
+      {/* 4. La place du commerce dans les moteurs suivis. C'est la question qui
              amène le client ici. Le voile y est posé moteur par moteur : un
-             compte gratuit fait mesurer Gemini, et voit la carte ChatGPT sous
-             voile — faute d'avoir été exécutée. */}
+             compte gratuit fait mesurer Gemini, et voit les trois autres cartes
+             sous voile — faute d'avoir été exécutées. */}
       <RankingsSection engines={analysis.engines} tier={tier} />
 
       {/* 5. Les corrections, dans la foulée du classement : le client vient de

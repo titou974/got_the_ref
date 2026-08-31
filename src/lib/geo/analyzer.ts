@@ -3,6 +3,7 @@ import { askJson, isAiConfigured } from "@/lib/ai/client";
 import { askGeminiGrounded, isGeminiConfigured } from "@/lib/ai/gemini";
 import {
   CATEGORY_META,
+  DASHBOARD_ENGINES,
   type CategoryKey,
   type CategoryScore,
   type GeoAnalysisResult,
@@ -64,9 +65,10 @@ export type AnalysisContext = {
    *
    * C'est ce qui distingue l'analyse d'un compte gratuit : seul Gemini y est
    * mesuré — son relevé passe par le grounding Google Search — tandis que
-   * ChatGPT, qui consomme un appel à l'outil de recherche d'OpenAI, n'est pas
-   * appelé. Sa note reste alors une estimation du modèle, et le tableau de bord
-   * la garde sous voile plutôt que de la faire passer pour un relevé.
+   * ChatGPT, Perplexity et Claude, qui se paient à chaque appel, ne sont pas
+   * interrogés. Leurs notes restent alors des estimations du modèle, et le
+   * tableau de bord les garde sous voile plutôt que de les faire passer pour des
+   * relevés.
    */
   engines?: AiEngine[];
   /**
@@ -90,9 +92,10 @@ export type AnalysisContext = {
  * reconnaît immédiatement — le surcoût par audit reste sans commune mesure avec
  * un rapport qui ne tient pas.
  *
- * Les deux moteurs (ChatGPT, Gemini) ne sont appelés que pour une seule chose :
- * le CLASSEMENT réel, qu'aucun autre modèle ne peut produire à leur place
- * puisqu'il s'agit de leur propre réponse, formée en lisant le web.
+ * Les moteurs suivis (ChatGPT, Gemini, Perplexity, Claude) ne sont appelés que
+ * pour une seule chose : le CLASSEMENT réel, qu'aucun autre modèle ne peut
+ * produire à leur place puisqu'il s'agit de leur propre réponse, formée en
+ * lisant le web.
  */
 const AUDIT_MAX_TOKENS = 16000;
 
@@ -105,9 +108,23 @@ const MAX_RANK_ITEMS = 10;
  * Les moteurs dont on relève le classement, dans l'ordre d'affichage.
  * Chacun est interrogé par SA propre API et va lire le web avant de répondre :
  * la réponse de ChatGPT ne peut pas être devinée par Gemini, et aucun modèle
- * répondant de mémoire ne peut tenir lieu de l'un des deux.
+ * répondant de mémoire ne peut tenir lieu de l'un des quatre.
  */
-const ALL_ENGINES: AiEngine[] = ["ChatGPT", "Gemini"];
+const ALL_ENGINES: AiEngine[] = [...DASHBOARD_ENGINES];
+
+/**
+ * Un casier de mesure vide par moteur suivi.
+ *
+ * Écrit à la main, ce casier oubliait un moteur le jour où la liste s'allongeait
+ * — et un moteur absent du casier n'est pas une carte vide, c'est un relevé
+ * silencieusement jeté. Il se déduit donc de la liste elle-même.
+ */
+function emptyPerEngine<T>(initial: () => T): Record<AiEngine, T> {
+  return Object.fromEntries(ALL_ENGINES.map((engine) => [engine, initial()])) as Record<
+    AiEngine,
+    T
+  >;
+}
 
 const CATEGORY_KEYS: CategoryKey[] = [
   "citability",
@@ -468,7 +485,7 @@ CONSIGNES :
 2. Note chaque catégorie de 0 à 100 selon la GRILLE D'AUDIT GEO ci-dessus, en t'appuyant sur les données réelles. Sois rigoureux et honnête : un site sans données structurées ne peut pas avoir un bon score "structuredData".
 3. Pour chaque catégorie, donne un résumé (1-2 phrases) et 2 à 4 constats précis (findings).
 4. Propose 5 à 8 recommandations actionnables, priorisées (critique/haute/moyenne/basse) avec un impact estimé (1-10) et la catégorie concernée. NE RECOMMANDE JAMAIS d'ajouter un schéma déjà présent dans « Types JSON-LD détectés » (ex. si AggregateRating/Review/LocalBusiness/Restaurant/FAQPage y figurent, ils existent déjà : ne propose pas de les ajouter, suggère au plus de les enrichir).
-5. ${enginesInstruction} (Différencie les moteurs : ChatGPT Search valorise l'autorité et la structure, Gemini s'appuie sur l'écosystème Google et les données structurées. NE PRODUIS JAMAIS de classement pour un moteur déjà mesuré : on n'utilise QUE des classements véridiques.)
+5. ${enginesInstruction} (Différencie les moteurs : ChatGPT Search valorise l'autorité et la structure, Gemini s'appuie sur l'écosystème Google et les données structurées, Perplexity cite page par page et privilégie les passages citables et les sources fraîches, Claude pèse l'expertise et la notoriété avant de reprendre une source. NE PRODUIS JAMAIS de classement pour un moteur déjà mesuré : on n'utilise QUE des classements véridiques.)
 6. googleSeo : réalise une mini-analyse SEO Google classique. Donne un score (0-100), un positionnement organique estimé (positioning, ex. "Page 1 (top 5)", "Page 2-3", "Non positionné"), un résumé, 2 à 4 constats (findings) et une liste de mots-clés (topKeywords) sur lesquels le site pourrait/devrait ressortir.
 7. aiSimulation : imagine une requête de recherche naturelle qu'un utilisateur taperait dans une IA et pour laquelle cette entreprise devrait apparaître (ex. "meilleur restaurant italien à Lyon"). Indique si le site apparaîtrait probablement dans les résultats cités (appearsInResults), à quelle position approximative (position, ou null), quels types de concurrents passeraient devant, et pourquoi.
 8. verdict : une phrase de synthèse percutante sur la visibilité IA actuelle du site.
@@ -1186,6 +1203,12 @@ function heuristicAnalysis(
     deriveEngine("ChatGPT", clamp(citability * 0.5 + brandAuthority * 0.3 + technical * 0.2), allCrawlersOk, profile),
     // Gemini : écosystème Google + données structurées
     deriveEngine("Gemini", clamp(structuredData * 0.4 + technical * 0.35 + citability * 0.25), allCrawlersOk, profile),
+    // Perplexity : il cite ses sources page par page — la citabilité prime,
+    // puis la solidité technique qui décide si la page est lue jusqu'au bout.
+    deriveEngine("Perplexity", clamp(citability * 0.5 + technical * 0.3 + contentEEAT * 0.2), allCrawlersOk, profile),
+    // Claude : il pèse ce qu'il lit avant de le reprendre — l'expertise et la
+    // notoriété du site comptent plus chez lui que son balisage.
+    deriveEngine("Claude", clamp(contentEEAT * 0.4 + brandAuthority * 0.35 + citability * 0.25), allCrawlersOk, profile),
   ];
 
   const googleScore = clamp(technical * 0.4 + contentEEAT * 0.35 + structuredData * 0.25);
@@ -1388,7 +1411,7 @@ function summaryFromMeasure(engine: AiEngine, m: MeasuredEngine): string {
 /**
  * Construit les scores moteurs finaux.
  *
- * Un seul principe, et il vaut pour les deux moteurs : **rien n'écrase un
+ * Un seul principe, et il vaut pour tous les moteurs : **rien n'écrase un
  * relevé réel**. Un moteur qui a répondu prend sa mesure du jour. Un moteur
  * muet garde le dernier top 10 qu'il avait réellement rendu, avec sa date —
  * une panne d'API ne fait pas disparaître une position, et surtout elle ne la
@@ -1480,7 +1503,7 @@ export type DeclaredRankingProfile = {
 
 export type RefreshRankingsOptions = {
   declared?: DeclaredRankingProfile;
-  /** Moteurs à interroger. Par défaut les trois. */
+  /** Moteurs à interroger. Par défaut, tous ceux du tableau de bord. */
   engines?: AiEngine[];
 };
 
@@ -1514,9 +1537,9 @@ function rankingProfile(
  * Reprend UNIQUEMENT les classements, sur une analyse déjà faite.
  *
  * C'est ce que le tableau de bord relance semaine après semaine : la place du
- * commerce dans ChatGPT et Gemini bouge, pas la structure de son site.
- * On réinterroge donc les deux moteurs par leurs API respectives — eux seuls
- * connaissent leur propre réponse — sans repayer l'audit complet.
+ * commerce dans les moteurs suivis bouge, pas la structure de son site.
+ * On les réinterroge donc par leurs API respectives — eux seuls connaissent
+ * leur propre réponse — sans repayer l'audit complet.
  *
  * Un moteur qui ne répond pas garde sa dernière mesure connue plutôt que de
  * disparaître : une absence de réponse n'est pas une perte de position.
@@ -1537,14 +1560,8 @@ export async function refreshEngineRankings(
   const directQuery = buildEngineQuery(profile, "direct");
   const indirectQuery = wantsIndirect(profile) ? buildEngineQuery(profile, "indirect") : null;
 
-  const measuredDirect: Record<AiEngine, MeasuredEngine | null> = {
-    ChatGPT: null,
-    Gemini: null,
-  };
-  const measuredRankings: Record<AiEngine, EngineRanking[]> = {
-    ChatGPT: [],
-    Gemini: [],
-  };
+  const measuredDirect = emptyPerEngine<MeasuredEngine | null>(() => null);
+  const measuredRankings = emptyPerEngine<EngineRanking[]>(() => []);
 
   geoLog("Classements — relevé des moteurs", {
     moteurs: engineList.join(", "),
@@ -1668,14 +1685,8 @@ export async function analyzeSite(
   const indirect = wantsIndirect(profile);
   const indirectQuery = indirect ? buildEngineQuery(profile, "indirect") : null;
 
-  const measuredDirect: Record<AiEngine, MeasuredEngine | null> = {
-    ChatGPT: null,
-    Gemini: null,
-  };
-  const measuredRankings: Record<AiEngine, EngineRanking[]> = {
-    ChatGPT: [],
-    Gemini: [],
-  };
+  const measuredDirect = emptyPerEngine<MeasuredEngine | null>(() => null);
+  const measuredRankings = emptyPerEngine<EngineRanking[]>(() => []);
 
   if (useApis && hasAnyEngineKey()) {
     geoLog("Étape 2a — Classements réels moteurs (avant audit)", {
