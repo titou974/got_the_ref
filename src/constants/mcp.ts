@@ -21,7 +21,7 @@ export const MCP_PACKAGE = "got-the-ref-mcp";
  * l'archive depuis le site lui-même (`npm run mcp:pack` la dépose dans
  * `public/mcp/`) et pointer les commandes dessus :
  *
- *     NEXT_PUBLIC_MCP_SOURCE=https://gottheref.com/mcp/got-the-ref-mcp.tgz
+ *     NEXT_PUBLIC_MCP_SOURCE=https://gotheref.com/mcp/got-the-ref-mcp.tgz
  *
  * La variable est publique par nature — c'est une adresse de téléchargement,
  * elle figure en clair dans les commandes affichées au client. Une fois le

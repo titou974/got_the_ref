@@ -4,7 +4,7 @@
 
 /** L'adresse de la plateforme. Surchargée en développement. */
 export const API_URL = (
-  process.env.GOT_THE_REF_URL ?? "https://gottheref.com"
+  process.env.GOT_THE_REF_URL ?? "https://gotheref.com"
 ).replace(/\/+$/, "");
 
 /** Le nom du serveur MCP tel que l'agent l'enregistre. */

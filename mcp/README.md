@@ -75,7 +75,7 @@ il n'y a rien à reconstituer.
 
 | Variable | Rôle |
 | --- | --- |
-| `GOT_THE_REF_URL` | Adresse de la plateforme. Par défaut `https://gottheref.com`. |
+| `GOT_THE_REF_URL` | Adresse de la plateforme. Par défaut `https://gotheref.com`. |
 | `GOT_THE_REF_TOKEN` | Clé fournie directement, sans appairage. Pour l'intégration continue. |
 | `GOT_THE_REF_CLIENT` | Nom montré au client sur l'écran d'autorisation. |
 
@@ -94,7 +94,7 @@ cd mcp && npm publish --access public
 ```
 
 Le nom `got-the-ref-mcp` doit être libre. S'il ne l'est pas, on passe au nom
-d'organisation (`@gottheref/mcp`) et les commandes s'allongent d'autant.
+d'organisation (`@gotheref/mcp`) et les commandes s'allongent d'autant.
 
 **2. Archive servie par le site (sans npm)**
 
@@ -107,7 +107,7 @@ npm run mcp:pack        # dépose public/mcp/got-the-ref-mcp.tgz
 Puis, côté plateforme :
 
 ```bash
-NEXT_PUBLIC_MCP_SOURCE=https://gottheref.com/mcp/got-the-ref-mcp.tgz
+NEXT_PUBLIC_MCP_SOURCE=https://gotheref.com/mcp/got-the-ref-mcp.tgz
 ```
 
 Les commandes affichées dans la modale pointent alors sur l'archive. Elles
