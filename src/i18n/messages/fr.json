@@ -1601,8 +1601,7 @@
       "nicheLabel": "Niche détectée",
       "zoneLabel": "Zone détectée",
       "zoneLabelOnline": "Zone couverte",
-      "zoneOnline": "Tout le web",
-      "note": "C'est la requête que nous envoyons à ChatGPT et Gemini."
+      "zoneOnline": "Tout le web"
     },
     "notices": {
       "dailyTitle": "Faites une analyse tous les jours",

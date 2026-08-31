@@ -197,7 +197,6 @@ export default async function DashboardHomePage() {
         niche={context.niche ?? analysis.profile.niche ?? null}
         location={analysis.profile.location ?? context.cities[0] ?? null}
         isPhysical={context.isPhysical && analysis.profile.isPhysical}
-        query={analysis.liveQuery ?? null}
       />
 
       {/* 4. La place du commerce dans ChatGPT et Gemini. C'est la question qui
