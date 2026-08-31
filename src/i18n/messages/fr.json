@@ -1528,6 +1528,20 @@
       "points": ["Restaurants & hôtels", "Artisans & BTP", "Santé & bien-être"]
     }
   },
+  "trafficGain": {
+    "perMonth": "par mois",
+    "unit": "visites / mois",
+    "share": "{share} %",
+    "contentTitle": "Visites supplémentaires estimées",
+    "contentCaption": "Ce que les corrections de cette page rapportent une fois posées sur votre site : balise title, meta description, H1 et paragraphe d'introduction réécrits avec les mots-clés de votre niche.",
+    "contentNote": "Ce chiffre est estimé. Il part de votre note de visibilité actuelle et de la part du plan d'action que porte le contenu. Vos visites réelles se lisent sur la carte de trafic de l'accueil, une fois Analytics rattaché.",
+    "homeTitle": "Visites supplémentaires estimées, tout le plan appliqué",
+    "homeCaption": "Ce que rapportent les corrections ci-dessous quand elles sont toutes appliquées, structure et données structurées comprises.",
+    "homeNote": "Ce chiffre est estimé. Il part de votre note de visibilité actuelle et de la marge qui vous reste sur chaque moteur. Vos visites réelles se lisent sur la carte de trafic, plus bas, une fois Analytics rattaché.",
+    "pricingTitle": "Visites supplémentaires estimées avec got_the_ref",
+    "pricingCaption": "Ce qu'un commerce jamais travaillé pour les IA peut capter chaque mois sur les quatre moteurs, une fois les agents passés.",
+    "pricingNote": "Ce chiffre vaut pour un site type. Le vôtre dépend de votre niche et de ce qui tourne déjà sur vos pages. L'analyse gratuite le calcule sur votre site."
+  },
   "dashboard": {
     "gate": {
       "offers": {

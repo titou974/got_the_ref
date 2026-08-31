@@ -8,6 +8,8 @@ import { BrandProof } from "@/components/BrandProof";
 import { PricingOffers } from "@/components/pricing/PricingOffers";
 import { PricingFaq } from "@/components/pricing/PricingFaq";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
+import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
+import { referenceGain } from "@/lib/geo/traffic-gain";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
 import { BOOST, SUBSCRIPTION_PRICE, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
@@ -84,6 +86,7 @@ type Props = { searchParams: Promise<{ raison?: string; analyse?: string }> };
 export default async function TarifsPage({ searchParams }: Props) {
   const { raison, analyse } = await searchParams;
   const t = await getTranslations("pricing");
+  const tg = await getTranslations("trafficGain");
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
@@ -110,6 +113,19 @@ export default async function TarifsPage({ searchParams }: Props) {
               </p>
             )}
           </header>
+
+          {/* Ce que le visiteur vient chercher avant le prix : ce que ça
+              rapporte. Le chiffre est celui d'un site type — la page est
+              ouverte à qui n'a pas de compte, et on n'a rien lu de son site —
+              et la note sous la rangée le dit. */}
+          <div className="mt-10">
+            <TrafficGainCards
+              gain={referenceGain()}
+              title={tg("pricingTitle")}
+              caption={tg("pricingCaption")}
+              note={tg("pricingNote")}
+            />
+          </div>
         </div>
 
         <ResultsCarousel className="py-10 sm:py-14" />

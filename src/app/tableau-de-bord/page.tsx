@@ -20,6 +20,8 @@ import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
 import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
 import { PaidReportCard } from "@/components/dashboard/PaidReportCard";
 import { Recommendations } from "@/components/geo/Recommendations";
+import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
+import { totalGainFor } from "@/lib/geo/traffic-gain";
 import { GatePanel, TierGate } from "@/components/tableau-de-bord/TierGate";
 import {
   FREE_RECOMMENDATION_LIMIT,
@@ -67,6 +69,7 @@ export default async function DashboardHomePage() {
   const context = await getDashboardContext(user.id);
   const t = await getTranslations("dashboard.home");
   const ta = await getTranslations("analysisReport");
+  const tg = await getTranslations("trafficGain");
 
   // Aucune analyse : c'est la première ouverture, l'écran d'attente la lance.
   //
@@ -212,6 +215,22 @@ export default async function DashboardHomePage() {
           <h2 className="text-lg font-bold">{t("priorities")}</h2>
           <p className="text-sm text-muted">{t("prioritiesHint")}</p>
         </div>
+
+        {/* Ce que la liste rapporte, avant la liste. Une suite de correctifs se
+            lit comme une corvée tant qu'on n'a pas dit ce qu'elle paie ; le
+            chiffre est posé entre le titre de la section et son premier
+            correctif, à l'endroit exact où la question se pose. Il couvre tout
+            le plan, voilé compris — c'est bien ce que le client obtient s'il va
+            au bout. */}
+        <div className="mb-4">
+          <TrafficGainCards
+            gain={totalGainFor(analysis)}
+            title={tg("homeTitle")}
+            caption={tg("homeCaption")}
+            note={tg("homeNote")}
+          />
+        </div>
+
         {/* En clair, les correctifs que l'offre ouvre ; sous voile, deux cartes
             et le compte de ce qui reste. Les deux listes se suivent sans
             rupture : le client lit ce qu'il peut appliquer aujourd'hui, puis

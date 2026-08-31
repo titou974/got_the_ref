@@ -1,25 +1,36 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { getDashboardContext, getOnPageRewriteQuota } from "@/features/dashboard/queries";
+import { contentGainFor } from "@/lib/geo/traffic-gain";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
 import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
+import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
 
 export const maxDuration = 300;
 
 /**
- * Contenu : les mots-clés de la niche, puis les trois endroits où ils
- * s'écrivent — la balise title et la meta description, le H1, le paragraphe
- * d'introduction. Chacun montre l'existant et la réécriture côte à côte, et
- * rien d'autre que les mots-clés effectivement placés.
+ * Contenu : ce que la page rapporte, ce qu'elle corrige, et les mots sur
+ * lesquels elle le fait.
+ *
+ * L'ordre a changé. Le tableau des mots-clés ouvrait l'écran : c'était de la
+ * documentation avant l'action, et le client devait descendre pour trouver ce
+ * qu'on lui demande de faire. Il ferme désormais la page — on le consulte
+ * quand on veut vérifier un terme, pas pour décider.
+ *
+ * En tête, la raison d'agir : les visites que ces corrections peuvent ramener,
+ * réparties sur les quatre surfaces qui les envoient. Puis les trois endroits
+ * où les mots s'écrivent — la balise title et la meta description, le H1, le
+ * paragraphe d'introduction — l'existant et la réécriture côte à côte.
  */
 export default async function ContenuPage() {
   const user = await requireUser();
-  const [context, quota, t] = await Promise.all([
+  const [context, quota, t, tg] = await Promise.all([
     getDashboardContext(user.id),
     getOnPageRewriteQuota(user.id),
     getTranslations("dashboard.content"),
+    getTranslations("trafficGain"),
   ]);
 
   if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
@@ -30,7 +41,15 @@ export default async function ContenuPage() {
     <>
       <PageHeader title={t("pageTitle")} />
 
-      <KeywordTable insight={analysis.trendingKeywords ?? null} />
+      {/* Le gain n'est compté que sur la part contenu du plan d'action : cette
+          page ne corrige pas la structure, et lui attribuer le total ferait
+          promettre deux fois le même chiffre à deux écrans. */}
+      <TrafficGainCards
+        gain={contentGainFor(analysis)}
+        title={tg("contentTitle")}
+        caption={tg("contentCaption")}
+        note={tg("contentNote")}
+      />
 
       <ContentCompare
         current={{
@@ -44,6 +63,8 @@ export default async function ContenuPage() {
         insight={analysis.trendingKeywords ?? null}
         quota={quota}
       />
+
+      <KeywordTable insight={analysis.trendingKeywords ?? null} />
     </>
   );
 }
