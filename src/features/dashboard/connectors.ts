@@ -34,19 +34,108 @@ export type PublishInput = {
   body: string;
   excerpt?: string | null;
   slug?: string | null;
+  /** La signature de l'article, là où la plateforme en exige une (Shopify). */
+  author?: string | null;
 };
 
 export type PublishResult = { url: string | null; externalId: string | null };
 
 const trimSlash = (value: string) => value.replace(/\/+$/, "");
 
+/**
+ * Le délai au-delà duquel on abandonne un appel vers le site du client.
+ *
+ * Ces requêtes sortent vers des hébergements que l'on ne choisit pas : un
+ * mutualisé qui rame, un pare-feu qui avale la demande sans jamais répondre.
+ * Sans limite, `fetch` attend la coupure du socket — le formulaire de
+ * rattachement reste figé, et la tâche planifiée brûle son budget sur un seul
+ * site pendant que les autres attendent leur tour.
+ */
+const TIMEOUT_MS = 15_000;
+
+/**
+ * Un appel sortant borné dans le temps, et dont l'échec se lit.
+ *
+ * `AbortSignal.timeout` lève une `TimeoutError` dont le texte ne dit rien à un
+ * commerçant. La traduction se fait ici, une fois, pour que tous les appels de
+ * ce fichier échouent de la même manière.
+ */
+export async function call(url: string, init: RequestInit = {}): Promise<Response> {
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new AppError(
+        `Le site n'a pas répondu en ${TIMEOUT_MS / 1000} secondes.`,
+        "SITE_TIMEOUT",
+        504,
+      );
+    }
+    throw new AppError(
+      error instanceof Error ? error.message : "Site injoignable.",
+      "SITE_UNREACHABLE",
+      502,
+    );
+  }
+}
+
 const basic = (user: string, password: string) =>
   `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`;
 
-/** L'hôte d'une boutique Shopify, avec ou sans le `.myshopify.com` déjà écrit. */
+/**
+ * L'adresse d'un site WordPress, ramenée à sa racine.
+ *
+ * Le client colle ce qu'il a sous les yeux : la barre d'adresse de son
+ * administration (`…/wp-admin/options-general.php`), parfois l'API elle-même,
+ * souvent sans le schéma. Trois nettoyages valent mieux qu'un refus pour une
+ * barre oblique de trop.
+ */
+export function wpSite(value: string): string {
+  const raw = value.trim();
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return trimSlash(withScheme.replace(/\/(wp-admin|wp-login\.php|wp-json)(\/.*)?$/i, ""));
+}
+
+/**
+ * Le mot de passe d'application tel que WordPress l'accepte.
+ *
+ * L'écran qui le crée l'affiche en six groupes séparés par des espaces, et
+ * c'est ainsi qu'il est copié. WordPress les retire avant de comparer : les
+ * garder produirait un en-tête `Basic` qui ne correspond à rien, et le client
+ * lirait « mot de passe incorrect » avec le bon mot de passe.
+ */
+export const appPassword = (value: string) => value.replace(/\s+/g, "");
+
+/**
+ * L'hôte d'administration d'une boutique Shopify.
+ *
+ * L'API Admin ne répond que sur `*.myshopify.com`, jamais sur le domaine de
+ * vente. Le client, lui, colle ce qu'il connaît : sa poignée seule, l'adresse
+ * de son administration, parfois son domaine public. Les deux premiers cas se
+ * ramènent au bon hôte ; le troisième ressort en phrase claire plutôt qu'en
+ * 404 illisible.
+ */
 const shopHost = (value: string) => {
-  const host = value.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-  return host.includes(".") ? host : `${host}.myshopify.com`;
+  const raw = value.trim().replace(/^https?:\/\//, "").toLowerCase();
+  if (!raw) throw new AppError("Domaine de boutique manquant.", "BAD_CREDENTIALS", 400);
+
+  // L'adresse que le client a sous les yeux quand il administre sa boutique.
+  const admin = raw.match(/^admin\.shopify\.com\/store\/([a-z0-9-]+)/);
+  if (admin) return `${admin[1]}.myshopify.com`;
+
+  const host = raw.replace(/\/.*$/, "");
+  if (host.endsWith(".myshopify.com")) return host;
+  if (!host.includes(".")) return `${host}.myshopify.com`;
+
+  throw new AppError(
+    `L'API Shopify ne répond que sur une adresse « .myshopify.com » : « ${host} » est le domaine public de la boutique. L'adresse d'administration se lit dans Shopify, rubrique Paramètres › Domaines.`,
+    "BAD_CREDENTIALS",
+    400,
+  );
 };
 
 const SHOPIFY_API = "2026-01";
@@ -67,16 +156,27 @@ export async function shopifyGraphql<T>(
   variables: Record<string, unknown> = {},
 ): Promise<T> {
   const host = shopHost(credentials.shopDomain ?? "");
-  const response = await fetch(`https://${host}/admin/api/${SHOPIFY_API}/graphql.json`, {
+  const response = await call(`https://${host}/admin/api/${SHOPIFY_API}/graphql.json`, {
     method: "POST",
     headers: {
       "X-Shopify-Access-Token": credentials.adminAccessToken,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ query, variables }),
-    cache: "no-store",
   });
-  if (!response.ok) throw new AppError(await shortError(response), "SHOPIFY_HTTP", 502);
+  if (!response.ok) {
+    // Shopify plafonne le débit de chaque boutique : au-delà, elle répond 429.
+    // Ce n'est pas un jeton invalide, et le dire évite au client d'aller en
+    // régénérer un pour rien.
+    if (response.status === 429) {
+      throw new AppError(
+        "Shopify limite temporairement les appels à cette boutique. Réessayez dans une minute.",
+        "SHOPIFY_THROTTLED",
+        429,
+      );
+    }
+    throw new AppError(await shortError(response), "SHOPIFY_HTTP", 502);
+  }
 
   const payload = (await response.json()) as {
     data?: T;
@@ -116,15 +216,55 @@ export async function verifyConnection(
     switch (platform) {
       case "wordpress":
       case "woocommerce": {
-        const site = trimSlash(credentials.siteUrl ?? "");
-        const response = await fetch(`${site}/wp-json/wp/v2/users/me?context=edit`, {
-          headers: { Authorization: basic(credentials.username, credentials.applicationPassword) },
-          cache: "no-store",
+        const site = wpSite(credentials.siteUrl ?? "");
+
+        // WordPress désactive les mots de passe d'application sur une connexion
+        // en clair : la connexion échouerait sans que rien ne dise pourquoi.
+        if (site.startsWith("http://")) {
+          return {
+            ok: false,
+            capabilities: [],
+            siteUrl: site,
+            error:
+              "WordPress refuse les mots de passe d'application sur une connexion non chiffrée : passez le site en HTTPS avant de le rattacher.",
+          };
+        }
+
+        // `context=edit` n'est servi qu'à un compte qui a le droit de modifier.
+        // Un abonné reçoit 403 ici — exactement ce qu'il faut savoir avant de
+        // promettre au client que ses articles partiront tout seuls.
+        const response = await call(`${site}/wp-json/wp/v2/users/me?context=edit`, {
+          headers: {
+            Authorization: basic(
+              credentials.username.trim(),
+              appPassword(credentials.applicationPassword),
+            ),
+            Accept: "application/json",
+          },
         });
         if (!response.ok) {
-          return { ok: false, capabilities: [], siteUrl: site, error: await shortError(response) };
+          return {
+            ok: false,
+            capabilities: [],
+            siteUrl: site,
+            error: await wordpressError(response),
+          };
         }
-        return { ok: true, capabilities: ["publish", "edit"], siteUrl: site };
+
+        const me = (await response.json().catch(() => null)) as {
+          capabilities?: Record<string, boolean>;
+        } | null;
+
+        // Un compte sans `publish_posts` ouvrirait le lien pour le refermer au
+        // premier article : le rattachement reste bon, mais on n'annonce que la
+        // correction. Absence de la clé vaut oui — les anciens WordPress ne
+        // renvoient pas toujours la liste.
+        const canPublish = me?.capabilities?.publish_posts !== false;
+        return {
+          ok: true,
+          capabilities: canPublish ? ["publish", "edit"] : ["edit"],
+          siteUrl: site,
+        };
       }
 
       case "shopify": {
@@ -132,13 +272,25 @@ export async function verifyConnection(
         // L'appel d'essai passe par GraphQL : c'est la porte que la publication
         // et les corrections empruntent ensuite. Un jeton qui ouvre l'ancienne
         // API REST mais pas celle-ci n'est pas un lien utilisable.
-        const { shop } = await shopifyGraphql<{
+        //
+        // Les blogs sont demandés dans le même appel, exprès : ils exigent la
+        // portée `read_content`. Un jeton qui ne l'a pas passerait la
+        // vérification pour échouer au premier article, des semaines plus tard.
+        const { shop, blogs } = await shopifyGraphql<{
           shop: { primaryDomain?: { url?: string } };
-        }>(credentials, `query { shop { primaryDomain { url } } }`);
+          blogs: { nodes: { handle: string }[] };
+        }>(
+          credentials,
+          `query { shop { primaryDomain { url } } blogs(first: 1) { nodes { handle } } }`,
+        );
 
+        // Une boutique sans aucun blog reste rattachable — les métachamps SEO
+        // s'écrivent quand même — mais il n'y a nulle part où déposer un
+        // article, et l'interface ne doit pas le promettre.
+        const hasBlog = blogs.nodes.length > 0;
         return {
           ok: true,
-          capabilities: ["publish", "edit"],
+          capabilities: hasBlog ? ["publish", "edit"] : ["edit"],
           siteUrl: shop.primaryDomain?.url ?? `https://${host}`,
         };
       }
@@ -146,9 +298,8 @@ export async function verifyConnection(
       case "ghost": {
         const site = trimSlash(credentials.siteUrl ?? "");
         const token = await ghostToken(credentials.adminApiKey);
-        const response = await fetch(`${site}/ghost/api/admin/site/`, {
+        const response = await call(`${site}/ghost/api/admin/site/`, {
           headers: { Authorization: `Ghost ${token}` },
-          cache: "no-store",
         });
         if (!response.ok) {
           return { ok: false, capabilities: [], siteUrl: site, error: await shortError(response) };
@@ -157,9 +308,8 @@ export async function verifyConnection(
       }
 
       case "webflow": {
-        const response = await fetch(`https://api.webflow.com/v2/sites/${credentials.siteId}`, {
+        const response = await call(`https://api.webflow.com/v2/sites/${credentials.siteId}`, {
           headers: { Authorization: `Bearer ${credentials.apiToken}` },
-          cache: "no-store",
         });
         if (!response.ok) {
           return { ok: false, capabilities: [], siteUrl: null, error: await shortError(response) };
@@ -177,12 +327,11 @@ export async function verifyConnection(
       }
 
       case "wix": {
-        const response = await fetch("https://www.wixapis.com/blog/v3/posts?paging.limit=1", {
+        const response = await call("https://www.wixapis.com/blog/v3/posts?paging.limit=1", {
           headers: {
             Authorization: credentials.apiKey,
             "wix-site-id": credentials.siteId,
           },
-          cache: "no-store",
         });
         if (!response.ok) {
           return { ok: false, capabilities: [], siteUrl: null, error: await shortError(response) };
@@ -197,7 +346,7 @@ export async function verifyConnection(
         // accepté pour les corrections on-page, et l'on ne promet pas la
         // publication automatique.
         const site = trimSlash(credentials.siteUrl ?? "");
-        const response = await fetch(site, { method: "HEAD", cache: "no-store" });
+        const response = await call(site, { method: "HEAD" });
         if (!response.ok) {
           return { ok: false, capabilities: [], siteUrl: site, error: await shortError(response) };
         }
@@ -207,7 +356,7 @@ export async function verifyConnection(
       case "custom": {
         const site = trimSlash(credentials.siteUrl ?? "");
         const hook = credentials.webhookUrl ? trimSlash(credentials.webhookUrl) : null;
-        const response = await fetch(site, { method: "HEAD", cache: "no-store" });
+        const response = await call(site, { method: "HEAD" });
         if (!response.ok) {
           return { ok: false, capabilities: [], siteUrl: site, error: await shortError(response) };
         }
@@ -233,6 +382,31 @@ export async function verifyConnection(
   }
 }
 
+/**
+ * Ce qui s'est réellement passé quand WordPress refuse, dit au client.
+ *
+ * Les deux refus les plus fréquents n'ont rien à voir avec le mot de passe. Un
+ * hébergement Apache en CGI retire l'en-tête `Authorization` avant que PHP ne
+ * le voie : le site répond alors « non connecté » avec des identifiants
+ * parfaitement valides. Et une extension de sécurité ferme volontiers
+ * `/wp-json`. Renvoyer le code brut enverrait le client vérifier son mot de
+ * passe pendant une heure, pour rien.
+ */
+async function wordpressError(response: Response): Promise<string> {
+  const detail = await shortError(response);
+
+  if (response.status === 401) {
+    return `${detail} — si le mot de passe d'application est bon, l'hébergeur retire probablement l'en-tête « Authorization » : ajoutez la directive CGIPassAuth au fichier .htaccess du site.`;
+  }
+  if (response.status === 403) {
+    return `${detail} — ce compte WordPress n'a pas le droit de publier : utilisez un compte administrateur ou éditeur.`;
+  }
+  if (response.status === 404) {
+    return `${detail} — l'API REST de WordPress ne répond pas sur /wp-json : elle est désactivée, ou une extension de sécurité la bloque.`;
+  }
+  return detail;
+}
+
 /** Le message d'erreur de la plateforme, réduit à ce qui tient sur une ligne. */
 async function shortError(response: Response): Promise<string> {
   const text = await response.text().catch(() => "");
@@ -255,11 +429,14 @@ export async function publishArticle(
   switch (platform) {
     case "wordpress":
     case "woocommerce": {
-      const site = trimSlash(credentials.siteUrl ?? "");
-      const response = await fetch(`${site}/wp-json/wp/v2/posts`, {
+      const site = wpSite(credentials.siteUrl ?? "");
+      const response = await call(`${site}/wp-json/wp/v2/posts`, {
         method: "POST",
         headers: {
-          Authorization: basic(credentials.username, credentials.applicationPassword),
+          Authorization: basic(
+            credentials.username.trim(),
+            appPassword(credentials.applicationPassword),
+          ),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -270,7 +447,7 @@ export async function publishArticle(
           status: "publish",
         }),
       });
-      if (!response.ok) throw new AppError(await shortError(response), "PUBLISH_FAILED", 502);
+      if (!response.ok) throw new AppError(await wordpressError(response), "PUBLISH_FAILED", 502);
 
       const payload = (await response.json()) as { id?: number; link?: string };
       return { url: payload.link ?? null, externalId: payload.id ? String(payload.id) : null };
@@ -278,13 +455,34 @@ export async function publishArticle(
 
     case "shopify": {
       // Shopify range les articles dans un blog, et une boutique en a au moins
-      // un (« News ») créé d'office. On écrit dans le premier.
-      const { blogs } = await shopifyGraphql<{ blogs: { nodes: { id: string }[] } }>(
+      // un (« News ») créé d'office. Le client peut en désigner un autre par sa
+      // poignée ; sans indication, on écrit dans le premier.
+      //
+      // Le nom de la boutique voyage dans le même appel : `author` est déclaré
+      // non nul dans le schéma de création, et sans lui Shopify rejette la
+      // requête avant même de la lire.
+      const { shop, blogs } = await shopifyGraphql<{
+        shop: { name: string; primaryDomain?: { url?: string } };
+        blogs: { nodes: { id: string; handle: string }[] };
+      }>(
         credentials,
-        `query { blogs(first: 1) { nodes { id } } }`,
+        `query { shop { name primaryDomain { url } } blogs(first: 50) { nodes { id handle } } }`,
       );
-      const blogId = blogs.nodes[0]?.id;
-      if (!blogId) throw new AppError("Aucun blog sur cette boutique.", "PUBLISH_FAILED", 502);
+
+      const wanted = credentials.blogHandle?.trim().toLowerCase();
+      const blog = wanted
+        ? blogs.nodes.find((node) => node.handle.toLowerCase() === wanted)
+        : blogs.nodes[0];
+
+      if (!blog) {
+        throw new AppError(
+          wanted
+            ? `Aucun blog « ${wanted} » sur cette boutique.`
+            : "Aucun blog sur cette boutique : créez-en un dans Shopify, rubrique Boutique en ligne › Articles de blog.",
+          "PUBLISH_FAILED",
+          502,
+        );
+      }
 
       const created = await shopifyGraphql<{
         articleCreate: {
@@ -301,8 +499,11 @@ export async function publishArticle(
         }`,
         {
           article: {
-            blogId,
+            blogId: blog.id,
             title: article.title,
+            // Obligatoire côté Shopify. À défaut de signature portée par
+            // l'article, la boutique signe de son propre nom.
+            author: { name: article.author?.trim() || shop.name },
             body: article.body,
             summary: article.excerpt ?? undefined,
             handle: article.slug ?? undefined,
@@ -323,9 +524,13 @@ export async function publishArticle(
       const published = created.articleCreate.article;
       if (!published) throw new AppError("Shopify n'a rien créé.", "PUBLISH_FAILED", 502);
 
-      const host = shopHost(credentials.shopDomain ?? "");
+      // L'article se lit sur le domaine de vente, pas sur l'adresse
+      // d'administration : c'est ce lien-là que le client ouvrira.
+      const home = trimSlash(
+        shop.primaryDomain?.url ?? `https://${shopHost(credentials.shopDomain ?? "")}`,
+      );
       return {
-        url: `https://${host}/blogs/${published.blog.handle}/${published.handle}`,
+        url: `${home}/blogs/${published.blog.handle}/${published.handle}`,
         externalId: published.id,
       };
     }
@@ -333,7 +538,7 @@ export async function publishArticle(
     case "ghost": {
       const site = trimSlash(credentials.siteUrl ?? "");
       const token = await ghostToken(credentials.adminApiKey);
-      const response = await fetch(`${site}/ghost/api/admin/posts/?source=html`, {
+      const response = await call(`${site}/ghost/api/admin/posts/?source=html`, {
         method: "POST",
         headers: { Authorization: `Ghost ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -364,7 +569,7 @@ export async function publishArticle(
         );
       }
 
-      const response = await fetch(hook, {
+      const response = await call(hook, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

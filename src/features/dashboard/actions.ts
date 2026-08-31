@@ -438,6 +438,16 @@ export const connectSiteAction = authActionClient
     const connector = connectorFor(parsedInput.platform);
     if (!connector) throw new AppError("Plateforme inconnue.", "UNKNOWN_PLATFORM", 400);
 
+    // Le formulaire grise les plateformes qui ne sont pas ouvertes ; l'inspecteur
+    // du navigateur, lui, ne grise rien. Le refus tient ici.
+    if (!connector.ready) {
+      throw new AppError(
+        `Le rattachement ${connector.name} n'est pas encore ouvert.`,
+        "PLATFORM_NOT_READY",
+        400,
+      );
+    }
+
     if (!isCredentialsKeySet()) {
       throw new AppError(
         "Le stockage sécurisé des identifiants n'est pas configuré sur ce serveur.",

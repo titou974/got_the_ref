@@ -60,19 +60,18 @@ export default async function ArticlesPage() {
         <ArticleQuotaBar quota={quota} />
       </SectionGate>
 
-      <ArticleMonth
-        articles={articles.map((article) => ({
-          id: article.id,
-          title: article.title,
-          status: article.status,
-          scheduledFor: article.scheduledFor,
-        }))}
-        locked={locked}
-      />
+        <ArticleMonth
+          articles={articles.map((article) => ({
+            id: article.id,
+            title: article.title,
+            status: article.status,
+            scheduledFor: article.scheduledFor,
+          }))}
+        />
 
-      <ArticleAgenda articles={upcoming} locked={locked} />
+        <ArticleAgenda articles={upcoming} />
 
-      {published.length ? <ArticleAgenda articles={published} variant="published" /> : null}
+        {published.length ? <ArticleAgenda articles={published} variant="published" /> : null}
 
       <SectionGate section="articles" locked={locked} compact>
         <BrandVoicePanel

@@ -164,9 +164,9 @@ export async function Dashboard({
           domain={result.domain}
           stack={result.signals.stack ?? null}
           issues={issues}
-          // Le rattachement automatique du site n'est pas encore ouvert : en
-          // attendant, la modale remet le prompt de correction, qui produit le
-          // même résultat à la main.
+          // Le rapport est public : personne n'est identifié, donc rien à
+          // rattacher ici. La modale sert le prompt de correction, et son bouton
+          // de rattachement mène aux réglages du compte, par la connexion.
           solutionPrompt={buildSolutionPrompt("results", result, diagnostic)}
         />
         </>

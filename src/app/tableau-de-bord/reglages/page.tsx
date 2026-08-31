@@ -1,9 +1,14 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isCredentialsKeySet } from "@/lib/crypto";
+import { getDashboardContext } from "@/features/dashboard/queries";
 import type { PlanKey } from "@/constants/plans";
+import { connectorForStack } from "@/constants/site-platforms";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
+import { Divider } from "@/components/tableau-de-bord/Field";
 import { SettingsForm } from "@/components/tableau-de-bord/SettingsForm";
+import { SiteConnectionPanel } from "@/components/tableau-de-bord/SiteConnectionPanel";
 
 /**
  * Le libellé d'offre affiché dans les réglages.
@@ -47,12 +52,21 @@ export default async function SettingsPage() {
   const user = await requireUser();
   const t = await getTranslations("dashboard.settings");
 
-  const [profile, voice] = await Promise.all([
+  // Le contexte est déjà lu par la coque du tableau de bord, et mémorisé le
+  // temps de la requête : le redemander ici ne coûte rien.
+  const [profile, voice, context] = await Promise.all([
     prisma.onboardingProfile.findUnique({ where: { userId: user.id } }),
     prisma.brandVoice.findUnique({ where: { userId: user.id } }),
+    getDashboardContext(user.id),
   ]);
 
   const planLabel = t(`plans.${PLAN_KEY[user.plan as PlanKey] ?? "free"}`);
+
+  // La date est mise en forme ici : le composant est rendu chez le client, et
+  // son fuseau ferait diverger le premier rendu de celui du serveur.
+  const connectedOn = context.site?.connectedAt
+    ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(context.site.connectedAt)
+    : null;
 
   return (
     <>
@@ -69,6 +83,28 @@ export default async function SettingsPage() {
         audience={profile?.audience ?? ""}
         toneInstructions={voice?.instructions ?? ""}
         toneBanned={voice?.banned ?? []}
+      />
+
+      <Divider className="my-12" />
+
+      <SiteConnectionPanel
+        link={
+          context.site
+            ? {
+                platform: context.site.platform,
+                siteUrl: context.site.siteUrl,
+                status: context.site.status,
+                capabilities: context.site.capabilities,
+                connectedOn,
+                lastError: context.site.lastError,
+              }
+            : null
+        }
+        // La plateforme reconnue au crawl est proposée d'emblée : neuf clients
+        // sur dix n'ont alors qu'à coller deux identifiants.
+        suggestedPlatform={connectorForStack(context.analysis?.signals.stack?.id).id}
+        suggestedSiteUrl={context.siteUrl ?? (context.domain ? `https://${context.domain}` : null)}
+        credentialsKeyReady={isCredentialsKeySet()}
       />
     </>
   );

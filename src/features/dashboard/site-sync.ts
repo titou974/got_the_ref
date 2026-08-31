@@ -2,7 +2,7 @@ import "server-only";
 
 import * as cheerio from "cheerio";
 import type { StructureFileKind } from "@/lib/geo/structure-files";
-import { shopifyGraphql, type Credentials } from "./connectors";
+import { appPassword, call, shopifyGraphql, wpSite, type Credentials } from "./connectors";
 
 /**
  * Ce que les agents écrivent sur le site du client, une fois le lien établi :
@@ -29,8 +29,10 @@ import { shopifyGraphql, type Credentials } from "./connectors";
  *   portent le H1 et le premier paragraphe, et leurs clés changent d'un thème à
  *   l'autre : on ne les touche pas au jugé.
  *
- * Rien de tout cela ne tourne aujourd'hui en production : le rattachement du
- * site n'est pas ouvert aux clients. C'est la plomberie, prête et testable.
+ * Le rattachement est ouvert aux clients depuis les réglages : ce qui suit part
+ * donc vers de vrais sites, sur des hébergements que l'on ne choisit pas. D'où
+ * les bornes de temps héritées de `connectors` — un mutualisé qui ne répond
+ * jamais ne doit pas retenir l'écran du client, ni le passage de la nuit.
  */
 
 export type SyncStatus =
@@ -65,8 +67,6 @@ export type StructureFile = {
   path: string;
   content: string;
 };
-
-const trimSlash = (value: string) => value.replace(/\/+$/, "");
 
 const basic = (user: string, password: string) =>
   `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`;
@@ -112,7 +112,7 @@ const SEO_DESCRIPTION_KEYS = ["_yoast_wpseo_metadesc", "rank_math_description"] 
 
 function wpHeaders(credentials: Credentials) {
   return {
-    Authorization: basic(credentials.username, credentials.applicationPassword),
+    Authorization: basic(credentials.username.trim(), appPassword(credentials.applicationPassword)),
     "Content-Type": "application/json",
   };
 }
@@ -123,10 +123,11 @@ async function wpJson<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${site}${path}`, {
+  // Même borne de temps qu'à la connexion : ces écritures partent depuis une
+  // action du client, qui attend devant son écran.
+  const response = await call(`${site}${path}`, {
     ...init,
     headers: wpHeaders(credentials),
-    cache: "no-store",
   });
   if (!response.ok) throw new Error(await shortError(response));
   return (await response.json()) as T;
@@ -186,7 +187,7 @@ async function wordpressOnPage(
   credentials: Credentials,
   patch: OnPagePatch,
 ): Promise<SyncStep[]> {
-  const site = trimSlash(credentials.siteUrl ?? "");
+  const site = wpSite(credentials.siteUrl ?? "");
   const steps: SyncStep[] = [];
 
   let page: WpPage | null;
@@ -313,7 +314,7 @@ async function wordpressStructure(
   credentials: Credentials,
   files: StructureFile[],
 ): Promise<SyncStep[]> {
-  const site = trimSlash(credentials.siteUrl ?? "");
+  const site = wpSite(credentials.siteUrl ?? "");
   const steps: SyncStep[] = [];
 
   for (const file of files.filter((item) => item.kind !== "jsonLd")) {

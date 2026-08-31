@@ -1,6 +1,10 @@
 import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
+import { isCredentialsKeySet } from "@/lib/crypto";
+import { connectorForStack } from "@/constants/site-platforms";
+import { getDashboardContext } from "@/features/dashboard/queries";
 import { writeSolutionPrompt } from "@/features/dashboard/solution-prompt";
+import type { SiteConnectSetup } from "@/components/tableau-de-bord/SiteConnectForm";
 import type { ArticleFact } from "@/lib/geo/solution-facts";
 import type { AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
@@ -20,36 +24,47 @@ import { SolveAgentsBar } from "@/components/dashboard/SolveAgentsBar";
  * fermerait la modale au moment de la bascule, en pleine lecture.
  */
 export function SolveAgentsDock({
+  userId,
   result,
   diagnostic,
   articles,
   locked = false,
 }: {
+  /** Le compte dont on lit le rattachement, pour l'ouvrir dans la modale. */
+  userId: string;
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
   /** Le planning éditorial : les articles rédigés partent dans le prompt. */
   articles: ArticleFact[];
   /**
-   * Compte gratuit : la barre s'affiche et la modale s'ouvre, mais le
-   * rattachement du site et le prompt passent sous voile. Le prompt n'est alors
-   * pas écrit du tout — c'est un appel au modèle de deux à trois secondes, et
-   * un texte qui n'atteint pas le navigateur ne se copie pas.
+   * Compte gratuit : la barre s'affiche, la modale s'ouvre et le site se
+   * rattache, mais le prompt passe sous voile. Il n'est alors pas écrit du
+   * tout — c'est un appel au modèle de deux à trois secondes, et un texte qui
+   * n'atteint pas le navigateur ne se copie pas.
    */
   locked?: boolean;
 }) {
   return (
     <Suspense fallback={null}>
-      <Dock result={result} diagnostic={diagnostic} articles={articles} locked={locked} />
+      <Dock
+        userId={userId}
+        result={result}
+        diagnostic={diagnostic}
+        articles={articles}
+        locked={locked}
+      />
     </Suspense>
   );
 }
 
 async function Dock({
+  userId,
   result,
   diagnostic,
   articles,
   locked,
 }: {
+  userId: string;
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
   articles: ArticleFact[];
@@ -83,6 +98,38 @@ async function Dock({
         articles,
       });
 
+  // Le rattachement du site s'ouvre dans la modale, et pas seulement dans les
+  // réglages : c'est ici que le client demande qu'on corrige son site, donc
+  // c'est ici qu'on lui demande la clé de sa maison. Le contexte est déjà lu
+  // par la coque du tableau de bord, et mémorisé le temps de la requête.
+  //
+  // Le rattachement reste ouvert à un compte gratuit : il ne donne accès à
+  // rien de payant par lui-même, et le faire d'abord évite au client de
+  // s'abonner puis de découvrir qu'il lui manque un mot de passe d'application.
+  const context = await getDashboardContext(userId);
+
+  // La date est mise en forme ici : la modale est rendue chez le client, et son
+  // fuseau ferait diverger le premier rendu de celui du serveur.
+  const connectedOn = context.site?.connectedAt
+    ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(context.site.connectedAt)
+    : null;
+
+  const connect: SiteConnectSetup = {
+    link: context.site
+      ? {
+          platform: context.site.platform,
+          siteUrl: context.site.siteUrl,
+          status: context.site.status,
+          capabilities: context.site.capabilities,
+          connectedOn,
+          lastError: context.site.lastError,
+        }
+      : null,
+    suggestedPlatform: connectorForStack(result.signals.stack?.id).id,
+    suggestedSiteUrl: context.siteUrl ?? (context.domain ? `https://${context.domain}` : null),
+    credentialsKeyReady: isCredentialsKeySet(),
+  };
+
   return (
     <>
       {/* La barre flotte au-dessus du bas de l'écran : sans cette réserve, elle
@@ -97,6 +144,7 @@ async function Dock({
         solutionPrompt={solutionPrompt}
         scope="dashboard"
         locked={locked}
+        connect={connect}
       />
     </>
   );

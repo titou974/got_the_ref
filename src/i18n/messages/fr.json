@@ -208,8 +208,9 @@
         "body": "Les agents appliquent les correctifs directement sur votre site : fichiers, balises et données structurées. Vous validez chaque changement avant publication.",
         "detected": "Plateforme détectée : {name}",
         "cta": "Connecter le site",
-        "connectSoon": "Bientôt",
-        "soonNote": "Wordpress et Shopify seront connectables prochainement.",
+        "connectManage": "Mettre le lien du site à jour",
+        "connectedNote": "{site} est rattaché : les agents y publient et y corrigent.",
+        "connectBack": "Revenir aux prompts",
         "promptCta": "Copier le prompt de correction",
         "promptCtaAll": "Copier les instructions pour tout solutionner avec votre agent IA",
         "shareDev": "Partager à votre développeur",
@@ -1956,6 +1957,104 @@
         "banned": "Termes à bannir",
         "bannedPlaceholder": "Un terme par ligne",
         "bannedHint": "Noms de concurrents, mots interdits par votre marque."
+      },
+      "site": {
+        "title": "Votre site",
+        "body": "Le lien par lequel les agents déposent vos articles et corrigent vos textes. Sans lui, tout se prépare ici et se recopie à la main chez vous.",
+        "platform": "Plateforme",
+        "pickTitle": "Sur quoi tourne votre site ?",
+        "pickBody": "Choisissez votre plateforme : on vous montre ensuite où prendre les identifiants qu'elle demande.",
+        "pickSoon": "Bientôt",
+        "pickDetected": "Détecté",
+        "pickChosen": "Plateforme : {name}",
+        "pickChange": "Changer",
+        "guideTitle": "Rattacher un site {name}, pas à pas",
+        "guides": {
+          "wordpress": {
+            "steps": [
+              "Connectez-vous à votre site WordPress avec un compte administrateur.",
+              "Ouvrez « Utilisateurs → Profil », puis descendez jusqu'à la section « Mots de passe d'application ».",
+              "Saisissez le nom « got_the_ref », puis cliquez sur « Ajouter un nouveau mot de passe d'application ».",
+              "Copiez le mot de passe affiché : WordPress ne le montrera plus. Les espaces qu'il contient sont sans importance.",
+              "Votre identifiant est celui affiché en haut du même écran, sous « Nom d'utilisateur ».",
+              "Collez l'adresse de votre site, cet identifiant et ce mot de passe dans les champs ci-dessous."
+            ],
+            "caution": "Le site doit être en HTTPS : WordPress désactive les mots de passe d'application sur une connexion en clair. Si le rattachement est refusé alors que le mot de passe est bon, votre hébergeur retire l'en-tête « Authorization » — la directive « CGIPassAuth On » dans le fichier .htaccess le rétablit."
+          },
+          "shopify": {
+            "steps": [
+              "Dans l'administration Shopify, ouvrez « Paramètres → Applications et canaux de vente ».",
+              "Cliquez sur « Développer des applications », puis « Créer une application ». Nommez-la got_the_ref.",
+              "Onglet « Configuration » → « Admin API » : cochez les portées read_content et write_content, puis enregistrez.",
+              "Cliquez sur « Installer l'application » pour l'activer sur la boutique.",
+              "Onglet « Identifiants API » : révélez le « Jeton d'accès Admin API » et copiez-le. Shopify ne l'affiche qu'une seule fois.",
+              "L'adresse de la boutique est celle en « .myshopify.com » (Paramètres → Domaines), pas votre domaine de vente."
+            ],
+            "caution": "Le champ « Blog visé » est facultatif : sans indication, les articles vont dans le premier blog de la boutique. Une boutique sans aucun blog reste rattachable, mais ses articles resteront à déposer à la main."
+          }
+        },
+        "connect": "Rattacher le site",
+        "reconnect": "Mettre le lien à jour",
+        "connecting": "Vérification en cours…",
+        "disconnect": "Détacher",
+        "docs": "Voir la documentation de la plateforme",
+        "statusConnected": "Rattaché",
+        "statusError": "Refusé",
+        "statusPending": "En attente",
+        "connectedOn": "Rattaché le {date}.",
+        "canPublish": "Vos articles partent tout seuls, à la date prévue.",
+        "canEditOnly": "Les corrections de textes passent. Les articles, eux, restent à déposer à la main : cette plateforme ne les ouvre pas à une API.",
+        "noKey": "Le stockage sécurisé des identifiants n'est pas configuré sur ce serveur : le rattachement restera indisponible tant que la clé CREDENTIALS_KEY n'y est pas posée.",
+        "secretHint": "Jamais réaffiché. Pour changer le lien, saisissez-le à nouveau.",
+        "confirmDisconnect": "Détacher ce site ? Les identifiants seront effacés et les publications programmées s'arrêteront.",
+        "fields": {
+          "siteUrl": {
+            "label": "Adresse du site",
+            "placeholder": "https://mon-site.fr"
+          },
+          "username": {
+            "label": "Identifiant WordPress",
+            "hint": "Le compte qui publiera : administrateur ou éditeur."
+          },
+          "applicationPassword": {
+            "label": "Mot de passe d'application",
+            "hint": "Dans WordPress : Utilisateurs → Profil → Mots de passe d'application. Ce n'est pas votre mot de passe de connexion."
+          },
+          "shopDomain": {
+            "label": "Adresse de la boutique",
+            "placeholder": "ma-boutique.myshopify.com",
+            "hint": "L'adresse en « .myshopify.com », pas le domaine de vente."
+          },
+          "adminAccessToken": {
+            "label": "Jeton d'accès Admin",
+            "hint": "Dans Shopify : Paramètres → Applications et canaux de vente → Développer des applications. Portées à cocher : read_content et write_content."
+          },
+          "blogHandle": {
+            "label": "Blog visé",
+            "placeholder": "news",
+            "hint": "Facultatif. Sans indication, les articles vont dans le premier blog de la boutique."
+          },
+          "siteId": {
+            "label": "Identifiant du site"
+          },
+          "apiKey": {
+            "label": "Clé d'API"
+          },
+          "apiToken": {
+            "label": "Jeton d'API"
+          },
+          "adminApiKey": {
+            "label": "Clé d'API Admin"
+          },
+          "webserviceKey": {
+            "label": "Clé du webservice"
+          },
+          "webhookUrl": {
+            "label": "Webhook de publication",
+            "placeholder": "https://mon-site.fr/api/articles",
+            "hint": "Facultatif. Sans lui, les articles restent à déposer à la main."
+          }
+        }
       }
     },
     "siteSelect": {

@@ -30,6 +30,19 @@ export type SiteConnector = {
   docsUrl: string | null;
   capabilities: SiteCapability[];
   fields: ConnectorField[];
+  /**
+   * Ouvert aux clients, ou seulement écrit.
+   *
+   * Le code sait appeler la plupart de ces plateformes, mais seules WordPress
+   * et Shopify ont été menées jusqu'au bout — identifiants vérifiés sur de
+   * vrais sites, article publié, page corrigée, manuel écrit. Les autres se
+   * montrent grisées : promettre un rattachement qu'on n'a pas éprouvé coûte
+   * plus cher que de dire « bientôt ».
+   *
+   * Le drapeau n'est pas décoratif : `connectSiteAction` refuse un connecteur
+   * fermé. Une case grisée se déjoue avec l'inspecteur, pas un refus serveur.
+   */
+  ready: boolean;
 };
 
 export const SITE_CONNECTORS: SiteConnector[] = [
@@ -43,6 +56,7 @@ export const SITE_CONNECTORS: SiteConnector[] = [
       { name: "username", kind: "text", required: true },
       { name: "applicationPassword", kind: "secret", required: true },
     ],
+    ready: true,
   },
   {
     id: "woocommerce",
@@ -54,6 +68,7 @@ export const SITE_CONNECTORS: SiteConnector[] = [
       { name: "username", kind: "text", required: true },
       { name: "applicationPassword", kind: "secret", required: true },
     ],
+    ready: false,
   },
   {
     id: "shopify",
@@ -63,7 +78,12 @@ export const SITE_CONNECTORS: SiteConnector[] = [
     fields: [
       { name: "shopDomain", kind: "text", required: true },
       { name: "adminAccessToken", kind: "secret", required: true },
+      // Une boutique a souvent plusieurs blogs, et le premier n'est pas
+      // toujours celui que le client tient à jour. Laissé vide, on écrit dans
+      // le premier — ce qui reste le cas courant, avec le seul « News ».
+      { name: "blogHandle", kind: "text", required: false },
     ],
+    ready: true,
   },
   {
     id: "wix",
@@ -76,6 +96,7 @@ export const SITE_CONNECTORS: SiteConnector[] = [
       { name: "siteId", kind: "text", required: true },
       { name: "apiKey", kind: "secret", required: true },
     ],
+    ready: false,
   },
   {
     id: "webflow",
@@ -89,6 +110,7 @@ export const SITE_CONNECTORS: SiteConnector[] = [
       { name: "siteId", kind: "text", required: true },
       { name: "apiToken", kind: "secret", required: true },
     ],
+    ready: false,
   },
   {
     id: "squarespace",
@@ -101,6 +123,7 @@ export const SITE_CONNECTORS: SiteConnector[] = [
       { name: "siteUrl", kind: "url", required: true },
       { name: "apiKey", kind: "secret", required: true },
     ],
+    ready: false,
   },
   {
     id: "ghost",
@@ -111,6 +134,7 @@ export const SITE_CONNECTORS: SiteConnector[] = [
       { name: "siteUrl", kind: "url", required: true },
       { name: "adminApiKey", kind: "secret", required: true },
     ],
+    ready: false,
   },
   {
     id: "prestashop",
@@ -122,6 +146,7 @@ export const SITE_CONNECTORS: SiteConnector[] = [
       { name: "siteUrl", kind: "url", required: true },
       { name: "webserviceKey", kind: "secret", required: true },
     ],
+    ready: false,
   },
   {
     id: "framer",
@@ -133,6 +158,7 @@ export const SITE_CONNECTORS: SiteConnector[] = [
       { name: "siteUrl", kind: "url", required: true },
       { name: "apiToken", kind: "secret", required: true },
     ],
+    ready: false,
   },
   {
     id: "custom",
@@ -146,6 +172,7 @@ export const SITE_CONNECTORS: SiteConnector[] = [
       { name: "webhookUrl", kind: "url", required: false },
       { name: "apiToken", kind: "secret", required: false },
     ],
+    ready: false,
   },
 ];
 
