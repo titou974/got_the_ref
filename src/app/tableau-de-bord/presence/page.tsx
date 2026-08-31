@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext, listProspects } from "@/features/dashboard/queries";
+import { businessHint, getDashboardContext, listProspects } from "@/features/dashboard/queries";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { ProspectTable } from "@/components/tableau-de-bord/ProspectTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
@@ -26,7 +26,7 @@ export default async function PresencePage() {
   ]);
   const t = await getTranslations("dashboard.presence");
 
-  if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
+  if (!context.analysis) return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
 
   const analysis = context.analysis;
   const presence = analysis.webPresence;

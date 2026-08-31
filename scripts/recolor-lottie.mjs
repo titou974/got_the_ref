@@ -57,13 +57,89 @@ function repaint(node, counts) {
   }
 }
 
+// ── Neutralisation ───────────────────────────────────────────────────────────
+//
+// Les six animations ci-dessus venaient de la même série et partageaient trois
+// verts exacts : une correspondance couleur par couleur suffisait. Celle de
+// l'assistant vient d'ailleurs — cyan, bleu, orange et un dégradé arc-en-ciel —
+// et n'a aucune couleur en commun avec elles. Aucune table de correspondance ne
+// la ramènerait à la charte.
+//
+// On la convertit donc par la luminance : chaque couleur est remplacée par le
+// gris du thème dont elle a la clarté. Le dessin garde ses contrastes — ce qui
+// se détachait se détache encore, ce qui servait de fond reste en fond — et
+// perd sa teinte, qui était le seul problème. C'est la conversion d'une image
+// couleur en noir et blanc, appliquée à un fichier vectoriel.
+const NEUTRALIZE = new Set(["ai-assistant.json"]);
+
+/** La rampe neutre du thème, de l'obsidienne au blanc, en clarté. */
+const NEUTRALS = [0.035, 0.247, 0.443, 0.631, 0.831, 0.925, 1];
+
+/** Rec. 709 : la clarté perçue, pas la moyenne des trois canaux. */
+function luminance(r, g, b) {
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Le gris de la rampe le plus proche en clarté. */
+function toNeutral(r, g, b) {
+  const l = luminance(r, g, b);
+  const grey = NEUTRALS.reduce((best, step) =>
+    Math.abs(step - l) < Math.abs(best - l) ? step : best,
+  );
+  return [grey, grey, grey];
+}
+
+function neutralize(node, counts) {
+  if (Array.isArray(node)) {
+    for (const item of node) neutralize(item, counts);
+    return;
+  }
+  if (!node || typeof node !== "object") return;
+
+  for (const [key, value] of Object.entries(node)) {
+    // Une couleur pleine : `{ c: { a: 0, k: [r, g, b, a?] } }`.
+    const k = key === "c" && value && typeof value === "object" ? value.k : null;
+    if (Array.isArray(k) && k.length >= 3 && k.every((n) => typeof n === "number")) {
+      const [r, g, b] = toNeutral(k[0], k[1], k[2]);
+      value.k = k.length === 4 ? [r, g, b, k[3]] : [r, g, b];
+      counts.couleurs = (counts.couleurs ?? 0) + 1;
+      continue;
+    }
+
+    // Un dégradé : `{ g: { p: n, k: { k: [pos, r, g, b, pos, r, g, b, …] } } }`.
+    // Les positions sont laissées telles quelles, seules les couleurs changent.
+    const stops = key === "g" && value?.k?.k;
+    if (Array.isArray(stops) && stops.length % 4 === 0) {
+      for (let i = 0; i < stops.length; i += 4) {
+        const [r, g, b] = toNeutral(stops[i + 1], stops[i + 2], stops[i + 3]);
+        stops[i + 1] = r;
+        stops[i + 2] = g;
+        stops[i + 3] = b;
+      }
+      counts.degrades = (counts.degrades ?? 0) + 1;
+      continue;
+    }
+
+    neutralize(value, counts);
+  }
+}
+
 for (const file of readdirSync(DIR).sort()) {
-  if (!TARGETS.has(file)) continue;
   const path = join(DIR, file);
-  const data = JSON.parse(readFileSync(path, "utf8"));
   const counts = {};
-  repaint(data, counts);
-  writeFileSync(path, JSON.stringify(data));
+
+  if (TARGETS.has(file)) {
+    const data = JSON.parse(readFileSync(path, "utf8"));
+    repaint(data, counts);
+    writeFileSync(path, JSON.stringify(data));
+  } else if (NEUTRALIZE.has(file)) {
+    const data = JSON.parse(readFileSync(path, "utf8"));
+    neutralize(data, counts);
+    writeFileSync(path, JSON.stringify(data));
+  } else {
+    continue;
+  }
+
   const summary = Object.entries(counts)
     .map(([name, n]) => `${name} ×${n}`)
     .join(", ");

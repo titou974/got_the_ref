@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext } from "@/features/dashboard/queries";
+import { businessHint, getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { CATEGORY_META } from "@/lib/geo/types";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
@@ -30,7 +30,7 @@ export default async function ArchitecturePage() {
   const t = await getTranslations("dashboard.architecture");
   const ta = await getTranslations("analysisReport");
 
-  if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
+  if (!context.analysis) return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
 
   const analysis = context.analysis;
   const diagnostic = buildDiagnostic(analysis);

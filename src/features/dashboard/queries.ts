@@ -15,9 +15,11 @@ import {
 import {
   BOOST_ARTICLE_WINDOW_DAYS,
   FREE_CONTENT_REWRITES,
+  analysisNeedsUpgrade,
   tierAtLeast,
   type AccessTier,
 } from "@/constants/access";
+import type { BusinessHint } from "@/lib/geo/loading-prompts";
 import { getAccess } from "@/features/billing/access";
 
 /**
@@ -176,6 +178,53 @@ export const getDashboardContext = cache(async function getDashboardContext(
     },
   };
 });
+
+/**
+ * Le commerce tel que l'écran d'attente a besoin de le connaître.
+ *
+ * Il n'en faut pas plus pour écrire les questions tapées pendant l'analyse : la
+ * niche, la ville où l'on reçoit, et le fait de recevoir du public. Extrait ici
+ * plutôt que recopié sur chaque page, parce que les cinq onglets rendent le
+ * même écran d'attente et qu'une divergence entre eux ne se verrait pas.
+ */
+export function businessHint(context: DashboardContext): BusinessHint {
+  return {
+    niche: context.niche,
+    city: context.cities[0] ?? null,
+    isPhysical: context.isPhysical,
+  };
+}
+
+/**
+ * Le tableau de bord a-t-il de quoi s'afficher ?
+ *
+ * La question que l'écran d'attente pose au serveur pour savoir s'il doit
+ * s'effacer. La condition est exactement celle des pages : une analyse
+ * enregistrée, et faite au niveau d'accès actuel du compte. Elles doivent le
+ * rester — répondre « prêt » sur un critère plus large rendrait la main à une
+ * page qui, elle, réafficherait l'attente, et le client tournerait en rond.
+ *
+ * Lecture étroite plutôt qu'un `getDashboardContext` complet : cette fonction
+ * est appelée en boucle pendant la fin de l'analyse, et six requêtes toutes les
+ * deux secondes pour lire un booléen seraient six fois trop.
+ */
+export async function isDashboardReady(userId: string): Promise<boolean> {
+  const [access, profile] = await Promise.all([
+    getAccess(userId),
+    prisma.onboardingProfile.findUnique({ where: { userId }, select: { domain: true } }),
+  ]);
+
+  const record = await prisma.analysis.findFirst({
+    where: { userId, ...(profile?.domain ? { domain: profile.domain } : {}) },
+    orderBy: { createdAt: "desc" },
+    select: { data: true },
+  });
+
+  const analysis = record ? parseAnalysis(record.data) : null;
+  if (!analysis) return false;
+
+  return !analysisNeedsUpgrade(analysis.accessTier, access.tier);
+}
 
 /** Les identifiants du lien, déchiffrés. Réservé aux appels sortants. */
 export async function readSiteCredentials<T = Record<string, string>>(
