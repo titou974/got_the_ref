@@ -13,9 +13,9 @@ import type { SiteCapability } from "@/constants/site-platforms";
  * ne renvoie rien d'utile n'est pas un lien, c'est une promesse. `publish` dépose
  * un article et rend son URL publique.
  *
- * Les plateformes qui n'ouvrent pas leur rédaction (Squarespace, PrestaShop,
- * Framer) sont rattachées quand même : le lien sert alors aux corrections
- * on-page, et l'interface n'annonce que ce que `capabilities` contient.
+ * Les plateformes qui n'ouvrent pas leur rédaction (Squarespace, Framer) sont
+ * rattachées quand même : le lien sert alors aux corrections on-page, et
+ * l'interface n'annonce que ce que `capabilities` contient.
  */
 
 export type Credentials = Record<string, string>;
@@ -206,6 +206,250 @@ async function ghostToken(adminApiKey: string): Promise<string> {
     .sign(Buffer.from(secret, "hex"));
 }
 
+/**
+ * L'adresse d'un site, ramenée à sa racine et pourvue d'un schéma.
+ *
+ * Même geste que pour WordPress, en plus court : le client colle son domaine
+ * sans « https:// », ou avec la barre oblique de trop.
+ */
+const siteRoot = (value: string) => {
+  const raw = value.trim();
+  if (!raw) throw new AppError("Adresse du site manquante.", "BAD_CREDENTIALS", 400);
+  return trimSlash(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+};
+
+/**
+ * Une adresse de page déduite d'un titre, quand la plateforme en exige une.
+ *
+ * PrestaShop refuse une page de contenu sans `link_rewrite`, et n'en invente
+ * pas : sans cette fonction, la publication échouerait sur un champ que le
+ * client n'a aucune raison de remplir lui-même.
+ */
+const slugify = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70) || "article";
+
+// ── Wix ──────────────────────────────────────────────────────────────────────
+
+const WIX_API = "https://www.wixapis.com";
+
+/**
+ * Les en-têtes d'un appel Wix authentifié par clé d'API.
+ *
+ * Wix veut la clé telle quelle dans `Authorization` — ni « Bearer », ni
+ * « Basic » — accompagnée de l'identifiant du site. La documentation est
+ * formelle sur un point : `wix-site-id` et `wix-account-id` ne voyagent jamais
+ * ensemble, et c'est le premier qui ouvre les ressources d'un site.
+ */
+const wixHeaders = (credentials: Credentials) => ({
+  Authorization: credentials.apiKey,
+  "wix-site-id": credentials.siteId,
+  "Content-Type": "application/json",
+});
+
+/**
+ * Ce que Wix reproche, en français.
+ *
+ * Wix range le motif du refus dans `details.applicationError.description` et
+ * laisse `message` à un texte générique : renvoyer le corps brut donnerait au
+ * client une accolade et un code, jamais la phrase utile.
+ */
+async function wixError(response: Response): Promise<string> {
+  const text = await response.text().catch(() => "");
+  let detail = "";
+  try {
+    const payload = JSON.parse(text) as {
+      message?: string;
+      details?: { applicationError?: { description?: string } };
+    };
+    detail = payload.details?.applicationError?.description ?? payload.message ?? "";
+  } catch {
+    detail = text.replace(/\s+/g, " ").trim().slice(0, 200);
+  }
+
+  const head = detail ? `${response.status} : ${detail}` : `Réponse ${response.status}.`;
+  if (response.status === 401 || response.status === 403) {
+    return `${head} — vérifiez que la clé d'API porte les autorisations « Blog » en lecture et en écriture, et que l'identifiant du site est bien celui de ce site.`;
+  }
+  return head;
+}
+
+async function wixJson<T>(
+  credentials: Credentials,
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const response = await call(`${WIX_API}${path}`, { ...init, headers: wixHeaders(credentials) });
+  if (!response.ok) throw new AppError(await wixError(response), "WIX_HTTP", 502);
+  return (await response.json()) as T;
+}
+
+/**
+ * Le corps d'un article, traduit dans le format que le blog Wix accepte.
+ *
+ * Wix ne stocke pas de HTML : un article y est un document Ricos, un arbre de
+ * nœuds typés. Le convertisseur maison de Wix fait la traduction, et c'est le
+ * seul moyen honnête d'y déposer un texte qui garde ses H2 — recopier le HTML
+ * dans un champ de texte donnerait un article d'un seul bloc, sans hiérarchie,
+ * c'est-à-dire sans rien de ce que les moteurs de réponse viennent y lire.
+ *
+ * Les trois enveloppes essayées ne sont pas de l'indécision : la référence
+ * REST, le guide et l'exemple en ligne de commande décrivent trois formes
+ * différentes pour le même point d'entrée. On prend la première que Wix
+ * accepte, plutôt que de parier sur celle des trois qui sera juste ce mois-ci.
+ */
+async function wixRicos(credentials: Credentials, html: string): Promise<unknown> {
+  const bodies = [
+    { html, options: { plugins: ["HEADING", "LINK", "DIVIDER", "IMAGE", "CODE_BLOCK", "TABLE"] } },
+    { html, options: {} },
+    { options: { html } },
+  ];
+
+  let last = "";
+  for (const body of bodies) {
+    const response = await call(`${WIX_API}/ricos/v1/ricos-document/convert/to-ricos`, {
+      method: "POST",
+      headers: wixHeaders(credentials),
+      body: JSON.stringify(body),
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as { document?: unknown };
+      if (payload.document) return payload.document;
+      last = "Wix a renvoyé un document vide.";
+      continue;
+    }
+
+    last = await wixError(response);
+    // Un refus qui n'est pas un désaccord sur la forme du corps — jeton, droits,
+    // débit — ne sera pas levé par une autre enveloppe : inutile d'insister.
+    if (response.status !== 400 && response.status !== 404) break;
+  }
+
+  throw new AppError(
+    `Wix n'a pas su convertir l'article dans son format d'édition. ${last}`,
+    "PUBLISH_FAILED",
+    502,
+  );
+}
+
+/** L'adresse d'un article Wix, que l'API rend tantôt à plat, tantôt en deux morceaux. */
+function wixUrl(url: unknown): string | null {
+  if (typeof url === "string") return url || null;
+  if (url && typeof url === "object") {
+    const parts = url as { base?: string; path?: string };
+    if (parts.base) return `${trimSlash(parts.base)}${parts.path ?? ""}`;
+  }
+  return null;
+}
+
+/**
+ * La clé sait-elle écrire, et pas seulement lire ?
+ *
+ * Wix ne publie pas la liste des autorisations d'une clé : le seul moyen de le
+ * savoir est d'essayer. Un brouillon n'est visible d'aucun visiteur, et il est
+ * effacé dans la foulée — l'essai ne laisse rien derrière lui. Un échec n'est
+ * pas une erreur de rattachement : le lien reste bon pour les corrections, et
+ * l'interface annonce alors des articles à déposer à la main.
+ */
+async function wixCanPublish(credentials: Credentials): Promise<boolean> {
+  // L'essai ne doit jamais faire échouer le rattachement : la lecture du blog a
+  // déjà prouvé que la clé ouvre ce site. Un refus, une coupure ou un délai
+  // dépassé se lisent tous de la même manière — pas de publication automatique.
+  const response = await call(`${WIX_API}/blog/v3/draft-posts`, {
+    method: "POST",
+    headers: wixHeaders(credentials),
+    body: JSON.stringify({ draftPost: { title: "got_the_ref — essai de rattachement" } }),
+  }).catch(() => null);
+  if (!response?.ok) return false;
+
+  const payload = (await response.json().catch(() => null)) as {
+    draftPost?: { id?: string };
+  } | null;
+  const id = payload?.draftPost?.id;
+  if (!id) return false;
+
+  // Le brouillon d'essai n'a plus rien à faire là. S'il résiste, on n'en fait
+  // pas un échec de rattachement : le client verrait un refus pour un brouillon
+  // qu'il peut supprimer d'un clic.
+  await call(`${WIX_API}/blog/v3/draft-posts/${id}`, {
+    method: "DELETE",
+    headers: wixHeaders(credentials),
+  }).catch(() => null);
+
+  return true;
+}
+
+// ── PrestaShop ───────────────────────────────────────────────────────────────
+
+/**
+ * Les en-têtes du webservice PrestaShop.
+ *
+ * La clé tient lieu d'identifiant et le mot de passe reste vide : c'est la
+ * convention du webservice, pas un oubli.
+ */
+const prestashopHeaders = (credentials: Credentials) => ({
+  Authorization: basic(credentials.webserviceKey ?? "", ""),
+  Accept: "application/json",
+});
+
+/**
+ * Ce que PrestaShop reproche, traduit.
+ *
+ * Les deux refus courants n'ont rien à voir avec la clé : le webservice est
+ * éteint dans la boutique (404 sur `/api`), ou la clé existe mais n'a pas la
+ * case cochée en face de la ressource demandée (403). Le code brut enverrait le
+ * client régénérer une clé qui n'a jamais été en cause.
+ */
+async function prestashopError(response: Response): Promise<string> {
+  const detail = await shortError(response);
+  if (response.status === 401) {
+    return `${detail} — clé du webservice refusée : vérifiez-la dans Paramètres avancés → Webservice, et qu'elle y est bien active.`;
+  }
+  if (response.status === 403) {
+    return `${detail} — cette clé n'a pas les droits sur la ressource demandée : cochez « content_management_system » et « languages » en lecture comme en écriture.`;
+  }
+  if (response.status === 404) {
+    return `${detail} — le webservice de PrestaShop ne répond pas sur /api : activez-le dans Paramètres avancés → Webservice.`;
+  }
+  return detail;
+}
+
+async function prestashopJson<T>(site: string, credentials: Credentials, path: string): Promise<T> {
+  const response = await call(`${site}${path}`, { headers: prestashopHeaders(credentials) });
+  if (!response.ok) throw new AppError(await prestashopError(response), "PRESTASHOP_HTTP", 502);
+  return (await response.json()) as T;
+}
+
+/**
+ * La langue dans laquelle écrire une page PrestaShop.
+ *
+ * Tous les textes du webservice sont indexés par langue, et une page déposée
+ * sous un identifiant qui n'existe pas ressort vide côté boutique. On prend la
+ * première langue active — celle de la vitrine, dans l'immense majorité des
+ * boutiques d'un seul pays.
+ */
+async function prestashopLanguage(site: string, credentials: Credentials): Promise<number> {
+  const payload = await prestashopJson<{ languages?: { id?: number }[] }>(
+    site,
+    credentials,
+    "/api/languages?output_format=JSON&display=[id]&filter[active]=1&sort=[id_ASC]",
+  );
+  return payload.languages?.[0]?.id ?? 1;
+}
+
+/** Un texte déposé dans du XML sans le rompre, `]]>` compris. */
+const cdata = (value: string) => `<![CDATA[${value.replace(/]]>/g, "]]&gt;")}]]>`;
+
+/** Un champ traduit du webservice : PrestaShop les veut tous ainsi, même seuls. */
+const psField = (name: string, languageId: number, value: string) =>
+  `<${name}><language id="${languageId}">${cdata(value)}</language></${name}>`;
+
 // ── Vérification ─────────────────────────────────────────────────────────────
 
 export async function verifyConnection(
@@ -327,20 +571,66 @@ export async function verifyConnection(
       }
 
       case "wix": {
-        const response = await call("https://www.wixapis.com/blog/v3/posts?paging.limit=1", {
-          headers: {
-            Authorization: credentials.apiKey,
-            "wix-site-id": credentials.siteId,
-          },
+        // La lecture du blog dit deux choses d'un coup : la clé ouvre bien ce
+        // site, et l'adresse publique du blog — la seule que Wix veuille bien
+        // rendre sans autorisation supplémentaire.
+        const response = await call(`${WIX_API}/blog/v3/posts?paging.limit=1&fieldsets=URL`, {
+          headers: wixHeaders(credentials),
         });
         if (!response.ok) {
-          return { ok: false, capabilities: [], siteUrl: null, error: await shortError(response) };
+          return { ok: false, capabilities: [], siteUrl: null, error: await wixError(response) };
         }
-        return { ok: true, capabilities: ["edit"], siteUrl: null };
+
+        const payload = (await response.json().catch(() => null)) as {
+          posts?: { url?: unknown }[];
+        } | null;
+        const first = wixUrl(payload?.posts?.[0]?.url);
+        // « …/post/mon-article » : on remonte au site, pas à l'article lu.
+        const siteUrl = first ? first.replace(/\/post\/.*$/, "") : null;
+
+        // Lire n'est pas écrire. Une clé taillée en lecture seule passerait la
+        // vérification pour échouer au premier article, des semaines plus tard :
+        // on dépose donc un brouillon d'essai — invisible des visiteurs — et on
+        // le retire aussitôt. Ce qu'il en coûte, c'est deux appels ; ce qu'il
+        // évite, c'est une promesse.
+        const canPublish = await wixCanPublish(credentials);
+        return {
+          ok: true,
+          capabilities: canPublish ? ["publish", "edit"] : ["edit"],
+          siteUrl,
+        };
+      }
+
+      case "prestashop": {
+        const site = siteRoot(credentials.siteUrl ?? "");
+        // La racine du webservice liste les ressources que cette clé ouvre :
+        // une clé valide mais sans droit sur les pages de contenu s'y voit du
+        // premier coup d'œil, avant qu'on ait promis quoi que ce soit.
+        const response = await call(`${site}/api/?output_format=JSON`, {
+          headers: prestashopHeaders(credentials),
+        });
+        if (!response.ok) {
+          return {
+            ok: false,
+            capabilities: [],
+            siteUrl: site,
+            error: await prestashopError(response),
+          };
+        }
+
+        const payload = (await response.json().catch(() => null)) as {
+          api?: Record<string, unknown>;
+        } | null;
+        const resources = Object.keys(payload?.api ?? {});
+        const canPublish = resources.includes("content_management_system");
+        return {
+          ok: true,
+          capabilities: canPublish ? ["publish", "edit"] : ["edit"],
+          siteUrl: site,
+        };
       }
 
       case "squarespace":
-      case "prestashop":
       case "framer": {
         // Ces trois-là n'ouvrent pas la rédaction à une API tierce. Le lien est
         // accepté pour les corrections on-page, et l'on ne promet pas la
@@ -557,6 +847,95 @@ export async function publishArticle(
 
       const payload = (await response.json()) as { posts?: { id?: string; url?: string }[] };
       return { url: payload.posts?.[0]?.url ?? null, externalId: payload.posts?.[0]?.id ?? null };
+    }
+
+    case "wix": {
+      // Wix écrit un article en deux temps : un brouillon, puis sa publication.
+      // Le corps doit d'abord passer dans le format d'édition de la plateforme,
+      // sans quoi l'article arriverait en un seul bloc de texte.
+      const richContent = await wixRicos(credentials, article.body);
+
+      const created = await wixJson<{ draftPost?: { id?: string } }>(
+        credentials,
+        "/blog/v3/draft-posts",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            draftPost: {
+              title: article.title,
+              richContent,
+              // Le chapô que Wix affiche dans la liste des articles. L'adresse
+              // de la page, elle, est laissée à Wix : il la tire du titre selon
+              // la convention du blog, et lui en imposer une autre casserait la
+              // cohérence des URL du site.
+              excerpt: article.excerpt ?? undefined,
+            },
+          }),
+        },
+      );
+
+      const draftId = created.draftPost?.id;
+      if (!draftId) throw new AppError("Wix n'a pas créé le brouillon.", "PUBLISH_FAILED", 502);
+
+      const published = await wixJson<{ postId?: string }>(
+        credentials,
+        `/blog/v3/draft-posts/${draftId}/publish`,
+        { method: "POST", body: "{}" },
+      );
+
+      const postId = published.postId ?? draftId;
+
+      // La publication ne rend que l'identifiant : l'adresse se relit ensuite.
+      // Un article publié sans lien à montrer reste un article publié — d'où le
+      // filet plutôt qu'une erreur.
+      const url = await wixJson<{ post?: { url?: unknown } }>(
+        credentials,
+        `/blog/v3/posts/${postId}?fieldsets=URL`,
+      )
+        .then((payload) => wixUrl(payload.post?.url))
+        .catch(() => null);
+
+      return { url, externalId: postId };
+    }
+
+    case "prestashop": {
+      // PrestaShop n'a pas de blog : une page de contenu est le seul foyer
+      // natif d'un article, et c'est celui que le back-office ouvrira sous
+      // « Design → Pages ».
+      const site = siteRoot(credentials.siteUrl ?? "");
+      const languageId = await prestashopLanguage(site, credentials);
+      const slug = slugify(article.slug ?? article.title);
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+  <content>
+    <id_cms_category>1</id_cms_category>
+    <active>1</active>
+    <indexation>1</indexation>
+    ${psField("meta_title", languageId, article.title)}
+    ${psField("head_seo_title", languageId, article.title)}
+    ${psField("meta_description", languageId, article.excerpt ?? "")}
+    ${psField("link_rewrite", languageId, slug)}
+    ${psField("content", languageId, article.body)}
+  </content>
+</prestashop>`;
+
+      const response = await call(`${site}/api/content_management_system?output_format=JSON`, {
+        method: "POST",
+        headers: { ...prestashopHeaders(credentials), "Content-Type": "text/xml" },
+        body: xml,
+      });
+      if (!response.ok) throw new AppError(await prestashopError(response), "PUBLISH_FAILED", 502);
+
+      const payload = (await response.json().catch(() => null)) as {
+        content?: { id?: number | string };
+      } | null;
+      const id = payload?.content?.id;
+      if (!id) throw new AppError("PrestaShop n'a pas créé la page.", "PUBLISH_FAILED", 502);
+
+      // L'adresse d'une page de contenu suit toujours la même forme quand les
+      // URL simplifiées sont actives, ce qui est le réglage par défaut.
+      return { url: `${site}/content/${id}-${slug}`, externalId: String(id) };
     }
 
     case "custom": {
