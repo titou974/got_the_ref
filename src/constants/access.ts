@@ -209,6 +209,26 @@ export const FREE_RECOMMENDATION_CATEGORIES = ["contentEEAT"] as const;
  */
 export const FREE_RECOMMENDATION_LIMIT = 3;
 
+/**
+ * Combien de correctifs fermés se montrent, floutés, sous la barre d'appel.
+ *
+ * Deux. La liste entière — quinze cartes grises à faire défiler — repoussait
+ * l'offre hors de l'écran et n'apprenait rien de plus : une carte floutée dit la
+ * même chose que la quinzième. Deux suffisent à montrer la forme, et le compte
+ * réel de ce qui reste est écrit sur la barre juste en dessous.
+ */
+export const VEILED_RECOMMENDATION_PREVIEW = 2;
+
+/**
+ * La fourchette dans laquelle s'annonce le nombre de corrections restantes.
+ *
+ * En dessous de dix, la passe ne vaut pas son prix ; au-dessus de vingt, le
+ * client lit une condamnation plutôt qu'un plan de travail. Le compte affiché
+ * reste celui du site (contrôles ratés et correctifs fermés), simplement ramené
+ * entre ces deux bornes.
+ */
+export const PENDING_FIXES_RANGE: readonly [number, number] = [10, 20];
+
 /** Ce correctif est-il lisible à ce niveau ? */
 export function seesRecommendation(tier: AccessTier, category: string): boolean {
   if (tierAtLeast(tier, "boost")) return true;

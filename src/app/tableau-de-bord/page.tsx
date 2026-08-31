@@ -6,11 +6,14 @@ import {
 } from "@/features/dashboard/queries";
 import { fetchAiTraffic } from "@/features/dashboard/ga4";
 import { buildDemoAiTraffic } from "@/features/dashboard/demoTraffic";
-import { buildDiagnostic } from "@/lib/geo/diagnostic";
+import { buildDiagnostic, type AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
+import type { Recommendation } from "@/lib/geo/types";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
-import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
+import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
+import { DashboardNotices } from "@/components/tableau-de-bord/DashboardNotices";
+import { NicheBand } from "@/components/tableau-de-bord/NicheBand";
 import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
@@ -18,9 +21,11 @@ import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
 import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
 import { PaidReportCard } from "@/components/dashboard/PaidReportCard";
 import { Recommendations } from "@/components/geo/Recommendations";
-import { TierGate } from "@/components/tableau-de-bord/TierGate";
+import { GatePanel, TierGate } from "@/components/tableau-de-bord/TierGate";
 import {
   FREE_RECOMMENDATION_LIMIT,
+  PENDING_FIXES_RANGE,
+  VEILED_RECOMMENDATION_PREVIEW,
   analysisNeedsUpgrade,
   canSee,
   offerForBlock,
@@ -43,9 +48,15 @@ export const maxDuration = 300;
  * ChatGPT et Gemini, et ce qu'il faut corriger pour la gagner.
  *
  * En bas, ce qui court dans la durée : le trafic amené par les IA et le
- * calendrier de rédaction. Et l'exécution ne vit pas dans la page : elle tient
- * dans la barre fixe « résoudre avec les agents IA », à portée de pouce d'un
- * bout à l'autre.
+ * calendrier de rédaction, posé sur sa grille de jours. Et l'exécution ne vit
+ * pas dans la page : elle tient dans la barre fixe « résoudre avec les agents
+ * IA », à portée de pouce d'un bout à l'autre.
+ *
+ * Ce qu'une offre n'ouvre pas encore garde sa carte entière et lisible : seuls
+ * les chiffres et les tracés sont retenus — « X visites », « #X », une courbe
+ * floutée — et l'appel descend en pied de carte (cf. `TierGate` en mode
+ * `reveal`). Le client voit la forme exacte de ce qu'il achète, sans en lire
+ * une valeur.
  *
  * Le suivi des mentions dans les IA a été retiré de cet écran : le relevé
  * n'était vendu qu'à l'abonnement, coûtait un appel DataForSEO par visite, et
@@ -92,8 +103,6 @@ export default async function DashboardHomePage() {
     listArticles(user.id),
   ]);
 
-  const upcoming = articles.filter((article) => article.status !== "published");
-
   // Le plan d'action se coupe en deux sur un compte gratuit : les correctifs de
   // contenu se lisent — l'onglet qui les exécute est ouvert —, les autres
   // gardent leur forme sous voile. Les premiers sont bornés : quelques cartes
@@ -105,6 +114,17 @@ export default async function DashboardHomePage() {
     (r) => !openRecommendations.includes(r),
   );
 
+  // Sous voile, deux cartes suffisent. Une liste de quinze correctifs floutés
+  // faisait défiler un écran entier de gris avant d'arriver à l'appel : le
+  // client n'y lisait rien de plus qu'en deux cartes, et l'offre arrivait trop
+  // tard. Les deux montrées sont les plus urgentes ; le compte total, lui, est
+  // écrit sur la barre.
+  const veiledRecommendations = [...lockedRecommendations]
+    .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
+    .slice(0, VEILED_RECOMMENDATION_PREVIEW);
+
+  const pendingFixes = countPendingFixes(diagnostic, lockedRecommendations.length);
+
   const date = new Date(analysis.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
@@ -113,6 +133,10 @@ export default async function DashboardHomePage() {
 
   return (
     <>
+      {/* Ce qui se dit avant la première carte, et seulement sur téléphone : le
+          relevé du jour, et l'écran où le produit se lit le mieux. */}
+      <DashboardNotices tier={tier} />
+
       <PageHeader />
 
       {/* 1. La fenêtre du site, assombrie, avec la note posée dessus. */}
@@ -167,22 +191,32 @@ export default async function DashboardHomePage() {
         scope={tierAtLeast(tier, "boost") ? "dashboard" : "free"}
       />
 
-      {/* 3. La place du commerce dans ChatGPT et Gemini. C'est la question qui
+      {/* 3. Sur quoi et où nous l'avons interrogé. Les classements qui suivent
+             ne veulent rien dire sans ces deux mots-là : c'est la requête
+             elle-même, écrite en clair juste avant son résultat. */}
+      <NicheBand
+        niche={context.niche ?? analysis.profile.niche ?? null}
+        location={analysis.profile.location ?? context.cities[0] ?? null}
+        isPhysical={context.isPhysical && analysis.profile.isPhysical}
+      />
+
+      {/* 4. La place du commerce dans ChatGPT et Gemini. C'est la question qui
              amène le client ici. Le voile y est posé moteur par moteur : un
              compte gratuit fait mesurer Gemini, et voit la carte ChatGPT sous
              voile — faute d'avoir été exécutée. */}
       <RankingsSection engines={analysis.engines} tier={tier} />
 
-      {/* 4. Les corrections, dans la foulée du classement : le client vient de
+      {/* 5. Les corrections, dans la foulée du classement : le client vient de
              lire sa place, il doit lire tout de suite ce qui la lui coûte. */}
       <section>
         <div className="mb-3">
           <h2 className="text-lg font-bold">{t("priorities")}</h2>
           <p className="text-sm text-muted">{t("prioritiesHint")}</p>
         </div>
-        {/* En clair, les correctifs de contenu ; sous voile, tout le reste. Les
-            deux listes se suivent sans rupture : le client lit trois cartes,
-            puis voit la forme de celles qu'il n'a pas encore. */}
+        {/* En clair, les correctifs que l'offre ouvre ; sous voile, deux cartes
+            et le compte de ce qui reste. Les deux listes se suivent sans
+            rupture : le client lit ce qu'il peut appliquer aujourd'hui, puis
+            voit la forme de ce qui l'attend et combien il en reste. */}
         <div className="space-y-4">
           {openRecommendations.length > 0 && (
             <Recommendations
@@ -190,13 +224,19 @@ export default async function DashboardHomePage() {
               emptyLabel={ta("results.noRecommendations")}
             />
           )}
-          {lockedRecommendations.length > 0 && (
-            <Block block="recommendations" open={sees("recommendations")}>
+          {veiledRecommendations.length > 0 && (
+            <TierGate
+              offer={offerForBlock("recommendations")}
+              item="recommendations"
+              reveal
+              values={{ count: pendingFixes }}
+            >
               <Recommendations
-                recommendations={lockedRecommendations}
+                recommendations={veiledRecommendations}
                 emptyLabel={ta("results.noRecommendations")}
+                veiled
               />
-            </Block>
+            </TierGate>
           )}
           {openRecommendations.length === 0 && lockedRecommendations.length === 0 && (
             <Recommendations
@@ -209,23 +249,36 @@ export default async function DashboardHomePage() {
 
       {/* ---- Ce qui court dans la durée ---- */}
 
-      {/* 5. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
+      {/* 6. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
              n'est pas rattaché. Les dates sont lues ici, côté serveur, pour que
              le navigateur reçoive le même axe que le rendu initial. */}
-      <Block block="traffic" open={sees("traffic")}>
-        <AiTrafficCard
-          report={traffic}
-          demo={buildDemoAiTraffic()}
-          domain={context.domain ?? analysis.domain}
-        />
-      </Block>
+      <AiTrafficCard
+        report={traffic}
+        demo={buildDemoAiTraffic()}
+        domain={context.domain ?? analysis.domain}
+        veiled={!sees("traffic")}
+        overlay={
+          sees("traffic") ? undefined : (
+            <GatePanel offer={offerForBlock("traffic")} item="traffic" />
+          )
+        }
+      />
 
-      {/* 6. Le calendrier de rédaction, en clair à tous les niveaux. Un compte
-             gratuit y lit les premiers sujets de sa semaine, datés : c'est la
-             pièce du produit qui se montre mieux qu'elle ne se raconte. Ce qu'il
-             ne peut pas faire, c'est publier — l'onglet Articles s'achète, et
-             les liens mènent alors aux tarifs. */}
-      <ArticleAgenda articles={upcoming} limit={4} locked={!tierAtLeast(tier, "boost")} />
+      {/* 7. Le calendrier de rédaction, en clair à tous les niveaux, et posé sur
+             sa grille de jours plutôt qu'en liste des quatre prochains titres :
+             un mois entier montre le rythme de publication d'un coup d'œil, là
+             où quatre lignes ressemblaient à une liste de tâches. Ce que le
+             client ne peut pas faire, c'est publier — l'onglet Articles
+             s'achète, et les cases mènent alors aux tarifs. */}
+      <ArticleMonth
+        articles={articles.map((article) => ({
+          id: article.id,
+          title: article.title,
+          status: article.status,
+          scheduledFor: article.scheduledFor,
+        }))}
+        locked={!tierAtLeast(tier, "boost")}
+      />
 
       {/* L'exécution ne vit pas au bas de la page : la barre fixe la porte, et
           elle mène aux deux voies. Rattacher le site — les agents publient et
@@ -257,26 +310,31 @@ export default async function DashboardHomePage() {
   );
 }
 
+/** L'ordre d'urgence des correctifs, pour ne montrer que les plus pressants. */
+const PRIORITY_RANK: Record<Recommendation["priority"], number> = {
+  critique: 0,
+  haute: 1,
+  moyenne: 2,
+  basse: 3,
+};
+
 /**
- * Un bloc de l'accueil, en clair ou sous voile.
+ * Combien de corrections séparent ce site du haut des réponses IA.
  *
- * Le contenu est écrit une seule fois : c'est le même balisage qui se montre et
- * qui se cache, sinon le voile finirait par promettre autre chose que ce qu'il
- * y a dessous.
+ * Le compte est réel : chaque contrôle raté du diagnostic — structure et
+ * contenu — est une correction à faire, et chaque correctif encore fermé en est
+ * une autre. C'est le seul chiffre du voile qui reste en clair, et il ne doit
+ * donc rien à une estimation.
+ *
+ * Il est ensuite ramené dans la fourchette annoncée sur la barre d'appel : un
+ * site déjà propre n'a pas de quoi remplir une passe, et un site en ruine en
+ * afficherait quarante, ce qui décourage au lieu de vendre.
  */
-function Block({
-  block,
-  open,
-  children,
-}: {
-  block: Parameters<typeof offerForBlock>[0];
-  open: boolean;
-  children: React.ReactNode;
-}) {
-  if (open) return <>{children}</>;
-  return (
-    <TierGate offer={offerForBlock(block)} item={block}>
-      {children}
-    </TierGate>
-  );
+function countPendingFixes(diagnostic: AnalysisDiagnostic, lockedCount: number): number {
+  const failed = [...diagnostic.architecture.checks, ...diagnostic.content.checks].filter(
+    (check) => check.status === "ko" || check.status === "warn",
+  ).length;
+
+  const [min, max] = PENDING_FIXES_RANGE;
+  return Math.min(max, Math.max(min, failed + lockedCount));
 }

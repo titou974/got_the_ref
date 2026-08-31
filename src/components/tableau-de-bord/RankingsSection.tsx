@@ -9,7 +9,7 @@ import { SearchLoader } from "@/components/SearchLoader";
 import { DASHBOARD_ENGINES, type EngineScore } from "@/lib/geo/types";
 import { decoyEngine } from "@/lib/geo/decoy-ranking";
 import { runsEngine, type AccessTier } from "@/constants/access";
-import { TierGate } from "./TierGate";
+import { GatePanel } from "./TierGate";
 
 /**
  * La place du commerce dans les moteurs suivis, et le bouton qui la reprend.
@@ -94,30 +94,32 @@ export function RankingsSection({
         <div className={shown.length === 2 ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
           {shown.map((engine, i) => {
             const open = runsEngine(tier, engine.engine);
-            const card = (
-              <EngineCard
-                engine={open ? engine : decoyEngine(engine, reference)}
-                delay={i * 0.05}
-                compact={shown.length === 2}
-                preview={!open}
-              />
-            );
-            return open ? (
-              <div key={engine.engine}>{card}</div>
-            ) : (
-              // Le logo du moteur est repris net sur le voile : sous le flou,
-              // celui de la carte n'est plus lisible, et l'appel doit dire de
-              // quel moteur il parle avant de dire ce qu'il coûte.
-              <TierGate
-                key={engine.engine}
-                offer="boost"
-                item="rankings"
-                compact
-                logo={ENGINE_LOGOS[engine.engine]}
-                logoAlt={engine.engine}
-              >
-                {card}
-              </TierGate>
+
+            // La carte reste lisible : on doit voir quel moteur a été
+            // interrogé, sur quelles requêtes, et qu'un top 10 existe. Seules
+            // les bandes du classement et la note sont retenues, et l'appel se
+            // pose dessus — pas en pied de carte, où il faudrait faire le lien
+            // soi-même entre le flou du milieu et l'offre du bas. Le logo y est
+            // repris net : sous le flou, celui de la carte n'est plus lisible.
+            return (
+              <div key={engine.engine}>
+                <EngineCard
+                  engine={open ? engine : decoyEngine(engine, reference)}
+                  delay={i * 0.05}
+                  compact={shown.length === 2}
+                  preview={!open}
+                  overlay={
+                    open ? undefined : (
+                      <GatePanel
+                        offer="boost"
+                        item="rankings"
+                        logo={ENGINE_LOGOS[engine.engine]}
+                        logoAlt={engine.engine}
+                      />
+                    )
+                  }
+                />
+              </div>
             );
           })}
         </div>
