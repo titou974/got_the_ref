@@ -6,10 +6,11 @@ import type { TrafficGain } from "@/lib/geo/traffic-gain";
  * Ce que les corrections rapportent, en visites, réparties sur les quatre
  * surfaces qui les envoient.
  *
- * La rangée se lit dans un seul sens : le total d'abord, sur la seule carte
- * sombre de l'écran, puis les quatre parts qui le composent. Le contraste
- * n'est pas décoratif — c'est ce que le client achète en haut, et le détail de
- * la facture en dessous.
+ * La rangée se lit dans un seul sens : le total d'abord, puis les quatre parts
+ * qui le composent. Toutes les cartes sont claires, et le seul aplat sombre de
+ * la rangée est la pastille qui tient le total. C'est ce que le client achète
+ * en haut, le détail en dessous, et une seule tache d'encre pour dire lequel
+ * des deux compte.
  *
  * Les cartes de moteur ne portent pas de pastille de variation. Une pastille
  * verte « +12 % » annonce une mesure comparée à la période précédente, et il
@@ -40,21 +41,26 @@ export async function TrafficGainCards({
   return (
     <section>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {/* Le total, sur toute la largeur : c'est la seule ligne que le client
-            retiendra, et la seule surface sombre de la page. */}
-        <div className="col-span-2 rounded-[28px] bg-obsidian p-5 text-white sm:p-6 lg:col-span-4">
-          <dt className="text-[11px] font-semibold uppercase tracking-wider text-white/60">
+        {/* Le total, sur toute la largeur. La carte reste claire comme les
+            quatre autres : c'est la pastille du chiffre qui porte le sombre.
+            Une surface pleine en primary écrasait le reste de l'écran et
+            faisait du total une bannière ; ramené à sa pastille, il se lit
+            comme le résultat des quatre cartes plutôt que comme une réclame. */}
+        <div className="col-span-2 rounded-[24px] border border-border bg-surface p-5 sm:p-6 lg:col-span-4">
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-steel">
             {title}
           </dt>
-          <dd className="mt-2 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <span className="text-[44px] font-bold leading-none tabular-nums sm:text-[56px]">
-              +{gain.total.toLocaleString("fr-FR")}
-            </span>
-            <span className="text-sm font-medium text-white/60">{t("perMonth")}</span>
-          </dd>
-          <p className="mt-3 max-w-lg text-pretty text-sm leading-relaxed text-white/70">
-            {caption}
-          </p>
+          <div className="mt-2.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+            <dd className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              <span className="rounded-pill bg-obsidian px-3.5 py-1.5 text-[26px] font-bold leading-none tabular-nums text-white sm:text-[30px]">
+                +{gain.total.toLocaleString("fr-FR")}
+              </span>
+              <span className="text-sm font-medium text-muted">{t("perMonth")}</span>
+            </dd>
+            <p className="text-pretty text-sm leading-relaxed text-muted sm:max-w-md sm:text-right">
+              {caption}
+            </p>
+          </div>
         </div>
 
         {gain.engines.map((engine) => (

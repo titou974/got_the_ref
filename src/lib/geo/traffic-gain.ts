@@ -21,9 +21,10 @@ import type { GeoAnalysisResult, Recommendation } from "./types";
  *      Contenu n'en corrige qu'une partie ; l'accueil les couvre toutes.
  *
  * Les valeurs sont arrondies au multiple de cinq, et le total est la somme des
- * valeurs arrondies — pas l'arrondi de la somme. Une carte qui annonce un
- * total que ses quatre parts ne reconstituent pas se fait relire une fois, et
- * plus jamais croire.
+ * valeurs arrondies, pas l'arrondi de la somme. Une carte qui annonce un total
+ * que ses quatre parts ne reconstituent pas se fait relire une fois, et plus
+ * jamais croire. Chaque moteur porte un plancher (`FLOOR_PER_ENGINE`) : le
+ * total ne tombe donc jamais à zéro.
  */
 
 /** Les quatre surfaces qui envoient des visites, dans l'ordre de leur poids. */
@@ -95,9 +96,20 @@ export type TrafficGain = {
   total: number;
 };
 
+/**
+ * Le plancher par moteur, en visites mensuelles.
+ *
+ * Aucune carte ne descend à zéro, et le total non plus. Un site n'est jamais
+ * si bien placé qu'il n'ait plus rien à prendre : les quatre moteurs
+ * réinterrogent leur index en continu, les concurrents bougent, et une note de
+ * 100 sur notre échelle veut dire « rien à corriger aujourd'hui », pas « plus
+ * une visite à gagner ». Annoncer zéro dirait le contraire, et le dirait faux.
+ */
+const FLOOR_PER_ENGINE = 5;
+
 /** Arrondi au multiple de cinq : un chiffre estimé ne se donne pas à l'unité. */
 function roundToFive(value: number): number {
-  return Math.max(0, Math.round(value / 5) * 5);
+  return Math.max(FLOOR_PER_ENGINE, Math.round(value / 5) * 5);
 }
 
 /**
@@ -122,9 +134,7 @@ export function estimateTrafficGain(score: number, coverage = 1): TrafficGain {
       label: GAIN_ENGINE_META[engine].label,
       logo: GAIN_ENGINE_META[engine].logo,
       visits: visits[index],
-      // Sans total, pas de part à afficher : quatre « 0 % » valent mieux qu'une
-      // division par zéro.
-      share: total > 0 ? Math.round((visits[index] / total) * 100) : 0,
+      share: Math.round((visits[index] / total) * 100),
     })),
   };
 }
