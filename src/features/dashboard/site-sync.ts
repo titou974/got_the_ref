@@ -2,6 +2,7 @@ import "server-only";
 
 import * as cheerio from "cheerio";
 import type { StructureFileKind } from "@/lib/geo/structure-files";
+import { SITE_CONNECTORS } from "@/constants/site-platforms";
 import { appPassword, call, shopifyGraphql, wpSite, type Credentials } from "./connectors";
 
 /**
@@ -22,12 +23,25 @@ import { appPassword, call, shopifyGraphql, wpSite, type Credentials } from "./c
  *   clés de Yoast ou de Rank Math quand l'un des deux est installé. Les
  *   fichiers de racine (`/llms.txt`, `/robots.txt`) ne s'écrivent pas par REST :
  *   ils restent manuels, contenu fourni.
+ * - WooCommerce : c'est un WordPress. La boutique ajoute des produits, pas un
+ *   moteur de publication : tout ce qui suit passe par l'API du cœur, et le
+ *   connecteur emprunte donc exactement le même chemin.
  * - Shopify : la boutique est fermée. Les articles de blog passent (voir
  *   `connectors`), les métachamps SEO aussi, mais la racine appartient à
  *   Shopify — `/sitemap.xml` et `/robots.txt` sont générés par la plateforme,
  *   et aucun fichier arbitraire ne peut y être déposé. Les sections du thème
  *   portent le H1 et le premier paragraphe, et leurs clés changent d'un thème à
  *   l'autre : on ne les touche pas au jugé.
+ * - Wix : les articles passent, rien d'autre. Le site est décrit dans l'éditeur
+ *   et non dans une base ouverte : ni la balise title de la page d'accueil, ni
+ *   son H1, ni le balisage de données structurées n'ont de point d'entrée. Tout
+ *   ressort donc en « à faire à la main », mais avec le chemin de menu exact et
+ *   le texte prêt à coller — ce qui est la seule chose utile qu'on puisse en
+ *   dire.
+ * - PrestaShop : le webservice couvre le catalogue et les pages de contenu. Les
+ *   métadonnées de la page d'accueil vivent ailleurs, dans les réglages SEO du
+ *   back-office, et le H1 appartient au thème. Là encore : chemin de menu et
+ *   texte exact.
  *
  * Le rattachement est ouvert aux clients depuis les réglages : ce qui suit part
  * donc vers de vrais sites, sur des hébergements que l'on ne choisit pas. D'où
@@ -518,6 +532,170 @@ async function shopifyStructure(files: StructureFile[]): Promise<SyncStep[]> {
   });
 }
 
+// ── Wix ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Les textes de la page d'accueil chez Wix : tous à la main, tous dits.
+ *
+ * Wix ouvre son blog à une API, jamais ses pages : le contenu d'une page est
+ * une composition d'éditeur, et les réglages SEO d'une page ne sont exposés
+ * nulle part. Rendre ici un « appliqué » serait faux, et un « impossible » sec
+ * serait inutile. Ce qui aide le client tient en deux choses : le chemin exact
+ * dans son tableau de bord, et le texte à coller sans le retaper.
+ */
+function wixOnPage(patch: OnPagePatch): SyncStep[] {
+  const steps: SyncStep[] = [];
+
+  if (patch.title || patch.metaDescription) {
+    steps.push({
+      key: "seoSettings",
+      status: "manual",
+      detail: [
+        "Wix ne laisse pas modifier le référencement d'une page depuis l'extérieur.",
+        "À recopier dans Wix → Marketing et SEO → Paramètres SEO → Page d'accueil → Général :",
+        patch.title ? `titre « ${patch.title} »` : null,
+        patch.metaDescription ? `description « ${patch.metaDescription} »` : null,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+  }
+
+  if (patch.h1 || patch.firstParagraph) {
+    steps.push({
+      key: "content",
+      status: "manual",
+      detail: [
+        "Le H1 et le premier paragraphe sont des blocs de l'éditeur Wix : aucune API ne les atteint.",
+        "À coller dans l'Éditeur Wix, sur la page d'accueil :",
+        patch.h1 ? `H1 « ${patch.h1} »` : null,
+        patch.firstParagraph ? `paragraphe « ${patch.firstParagraph} »` : null,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+  }
+
+  return steps;
+}
+
+/**
+ * Les fichiers de racine chez Wix.
+ *
+ * `/robots.txt` s'amende depuis le tableau de bord — c'est le seul fichier de
+ * racine que Wix confie au propriétaire du site. Pour le reste, le domaine est
+ * servi par Wix : un `/llms.txt` n'y a pas de place, exactement comme chez
+ * Shopify.
+ */
+function wixStructure(files: StructureFile[]): SyncStep[] {
+  return files.map((file) => {
+    if (file.kind === "robotsTxt") {
+      return {
+        key: file.kind,
+        status: "manual" as const,
+        detail:
+          "Wix génère /robots.txt et le laisse amender : Marketing et SEO → Outils SEO → Modifier le fichier robots.txt, puis y reporter les règles fournies.",
+      };
+    }
+    if (file.kind === "llmsTxt") {
+      return {
+        key: file.kind,
+        status: "manual" as const,
+        detail:
+          "Wix ne permet de déposer aucun fichier à la racine du domaine : /llms.txt ne peut pas y être posé. Le contenu reste utile le jour où le site sera servi depuis un hébergement que vous tenez.",
+      };
+    }
+    return {
+      key: file.kind,
+      status: "manual" as const,
+      detail:
+        "Les données structurées se posent page par page : Marketing et SEO → Paramètres SEO → Page d'accueil → Avancé → Balisage de données structurées.",
+    };
+  });
+}
+
+// ── PrestaShop ───────────────────────────────────────────────────────────────
+
+/**
+ * Les textes de la page d'accueil chez PrestaShop.
+ *
+ * Le webservice ouvre le catalogue et les pages de contenu, mais les
+ * métadonnées de l'accueil sont rangées dans les réglages SEO de la boutique,
+ * hors de sa portée. Le H1 et le premier paragraphe, eux, appartiennent au
+ * thème ou au module qui compose la vitrine : les écrire au jugé casserait la
+ * page. Reste le chemin de menu, et le texte exact.
+ */
+function prestashopOnPage(patch: OnPagePatch): SyncStep[] {
+  const steps: SyncStep[] = [];
+
+  if (patch.title || patch.metaDescription) {
+    steps.push({
+      key: "seoSettings",
+      status: "manual",
+      detail: [
+        "Les métadonnées de la page d'accueil ne passent pas par le webservice de PrestaShop.",
+        "À recopier dans Configurer → Paramètres de la boutique → Trafic et SEO → onglet SEO et URL → ligne « index » → Modifier :",
+        patch.title ? `titre « ${patch.title} »` : null,
+        patch.metaDescription ? `description « ${patch.metaDescription} »` : null,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+  }
+
+  if (patch.h1 || patch.firstParagraph) {
+    steps.push({
+      key: "content",
+      status: "manual",
+      detail: [
+        "Le H1 et le premier paragraphe de l'accueil viennent du thème ou d'un module de bloc texte, dont les réglages changent d'un thème à l'autre.",
+        "À coller depuis Design → Thème et logo, ou dans le module qui porte le bandeau d'accueil :",
+        patch.h1 ? `H1 « ${patch.h1} »` : null,
+        patch.firstParagraph ? `paragraphe « ${patch.firstParagraph} »` : null,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+  }
+
+  return steps;
+}
+
+/**
+ * Les fichiers de racine chez PrestaShop.
+ *
+ * La boutique est servie depuis un hébergement que le client tient : tout
+ * fichier peut donc y être déposé, `/llms.txt` compris. `/robots.txt` demande
+ * une précaution, en revanche — PrestaShop sait le régénérer depuis le
+ * back-office, et cette régénération écrase ce qu'on y aurait ajouté.
+ */
+function prestashopStructure(files: StructureFile[]): SyncStep[] {
+  return files.map((file) => {
+    if (file.kind === "robotsTxt") {
+      return {
+        key: file.kind,
+        status: "manual" as const,
+        detail:
+          "PrestaShop régénère /robots.txt depuis Configurer → Paramètres de la boutique → Trafic et SEO, et cette régénération écrase le fichier. Générez-le d'abord, puis ajoutez les règles fournies à la fin par FTP.",
+      };
+    }
+    if (file.kind === "llmsTxt") {
+      return {
+        key: file.kind,
+        status: "manual" as const,
+        detail:
+          "Le webservice de PrestaShop ne dépose pas de fichier. Placez celui-ci à la racine de la boutique par FTP ou depuis le gestionnaire de fichiers de votre hébergeur, avec le contenu fourni.",
+      };
+    }
+    return {
+      key: file.kind,
+      status: "manual" as const,
+      detail:
+        "Les données structurées se posent dans le thème : Design → Thème et logo → Modifier le code, dans le gabarit templates/_partials/head.tpl avant la fermeture de l'en-tête.",
+    };
+  });
+}
+
 // ── Entrées publiques ────────────────────────────────────────────────────────
 
 const UNSUPPORTED: SyncStep[] = [
@@ -529,20 +707,76 @@ const UNSUPPORTED: SyncStep[] = [
   },
 ];
 
+/**
+ * Qui corrige quoi, par plateforme.
+ *
+ * Deux tables plutôt que deux `switch`, pour la même raison que côté
+ * publication : le registre des connecteurs promet au client que telle
+ * plateforme accepte les corrections, et rien ne reliait cette promesse au code
+ * qui la tient. Une plateforme ouverte sans entrée ici retombait sur
+ * `UNSUPPORTED` — un « à faire à la main » générique, servi en silence, là où le
+ * client attendait le chemin de menu et le texte exact.
+ *
+ * WooCommerce partage les fonctions de WordPress : la boutique ajoute des
+ * produits, pas un moteur de publication.
+ */
+const ON_PAGE: Record<
+  string,
+  (credentials: Credentials, patch: OnPagePatch) => Promise<SyncStep[]> | SyncStep[]
+> = {
+  wordpress: wordpressOnPage,
+  woocommerce: wordpressOnPage,
+  shopify: shopifyOnPage,
+  wix: (_credentials, patch) => wixOnPage(patch),
+  prestashop: (_credentials, patch) => prestashopOnPage(patch),
+};
+
+const STRUCTURE: Record<
+  string,
+  (credentials: Credentials, files: StructureFile[]) => Promise<SyncStep[]> | SyncStep[]
+> = {
+  wordpress: wordpressStructure,
+  woocommerce: wordpressStructure,
+  shopify: (_credentials, files) => shopifyStructure(files),
+  wix: (_credentials, files) => wixStructure(files),
+  prestashop: (_credentials, files) => prestashopStructure(files),
+};
+
+/**
+ * Toute plateforme ouverte qui promet les corrections sait-elle les porter ?
+ *
+ * Même sévérité que du côté de la publication : on lève en développement, où
+ * c'est une faute de câblage à corriger tout de suite, et l'on se contente des
+ * journaux en production, où l'exécution retombe sur un « à faire à la main »
+ * générique — pauvre, mais pas mensonger.
+ */
+function assertSyncCoversRegistry(): void {
+  const missing = SITE_CONNECTORS.filter(
+    (connector) =>
+      connector.ready &&
+      connector.capabilities.includes("edit") &&
+      (!ON_PAGE[connector.id] || !STRUCTURE[connector.id]),
+  ).map((connector) => connector.name);
+
+  if (missing.length === 0) return;
+
+  const message =
+    `Connecteurs ouverts aux corrections sans traitement écrit : ${missing.join(", ")}. ` +
+    "Ajoutez-les à ON_PAGE et STRUCTURE dans features/dashboard/site-sync, ou retirez-leur « edit » dans constants/site-platforms.";
+
+  if (process.env.NODE_ENV === "production") console.error(message);
+  else throw new Error(message);
+}
+
+assertSyncCoversRegistry();
+
 export async function applyOnPage(
   platform: string,
   credentials: Credentials,
   patch: OnPagePatch,
 ): Promise<SyncStep[]> {
-  switch (platform) {
-    case "wordpress":
-    case "woocommerce":
-      return wordpressOnPage(credentials, patch);
-    case "shopify":
-      return shopifyOnPage(credentials, patch);
-    default:
-      return UNSUPPORTED;
-  }
+  const handler = ON_PAGE[platform];
+  return handler ? handler(credentials, patch) : UNSUPPORTED;
 }
 
 export async function applyStructure(
@@ -552,13 +786,6 @@ export async function applyStructure(
 ): Promise<SyncStep[]> {
   if (files.length === 0) return [];
 
-  switch (platform) {
-    case "wordpress":
-    case "woocommerce":
-      return wordpressStructure(credentials, files);
-    case "shopify":
-      return shopifyStructure(files);
-    default:
-      return UNSUPPORTED;
-  }
+  const handler = STRUCTURE[platform];
+  return handler ? handler(credentials, files) : UNSUPPORTED;
 }

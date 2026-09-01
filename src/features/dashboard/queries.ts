@@ -21,6 +21,7 @@ import {
 } from "@/constants/access";
 import type { BusinessHint } from "@/lib/geo/loading-prompts";
 import { getAccess } from "@/features/billing/access";
+import { departureFilter } from "./publish-queue";
 
 /**
  * Tout ce que le tableau de bord relit avant d'afficher quoi que ce soit.
@@ -55,6 +56,8 @@ export type SiteLink = {
   capabilities: SiteCapability[];
   connectedAt: Date | null;
   lastError: string | null;
+  /** Le pilote automatique dépose aussi les articles rédigés jamais relus. */
+  autoPublish: boolean;
 };
 
 export type GoogleLinkState = {
@@ -168,6 +171,7 @@ export const getDashboardContext = cache(async function getDashboardContext(
           capabilities: siteLink.capabilities as SiteCapability[],
           connectedAt: siteLink.connectedAt,
           lastError: siteLink.lastError,
+          autoPublish: siteLink.autoPublish,
         }
       : null,
     brandVoice: voice ? { instructions: voice.instructions, banned: voice.banned } : null,
@@ -254,6 +258,73 @@ export const listArticles = cache(async function listArticles(userId: string) {
 
 export async function getArticle(userId: string, id: string) {
   return prisma.article.findFirst({ where: { id, userId } });
+}
+
+/**
+ * Ce que le compte a en attente de départ : le prochain, et combien derrière.
+ *
+ * La question est posée avec la règle de la file elle-même (`departureFilter`),
+ * pas avec une approximation qui lui ressemblerait. Un écran qui annonce « part
+ * mardi » alors que la file ne le prendra jamais est pire qu'un écran muet : le
+ * client attend, ne voit rien venir, et cesse de croire le calendrier.
+ *
+ * `blocked` compte à part les articles validés qui ne partiront pas faute de
+ * rattachement. Ce n'est pas la même conversation : là, il n'y a rien à
+ * attendre, il y a un site à brancher.
+ */
+export type PublishPlan = {
+  next: { id: string; title: string; status: string; scheduledFor: Date } | null;
+  /** Articles qui partiront tout seuls, celui de tête compris. */
+  queued: number;
+  /** Validés et rédigés qui attendent un rattachement pour bouger. */
+  blocked: number;
+  autoPublish: boolean;
+  /** Un site est rattaché et vérifié — sans dire ce qu'il autorise. */
+  linked: boolean;
+  /** Le lien est en place et sait déposer un article. */
+  canPublish: boolean;
+};
+
+export async function getPublishPlan(userId: string): Promise<PublishPlan> {
+  const [link, next, queued, blocked] = await Promise.all([
+    prisma.siteConnection.findUnique({
+      where: { userId },
+      select: { status: true, capabilities: true, autoPublish: true },
+    }),
+    prisma.article.findFirst({
+      where: departureFilter(userId),
+      orderBy: { scheduledFor: "asc" },
+      select: { id: true, title: true, status: true, scheduledFor: true },
+    }),
+    prisma.article.count({ where: departureFilter(userId) }),
+    prisma.article.count({
+      where: {
+        userId,
+        publishedAt: null,
+        body: { not: "" },
+        status: { in: ["approved", "drafted"] },
+        // Le miroir de la règle de départ : ce qui est prêt côté texte mais que
+        // le rattachement laisse à quai. Le filtre est pris sans compte — le
+        // `userId` ci-dessus le porte déjà, et le nier ici retirerait de la
+        // négation la seule condition qui ne doit pas y entrer.
+        NOT: departureFilter(),
+      },
+    }),
+  ]);
+
+  return {
+    // `scheduledFor` est non nul par construction du filtre ; TypeScript ne le
+    // sait pas, et le rétrécir ici évite de traîner un `Date | null` jusqu'aux
+    // écrans qui n'auraient rien à en faire.
+    next: next?.scheduledFor
+      ? { id: next.id, title: next.title, status: next.status, scheduledFor: next.scheduledFor }
+      : null,
+    queued,
+    blocked,
+    autoPublish: link?.autoPublish ?? false,
+    linked: link?.status === "connected",
+    canPublish: link?.status === "connected" && link.capabilities.includes("publish"),
+  };
 }
 
 export async function listProspects(userId: string) {

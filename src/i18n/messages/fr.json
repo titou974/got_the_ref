@@ -1664,6 +1664,36 @@
       "refresh": "Reprendre le relevé",
       "refreshing": "Interrogation des trois moteurs…"
     },
+    "dock": {
+      "eyebrow": "Prochain départ",
+      "queued": "{count, plural, one {# à quai} other {# à quai}}",
+      "inDays": "{count, plural, =0 {aujourd'hui} =1 {demain} other {dans # jours}}",
+      "late": "en retard, part au prochain passage",
+      "publishNow": "Publier maintenant",
+      "publishing": "Publication…",
+      "publishFailed": "La publication a échoué. Ouvrez l'article pour lire ce que le site a répondu.",
+      "schedule": "Planifier",
+      "scheduleDay": "Jour",
+      "scheduleHour": "Heure",
+      "scheduleFixedHour": "Les articles partent à {time}, une fois par jour : choisissez le jour, l'heure est la même pour tous.",
+      "scheduleConfirm": "Enregistrer la date",
+      "scheduleSaving": "Enregistrement…",
+      "scheduleCancel": "Annuler",
+      "open": "Ouvrir l'article",
+      "emptyTitle": "Rien à quai",
+      "emptyBody": "Validez un article rédigé : il partira tout seul à sa date, sans que vous ayez à revenir.",
+      "manualTitle": "Dépôt à la main",
+      "manualBody": "Votre site est rattaché, mais il n'ouvre pas sa rédaction à une API : les articles restent à déposer depuis son éditeur. Ouvrez un article validé, le tableau de bord vous donne le texte et le prompt qui le pose.",
+      "unconnectedTitle": "Aucun site rattaché",
+      "unconnectedBody": "Vos articles sont prêts, il manque la porte. Rattachez votre site et ils partiront à la date prévue.",
+      "unconnectedWaiting": "{count, plural, one {# article attend un site où être déposé.} other {# articles attendent un site où être déposés.}} Rattachez le vôtre et ils partiront à leur date.",
+      "connect": "Rattacher mon site",
+      "autoTitle": "Pilote automatique",
+      "autoOffLabel": "Ce que je valide",
+      "autoOffBody": "Seuls les articles que vous avez validés partent. Les autres attendent votre relecture.",
+      "autoOnLabel": "Tout, dès que c'est écrit",
+      "autoOnBody": "Les articles rédigés partent aussi, sans relecture. Le planning se déroule sans vous."
+    },
     "agenda": {
       "title": "Prochains articles",
       "hint": "Le calendrier tenu par les agents.",
@@ -1823,12 +1853,15 @@
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "approve": "Valider",
-      "publish": "Publier sur mon site",
+      "publishNow": "Publier maintenant",
+      "preparePublish": "Préparer la publication",
+      "schedule": "Planifier",
       "publishing": "Publication…",
       "drop": "Écarter ce sujet",
       "seeOnline": "Voir l'article en ligne",
       "bodyPlaceholder": "Écrivez l'article. Une réponse nette par section, dès la première phrase.",
       "scheduled": "Prévu le {date}",
+      "scheduledAt": "Prévu {date} à {time}",
       "undated": "Sans date de publication",
       "back": "Retour aux articles",
       "status": {
@@ -1868,7 +1901,6 @@
       "words": "{count} mots",
       "unsaved": "Modifications non enregistrées",
       "savedState": "Enregistré",
-      "publishNow": "Publier maintenant",
       "publishPromptTitle": "Prompt de publication",
       "publishPromptHint": "À coller dans votre agent IA ou à envoyer à votre développeur : il contient l'article entier et où le poser.",
       "publishPromptCopy": "Copier le prompt",
@@ -2032,6 +2064,17 @@
             ],
             "caution": "Le site doit être en HTTPS : WordPress désactive les mots de passe d'application sur une connexion en clair. Si le rattachement est refusé alors que le mot de passe est bon, votre hébergeur retire l'en-tête « Authorization » — la directive « CGIPassAuth On » dans le fichier .htaccess le rétablit."
           },
+          "woocommerce": {
+            "steps": [
+              "WooCommerce est une extension de WordPress : le rattachement passe par votre compte WordPress, pas par les réglages de la boutique.",
+              "Connectez-vous à votre site avec un compte administrateur, puis ouvrez « Utilisateurs → Profil ».",
+              "Descendez jusqu'à la section « Mots de passe d'application », saisissez le nom « got_the_ref », puis cliquez sur « Ajouter un nouveau mot de passe d'application ».",
+              "Copiez le mot de passe affiché : WordPress ne le montrera plus. Les espaces qu'il contient sont sans importance.",
+              "Votre identifiant est celui affiché en haut du même écran, sous « Nom d'utilisateur ».",
+              "Collez l'adresse de votre boutique, cet identifiant et ce mot de passe dans les champs ci-dessous."
+            ],
+            "caution": "Le site doit être en HTTPS : WordPress désactive les mots de passe d'application sur une connexion en clair. Attention à ne pas confondre : les clés « Consumer key » et « Consumer secret » de WooCommerce ouvrent le catalogue et les commandes, jamais les articles ni les pages — ce n'est pas ce qu'il faut ici."
+          },
           "shopify": {
             "steps": [
               "Dans l'administration Shopify, ouvrez « Paramètres → Applications et canaux de vente ».",
@@ -2042,6 +2085,28 @@
               "L'adresse de la boutique est celle en « .myshopify.com » (Paramètres → Domaines), pas votre domaine de vente."
             ],
             "caution": "Le champ « Blog visé » est facultatif : sans indication, les articles vont dans le premier blog de la boutique. Une boutique sans aucun blog reste rattachable, mais ses articles resteront à déposer à la main."
+          },
+          "wix": {
+            "steps": [
+              "Ouvrez manage.wix.com, cliquez sur votre compte en haut à droite, puis « Paramètres du compte » → « Clés API ».",
+              "Cliquez sur « Générer une clé API » et nommez-la got_the_ref.",
+              "Dans les autorisations, cochez « Blog » en lecture et en écriture, puis restreignez la clé à ce seul site si Wix vous le propose.",
+              "Copiez la clé affichée : Wix ne la montre qu'une seule fois.",
+              "L'identifiant du site se lit sur la même page, colonne « ID du site » ; à défaut, il apparaît dans l'adresse de votre tableau de bord Wix, juste après « /dashboard/ ».",
+              "Collez cet identifiant et cette clé dans les champs ci-dessous."
+            ],
+            "caution": "Wix demande un forfait payant et un blog déjà ajouté au site pour accepter des articles ; sans blog, le lien reste bon mais les articles resteront à déposer à la main. Les textes de la page d'accueil, eux, ne s'écrivent que dans l'éditeur Wix : le tableau de bord vous rendra le texte exact et le chemin du menu."
+          },
+          "prestashop": {
+            "steps": [
+              "Dans le back-office, ouvrez « Paramètres avancés → Webservice » et passez « Activer le service web » sur Oui.",
+              "Cliquez sur « Ajouter une nouvelle clé webservice », puis sur « Générer » pour obtenir la clé.",
+              "Donnez-lui la description got_the_ref et laissez le statut sur Actif.",
+              "Dans le tableau des permissions, cochez « content_management_system » en Voir, Ajouter et Modifier, et « languages » en Voir.",
+              "Enregistrez, puis copiez la clé : elle reste consultable dans cette même liste.",
+              "Collez l'adresse de la boutique et cette clé dans les champs ci-dessous."
+            ],
+            "caution": "PrestaShop n'a pas de blog : les articles sont déposés en pages de contenu, que vous retrouverez sous « Design → Pages ». Les métadonnées de la page d'accueil se règlent à la main dans « Configurer → Paramètres de la boutique → Trafic et SEO » ; le tableau de bord vous en donnera le texte exact."
           }
         },
         "connect": "Rattacher le site",
@@ -2086,10 +2151,13 @@
             "hint": "Facultatif. Sans indication, les articles vont dans le premier blog de la boutique."
           },
           "siteId": {
-            "label": "Identifiant du site"
+            "label": "Identifiant du site",
+            "placeholder": "4339fba7-b533-4d10-a91b-822d825f29a5",
+            "hint": "Chez Wix : Paramètres du compte → Clés API, colonne « ID du site ». Il apparaît aussi dans l'adresse du tableau de bord, après « /dashboard/ »."
           },
           "apiKey": {
-            "label": "Clé d'API"
+            "label": "Clé d'API",
+            "hint": "Chez Wix : menu du compte → Paramètres du compte → Clés API. Autorisations à cocher : « Blog » en lecture et en écriture."
           },
           "apiToken": {
             "label": "Jeton d'API"
@@ -2098,7 +2166,8 @@
             "label": "Clé d'API Admin"
           },
           "webserviceKey": {
-            "label": "Clé du webservice"
+            "label": "Clé du webservice",
+            "hint": "Dans PrestaShop : Paramètres avancés → Webservice. Permissions à cocher : content_management_system en Voir, Ajouter et Modifier, languages en Voir."
           },
           "webhookUrl": {
             "label": "Webhook de publication",
