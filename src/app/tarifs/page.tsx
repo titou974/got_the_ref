@@ -17,7 +17,6 @@ import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
 import { BOOST, SUBSCRIPTION_PRICE, TRIAL, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
 import { SITE } from "@/constants/site";
-import { getCurrentUser } from "@/lib/auth";
 import { ANONYMOUS_TRIAL_STATE, getTrialState } from "@/features/billing/trial";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -93,15 +92,25 @@ export default async function TarifsPage({ searchParams }: Props) {
   const t = await getTranslations("pricing");
   const tg = await getTranslations("trafficGain");
 
+  // Deux questions posées au même compte, et une seule identification.
+  //
   // L'essai n'est proposé qu'à qui peut encore le prendre : un visiteur sans
   // compte, ou un compte gratuit qui n'a jamais ouvert d'abonnement. Pendant
   // l'essai comme après, la page reprend sa forme habituelle — Coup de Boost en
   // tête, abonnement à son prix dessous — sans reproposer trois jours déjà
   // consommés (cf. `features/billing/trial.ts`).
+  //
+  // Les visites à gagner, elles, ne s'affichent que si elles sont calculées sur
+  // le site du visiteur. Sans session, ou avec un compte dont l'analyse n'a pas
+  // encore tourné, il n'y a rien d'honnête à annoncer : un chiffre de site type
+  // se lirait comme une promesse chiffrée faite à quelqu'un dont on n'a rien lu.
   const user = await getCurrentUser();
-  const { available: trial } = user
-    ? await getTrialState(user.id)
-    : ANONYMOUS_TRIAL_STATE;
+  const [{ available: trial }, analysis] = user
+    ? await Promise.all([
+        getTrialState(user.id),
+        getDashboardContext(user.id).then((context) => context.analysis),
+      ])
+    : [ANONYMOUS_TRIAL_STATE, null];
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
