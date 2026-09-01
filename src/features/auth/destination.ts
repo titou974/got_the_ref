@@ -23,7 +23,12 @@ import { ROUTES, safeNextPath } from "@/constants/routes";
  *
  * Le `suite` (la page visée avant l'identification) n'est honoré qu'une fois
  * l'accueil terminé : y renvoyer un compte qui n'a pas encore donné son site
- * ouvrirait des écrans vides.
+ * ouvrirait des écrans vides. Et il ne l'est **pas** pour un compte neuf, même
+ * s'il désigne un chemin valable : les formulaires d'identification portent tous
+ * un `suite` par défaut — le tableau de bord —, et l'honorer sautait par-dessus
+ * les tarifs pour déposer l'inscrit sur un tableau de bord vide, qui le
+ * renvoyait aussitôt au questionnaire d'accueil. L'essai de trois jours ne lui
+ * était jamais proposé.
  */
 export async function resolveAuthDestination(
   userId: string,
@@ -40,5 +45,5 @@ export async function resolveAuthDestination(
   if (profile?.completedAt) return safeNextPath(requested, ROUTES.dashboard);
   if (profile || subscription) return ROUTES.onboarding;
 
-  return safeNextPath(requested, ROUTES.pricing);
+  return ROUTES.pricing;
 }
