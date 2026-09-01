@@ -33,7 +33,14 @@ export default async function ContenuPage() {
     getTranslations("trafficGain"),
   ]);
 
-  if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
+  if (!context.analysis)
+    return (
+      <PreparingAnalysis
+        tier={context.tier}
+        siteUrl={context.siteUrl ?? context.domain}
+        isPhysical={context.isPhysical}
+      />
+    );
 
   const analysis = context.analysis;
 

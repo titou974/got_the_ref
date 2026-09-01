@@ -25,7 +25,14 @@ export default async function GoogleMapsPage() {
   if (!context.isPhysical) notFound();
 
   const t = await getTranslations("dashboard.maps");
-  if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
+  if (!context.analysis)
+    return (
+      <PreparingAnalysis
+        tier={context.tier}
+        siteUrl={context.siteUrl ?? context.domain}
+        isPhysical={context.isPhysical}
+      />
+    );
 
   const analysis = context.analysis;
   const coherence = analysis.mapsCoherence ?? null;

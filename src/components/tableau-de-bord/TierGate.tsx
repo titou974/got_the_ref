@@ -115,7 +115,7 @@ export function TierGate({
  * un client clique sur ce qu'il veut voir, pas sur le nom d'un forfait. Le
  * badge, lui, garde le nom de l'offre, puisqu'il faut bien dire ce qui s'achète.
  */
-function GateBar({
+export function GateBar({
   offer,
   item,
   logo,

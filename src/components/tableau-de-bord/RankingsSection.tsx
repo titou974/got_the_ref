@@ -40,9 +40,18 @@ import { GatePanel } from "./TierGate";
 export function RankingsSection({
   engines,
   tier,
+  canRefresh = true,
 }: {
   engines: EngineScore[];
   tier: AccessTier;
+  /**
+   * Reprendre le relevé écrit en base : réservé à qui a un compte.
+   *
+   * L'aperçu public d'une analyse affiche les mêmes cartes, mais il n'y a rien à
+   * rafraîchir — l'analyse n'appartient à personne, et l'action serveur refuse
+   * un visiteur anonyme. Un bouton qui ne peut qu'échouer ne se montre pas.
+   */
+  canRefresh?: boolean;
 }) {
   const t = useTranslations("analysisReport.results");
   const tr = useTranslations("dashboard.rankings");
@@ -70,19 +79,21 @@ export function RankingsSection({
               question posée en son nom. */}
           <p className="mt-0.5 max-w-2xl text-sm text-muted">{t("engineScoresSubtitle")}</p>
         </div>
-        <span className="flex flex-col items-end gap-1">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => execute({})}
-            className="inline-flex cursor-pointer items-center rounded-pill border border-graphite px-4 py-2 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist disabled:opacity-60"
-          >
-            {isPending ? tr("refreshing") : tr("refresh")}
-          </button>
-          {result.serverError ? (
-            <span className="max-w-xs text-right text-xs text-danger">{result.serverError}</span>
-          ) : null}
-        </span>
+        {canRefresh ? (
+          <span className="flex flex-col items-end gap-1">
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => execute({})}
+              className="inline-flex cursor-pointer items-center rounded-pill border border-graphite px-4 py-2 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist disabled:opacity-60"
+            >
+              {isPending ? tr("refreshing") : tr("refresh")}
+            </button>
+            {result.serverError ? (
+              <span className="max-w-xs text-right text-xs text-danger">{result.serverError}</span>
+            ) : null}
+          </span>
+        ) : null}
       </div>
 
       {isPending ? (

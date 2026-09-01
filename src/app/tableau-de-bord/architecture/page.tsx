@@ -30,7 +30,14 @@ export default async function ArchitecturePage() {
   const t = await getTranslations("dashboard.architecture");
   const ta = await getTranslations("analysisReport");
 
-  if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
+  if (!context.analysis)
+    return (
+      <PreparingAnalysis
+        tier={context.tier}
+        siteUrl={context.siteUrl ?? context.domain}
+        isPhysical={context.isPhysical}
+      />
+    );
 
   const analysis = context.analysis;
   const diagnostic = buildDiagnostic(analysis);

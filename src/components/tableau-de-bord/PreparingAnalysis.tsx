@@ -10,7 +10,8 @@ import {
 } from "@/features/dashboard/actions";
 import { draftsSeedArticles, type AccessTier } from "@/constants/access";
 import { Card } from "./Card";
-import { AiKeysAnimation } from "./AiKeysAnimation";
+import { AiKeysAnimation } from "@/components/AiKeysAnimation";
+import { useNicheQuestions } from "@/components/useNicheQuestions";
 
 /**
  * L'analyse lancée à la première ouverture du tableau de bord — et rejouée le
@@ -63,8 +64,22 @@ function ease(from: number, to: number, elapsed: number, tau: number): number {
   return from + (to - from) * (1 - Math.exp(-elapsed / tau));
 }
 
-export function PreparingAnalysis({ tier = "free" }: { tier?: AccessTier }) {
+export function PreparingAnalysis({
+  tier = "free",
+  siteUrl = null,
+  isPhysical = true,
+}: {
+  tier?: AccessTier;
+  /**
+   * Le site du client, pour que les questions tapées sous ses yeux soient les
+   * siennes. Absent — fiche d'accueil incomplète —, le clavier tape ses
+   * questions d'attente, ce qui reste préférable à un écran figé.
+   */
+  siteUrl?: string | null;
+  isPhysical?: boolean;
+}) {
   const t = useTranslations("dashboard.preparing");
+  const { questions, niche } = useNicheQuestions(siteUrl, isPhysical ? "physical" : "online");
   // Le texte de la seconde passe annonce ce qui part vraiment : sur un compte
   // gratuit, des sujets planifiés et rien de rédigé. Promettre trois brouillons
   // à qui n'en recevra aucun serait le seul vrai mensonge de cet écran.
@@ -190,7 +205,7 @@ export function PreparingAnalysis({ tier = "free" }: { tier?: AccessTier }) {
         </div>
       </div>
 
-      <AiKeysAnimation />
+      <AiKeysAnimation questions={questions} niche={niche} />
     </div>
   );
 }

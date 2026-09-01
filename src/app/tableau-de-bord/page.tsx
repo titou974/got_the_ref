@@ -6,9 +6,9 @@ import {
 } from "@/features/dashboard/queries";
 import { fetchAiTraffic } from "@/features/dashboard/ga4";
 import { buildDemoAiTraffic } from "@/features/dashboard/demoTraffic";
-import { buildDiagnostic, type AnalysisDiagnostic } from "@/lib/geo/diagnostic";
+import { buildDiagnostic } from "@/lib/geo/diagnostic";
+import { buildRecommendationPlan } from "@/features/dashboard/plan";
 import { scoreLabel } from "@/lib/score";
-import type { Recommendation } from "@/lib/geo/types";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
@@ -22,15 +22,11 @@ import { PaidReportCard } from "@/components/dashboard/PaidReportCard";
 import { Recommendations } from "@/components/geo/Recommendations";
 import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
 import { totalGainFor } from "@/lib/geo/traffic-gain";
-import { GatePanel, TierGate } from "@/components/tableau-de-bord/TierGate";
+import { GateBar, GatePanel, TierGate } from "@/components/tableau-de-bord/TierGate";
 import {
-  FREE_RECOMMENDATION_LIMIT,
-  PENDING_FIXES_RANGE,
-  VEILED_RECOMMENDATION_PREVIEW,
   analysisNeedsUpgrade,
   canSee,
   offerForBlock,
-  seesRecommendation,
   tierAtLeast,
 } from "@/constants/access";
 
@@ -80,7 +76,13 @@ export default async function DashboardHomePage() {
   // d'attente que la mise en route — même barre, même animation : le client
   // reconnaît ce qu'il regarde, et il n'a rien à cliquer.
   if (!context.analysis || analysisNeedsUpgrade(context.analysis.accessTier, context.tier)) {
-    return <PreparingAnalysis tier={context.tier} />;
+    return (
+      <PreparingAnalysis
+        tier={context.tier}
+        siteUrl={context.siteUrl ?? context.domain}
+        isPhysical={context.isPhysical}
+      />
+    );
   }
 
   const analysis = context.analysis;
@@ -105,27 +107,16 @@ export default async function DashboardHomePage() {
     listArticles(user.id),
   ]);
 
-  // Le plan d'action se coupe en deux sur un compte gratuit : les correctifs de
-  // contenu se lisent — l'onglet qui les exécute est ouvert —, les autres
-  // gardent leur forme sous voile. Les premiers sont bornés : quelques cartes
-  // démontrent, la liste entière remplacerait l'offre.
-  const openRecommendations = analysis.recommendations
-    .filter((r) => seesRecommendation(tier, r.category))
-    .slice(0, sees("recommendations") ? undefined : FREE_RECOMMENDATION_LIMIT);
-  const lockedRecommendations = analysis.recommendations.filter(
-    (r) => !openRecommendations.includes(r),
-  );
-
-  // Sous voile, deux cartes suffisent. Une liste de quinze correctifs floutés
-  // faisait défiler un écran entier de gris avant d'arriver à l'appel : le
-  // client n'y lisait rien de plus qu'en deux cartes, et l'offre arrivait trop
-  // tard. Les deux montrées sont les plus urgentes ; le compte total, lui, est
-  // écrit sur la barre.
-  const veiledRecommendations = [...lockedRecommendations]
-    .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
-    .slice(0, VEILED_RECOMMENDATION_PREVIEW);
-
-  const pendingFixes = countPendingFixes(diagnostic, lockedRecommendations.length);
+  // Le découpage du plan d'action — ce qui se lit, ce qui reste sous voile, et
+  // le compte des corrections — est partagé avec l'aperçu public d'une analyse
+  // (cf. `features/dashboard/plan`) : les deux écrans montrent la même liste et
+  // doivent en annoncer le même compte.
+  const {
+    open: openRecommendations,
+    veiled: veiledRecommendations,
+    locked: lockedRecommendations,
+    pendingFixes,
+  } = buildRecommendationPlan(analysis.recommendations, diagnostic, tier);
 
   const date = new Date(analysis.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -272,12 +263,17 @@ export default async function DashboardHomePage() {
              le navigateur reçoive le même axe que le rendu initial. */}
       <AiTrafficCard
         report={traffic}
-        demo={buildDemoAiTraffic()}
+        demo={buildDemoAiTraffic(context.domain ?? analysis.domain)}
         domain={context.domain ?? analysis.domain}
         veiled={!sees("traffic")}
         overlay={
           sees("traffic") ? undefined : (
             <GatePanel offer={offerForBlock("traffic")} item="traffic" />
+          )
+        }
+        offerCall={
+          sees("traffic") ? undefined : (
+            <GateBar offer={offerForBlock("traffic")} item="traffic" />
           )
         }
       />
@@ -307,33 +303,4 @@ export default async function DashboardHomePage() {
       />
     </>
   );
-}
-
-/** L'ordre d'urgence des correctifs, pour ne montrer que les plus pressants. */
-const PRIORITY_RANK: Record<Recommendation["priority"], number> = {
-  critique: 0,
-  haute: 1,
-  moyenne: 2,
-  basse: 3,
-};
-
-/**
- * Combien de corrections séparent ce site du haut des réponses IA.
- *
- * Le compte est réel : chaque contrôle raté du diagnostic — structure et
- * contenu — est une correction à faire, et chaque correctif encore fermé en est
- * une autre. C'est le seul chiffre du voile qui reste en clair, et il ne doit
- * donc rien à une estimation.
- *
- * Il est ensuite ramené dans la fourchette annoncée sur la barre d'appel : un
- * site déjà propre n'a pas de quoi remplir une passe, et un site en ruine en
- * afficherait quarante, ce qui décourage au lieu de vendre.
- */
-function countPendingFixes(diagnostic: AnalysisDiagnostic, lockedCount: number): number {
-  const failed = [...diagnostic.architecture.checks, ...diagnostic.content.checks].filter(
-    (check) => check.status === "ko" || check.status === "warn",
-  ).length;
-
-  const [min, max] = PENDING_FIXES_RANGE;
-  return Math.min(max, Math.max(min, failed + lockedCount));
 }

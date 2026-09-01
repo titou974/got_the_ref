@@ -26,7 +26,14 @@ export default async function PresencePage() {
   ]);
   const t = await getTranslations("dashboard.presence");
 
-  if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
+  if (!context.analysis)
+    return (
+      <PreparingAnalysis
+        tier={context.tier}
+        siteUrl={context.siteUrl ?? context.domain}
+        isPhysical={context.isPhysical}
+      />
+    );
 
   const analysis = context.analysis;
   const presence = analysis.webPresence;

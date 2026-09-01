@@ -10,7 +10,6 @@ import {
   type DemoEngine,
   type DemoEngineSummary,
 } from "@/features/dashboard/demoTraffic";
-import { Obscured, Redacted } from "@/components/dashboard/LockedContent";
 import { useIsCompact } from "@/lib/useIsCompact";
 import { cx } from "@/lib/utils";
 import { Card, CardTitle, Delta } from "./Card";
@@ -54,24 +53,26 @@ export function AiTrafficDemoCard({
   demo,
   domain,
   veiled = false,
-  overlay,
+  offerCall,
 }: {
   demo: DemoAiTraffic;
   domain: string | null;
   /**
    * La carte est posée sous une offre qui ne l'ouvre pas encore.
    *
-   * Elle garde alors tout ce qui la rend lisible — le titre, la barre de
-   * période, les trois onglets avec leurs logos, l'axe des dates — et ne retient
-   * que deux choses : les totaux, écrits « X », et la courbe, floutée. C'est la
-   * seule part qui répond vraiment à la question posée, et la seule qui
-   * s'achète. L'appel de l'offre, lui, arrive par `overlay` et se pose sur la
-   * courbe : c'est là que le voile se voit, donc là qu'il faut dire comment le
-   * lever.
+   * Elle reste entière et lisible — ces visites sont inventées, il n'y a rien à
+   * retenir derrière un voile. Seul change l'appel posé sous la courbe : celui
+   * de l'offre quand elle ne l'ouvre pas, celui du rattachement Analytics sinon.
    */
   veiled?: boolean;
-  /** L'appel de l'offre, posé par-dessus la courbe floutée. */
-  overlay?: React.ReactNode;
+  /**
+   * L'appel de l'offre, rendu **en flux** sous la courbe.
+   *
+   * Il attend donc une barre (`GateBar`), pas un panneau posé en absolu
+   * (`GatePanel`) : celui-ci se cale sur son parent positionné et, dans un
+   * conteneur en flux, il irait se coller au premier ancêtre `relative` venu.
+   */
+  offerCall?: React.ReactNode;
 }) {
   const t = useTranslations("dashboard.traffic");
   const compact = useIsCompact();
@@ -98,77 +99,67 @@ export function AiTrafficDemoCard({
         }
       />
 
-      {/* Sans offre pour l'ouvrir, la carte reste entière et seule la courbe se
-          floute : le client lit la période, les trois assistants suivis et la
-          forme de l'écran, sans lire un chiffre. En attente de rattachement,
-          c'est l'inverse — l'exemple est inventé de bout en bout, donc tout
-          passe sous le voile, et le panneau de rattachement se pose dessus. */}
-      <div className="relative isolate mt-4">
-        <Veiled on={!veiled}>
-          <TrafficFilterBar
-            domain={domain}
-            period={period}
-            onPeriodChange={setPeriod}
+      {/* La courbe d'exemple se lit en clair, quel que soit l'état de l'offre.
+          Elle était floutée dans les deux cas — sous une offre qui ne l'ouvre
+          pas, et en attente de rattachement Analytics — et c'était flouter une
+          démonstration : ces visites sont inventées, il n'y a pas de mesure à
+          retenir derrière le voile. Un client qui ne voit qu'un brouillard gris
+          n'apprend pas ce que la carte lui montrera une fois branchée, et c'est
+          pourtant la seule chose que cette carte a à dire.
+          Ce qui reste, et qui suffit : le bandeau « données d'exemple » en tête,
+          et l'appel — rattachement ou offre — posé sous la courbe plutôt que
+          dessus. */}
+      <div className="mt-4">
+        <TrafficFilterBar
+          domain={domain}
+          period={period}
+          onPeriodChange={setPeriod}
+        />
+
+        <div className="mt-5 overflow-hidden rounded-2xl border border-border">
+          <EngineTabs
+            engines={view.engines}
+            selected={selected}
+            onSelect={setSelected}
           />
 
-          <div className="mt-5 overflow-hidden rounded-2xl border border-border">
-            <EngineTabs
-              engines={view.engines}
-              selected={selected}
-              onSelect={setSelected}
-              redacted={veiled}
+          <div className="p-4 sm:p-5">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+              <Delta value={changeOf(engine)} />
+              <span>{t("vsPrevious", { days: view.days })}</span>
+              {/* Sur téléphone, la part passe à la ligne : la puce y ouvrirait
+                  la ligne comme une liste à points. */}
+              <span aria-hidden className="hidden sm:inline">
+                ·
+              </span>
+              <span>
+                {t("share", {
+                  value: share < 1 ? share.toFixed(1) : String(Math.round(share)),
+                })}
+              </span>
+            </p>
+
+            {/* Sur téléphone, la courbe perd ce qui ne tient pas dans la
+                largeur : l'axe des ordonnées et toutes les dates sauf les
+                deux bouts. */}
+            <AreaChart
+              data={view.series}
+              index="date"
+              categories={[engine.name]}
+              colors={[ENGINES[engine.name].color]}
+              valueFormatter={formatVisits}
+              showLegend={false}
+              showYAxis={!compact}
+              startEndOnly={compact}
+              yAxisWidth={44}
+              className={compact ? "mt-4 h-56" : "mt-4 h-72"}
             />
-
-            <div className="p-4 sm:p-5">
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-                {veiled ? null : <Delta value={changeOf(engine)} />}
-                <span>{t("vsPrevious", { days: view.days })}</span>
-                {/* Sur téléphone, la part passe à la ligne : la puce y ouvrirait
-                    la ligne comme une liste à points. */}
-                <span aria-hidden className="hidden sm:inline">
-                  ·
-                </span>
-                <span>
-                  {veiled
-                    ? t("shareMasked")
-                    : t("share", {
-                        value:
-                          share < 1
-                            ? share.toFixed(1)
-                            : String(Math.round(share)),
-                      })}
-                </span>
-              </p>
-
-              {/* Sur téléphone, la courbe perd ce qui ne tient pas dans la
-                  largeur : l'axe des ordonnées et toutes les dates sauf les
-                  deux bouts. */}
-              {/* L'appel se pose sur la courbe, la seule part retenue : le
-                  titre, la période et les onglets restent lisibles au-dessus.
-                  La hauteur minimale lui garde sa place : sur un téléphone, la
-                  courbe fait 224 px et le panneau y serait à l'étroit. */}
-              <div className={`relative isolate ${veiled ? "min-h-[17rem]" : ""}`}>
-                <Veiled on={veiled}>
-                  <AreaChart
-                    data={view.series}
-                    index="date"
-                    categories={[engine.name]}
-                    colors={[ENGINES[engine.name].color]}
-                    valueFormatter={formatVisits}
-                    showLegend={false}
-                    showYAxis={!compact}
-                    startEndOnly={compact}
-                    yAxisWidth={44}
-                    className={compact ? "mt-4 h-56" : "mt-4 h-72"}
-                  />
-                </Veiled>
-                {veiled ? overlay : null}
-              </div>
-            </div>
           </div>
-        </Veiled>
+        </div>
 
-        {veiled ? null : <ConnectOverlay />}
+        {/* L'appel, sous la courbe. Sous une offre qui n'ouvre pas encore le
+            trafic, c'est celui de l'offre ; sinon, c'est le rattachement. */}
+        <div className="mt-4">{veiled ? offerCall : <ConnectPanel />}</div>
       </div>
 
       <p className="mt-4 text-xs text-ash">{t("geminiNote")}</p>
@@ -176,14 +167,12 @@ export function AiTrafficDemoCard({
   );
 }
 
-/** Floute son contenu, ou le laisse tel quel. Deux états, un seul balisage. */
-function Veiled({ on, children }: { on: boolean; children: React.ReactNode }) {
-  if (!on) return <>{children}</>;
-  return <Obscured>{children}</Obscured>;
-}
-
 /**
- * Le voile posé sur l'exemple : ce qu'il faudra rattacher, et quand.
+ * Ce qu'il faudra rattacher pour que la courbe devienne une mesure.
+ *
+ * Le panneau se pose sous la courbe et non plus dessus : la courbe d'exemple se
+ * lit désormais en clair, et un calque posé par-dessus la recouvrirait aussi
+ * sûrement que le flou qu'il remplace.
  *
  * Les deux boutons sont désactivés et le disent — ni l'un ni l'autre n'ouvre
  * quoi que ce soit aujourd'hui. Un bouton actif qui mènerait à un écran vide
@@ -193,22 +182,20 @@ function Veiled({ on, children }: { on: boolean; children: React.ReactNode }) {
  * mesure sur un site qui n'en a pas. Les deux sont là parce que les clients
  * arrivent avec l'un ou l'autre, rarement les deux.
  */
-function ConnectOverlay() {
+function ConnectPanel() {
   const t = useTranslations("dashboard.traffic");
 
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-3xl border border-fog bg-snow/95 p-5 text-center shadow-[var(--shadow-md)] backdrop-blur-sm">
-        <span className="inline-flex items-center rounded-pill bg-mist px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-steel">
-          {t("locked.badge")}
-        </span>
+    <div className="rounded-3xl border border-fog bg-snow p-5 text-center">
+      <span className="inline-flex items-center rounded-pill bg-mist px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-steel">
+        {t("locked.badge")}
+      </span>
 
-        <p className="mt-3 font-semibold">{t("locked.title")}</p>
+      <p className="mt-3 font-semibold">{t("locked.title")}</p>
 
-        <div className="mt-4 flex flex-col gap-2">
-          <ConnectButton label={t("locked.analytics")} />
-          <ConnectButton label={t("locked.tagManager")} />
-        </div>
+      <div className="mx-auto mt-4 flex max-w-sm flex-col gap-2">
+        <ConnectButton label={t("locked.analytics")} />
+        <ConnectButton label={t("locked.tagManager")} />
       </div>
     </div>
   );
@@ -269,13 +256,10 @@ function EngineTabs({
   engines,
   selected,
   onSelect,
-  redacted = false,
 }: {
   engines: DemoEngineSummary[];
   selected: DemoEngine;
   onSelect: (engine: DemoEngine) => void;
-  /** Le total de chaque assistant est retenu : « X » prend sa place. */
-  redacted?: boolean;
 }) {
   const move = (step: number) => {
     const index = engines.findIndex((item) => item.name === selected);
@@ -332,11 +316,7 @@ function EngineTabs({
               </span>
             </span>
             <span className="mt-1 block text-xl font-bold tabular-nums sm:text-2xl">
-              {redacted ? (
-                <Redacted label={`visites depuis ${item.name}, masquées`} />
-              ) : (
-                formatVisits(item.sessions)
-              )}
+              {formatVisits(item.sessions)}
             </span>
           </button>
         );

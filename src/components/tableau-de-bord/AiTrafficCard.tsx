@@ -23,24 +23,36 @@ export function AiTrafficCard({
   domain,
   veiled = false,
   overlay,
+  offerCall,
 }: {
   report: AiTrafficReport | null;
   demo: DemoAiTraffic;
   /** Le domaine suivi, montré dans la barre de filtres de la carte d'exemple. */
   domain: string | null;
   /**
-   * L'offre du compte n'ouvre pas encore le trafic : la carte reste entière,
-   * les totaux s'écrivent « X » et la courbe se floute.
+   * L'offre du compte n'ouvre pas encore le trafic : sur une mesure réelle, les
+   * totaux s'écrivent « X » et la courbe se floute.
    */
   veiled?: boolean;
-  /** L'appel de l'offre, posé par-dessus la courbe floutée. */
+  /**
+   * L'appel de l'offre posé **par-dessus** la courbe floutée d'une mesure
+   * réelle. Attend un `GatePanel`, qui se cale sur le parent positionné.
+   */
   overlay?: React.ReactNode;
+  /**
+   * L'appel de l'offre posé **en flux** sous la courbe d'exemple, qui n'est
+   * plus floutée. Attend une `GateBar`.
+   *
+   * Deux emplacements parce qu'il y a deux situations : une mesure retenue se
+   * couvre là où elle se lit, un exemple inventé n'a rien à couvrir.
+   */
+  offerCall?: React.ReactNode;
 }) {
   const t = useTranslations("dashboard.traffic");
 
   if (!report) {
     return (
-      <AiTrafficDemoCard demo={demo} domain={domain} veiled={veiled} overlay={overlay} />
+      <AiTrafficDemoCard demo={demo} domain={domain} veiled={veiled} offerCall={offerCall} />
     );
   }
 

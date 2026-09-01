@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 
 /**
  * Ce que l'audit est en train de faire, montré plutôt que décrit : quelqu'un
@@ -18,10 +19,24 @@ import { motion } from "framer-motion";
  */
 
 const ENGINES = [
-  { name: "ChatGPT", logo: "/logoopenai1.png", query: "meilleur restaurant près de moi" },
-  { name: "Perplexity", logo: "/logoperplexity1.png", query: "qui recommandes-tu dans ma ville" },
-  { name: "Gemini", logo: "/logogemini1.webp", query: "quelle adresse choisir ce soir" },
+  { name: "ChatGPT", logo: "/logoopenai1.png" },
+  { name: "Perplexity", logo: "/logoperplexity1.png" },
+  { name: "Gemini", logo: "/logogemini1.webp" },
 ] as const;
+
+/**
+ * Ce qui s'écrit quand personne n'a encore dit de quel commerce il s'agit.
+ *
+ * Les vraies questions sont écrites par DeepSeek Flash à partir de la niche
+ * détectée (cf. `lib/geo/niche-questions`) et descendent en props. Elles
+ * arrivent après le montage — l'appel part en même temps que l'analyse — et
+ * ces trois-là occupent l'écran d'ici là, plutôt qu'un clavier muet.
+ */
+const PLACEHOLDER_QUERIES = [
+  "meilleur restaurant près de moi",
+  "qui recommandes-tu dans ma ville",
+  "quelle adresse choisir ce soir",
+];
 
 /** Trois rangées, disposition française. Assez pour qu'on y reconnaisse un clavier. */
 const ROWS = [
@@ -35,12 +50,44 @@ const TYPE_MS = 55;
 /** Le temps de lire la question une fois écrite, avant de passer au moteur suivant. */
 const HOLD_MS = 1600;
 
-export function AiKeysAnimation() {
+export function AiKeysAnimation({
+  questions,
+  niche,
+}: {
+  /**
+   * Les questions à taper, une par moteur, écrites pour le commerce analysé.
+   * Absentes ou incomplètes, les questions d'attente prennent le relais.
+   */
+  questions?: string[];
+  /** La niche détectée, annoncée sous le clavier quand on la connaît. */
+  niche?: string | null;
+} = {}) {
+  const t = useTranslations("aiKeys");
   const [engine, setEngine] = useState(0);
   const [typed, setTyped] = useState(0);
 
   const current = ENGINES[engine];
-  const full = current.query;
+  const queries = ENGINES.map(
+    (_, index) => questions?.[index]?.trim() || PLACEHOLDER_QUERIES[index],
+  );
+  const full = queries[engine];
+
+  // Les questions arrivent après le montage : la frappe en cours repart du
+  // début sur la nouvelle question, plutôt que de continuer à écrire l'ancienne
+  // et d'afficher un mélange des deux.
+  //
+  // L'ajustement se fait pendant le rendu, pas dans un effet. Remis à zéro dans
+  // un effet, l'écran peignait d'abord une frappe à cheval sur les deux
+  // questions — l'ancien curseur au milieu du nouveau texte — avant de se
+  // corriger à la passe suivante. React réexécute ce rendu-ci avant de peindre
+  // quoi que ce soit, et le mélange ne s'affiche jamais.
+  const signature = queries.join("|");
+  const [renderedSignature, setRenderedSignature] = useState(signature);
+  if (renderedSignature !== signature) {
+    setRenderedSignature(signature);
+    setEngine(0);
+    setTyped(0);
+  }
 
   useEffect(() => {
     if (typed < full.length) {
@@ -142,6 +189,15 @@ export function AiKeysAnimation() {
           className="mt-0.5 h-7 w-32 rounded-md border border-fog sm:h-8 sm:w-40"
         />
       </div>
+
+      {/* La niche, une fois détectée. C'est elle qui explique pourquoi ces
+          questions-là s'écrivent et pas d'autres : sans elle, le visiteur voit
+          trois requêtes tomber sans savoir d'où elles sortent. */}
+      {niche ? (
+        <p className="mt-5 text-center text-xs text-muted">
+          {t("niche")} <span className="font-medium text-text">{niche}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

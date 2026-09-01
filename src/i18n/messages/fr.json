@@ -485,6 +485,9 @@
     "phaseSearch": "Analyse du référencement Google",
     "phaseRocket": "Génération des recommandations"
   },
+  "aiKeys": {
+    "niche": "Niche détectée :"
+  },
   "legal": {
     "lastUpdated": "Dernière mise à jour : {date}"
   },

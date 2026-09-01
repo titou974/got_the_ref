@@ -387,6 +387,8 @@ export function UrlAnalyzeForm({
           {analyzing && (
             <AnalyzingOverlay
               domain={extractDomain(url)}
+              url={url.trim()}
+              mode={mode}
               onComplete={() => {
                 animDoneRef.current = true;
                 maybeNavigate();
