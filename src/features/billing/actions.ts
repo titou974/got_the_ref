@@ -5,7 +5,7 @@ import { actionClient, authActionClient } from "@/lib/safe-action";
 import { prisma } from "@/lib/prisma";
 import { getStripe, getCheckoutMode, resolveBoostPriceId, resolvePriceId } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
-import { type BillingCycle } from "@/constants/plans";
+import { TRIAL, type BillingCycle } from "@/constants/plans";
 import { SITE } from "@/constants/site";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
@@ -14,6 +14,7 @@ import {
   boostCheckoutSchema,
   checkoutSchema,
   subscriptionCheckoutSchema,
+  trialCheckoutSchema,
 } from "./schemas";
 import {
   ANALYSIS_CHECKOUT_KIND,
@@ -147,6 +148,60 @@ export const createAnalysisCheckoutAction = actionClient
  * compte, puis l'espace client. Il n'y a plus d'essai — le compte gratuit tient
  * ce rôle, et il n'a besoin d'aucune carte bancaire.
  */
+/**
+ * Ouverture de l'essai de trois jours sur l'abonnement « Tout-en-un ».
+ *
+ * C'est le même checkout que la souscription, à `trial_period_days` près :
+ * Stripe enregistre la carte, ne débite rien, et prélève le tarif du cycle
+ * choisi au troisième jour si l'essai n'a pas été arrêté avant.
+ *
+ * Ce que l'essai ouvre côté produit n'est pas l'abonnement : le compte reste au
+ * niveau gratuit — voiles compris — jusqu'au premier débit (cf.
+ * `features/billing/access.ts`). L'essai montre le produit, il ne le donne pas.
+ *
+ * Le `kind` est celui de la souscription : au retour de Stripe, les deux se
+ * traitent exactement pareil — un compte à ouvrir, aucun rapport à débloquer.
+ */
+export const createTrialCheckoutAction = actionClient
+  .inputSchema(trialCheckoutSchema)
+  .action(async ({ parsedInput }) => {
+    const user = await getCurrentUser();
+    const stripe = getStripe();
+    const cycle: BillingCycle = parsedInput.cycle;
+    const price = await resolvePriceId("pro", cycle);
+
+    // Lie le paiement au navigateur qui l'ouvre : l'identifiant de session Stripe
+    // transite par l'URL de retour et ne suffit pas à prouver qu'on est le payeur.
+    const claimToken = newClaimToken();
+    await rememberClaim(claimToken);
+
+    const metadata = {
+      kind: SUBSCRIPTION_CHECKOUT_KIND,
+      cycle,
+      [CLAIM_METADATA_KEY]: claimToken,
+      ...(user ? { userId: user.id } : {}),
+    };
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price, quantity: 1 }],
+      ...(user?.stripeCustomerId
+        ? { customer: user.stripeCustomerId }
+        : { customer_email: user?.email }),
+      success_url: `${SITE.url}${ROUTES.checkoutSuccess}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${SITE.url}${ROUTES.pricing}?checkout=cancel`,
+      metadata,
+      subscription_data: { metadata, trial_period_days: TRIAL.days },
+      allow_promotion_codes: true,
+    });
+
+    if (!session.url) {
+      throw new AppError("Le paiement est momentanément indisponible.", "STRIPE_NO_URL", 502);
+    }
+
+    return { url: session.url };
+  });
+
 export const createSubscriptionCheckoutAction = actionClient
   .inputSchema(subscriptionCheckoutSchema)
   .action(async ({ parsedInput }) => {

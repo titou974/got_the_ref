@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { hasActiveSubscription } from "@/constants/plans";
+import { hasPaidSubscription } from "@/constants/plans";
 import {
   boostArticlesOpenUntil,
   canOpen,
@@ -19,6 +19,11 @@ import { AppError } from "@/lib/errors";
  * le Coup de Boost et la démonstration, tous deux sans abonnement Stripe) et
  * l'abonnement lui-même. La règle, elle, est ailleurs — `resolveTier` est une
  * fonction pure, celle que les cartes tarifaires et la barre latérale relisent.
+ *
+ * Seul un abonnement **payé** compte ici. Un abonnement en essai existe chez
+ * Stripe, avec sa carte enregistrée, mais n'a rien débité : ces trois jours-là
+ * se regardent au niveau gratuit, voiles compris, et c'est le premier
+ * prélèvement qui ouvre le reste.
  */
 
 export type AccessState = {
@@ -41,7 +46,7 @@ export const getAccess = cache(async function getAccess(userId: string): Promise
 
   const tier = resolveTier({
     plan: user?.plan,
-    subscribed: hasActiveSubscription(subscription),
+    subscribed: hasPaidSubscription(subscription),
     boostGrantedAt: user?.boostGrantedAt,
   });
 

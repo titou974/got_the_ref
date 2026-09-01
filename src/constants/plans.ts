@@ -67,15 +67,23 @@ export const BOOST = {
 } as const;
 
 /**
- * Il n'y a plus d'essai gratuit.
+ * L'essai gratuit de l'abonnement « Tout-en-un ».
  *
- * Ce qui en tenait lieu — regarder le produit avant de payer — est désormais le
- * compte gratuit lui-même : on ouvre un compte, on donne l'adresse de son site,
- * et le tableau de bord s'ouvre avec sa mesure, un classement et une correction
- * de contenu (cf. `constants/access.ts`). Rien à résilier, rien à débiter, et
- * aucune date d'expiration à surveiller — donc plus de `trial_period_days` sur
- * les checkouts Stripe.
+ * Trois jours, ouverts par un checkout Stripe en `trial_period_days` : la carte
+ * est enregistrée, rien n'est débité, et le premier prélèvement tombe au
+ * troisième jour si l'essai n'a pas été arrêté avant.
+ *
+ * Ce que l'essai ouvre, en revanche, n'est pas l'abonnement : pendant ces trois
+ * jours le compte reste au niveau gratuit — sa niche, sa note, un classement et
+ * ses correctifs de contenu, le reste sous voile (cf. `constants/access.ts`).
+ * L'accès complet s'ouvre au premier débit, quand l'abonnement passe `active`.
+ * D'où la distinction entre `hasActiveSubscription` (un abonnement court) et
+ * `hasPaidSubscription` (il est payé) : c'est la seconde qui donne les droits.
+ *
+ * `todayPrice` reste une donnée plutôt qu'un littéral : c'est le montant affiché
+ * en grand sur la carte tarif, face au tarif plein barré.
  */
+export const TRIAL = { days: 3, todayPrice: 0 } as const;
 
 /**
  * Tarif mensuel de l'abonnement engagé à l'année. Toujours affiché **par mois**
@@ -258,14 +266,23 @@ export function stripePriceEnvValue(
   return process.env[stripePriceEnvName(plan, cycle)];
 }
 
-/** Statuts d'abonnement Stripe considérés comme actifs. */
+/** Statuts d'abonnement Stripe considérés comme en cours, essai compris. */
 export const ACTIVE_SUBSCRIPTION_STATUSES = ["active", "trialing"] as const;
 
 /**
- * L'abonnement donne-t-il accès au tableau de bord ?
+ * Statuts d'un abonnement réellement payé.
  *
- * Abonné ou en essai, c'est oui — et c'est la même question partout : la home
- * y décide du libellé de son bouton, l'authentification de sa destination.
+ * L'essai en est exclu à dessein : la carte est enregistrée, mais rien n'a
+ * encore été débité et l'accès reste celui du compte gratuit.
+ */
+export const PAID_SUBSCRIPTION_STATUSES = ["active"] as const;
+
+/**
+ * Un abonnement court-il sur ce compte, payé ou en essai ?
+ *
+ * C'est la question de la navigation — le libellé du bouton de la home, la
+ * destination d'après-connexion — et celle de l'offre d'essai : on ne repropose
+ * pas trois jours gratuits à qui en a déjà ouvert un.
  */
 export function hasActiveSubscription(
   subscription: { status: string } | null | undefined,
@@ -274,4 +291,25 @@ export function hasActiveSubscription(
     subscription != null &&
     (ACTIVE_SUBSCRIPTION_STATUSES as readonly string[]).includes(subscription.status)
   );
+}
+
+/**
+ * L'abonnement est-il payé ?
+ *
+ * C'est cette question-là qui ouvre les droits (cf. `resolveTier`) : pendant
+ * l'essai, l'abonnement existe chez Stripe mais n'a rien débité, et le compte
+ * garde son niveau gratuit.
+ */
+export function hasPaidSubscription(
+  subscription: { status: string } | null | undefined,
+): boolean {
+  return (
+    subscription != null &&
+    (PAID_SUBSCRIPTION_STATUSES as readonly string[]).includes(subscription.status)
+  );
+}
+
+/** L'abonnement est-il dans ses trois jours d'essai ? */
+export function isTrialing(subscription: { status: string } | null | undefined): boolean {
+  return subscription?.status === "trialing";
 }

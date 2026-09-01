@@ -13,11 +13,13 @@ import { ROUTES, safeNextPath } from "@/constants/routes";
  * et atterrissait sur la grille tarifaire, comme un inconnu.
  *
  * D'où cet arbitrage, posé une fois et valable pour tout le monde : un compte
- * dont l'accueil est fait rentre chez lui, les autres passent par l'accueil.
- * Plus personne n'est renvoyé vers les tarifs à l'identification — l'accueil ne
- * demande plus qu'une adresse de site, et le tableau de bord qui s'ouvre
- * derrière montre déjà ce qu'il y a à acheter. Vendre avant d'avoir montré,
- * c'était le réflexe de l'époque où le produit commençait au paiement.
+ * dont l'accueil est fait rentre chez lui, un compte entamé reprend son accueil,
+ * et un compte qui vient de naître passe par les tarifs — c'est là que se prend
+ * l'essai de trois jours, et c'est l'étape qui manquerait au parcours si
+ * l'inscription déposait directement dans le tunnel d'accueil.
+ *
+ * Un compte qui a déjà ouvert un essai ou un abonnement ne repasse pas par les
+ * tarifs : sa décision est prise, il continue son accueil.
  *
  * Le `suite` (la page visée avant l'identification) n'est honoré qu'une fois
  * l'accueil terminé : y renvoyer un compte qui n'a pas encore donné son site
@@ -27,11 +29,16 @@ export async function resolveAuthDestination(
   userId: string,
   requested: unknown,
 ): Promise<string> {
-  const profile = await prisma.onboardingProfile.findUnique({
-    where: { userId },
-    select: { completedAt: true },
-  });
+  const [profile, subscription] = await Promise.all([
+    prisma.onboardingProfile.findUnique({
+      where: { userId },
+      select: { completedAt: true },
+    }),
+    prisma.subscription.findUnique({ where: { userId }, select: { status: true } }),
+  ]);
 
   if (profile?.completedAt) return safeNextPath(requested, ROUTES.dashboard);
-  return ROUTES.onboarding;
+  if (profile || subscription) return ROUTES.onboarding;
+
+  return safeNextPath(requested, ROUTES.pricing);
 }

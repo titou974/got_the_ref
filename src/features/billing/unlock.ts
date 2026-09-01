@@ -2,6 +2,7 @@ import "server-only";
 
 import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
+import { cancelTrialingSubscription } from "./trial";
 
 /** Marqueur porté par les sessions Stripe qui débloquent une analyse. */
 export const ANALYSIS_CHECKOUT_KIND = "analysis_unlock";
@@ -78,6 +79,10 @@ export async function resolveSessionUserId(
  *     semaine de rédaction ;
  *   — l'appel est sans effet sur une session qui n'est pas un Coup de Boost
  *     réglé, ce qui laisse l'appelant l'invoquer sans trier lui-même.
+ *
+ * Un Coup de Boost payé pendant l'essai y met fin : la personne a choisi la
+ * passe unique, elle n'a pas à voir tomber le prélèvement de l'abonnement trois
+ * jours plus tard.
  */
 export async function grantBoostFromSession(
   session: Stripe.Checkout.Session,
@@ -107,6 +112,8 @@ export async function grantBoostFromSession(
       ...(customerId ? { stripeCustomerId: customerId } : {}),
     },
   });
+
+  await cancelTrialingSubscription(userId);
 
   return userId;
 }

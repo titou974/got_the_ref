@@ -5,7 +5,7 @@ import { RotatingWord } from "./RotatingWord";
 import { GoogleMark } from "./GoogleMark";
 import { AiSearchSimulation } from "@/components/AiSearchSimulation";
 import { ROUTES } from "@/constants/routes";
-import { hasActiveSubscription } from "@/constants/plans";
+import { TRIAL, hasActiveSubscription } from "@/constants/plans";
 import { getCurrentUser } from "@/lib/auth";
 
 /**
@@ -98,15 +98,15 @@ export async function HomeHero() {
           {t("subtitle")}
         </p>
 
-        {/* CTA unique. L'inscription précède les tarifs : avec Google branché,
-            ouvrir un compte tient en un geste, et le compte gratuit montre déjà
-            quelque chose — la niche détectée, un classement, une correction de
-            contenu. On vend après avoir montré, plus avant. */}
+        {/* CTA unique : démarrer l'essai. L'inscription précède les tarifs —
+            avec Google branché, ouvrir un compte tient en un geste — et c'est
+            sur les tarifs que les trois jours se prennent, carte enregistrée
+            chez Stripe, rien débité avant la fin. */}
         <Link
           href={home ? ROUTES.dashboard : ROUTES.signUp}
           className="mt-8 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-7 py-4 text-base font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
-          {home ? t("ctaDashboard") : t("cta")}
+          {home ? t("ctaDashboard") : t("cta", { days: TRIAL.days })}
           <svg
             width="18"
             height="18"

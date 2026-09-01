@@ -3,8 +3,14 @@ import "server-only";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getStripe, resolvePriceId } from "@/lib/stripe";
-import { BILLING_CYCLES, PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
+import {
+  ACTIVE_SUBSCRIPTION_STATUSES,
+  BILLING_CYCLES,
+  PAID_PLAN_KEYS,
+  type PaidPlanKey,
+} from "@/constants/plans";
 import { resolveSessionUserId } from "./unlock";
+import { cancelTrialingSubscription } from "./trial";
 
 /**
  * Le rattachement d'un abonnement Stripe à un compte, en un seul endroit.
@@ -40,6 +46,11 @@ async function planFromPriceId(priceId: string | undefined): Promise<PaidPlanKey
   return null;
 }
 
+/** Cet abonnement court-il encore, payé ou en essai ? */
+function isLive(status: string): boolean {
+  return (ACTIVE_SUBSCRIPTION_STATUSES as readonly string[]).includes(status);
+}
+
 /** L'offre déjà portée par le compte est-elle un abonnement payant ? */
 function isPaidPlan(plan: string | null | undefined): plan is PaidPlanKey {
   return plan != null && (PAID_PLAN_KEYS as readonly string[]).includes(plan);
@@ -67,8 +78,34 @@ export async function syncSubscription(
 
   const priceId = sub.items.data[0]?.price.id;
   const plan = await planFromPriceId(priceId);
-  const active = sub.status === "active" || sub.status === "trialing";
+  // Payé, et pas seulement en cours : l'essai enregistre une carte sans rien
+  // débiter, et ne doit donc pas faire monter l'offre du compte. Ces trois
+  // jours-là se regardent au niveau gratuit (cf. `features/billing/trial.ts`).
+  const paid = sub.status === "active";
   const periodEnd = sub.items.data[0]?.current_period_end;
+
+  // Un compte ne garde qu'une ligne d'abonnement, et un client peut en avoir
+  // deux chez Stripe le temps d'un après-midi : celui qui était en essai, et
+  // celui qu'il vient de payer. Deux précautions, dans cet ordre.
+  const existing = await prisma.subscription.findUnique({
+    where: { userId: resolvedUserId },
+    select: { stripeSubscriptionId: true, status: true },
+  });
+  const otherSubscription =
+    existing?.stripeSubscriptionId != null && existing.stripeSubscriptionId !== sub.id;
+
+  // La première : la résiliation de l'essai revient en webhook, et c'est un
+  // abonnement mort qui écraserait alors celui qui court — le client venait de
+  // payer, il serait retombé gratuit. Un événement venu d'un autre abonnement
+  // que celui enregistré n'a rien à dire tant que ce dernier est en cours.
+  if (otherSubscription && !isLive(sub.status) && isLive(existing.status)) return;
+
+  // La seconde : un abonnement payé pendant l'essai coupe cet essai. Sans ça,
+  // le premier prélèvement de l'essai tomberait au troisième jour chez un
+  // client qui vient déjà de régler son abonnement.
+  if (paid && otherSubscription) {
+    await cancelTrialingSubscription(resolvedUserId, sub.id);
+  }
 
   const record = {
     stripeCustomerId: customerId,
@@ -94,7 +131,7 @@ export async function syncSubscription(
     select: { plan: true, boostGrantedAt: true },
   });
 
-  if (active && !plan) {
+  if (paid && !plan) {
     // Le tarif ne correspond à aucune offre connue : price tourné sans mettre à
     // jour l'env, ou client conservé sur un ancien tarif. L'accès est sauf —
     // `resolveTier` le lit sur la ligne `Subscription` — mais l'offre affichée
@@ -106,7 +143,7 @@ export async function syncSubscription(
   const next =
     current?.plan === "demo"
       ? "demo"
-      : active
+      : paid
         ? (plan ?? (isPaidPlan(current?.plan) ? current.plan : "pro"))
         : current?.boostGrantedAt
           ? "boost"

@@ -2,10 +2,12 @@
 
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { AgentRoster } from "./AgentRoster";
 import { BillingCycleProvider } from "./BillingCycleContext";
 import {
   GUARANTEE_DAYS,
   SUBSCRIPTION_PRICE,
+  TRIAL,
   YEARLY_DISCOUNT_PCT,
   YEARLY_MONTHLY_PRICE,
   type BillingCycle,
@@ -14,7 +16,7 @@ import {
 /** Montant formaté à la française, sans décimales (79 €). */
 const euros = (amount: number) => `${amount.toLocaleString("fr-FR")} €`;
 
-function Check() {
+function Check({ trial }: { trial: boolean }) {
   return (
     <svg
       width="16"
@@ -22,7 +24,7 @@ function Check() {
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden
-      className="mt-0.5 shrink-0 text-obsidian"
+      className={`mt-0.5 shrink-0 ${trial ? "text-white" : "text-obsidian"}`}
     >
       <path
         d="M5 13l4 4L19 7"
@@ -36,26 +38,30 @@ function Check() {
 }
 
 /**
- * L'abonnement « Tout-en-un », en carte claire, sous le Coup de Boost.
+ * L'abonnement « Tout-en-un », dans ses deux états.
  *
- * Elle a perdu deux choses. La surface sombre, passée à la passe unique : c'est
- * elle qu'on met en avant, et deux cartes noires ne mettent rien en avant. Et
- * l'essai gratuit, avec son « 0 € aujourd'hui » posé devant un tarif barré —
- * une mise en scène qui vendait une date d'échéance plutôt qu'un produit. Ce
- * qu'on montre maintenant est le prix qu'on paie : 79 € par mois, ou son tarif
- * remisé si l'on s'engage à l'année.
+ * — `trial` : l'essai de trois jours est encore à prendre. La carte reprend
+ *   alors la surface sombre et la mise en scène du prix qui allait avec — le
+ *   tarif plein barré, le 0 € du jour, l'abonnement à venir en note — parce
+ *   que ce qu'on propose n'est pas un abonnement mais son ouverture gratuite.
+ *   Elle passe en tête des offres, le Coup de Boost la suit en carte claire.
  *
- * L'onglet ne change que ce montant et la ligne de conditions. Il pilote aussi
- * le paiement : le cycle est publié dans le contexte, où le bouton de checkout
- * vient le lire (cf. `BillingCycleProvider`). Le tarif annuel s'affiche
- * **toujours par mois**, jamais en total : c'est la seule unité que le visiteur
- * compare d'un onglet à l'autre.
+ * — sans `trial` : l'essai est passé, en cours, ou n'a jamais été proposé (on
+ *   est déjà client). Il n'y a plus qu'un prix à annoncer, celui qu'on paie :
+ *   79 € par mois, ou son tarif remisé à l'année. La carte redevient claire et
+ *   se lit sous le Coup de Boost, qui reprend le noir.
+ *
+ * Dans les deux cas, l'onglet pilote le paiement : le cycle est publié dans le
+ * contexte, où le bouton de checkout vient le lire (cf. `BillingCycleProvider`).
+ * Le tarif annuel s'affiche **toujours par mois**, jamais en total : c'est la
+ * seule unité que le visiteur compare d'un onglet à l'autre.
  */
 export function PlanCard({
   cta,
   showAgents = true,
   compact = false,
   ctaNote,
+  trial = false,
   className = "",
 }: {
   /** Bouton d'action, rendu par le parent (checkout Stripe ou lien). */
@@ -65,6 +71,8 @@ export function PlanCard({
   compact?: boolean;
   /** Remplace la note sous le bouton (le CTA n'est pas le même partout). */
   ctaNote?: string;
+  /** L'essai de trois jours est proposé : carte sombre, prix du jour à 0 €. */
+  trial?: boolean;
   className?: string;
 }) {
   const t = useTranslations("pricing");
@@ -145,54 +153,114 @@ export function PlanCard({
         </div>
 
         <section
-          className={`flex w-full flex-col rounded-[36px] border border-pebble bg-snow shadow-[var(--shadow-md)] ${
-            compact ? "p-6 pt-7 sm:p-7 sm:pt-8" : "p-6 pt-8 sm:p-9 sm:pt-10"
-          }`}
+          className={`flex w-full flex-col rounded-[36px] shadow-[var(--shadow-md)] ${
+            trial ? "bg-obsidian text-white" : "border border-pebble bg-snow"
+          } ${compact ? "p-6 pt-7 sm:p-7 sm:pt-8" : "p-6 pt-8 sm:p-9 sm:pt-10"}`}
         >
-          <p className="text-xs font-semibold uppercase tracking-wider text-steel">
+          <p
+            className={`text-xs font-semibold uppercase tracking-wider ${
+              trial ? "text-white/50" : "text-steel"
+            }`}
+          >
             {t("plan.eyebrow")}
           </p>
           <h2 className="mt-2 text-2xl font-bold">{t("plan.name")}</h2>
-          <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">{t("plan.tagline")}</p>
-
-          {/* Un seul montant en grand, et c'est celui qu'on paie : le prix du
-              cycle choisi, toujours suivi de son « /mois ». C'est ce suffixe
-              qui dit d'un coup d'œil laquelle des deux offres est un
-              abonnement. */}
-          <div
-            className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${compact ? "mt-4" : "mt-6"}`}
-          >
-            <span
-              className={`font-display font-bold tabular-nums tracking-tight ${
-                compact ? "text-4xl sm:text-5xl" : "text-5xl sm:text-6xl"
-              }`}
-            >
-              {euros(price)}
-            </span>
-            <span className="text-base text-muted">{t("perMonth")}</span>
-          </div>
-
-          {/* Même réserve de hauteur que la note du Coup de Boost, au-dessus :
-              sans elle, la carte grandissait au changement d'onglet. */}
           <p
-            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed text-steel ${
-              compact ? "mt-3" : "mt-4"
+            className={`mt-2 max-w-md text-sm leading-relaxed ${
+              trial ? "text-white/60" : "text-muted"
             }`}
           >
+            {t("plan.tagline")}
+          </p>
+
+          {trial ? (
+            /* Ce qu'on paie aujourd'hui, en grand ; ce qui viendra ensuite, dessous.
+               Le tarif plein du cycle choisi passe devant, barré : c'est lui qui
+               donne sa valeur au 0 €. Il porte son « /mois » — depuis qu'une
+               offre à paiement unique vit juste à côté, c'est ce suffixe qui dit
+               d'un coup d'œil laquelle des deux est un abonnement. */
+            <div
+              className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${compact ? "mt-4" : "mt-6"}`}
+            >
+              <span
+                className={`font-display font-bold tabular-nums tracking-tight text-white/35 line-through decoration-white/45 decoration-2 ${
+                  compact ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl"
+                }`}
+              >
+                {euros(price)}
+                {/* Le suffixe reste plus petit que le montant : il qualifie le
+                    tarif, il ne se compare pas au 0 € du jour. `inline-block`
+                    coupe la barre du montant, qui retomberait sous ce petit
+                    texte comme un soulignement : c'est le prix qui est barré,
+                    pas son unité. */}
+                <span className="inline-block text-[0.62em] font-semibold">{t("perMonth")}</span>
+              </span>
+              <span
+                className={`font-display font-bold tabular-nums tracking-tight ${
+                  compact ? "text-4xl sm:text-5xl" : "text-5xl sm:text-6xl"
+                }`}
+              >
+                {euros(TRIAL.todayPrice)}
+              </span>
+              <span className="text-base text-white/50">{t("todayLabel")}</span>
+            </div>
+          ) : (
+            /* Un seul montant en grand, et c'est celui qu'on paie : le prix du
+               cycle choisi, toujours suivi de son « /mois ». */
+            <div
+              className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${compact ? "mt-4" : "mt-6"}`}
+            >
+              <span
+                className={`font-display font-bold tabular-nums tracking-tight ${
+                  compact ? "text-4xl sm:text-5xl" : "text-5xl sm:text-6xl"
+                }`}
+              >
+                {euros(price)}
+              </span>
+              <span className="text-base text-muted">{t("perMonth")}</span>
+            </div>
+          )}
+
+          {/* Trois lignes réservées, à toutes les largeurs : sans cette réserve
+              la carte grandissait au changement d'onglet, et le bouton ne
+              tombait plus à la même hauteur que celui du Coup de Boost. */}
+          <p
+            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed ${
+              trial ? "text-white/30 first-letter:uppercase" : "text-steel"
+            } ${compact ? "mt-3" : "mt-4"}`}
+          >
+            {/* En essai, l'abonnement à venir passe en note : un seul montant
+                doit se lire en grand sur cette carte, celui qu'on paie
+                aujourd'hui. */}
+            {trial && (
+              <>
+                {t("thenLabel")}{" "}
+                <span className="tabular-nums">
+                  {euros(price)}
+                  {t("perMonth")}
+                </span>
+                {" · "}
+              </>
+            )}
             {cycle === "yearly" ? t("cycle.yearlyTerms") : t("cycle.monthlyTerms")}
           </p>
 
           <div className={compact ? "mt-5" : "mt-7"}>
             <BillingCycleProvider cycle={cycle}>{cta}</BillingCycleProvider>
-            <p className="mt-2.5 text-center text-xs text-muted">
-              {ctaNote ?? t("plan.ctaNote")}
+            <p
+              className={`mt-2.5 text-center text-xs ${trial ? "text-white/50" : "text-muted"}`}
+            >
+              {ctaNote ?? (trial ? t("plan.ctaNoteTrial", { days: TRIAL.days }) : t("plan.ctaNote"))}
             </p>
           </div>
 
           <ul className={`space-y-2.5 ${compact ? "mt-6" : "mt-7"}`}>
             {features.map((f) => (
-              <li key={f} className="flex items-start gap-2.5 text-sm text-ink">
-                <Check />
+              <li
+                key={f}
+                className={`flex items-start gap-2.5 text-sm ${trial ? "text-white/85" : "text-ink"}`}
+              >
+                <Check trial={trial} />
                 <span>{f}</span>
               </li>
             ))}
@@ -200,11 +268,17 @@ export function PlanCard({
 
           {/* Collé au bas de la carte : l'espace en trop tombe au-dessus de ce
               bloc, jamais entre deux lignes de la liste. La phrase répond mot
-              pour mot à la note de périmètre du Coup de Boost, au-dessus :
-              l'une s'arrête, l'autre non. */}
+              pour mot à la note de périmètre du Coup de Boost : l'une s'arrête,
+              l'autre non. En tête des offres, la carte porte le roster
+              d'agents — c'est elle qu'on met en avant, elle a la place. */}
           {showAgents && (
-            <div className="mt-6 flex flex-1 flex-col justify-end">
-              <p className="rounded-2xl bg-mist px-4 py-3 text-xs leading-relaxed text-steel">
+            <div className="mt-6 flex flex-1 flex-col justify-end gap-3">
+              {trial && <AgentRoster />}
+              <p
+                className={`rounded-2xl px-4 py-3 text-xs leading-relaxed ${
+                  trial ? "bg-white/5 text-white/45" : "bg-mist text-steel"
+                }`}
+              >
                 {t("agents.note")}
               </p>
             </div>
