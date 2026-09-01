@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
+import { AiKeycaps } from "@/components/AiKeycaps";
 
 /**
  * Ce que l'audit est en train de faire, montré plutôt que décrit : la question
@@ -19,9 +19,16 @@ import { motion, useReducedMotion } from "framer-motion";
  * objet : capuchons pleins sur un socle sourd, arête claire, et une lèvre
  * intérieure sous chaque touche qui s'écrase à l'appui. C'est la même grammaire
  * que la pilule noire du système — l'ombre inset qui donne le toucher de verre
- * pressé —, appliquée à une touche. Les rangées sont décalées comme sur un
- * vrai AZERTY : sans ce décalage, dix carrés alignés se lisent comme un
- * tableau, pas comme un clavier.
+ * pressé —, appliquée à une touche. Les rangées sont décalées comme sur un vrai
+ * AZERTY : sans ce décalage, dix carrés alignés se lisent comme un tableau, pas
+ * comme un clavier.
+ *
+ * Au-dessus, les trois grosses touches des moteurs — celles du crawl et des
+ * recherches, ramenées ici. Elles ne tournent pas en rond : celle qui s'enfonce
+ * est le moteur à qui la question est réellement posée, et elle change quand la
+ * question change. C'est ce qui les rend meilleures que la pastille qu'elles
+ * remplacent dans la barre de saisie — un logo de seize pixels dit à qui l'on
+ * parle, une touche enfoncée dit qu'on est en train de lui parler.
  *
  * Tout est en transform, opacity et couleur, sans mesure de la fenêtre : la
  * boucle reste fluide sur un portable qui, par ailleurs, attend une réponse
@@ -32,12 +39,6 @@ import { motion, useReducedMotion } from "framer-motion";
  * progression, au-dessus, annonce déjà l'étape en cours. Faire lire chaque
  * changement de moteur ferait un fond sonore de trois minutes.
  */
-
-const ENGINES = [
-  { name: "ChatGPT", logo: "/logoopenai1.png" },
-  { name: "Perplexity", logo: "/logoperplexity1.png" },
-  { name: "Gemini", logo: "/logogemini1.webp" },
-] as const;
 
 /** Trois rangées, disposition française. Assez pour qu'on y reconnaisse un clavier. */
 const ROWS = [
@@ -67,7 +68,6 @@ export function AiKeysAnimation({ prompts }: { prompts: string[] }) {
   const [typed, setTyped] = useState(0);
 
   const question = prompts[index % prompts.length] ?? "";
-  const engine = ENGINES[index % ENGINES.length];
 
   // Une seule horloge pour les deux régimes : on écrit lettre à lettre, puis on
   // laisse lire, puis on passe à la question suivante. Sans mouvement, l'étape
@@ -95,25 +95,17 @@ export function AiKeysAnimation({ prompts }: { prompts: string[] }) {
 
   return (
     <div aria-hidden className="flex flex-col items-center gap-5">
+      {/* Les trois moteurs. Celui à qui la question est posée reste enfoncé le
+          temps qu'elle s'écrive : c'est lui qu'on interroge, pas une ronde. */}
+      <AiKeycaps active={index} />
+
       {/* La question, dans la boîte où on la tape. Deux lignes réservées : la
           boîte ne saute pas quand une question longue passe à la ligne. */}
       <div className="w-full max-w-lg rounded-[20px] border border-pebble bg-snow px-4 py-3.5">
-        <div className="flex items-start gap-2.5">
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-pill bg-mist px-2.5 py-1 text-xs font-medium text-ink">
-            <Image
-              src={engine.logo}
-              alt=""
-              width={16}
-              height={16}
-              className="h-4 w-4 shrink-0 rounded-[4px] object-contain"
-            />
-            {engine.name}
-          </span>
-          <p className="min-h-[2.5rem] flex-1 text-sm leading-relaxed text-text">
-            {shown}
-            <span className="ml-0.5 inline-block h-4 w-px animate-[blink_1s_step-end_infinite] bg-obsidian align-middle" />
-          </p>
-        </div>
+        <p className="min-h-[2.5rem] text-sm leading-relaxed text-text">
+          {shown}
+          <span className="ml-0.5 inline-block h-4 w-px animate-[blink_1s_step-end_infinite] bg-obsidian align-middle" />
+        </p>
       </div>
 
       {/* Le clavier. Socle sourd, capuchons pleins, rangées en escalier. */}
@@ -137,9 +129,13 @@ export function AiKeysAnimation({ prompts }: { prompts: string[] }) {
 }
 
 /**
- * Un capuchon. Au repos il porte sa lèvre et son ombre ; enfoncé il descend de
- * deux pixels, se remplit de noir et perd son relief — la descente et la perte
- * d'ombre font l'appui, la couleur ne fait que le confirmer.
+ * Un capuchon de lettre. Au repos il porte sa lèvre et son ombre ; enfoncé il
+ * descend de deux pixels, se remplit de noir et perd son relief — la descente
+ * et la perte d'ombre font l'appui, la couleur ne fait que le confirmer.
+ *
+ * Les touches des moteurs, elles, ne passent pas par ici : leurs visuels de
+ * marque sont déjà dessinés en volume (cf. `AiKeycaps`), et les poser dans ce
+ * cadre ferait une touche dans une touche.
  */
 function Keycap({
   label,
