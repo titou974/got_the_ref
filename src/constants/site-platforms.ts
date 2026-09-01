@@ -33,11 +33,13 @@ export type SiteConnector = {
   /**
    * Ouvert aux clients, ou seulement écrit.
    *
-   * Le code sait appeler la plupart de ces plateformes, mais seules WordPress
-   * et Shopify ont été menées jusqu'au bout — identifiants vérifiés sur de
-   * vrais sites, article publié, page corrigée, manuel écrit. Les autres se
-   * montrent grisées : promettre un rattachement qu'on n'a pas éprouvé coûte
-   * plus cher que de dire « bientôt ».
+   * Une plateforme n'est ouverte que quand tout le chemin existe : l'appel
+   * d'essai constate les droits réels, la publication sait déposer un article,
+   * la synchronisation sait dire ce qu'elle a écrit et ce qui reste à la main,
+   * et le mode d'emploi de la connexion est rédigé. Les cinq premières le
+   * sont — WordPress, WooCommerce, Shopify, Wix, PrestaShop. Les autres se
+   * montrent grisées : promettre un rattachement qu'on n'a pas écrit coûte plus
+   * cher que de dire « bientôt ».
    *
    * Le drapeau n'est pas décoratif : `connectSiteAction` refuse un connecteur
    * fermé. Une case grisée se déjoue avec l'inspecteur, pas un refus serveur.
@@ -61,14 +63,17 @@ export const SITE_CONNECTORS: SiteConnector[] = [
   {
     id: "woocommerce",
     name: "WooCommerce",
-    docsUrl: "https://woocommerce.github.io/woocommerce-rest-api-docs/",
+    // WooCommerce est une extension de WordPress : la rédaction reste celle du
+    // cœur, et c'est son API REST — pas celle du commerce — qui dépose les
+    // articles et corrige les pages. La documentation utile est donc la même.
+    docsUrl: "https://developer.wordpress.org/rest-api/",
     capabilities: ["publish", "edit"],
     fields: [
       { name: "siteUrl", kind: "url", required: true },
       { name: "username", kind: "text", required: true },
       { name: "applicationPassword", kind: "secret", required: true },
     ],
-    ready: false,
+    ready: true,
   },
   {
     id: "shopify",
@@ -89,14 +94,16 @@ export const SITE_CONNECTORS: SiteConnector[] = [
     id: "wix",
     name: "Wix",
     docsUrl: "https://dev.wix.com/docs/rest",
-    // Le blog Wix se lit par l'API, mais y déposer un article demande un flux
-    // de publication à part : pour l'instant, le lien sert aux corrections.
-    capabilities: ["edit"],
+    // Le blog Wix s'écrit en deux temps — un brouillon, puis sa publication —
+    // et son corps n'est ni du HTML ni du Markdown mais un document Ricos, que
+    // Wix sait convertir pour nous. Les textes de la page d'accueil, eux,
+    // restent dans l'éditeur : aucune API ne les expose.
+    capabilities: ["publish", "edit"],
     fields: [
       { name: "siteId", kind: "text", required: true },
       { name: "apiKey", kind: "secret", required: true },
     ],
-    ready: false,
+    ready: true,
   },
   {
     id: "webflow",
@@ -140,13 +147,16 @@ export const SITE_CONNECTORS: SiteConnector[] = [
     id: "prestashop",
     name: "PrestaShop",
     docsUrl: "https://devdocs.prestashop-project.org/webservice/",
-    // Le webservice PrestaShop expose le catalogue, pas le blog.
-    capabilities: ["edit"],
+    // PrestaShop n'a pas de blog : ses articles n'ont d'autre foyer natif que
+    // les pages de contenu (« content_management_system »), et c'est là qu'on
+    // les dépose. Le webservice parle XML et ne connaît pas les métadonnées de
+    // la page d'accueil, qui restent à recopier dans le back-office.
+    capabilities: ["publish", "edit"],
     fields: [
       { name: "siteUrl", kind: "url", required: true },
       { name: "webserviceKey", kind: "secret", required: true },
     ],
-    ready: false,
+    ready: true,
   },
   {
     id: "framer",

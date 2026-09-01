@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ROUTES } from "@/constants/routes";
+import { formatPublishTime, nextPublishPass } from "@/constants/publishing";
 import { Card, CardTitle } from "./Card";
 
 /**
@@ -26,10 +27,15 @@ export type AgendaArticle = {
   scheduledFor: Date | null;
 };
 
+/**
+ * Accordé au calendrier et à l'atelier : le noir plein dit « validé, à quai »
+ * partout dans le produit. La liste et la grille montrent le même planning ;
+ * elles ne peuvent pas le coder de deux façons.
+ */
 const STATUS_STYLE: Record<string, string> = {
   planned: "bg-mist text-steel",
-  drafted: "bg-obsidian/[0.06] text-ink",
-  approved: "bg-success/10 text-success",
+  drafted: "bg-mist text-ink ring-1 ring-inset ring-pebble",
+  approved: "bg-obsidian text-white",
   published: "bg-success/10 text-success",
   rejected: "bg-danger/10 text-danger",
 };
@@ -104,6 +110,14 @@ export async function ArticleAgenda({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{article.title}</span>
+                  {/* L'heure n'accompagne que ce qui part tout seul : sur un
+                      sujet encore à écrire, elle annoncerait un départ que rien
+                      ne prépare. */}
+                  {article.status === "approved" && article.scheduledFor ? (
+                    <span className="mt-0.5 block text-[11px] font-semibold tabular-nums text-steel">
+                      {formatPublishTime(nextPublishPass(article.scheduledFor))}
+                    </span>
+                  ) : null}
                 </span>
                 <span
                   className={`shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold ${

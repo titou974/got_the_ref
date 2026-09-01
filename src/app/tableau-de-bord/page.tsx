@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import {
+  businessHint,
   getDashboardContext,
   listArticles,
 } from "@/features/dashboard/queries";
@@ -80,7 +81,7 @@ export default async function DashboardHomePage() {
   // d'attente que la mise en route — même barre, même animation : le client
   // reconnaît ce qu'il regarde, et il n'a rien à cliquer.
   if (!context.analysis || analysisNeedsUpgrade(context.analysis.accessTier, context.tier)) {
-    return <PreparingAnalysis tier={context.tier} />;
+    return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
   }
 
   const analysis = context.analysis;
@@ -227,7 +228,6 @@ export default async function DashboardHomePage() {
             gain={totalGainFor(analysis)}
             title={tg("homeTitle")}
             caption={tg("homeCaption")}
-            note={tg("homeNote")}
           />
         </div>
 

@@ -1,12 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { authActionClient } from "@/lib/safe-action";
+import { sendEmail } from "@/lib/email";
+import { analysisReadyEmail } from "./emails";
 import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
 import { encryptJson, isCredentialsKeySet } from "@/lib/crypto";
 import { connectorFor } from "@/constants/site-platforms";
+import { preferredPassOnDay } from "@/constants/publishing";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { regenerateOnPageElement } from "@/lib/geo/keywords";
@@ -14,7 +18,12 @@ import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
 import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
-import { getArticleQuota, getDashboardContext, readSiteCredentials } from "./queries";
+import {
+  getArticleQuota,
+  getDashboardContext,
+  isDashboardReady,
+  readSiteCredentials,
+} from "./queries";
 import {
   releaseArticleGeneration,
   releaseOnPageRewrite,
@@ -43,6 +52,7 @@ import {
 } from "./service";
 import {
   articleIdSchema,
+  autoPublishSchema,
   brandVoiceSchema,
   connectSiteSchema,
   disconnectSiteSchema,
@@ -52,6 +62,7 @@ import {
   prospectIdSchema,
   prospectStatusSchema,
   regenerateOnPageSchema,
+  scheduleArticleSchema,
   settingsSchema,
   updateArticleSchema,
   writeArticleSchema,
@@ -209,9 +220,49 @@ export const prepareDashboardAction = authActionClient
           select: { id: true },
         });
 
+    // Les résultats partent aussi par e-mail. Beaucoup de clients ferment
+    // l'onglet pendant les trois minutes d'audit ; sans ce message, ils ne
+    // reviennent pas voir ce qu'ils ont demandé. Il est expédié après la
+    // réponse — le tableau de bord n'a pas à attendre Resend — et son échec ne
+    // remet pas en cause l'analyse, qui est écrite.
+    const { subject, html, text } = analysisReadyEmail({
+      userName: ctx.auth.user.name,
+      analysis: result,
+    });
+    after(() =>
+      sendEmail({
+        to: ctx.auth.user.email,
+        subject,
+        html,
+        text,
+        // Adossée à l'analyse : la reprise après achat en réécrit une nouvelle
+        // et mérite son e-mail, un double rendu de l'écran d'attente n'en
+        // mérite pas un second.
+        idempotencyKey: `analysis-ready/${record.id}/${tier}`,
+      }),
+    );
+
     revalidateDashboard();
     return { id: record.id };
   });
+
+/**
+ * Le tableau de bord est-il prêt à prendre la place de l'écran d'attente ?
+ *
+ * L'écran d'attente ne peut pas se fier au seul retour de `prepareDashboardAction` :
+ * l'action peut avoir rendu la main pendant que la revalidation de la page
+ * n'est pas encore visible, et une analyse écrite mais pas encore relue
+ * laisserait le client sur une barre pleine à 100 % — le défaut que cette
+ * action existe pour supprimer. Il demande donc au serveur, en toutes lettres,
+ * si la page d'accueil afficherait autre chose que l'attente.
+ *
+ * Aucune écriture, aucun appel de modèle : deux lectures en base. C'est ce qui
+ * autorise à la répéter toutes les deux secondes le temps que l'écriture
+ * devienne visible.
+ */
+export const dashboardReadyAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => ({ ready: await isDashboardReady(ctx.auth.user.id) }));
 
 /** Le niveau d'accès inscrit dans une analyse enregistrée, s'il l'a été. */
 function readAnalysisTier(raw: string): AccessTier | null {
@@ -294,8 +345,6 @@ export const refreshRankingsAction = authActionClient
 
 /** Une publication par jour ouvré : du lundi au vendredi, samedi et dimanche off. */
 const SEED_WEEKDAYS = [1, 2, 3, 4, 5] as const;
-/** Publication à 9 h : l'heure où le planning se lit comme un agenda. */
-const SEED_HOUR = 9;
 /**
  * Combien d'articles sont rédigés dans la foulée de la planification.
  *
@@ -319,19 +368,28 @@ const SEED_DRAFTS = 3;
  * sujets couvrent ainsi quatre semaines pleines plus deux jours.
  */
 function seedSchedule(from: Date, count: number): Date[] {
-  const monday = new Date(from);
-  monday.setHours(SEED_HOUR, 0, 0, 0);
-  // getDay() : 0 = dimanche. Le lundi suivant est à 1..7 jours d'ici, jamais
+  // Tout le calcul de jours se fait en UTC. Les variantes locales de `Date`
+  // donnaient un lundi différent selon le fuseau de la machine : en production
+  // le serveur est en UTC et l'écart ne se voyait pas, sur un poste à Paris le
+  // planning glissait d'un jour.
+  const monday = new Date(
+    Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()),
+  );
+  // getUTCDay() : 0 = dimanche. Le lundi suivant est à 1..7 jours d'ici, jamais
   // aujourd'hui — le premier article doit laisser le temps de la relecture.
-  monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7));
+  monday.setUTCDate(monday.getUTCDate() + ((8 - monday.getUTCDay()) % 7 || 7));
 
   const dates: Date[] = [];
   for (let index = 0; index < count; index += 1) {
     const week = Math.floor(index / SEED_WEEKDAYS.length);
     const weekday = SEED_WEEKDAYS[index % SEED_WEEKDAYS.length];
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + week * 7 + (weekday - 1));
-    dates.push(date);
+    const day = new Date(monday);
+    day.setUTCDate(monday.getUTCDate() + week * 7 + (weekday - 1));
+    // L'heure vient du rythme de la file, pas d'une constante posée ici. Elle
+    // valait 9 h, quand la tâche planifiée passe à 8 h : chaque article était
+    // daté une heure après le seul passage de sa journée, et repartait le
+    // lendemain. Vingt-deux sujets, vingt-deux jours de retard silencieux.
+    dates.push(new Date(preferredPassOnDay(day.toISOString().slice(0, 10))));
   }
   return dates;
 }
@@ -761,7 +819,15 @@ export const planArticlesAction = authActionClient
           topic.outline.map((heading) => ({ heading, level: 2 as const, instruction: "" })),
         ),
         excerpt: topic.angle,
-        scheduledFor: new Date(start.getTime() + step * (index + 1)),
+        // Calé sur le passage de la file, comme les sujets du planning initial.
+        // Une date posée entre deux passages n'avance rien : l'article attend
+        // le suivant, et l'écart entre ce qu'annonce le calendrier et ce qui
+        // se produit est exactement ce qu'on cherche à supprimer.
+        scheduledFor: new Date(
+          preferredPassOnDay(
+            new Date(start.getTime() + step * (index + 1)).toISOString().slice(0, 10),
+          ),
+        ),
         status: "planned",
       })),
     });
@@ -867,6 +933,61 @@ export const approveArticleAction = authActionClient
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
     return { ok: true };
+  });
+
+/**
+ * Déplace la date de publication d'un article.
+ *
+ * Le geste est réversible et sans effet de bord : il ne valide pas, ne rédige
+ * pas, ne dépose rien. Un article validé et redaté repart simplement à la
+ * nouvelle heure ; un sujet encore à écrire garde sa place au calendrier.
+ *
+ * La date passée est un instant complet, pas un jour : c'est l'écran qui a
+ * composé le jour et l'heure dans le fuseau du client, et la file compare des
+ * instants.
+ */
+export const scheduleArticleAction = authActionClient
+  .inputSchema(scheduleArticleSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "articles");
+
+    const { count } = await prisma.article.updateMany({
+      // Un article déjà déposé n'a plus de date à venir : le redater laisserait
+      // croire qu'il repartira, alors que la file écarte tout ce qui porte un
+      // `publishedAt`.
+      where: { id: parsedInput.id, userId, publishedAt: null },
+      data: { scheduledFor: new Date(parsedInput.scheduledFor) },
+    });
+    if (!count) throw new AppError("Article introuvable ou déjà publié.", "NOT_FOUND", 404);
+
+    revalidatePath(ROUTES.dashboardArticles);
+    revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
+    return { ok: true };
+  });
+
+/**
+ * Le pilote automatique : ce que la file s'autorise à déposer sans relecture.
+ *
+ * Fermé, elle ne dépose que les articles que le client a validés. Ouvert, elle
+ * dépose aussi ceux qui sont rédigés et jamais ouverts. C'est un consentement,
+ * et il se donne ici explicitement — jamais par défaut, jamais en effet de bord
+ * d'un autre réglage.
+ */
+export const setAutoPublishAction = authActionClient
+  .inputSchema(autoPublishSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "articles");
+
+    const { count } = await prisma.siteConnection.updateMany({
+      where: { userId },
+      data: { autoPublish: parsedInput.autoPublish },
+    });
+    if (!count) throw new AppError("Aucun site rattaché.", "NO_SITE_CONNECTION", 400);
+
+    revalidatePath(ROUTES.dashboardArticles);
+    return { autoPublish: parsedInput.autoPublish };
   });
 
 /** Dépose l'article sur le site du client, via le lien enregistré. */

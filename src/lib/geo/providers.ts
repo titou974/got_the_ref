@@ -504,6 +504,8 @@ async function queryClaude(query: string): Promise<LiveEngineResult> {
   }
 
   const model = process.env.ANTHROPIC_MODEL || "claude-opus-5";
+  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+
   const startedAt = Date.now();
   geoLog(`Claude — appel (${model}, web_search)…`, { requête: query.slice(0, 200) });
   try {
@@ -512,6 +514,7 @@ async function queryClaude(query: string): Promise<LiveEngineResult> {
       model,
       max_tokens: 2000,
       output_config: { effort: "low" },
+      system: RANKING_SYSTEM,
       tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
       messages: [{ role: "user", content: query }],
     });

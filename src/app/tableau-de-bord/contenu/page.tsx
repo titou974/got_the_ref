@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext, getOnPageRewriteQuota } from "@/features/dashboard/queries";
+import { businessHint, getDashboardContext, getOnPageRewriteQuota } from "@/features/dashboard/queries";
 import { contentGainFor } from "@/lib/geo/traffic-gain";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
@@ -33,7 +33,7 @@ export default async function ContenuPage() {
     getTranslations("trafficGain"),
   ]);
 
-  if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
+  if (!context.analysis) return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
 
   const analysis = context.analysis;
 
@@ -48,7 +48,6 @@ export default async function ContenuPage() {
         gain={contentGainFor(analysis)}
         title={tg("contentTitle")}
         caption={tg("contentCaption")}
-        note={tg("contentNote")}
       />
 
       <ContentCompare

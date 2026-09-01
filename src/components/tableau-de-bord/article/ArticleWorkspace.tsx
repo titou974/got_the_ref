@@ -22,6 +22,7 @@ import { readHeadings } from "@/lib/article-doc";
 import { ROUTES } from "@/constants/routes";
 import { BrandToneBar } from "../BrandToneBar";
 import { PublishPromptPanel } from "../PublishPromptPanel";
+import { ScheduleFields } from "../ScheduleFields";
 import { SearchLoader } from "@/components/SearchLoader";
 import { DocumentCanvas } from "./DocumentCanvas";
 import { OutlineRail } from "./OutlineRail";
@@ -58,12 +59,20 @@ export type EditorArticle = {
   externalUrl: string | null;
 };
 
-/** L'état d'un article, dit par une couleur du système plutôt qu'un mot de plus. */
+/**
+ * L'état d'un article, dit par une couleur du système plutôt qu'un mot de plus.
+ *
+ * Accordé au calendrier (`ArticleMonth`) : le noir plein y signifie « validé, à
+ * quai », et il doit signifier la même chose ici. Il était posé sur « rédigé »,
+ * ce qui donnait au client deux langages pour un seul planning — le pavé noir
+ * du calendrier et la pastille noire de l'atelier ne parlaient pas du même
+ * moment.
+ */
 const STATUS_CLASS: Record<string, string> = {
   planned: "bg-mist text-steel",
-  drafted: "bg-obsidian text-white",
-  approved: "bg-success/12 text-success",
-  published: "bg-success text-white",
+  drafted: "bg-mist text-ink ring-1 ring-inset ring-pebble",
+  approved: "bg-obsidian text-white",
+  published: "bg-success/12 text-success",
   rejected: "bg-mist text-ash line-through",
 };
 
@@ -119,6 +128,11 @@ export function ArticleWorkspace({
   // l'ouverture recopierait l'article entier dans le HTML envoyé au navigateur,
   // pour un bouton que la plupart des visites ne touchent pas.
   const [publishPrompt, setPublishPrompt] = useState<string | null>(null);
+
+  // Le calendrier de la barre de commande, replié tant qu'on ne le demande pas :
+  // ouvrir l'atelier sur deux champs de date détournerait l'œil du texte, qui
+  // est ce qu'on vient y faire.
+  const [scheduling, setScheduling] = useState(false);
 
   const editor = useEditor({
     // Le rendu part du client : côté serveur, ProseMirror n'a pas de DOM et la
@@ -316,12 +330,29 @@ export function ArticleWorkspace({
               onClick={() => publish.execute({ id: article.id })}
               className="cursor-pointer rounded-pill bg-obsidian px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
             >
-              {publish.isPending ? t("publishing") : t("publish")}
+              {publish.isPending ? t("publishing") : t("publishNow")}
             </button>
           ) : null}
 
-          {/* Site non rattaché : « publier maintenant » ne dépose pas, il écrit
-              le prompt qui dépose. Le geste reste le même pour le client. */}
+          {/* Planifier reste ouvert dès qu'il y a une date à poser, pas
+              seulement sur un article validé : le client date souvent son sujet
+              avant de le faire écrire, et lui refuser le calendrier tant que le
+              texte n'existe pas l'obligerait à revenir. Publié, en revanche, il
+              n'y a plus de départ à venir. */}
+          {!locked && article.status !== "published" && article.status !== "rejected" ? (
+            <button
+              type="button"
+              onClick={() => setScheduling((open) => !open)}
+              aria-expanded={scheduling}
+              className="cursor-pointer rounded-pill border border-graphite px-4 py-2 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist"
+            >
+              {t("schedule")}
+            </button>
+          ) : null}
+
+          {/* Site non rattaché : rien ne peut être déposé d'ici. Le geste change
+              donc de nom en même temps que de nature — il prépare le prompt qui
+              publiera, il ne publie pas. */}
           {!locked && article.status === "approved" && !canPublish ? (
             <button
               type="button"
@@ -341,7 +372,7 @@ export function ArticleWorkspace({
               }
               className="cursor-pointer rounded-pill bg-obsidian px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
             >
-              {t("publishNow")}
+              {t("preparePublish")}
             </button>
           ) : null}
 
@@ -356,6 +387,18 @@ export function ArticleWorkspace({
             </button>
           ) : null}
         </div>
+
+        {/* Le formulaire s'ouvre dans la barre, sous les boutons : la date qu'on
+            pose est une décision de la barre de commande, pas un écran à part. */}
+        {scheduling ? (
+          <div className="w-full">
+            <ScheduleFields
+              articleId={article.id}
+              current={article.scheduledFor}
+              onDone={() => setScheduling(false)}
+            />
+          </div>
+        ) : null}
       </div>
 
       {publishPrompt ? <PublishPromptPanel prompt={publishPrompt} /> : null}

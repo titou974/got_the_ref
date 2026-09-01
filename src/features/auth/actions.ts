@@ -35,23 +35,120 @@ function requestIp(headerList: Headers): string {
   );
 }
 
+/**
+ * Comment ce compte a-t-il été ouvert ? Rien s'il n'existe pas.
+ *
+ * Sert à répondre juste à quelqu'un qui s'inscrit avec une adresse déjà prise :
+ * lui dire « connectez-vous » alors qu'il n'a jamais eu de mot de passe — son
+ * compte est venu de Google — le renvoie sur un formulaire qu'il ne peut pas
+ * remplir. Le nom du fournisseur change la phrase, et donc l'issue.
+ */
+async function existingAccountKinds(email: string): Promise<Set<string> | null> {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { accounts: { select: { providerId: true } } },
+  });
+  if (!user) return null;
+  return new Set(user.accounts.map((account) => account.providerId));
+}
+
+/**
+ * L'inscription par e-mail.
+ *
+ * Le cas qui compte n'est pas le compte neuf, c'est l'adresse déjà connue. Un
+ * commerçant qui s'est inscrit il y a trois semaines revient, retape son
+ * adresse et son mot de passe habituel dans le formulaire d'inscription — parce
+ * que c'est le bouton qu'il voit en premier — et se prenait un « impossible de
+ * créer le compte » sans rien à faire ensuite. Il repartait.
+ *
+ * Trois issues, selon ce qu'on sait de lui :
+ *
+ * - Le mot de passe qu'il vient de taper est le bon : on le connecte. Ce n'est
+ *   pas une faveur, c'est une authentification réussie — il a fourni exactement
+ *   ce qu'exige le formulaire de connexion, sur le formulaire d'à côté.
+ * - Son compte vient de Google : on le lui dit, et le bouton Google est juste
+ *   au-dessus. Lui parler de mot de passe n'aurait aucun sens, il n'en a pas.
+ * - Le mot de passe ne correspond pas : on le renvoie à la connexion et au
+ *   mot de passe oublié, en nommant le problème.
+ *
+ * Le débit est bridé comme à la connexion, et pour la même raison : à partir du
+ * moment où ce formulaire vérifie un mot de passe, il en devient un banc
+ * d'essai. Sans ces deux verrous, il suffirait de passer par l'inscription pour
+ * contourner ceux de `signInAction`.
+ */
 export const signUpAction = actionClient
   .inputSchema(signUpSchema)
   .action(async ({ parsedInput }) => {
+    const email = parsedInput.email.trim().toLowerCase();
+    const headerList = await headers();
+
+    const perIp = rateLimit(`sign-up:ip:${requestIp(headerList)}`, 20, 15 * 60 * 1000);
+    const perEmail = rateLimit(`sign-up:email:${email}`, 10, 15 * 60 * 1000);
+    if (!perIp.ok || !perEmail.ok) {
+      returnValidationErrors(signUpSchema, {
+        _errors: [
+          "Trop de tentatives en peu de temps. Patientez quelques minutes avant de réessayer.",
+        ],
+      });
+    }
+
     let userId: string;
     try {
       const { user } = await auth.api.signUpEmail({
         body: {
-          email: parsedInput.email,
+          email,
           password: parsedInput.password,
-          name: parsedInput.name ?? parsedInput.email.split("@")[0],
+          name: parsedInput.name ?? email.split("@")[0],
         },
-        headers: await headers(),
+        headers: headerList,
       });
       userId = user.id;
     } catch {
+      const kinds = await existingAccountKinds(email);
+
+      if (!kinds) {
+        returnValidationErrors(signUpSchema, {
+          _errors: ["Impossible de créer le compte. Réessayez dans un instant."],
+        });
+      }
+
+      // Le compte existe et porte un mot de passe : celui qui vient d'être tapé
+      // est peut-être le bon, et dans ce cas il n'y a plus rien à demander.
+      if (kinds.has("credential")) {
+        // La redirection est sortie du `try` : `redirect` navigue en levant, et
+        // l'attraper ici ferait passer une connexion réussie pour un échec.
+        let signedInId: string | null = null;
+        try {
+          const { user } = await auth.api.signInEmail({
+            body: { email, password: parsedInput.password },
+            headers: headerList,
+          });
+          signedInId = user.id;
+        } catch {
+          /* mot de passe différent de celui du compte : dit juste en dessous */
+        }
+
+        if (signedInId) {
+          redirect(await resolveAuthDestination(signedInId, parsedInput.next));
+        }
+
+        returnValidationErrors(signUpSchema, {
+          _errors: [
+            "Un compte existe déjà avec cet e-mail, et ce mot de passe ne correspond pas. Connectez-vous, ou demandez un nouveau mot de passe.",
+          ],
+        });
+      }
+
+      if (kinds.has("google")) {
+        returnValidationErrors(signUpSchema, {
+          _errors: [
+            "Ce compte a été ouvert avec Google. Utilisez le bouton « Continuer avec Google » ci-dessus.",
+          ],
+        });
+      }
+
       returnValidationErrors(signUpSchema, {
-        _errors: ["Impossible de créer le compte. Cet e-mail est peut-être déjà utilisé."],
+        _errors: ["Un compte existe déjà avec cet e-mail. Connectez-vous pour le retrouver."],
       });
     }
 

@@ -36,17 +36,21 @@ export type GainEngine = (typeof GAIN_ENGINES)[number];
  * Le plafond mensuel par moteur, pour un commerce de taille courante cité en
  * tête sur sa niche.
  *
- * Google passe devant : ses aperçus IA sont posés au-dessus de résultats déjà
- * fréquentés, et c'est la seule des quatre surfaces qu'un client atteint sans
- * avoir choisi d'ouvrir un assistant. ChatGPT suit de près par son audience
- * propre. Gemini et Perplexity ferment la marche — audience plus étroite, mais
- * des réponses qui citent leurs sources plus volontiers.
+ * L'écart entre les quatre est volontairement large, parce qu'il l'est dans les
+ * faits. Google et ChatGPT ramènent l'essentiel : le premier pose ses aperçus
+ * IA au-dessus de résultats déjà fréquentés, et c'est la seule des quatre
+ * surfaces qu'un client atteint sans avoir choisi d'ouvrir un assistant ; le
+ * second a l'audience propre la plus large du lot. Gemini tient le milieu,
+ * porté par sa place dans les produits Google mais interrogé bien moins souvent
+ * en recherche. Perplexity ferme la marche loin derrière : ses réponses citent
+ * leurs sources plus volontiers qu'ailleurs, mais son audience française reste
+ * une fraction des trois autres.
  */
 const CEILING: Record<GainEngine, number> = {
-  google: 150,
-  chatgpt: 110,
-  gemini: 55,
-  perplexity: 25,
+  google: 220,
+  chatgpt: 180,
+  gemini: 60,
+  perplexity: 15,
 };
 
 /** Les libellés affichés, et le logo qui va avec (chemins dans /public). */
@@ -56,16 +60,6 @@ export const GAIN_ENGINE_META: Record<GainEngine, { label: string; logo: string 
   gemini: { label: "Gemini", logo: "/gemini.webp" },
   perplexity: { label: "Perplexity", logo: "/perplexity.png" },
 };
-
-/**
- * La note d'un site qui n'a jamais été travaillé pour les IA.
- *
- * Elle sert aux écrans qui n'ont pas d'analyse sous la main — la page des
- * tarifs, ouverte à un visiteur sans compte. On y annonce donc ce qu'un site
- * type peut gagner, pas ce que gagnera celui du visiteur : c'est la seule
- * projection honnête quand on n'a rien lu de son site.
- */
-export const REFERENCE_SCORE = 38;
 
 /**
  * La part du chemin couverte par les seules corrections de contenu, quand
@@ -86,8 +80,6 @@ export type EngineGain = {
   logo: string;
   /** Visites mensuelles supplémentaires estimées sur ce moteur. */
   visits: number;
-  /** Part de ce moteur dans le total, en pourcentage entier. */
-  share: number;
 };
 
 export type TrafficGain = {
@@ -134,7 +126,6 @@ export function estimateTrafficGain(score: number, coverage = 1): TrafficGain {
       label: GAIN_ENGINE_META[engine].label,
       logo: GAIN_ENGINE_META[engine].logo,
       visits: visits[index],
-      share: Math.round((visits[index] / total) * 100),
     })),
   };
 }
@@ -167,14 +158,4 @@ export function totalGainFor(analysis: GeoAnalysisResult): TrafficGain {
 /** Le gain des seules corrections de contenu d'une analyse. */
 export function contentGainFor(analysis: GeoAnalysisResult): TrafficGain {
   return estimateTrafficGain(analysis.overallScore, contentCoverage(analysis.recommendations));
-}
-
-/**
- * Le gain annoncé sur la page des tarifs, où l'on ne connaît pas le visiteur.
- *
- * C'est le gain d'un site type — note de référence, toutes corrections — et la
- * carte le dit en toutes lettres plutôt que de laisser croire à une mesure.
- */
-export function referenceGain(): TrafficGain {
-  return estimateTrafficGain(REFERENCE_SCORE);
 }

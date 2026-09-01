@@ -6,7 +6,11 @@ import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { SITE } from "@/constants/site";
-import { RESET_PASSWORD_TOKEN_TTL_SECONDS, resetPasswordEmail } from "./emails";
+import {
+  RESET_PASSWORD_TOKEN_TTL_SECONDS,
+  resetPasswordEmail,
+  welcomeEmail,
+} from "./emails";
 
 /**
  * Google n'est branché que si les deux identifiants OAuth sont présents.
@@ -87,6 +91,39 @@ export const auth = betterAuth({
     accountLinking: {
       enabled: true,
       trustedProviders: ["google"],
+    },
+  },
+  /**
+   * L'e-mail de bienvenue, accroché à la création de l'utilisateur.
+   *
+   * Ce point-là, et pas le formulaire d'inscription : une inscription par
+   * Google ne passe pas par `signUpAction`, elle arrive par la route de rappel
+   * de Better Auth. Brancher l'envoi sur l'action aurait privé de bienvenue la
+   * moitié des nouveaux comptes — et un rattachement de compte Google à un
+   * compte existant, lui, ne crée pas d'utilisateur et n'en déclenche donc pas,
+   * ce qui est exactement le comportement voulu.
+   *
+   * `after` plutôt qu'un `await` : la création du compte n'a pas à attendre
+   * Resend, et un envoi qui échoue ne doit pas faire échouer l'inscription.
+   */
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          const { subject, html, text } = welcomeEmail({ userName: user.name });
+          after(() =>
+            sendEmail({
+              to: user.email,
+              subject,
+              html,
+              text,
+              // Un compte n'est créé qu'une fois : la clé n'a rien à
+              // distinguer de plus que son identifiant.
+              idempotencyKey: `welcome/${user.id}`,
+            }),
+          );
+        },
+      },
     },
   },
   session: {

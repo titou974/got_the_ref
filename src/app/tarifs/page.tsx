@@ -10,7 +10,9 @@ import { PricingOffers } from "@/components/pricing/PricingOffers";
 import { PricingFaq } from "@/components/pricing/PricingFaq";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
 import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
-import { referenceGain } from "@/lib/geo/traffic-gain";
+import { totalGainFor } from "@/lib/geo/traffic-gain";
+import { getCurrentUser } from "@/lib/auth";
+import { getDashboardContext } from "@/features/dashboard/queries";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
 import { BOOST, SUBSCRIPTION_PRICE, TRIAL, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
@@ -106,7 +108,7 @@ export default async function TarifsPage({ searchParams }: Props) {
       {offersJsonLd().map((data, i) => (
         <JsonLd key={i} data={data} />
       ))}
-      <Nav minimal />
+      <Nav minimal backTo={ROUTES.dashboard} />
 
       <div className="flex flex-1 flex-col">
         <div className="mx-auto w-full max-w-6xl px-5 pt-12 sm:pt-16">
@@ -127,18 +129,17 @@ export default async function TarifsPage({ searchParams }: Props) {
             )}
           </header>
 
-          {/* Ce que le visiteur vient chercher avant le prix : ce que ça
-              rapporte. Le chiffre est celui d'un site type — la page est
-              ouverte à qui n'a pas de compte, et on n'a rien lu de son site —
-              et la note sous la rangée le dit. */}
-          <div className="mt-10">
-            <TrafficGainCards
-              gain={referenceGain()}
-              title={tg("pricingTitle")}
-              caption={tg("pricingCaption")}
-              note={tg("pricingNote")}
-            />
-          </div>
+          {/* Ce que le client vient chercher avant le prix : ce que ça
+              rapporte, calculé sur son propre site. */}
+          {analysis && (
+            <div className="mt-10">
+              <TrafficGainCards
+                gain={totalGainFor(analysis)}
+                title={tg("pricingTitle")}
+                caption={tg("pricingCaption")}
+              />
+            </div>
+          )}
         </div>
 
         <ResultsCarousel className="py-10 sm:py-14" />

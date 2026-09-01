@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { RiArrowLeftSLine, RiArrowRightSLine } from "@remixicon/react";
 import { ROUTES } from "@/constants/routes";
+import { alignToPass, formatPublishTime } from "@/constants/publishing";
 import { Card, CardTitle } from "./Card";
 
 /**
@@ -61,17 +62,55 @@ export type MonthArticle = {
   scheduledFor: string | null;
 };
 
-const STATUS_TINT: Record<string, string> = {
-  planned: "border-fog bg-mist",
-  drafted: "border-pebble/70 bg-mist",
-  approved: "border-success/40 bg-success/[0.07]",
-  published: "border-success/40 bg-success/[0.07]",
-  rejected: "border-danger/30 bg-danger/[0.05]",
+/**
+ * Ce qu'une vignette dit d'elle-même, sans qu'on ait à lire son état.
+ *
+ * Le calendrier ne distinguait rien : validé et publié partageaient le même
+ * vert pâle, et l'article qui allait partir demain ressemblait à celui qui
+ * était en ligne depuis trois semaines. Or ce sont les deux seuls moments qui
+ * demandent quelque chose au client — l'un qu'il le laisse partir, l'autre
+ * rien du tout.
+ *
+ * D'où une seule vignette pleine dans toute la grille : celle d'un article
+ * validé, à quai. Le système de couleurs dit « emphase = sombre, pas d'accent
+ * chromatique » : dans une grille faite de filets sur blanc, un pavé obsidian
+ * est le contraste le plus fort que la palette permette, et il n'introduit
+ * aucune teinte à apprendre.
+ *
+ * Le publié, lui, se distingue par sa forme et non par sa teinte : un bord
+ * gauche vert, épais de deux pixels. Un aplat vert à sept pour cent avait été
+ * essayé d'abord — à l'écran, il ne se distinguait ni du rédigé ni du sujet
+ * retenu, et la légende alignait trois carrés blancs qui n'apprenaient rien.
+ * Une arête franche se voit à cette taille, et reste discrète : c'est de
+ * l'histoire, elle n'a pas à crier plus fort que ce qui reste à faire.
+ */
+const TILE: Record<string, string> = {
+  planned: "border-fog bg-mist text-steel hover:bg-fog",
+  drafted: "border-pebble bg-surface text-text hover:bg-mist",
+  approved: "border-obsidian bg-obsidian text-white hover:bg-ink",
+  published: "border-fog border-l-2 border-l-success bg-surface text-steel hover:bg-mist",
+  rejected: "border-fog bg-surface text-ash line-through hover:bg-mist",
 };
+
+const tileClass = (status: string) => TILE[status] ?? TILE.planned;
 
 /** Le jour d'une date, ramené à sa seule journée UTC : « 2026-09-01 ». */
 function dayKey(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+/**
+ * L'heure de départ d'un article, « 09:00 ».
+ *
+ * Mise en forme dans le fuseau de publication, explicitement : c'est la seule
+ * façon d'obtenir la même chaîne au rendu du serveur — en UTC — et dans le
+ * navigateur du client, qui est à Paris. Sans lui, l'heure changerait sous ses
+ * yeux à l'hydratation.
+ */
+function hourOf(scheduledFor: string | null): string {
+  if (!scheduledFor) return "";
+  const date = new Date(scheduledFor);
+  return Number.isNaN(date.getTime()) ? "" : formatPublishTime(alignToPass(date));
 }
 
 /** Décalage du 1ᵉʳ du mois dans une grille commençant le lundi (0 = lundi). */
@@ -165,7 +204,13 @@ export function ArticleMonth({
           resetLabel={t("backToday")}
         />
 
-        <MonthGrid year={year} month={month} byDay={byDay} today={today} locked={locked} />
+        <MonthGrid
+          year={year}
+          month={month}
+          byDay={byDay}
+          today={today}
+          locked={locked}
+        />
       </div>
 
       {/* ---- Téléphone : les sept jours qui viennent ---- */}
@@ -182,7 +227,40 @@ export function ArticleMonth({
       </div>
 
       {placed === 0 ? <p className="mt-4 text-sm text-muted">{t("empty")}</p> : null}
+
+      <Legend />
     </Card>
+  );
+}
+
+/**
+ * La clé de lecture de la grille.
+ *
+ * Une vignette noire au milieu de vignettes grises est un signal fort, mais un
+ * signal fort qu'on ne sait pas lire n'est qu'une bizarrerie. Quatre échantillons
+ * et quatre mots suffisent, et ils reprennent exactement les classes des
+ * vignettes : la légende ne peut pas se désaccorder de ce qu'elle légende.
+ *
+ * L'échantillon est un rectangle et non un carré : c'est un bord gauche qui
+ * distingue le publié, et sur douze pixels de côté ce bord occupait un sixième
+ * de la surface — la pastille ressortait blanche, et la légende expliquait un
+ * signe qu'elle ne montrait pas.
+ *
+ * L'ordre suit la vie d'un article, de ce qui part à ce qui est parti : c'est
+ * la seule séquence que la liste puisse encoder, et elle est vraie.
+ */
+function Legend() {
+  const t = useTranslations("dashboard.agenda.status");
+
+  return (
+    <ul className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
+      {(["approved", "drafted", "planned", "published"] as const).map((status) => (
+        <li key={status} className="flex items-center gap-1.5 text-[11px] text-muted">
+          <span aria-hidden className={`h-3 w-5 rounded-[4px] border ${tileClass(status)}`} />
+          {t(status)}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -303,12 +381,15 @@ function MonthGrid({
               dayArticles.length ? "border-pebble/70 bg-mist" : "border-fog bg-surface"
             }`}
           >
-            {/* Aujourd'hui porte une pastille pleine plutôt qu'une bordure de
-                plus : la grille est déjà faite de cadres, un cadre supplémentaire
-                se serait confondu avec eux. */}
+            {/* Aujourd'hui se marque d'un cerne, pas d'un aplat. La pastille
+                était noire et pleine, ce qui allait tant que rien d'autre ne
+                l'était ; depuis que la vignette d'un article validé l'est, les
+                deux se confondaient en une seule tache et le client lisait un
+                état là où il n'y a qu'une position dans le mois. Le noir reste
+                donc à l'état, et la date en emprunte le trait. */}
             <span
               className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums ${
-                isToday ? "bg-obsidian text-white" : "text-steel"
+                isToday ? "border border-obsidian text-obsidian" : "text-steel"
               }`}
             >
               {day}
@@ -318,11 +399,16 @@ function MonthGrid({
                 <Link
                   key={article.id}
                   href={locked ? ROUTES.pricing : ROUTES.dashboardArticle(article.id)}
-                  className={`block cursor-pointer overflow-hidden rounded-lg border px-1.5 py-1 text-[10px] leading-snug text-text transition-colors duration-200 hover:bg-snow ${
-                    STATUS_TINT[article.status] ?? "border-fog bg-surface"
-                  }`}
+                  className={`block cursor-pointer overflow-hidden rounded-lg border px-1.5 py-1 text-[10px] leading-snug transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${tileClass(article.status)}`}
                 >
                   <span className="line-clamp-3">{article.title}</span>
+                  {/* L'heure n'apparaît que sur ce qui part : ailleurs, elle
+                      remplirait la case d'un chiffre sans conséquence. */}
+                  {article.status === "approved" ? (
+                    <span className="mt-0.5 block text-[9px] font-semibold tabular-nums text-white/70">
+                      {hourOf(article.scheduledFor)}
+                    </span>
+                  ) : null}
                 </Link>
               ))}
             </span>
@@ -403,7 +489,7 @@ function WeekRail({
                 </span>
                 <span
                   className={`mt-0.5 flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[13px] font-semibold tabular-nums ${
-                    isToday ? "bg-obsidian text-white" : "text-text"
+                    isToday ? "border border-obsidian text-obsidian" : "text-text"
                   }`}
                 >
                   {day.date.getUTCDate()}
@@ -415,22 +501,32 @@ function WeekRail({
                   <p className="py-1.5 text-[13px] text-ash">{t("dayEmpty")}</p>
                 ) : (
                   <div className="flex flex-col gap-1.5">
-                    {day.articles.map((article) => (
-                      <Link
-                        key={article.id}
-                        href={locked ? ROUTES.pricing : ROUTES.dashboardArticle(article.id)}
-                        className={`block cursor-pointer rounded-xl border px-3 py-2 transition-colors duration-200 hover:bg-snow ${
-                          STATUS_TINT[article.status] ?? "border-fog bg-surface"
-                        }`}
-                      >
-                        <span className="block text-[13px] font-medium leading-snug text-text">
-                          {article.title}
-                        </span>
-                        <span className="mt-0.5 block text-[11px] text-steel">
-                          {ts(article.status)}
-                        </span>
-                      </Link>
-                    ))}
+                    {day.articles.map((article) => {
+                      const approved = article.status === "approved";
+                      return (
+                        <Link
+                          key={article.id}
+                          href={locked ? ROUTES.pricing : ROUTES.dashboardArticle(article.id)}
+                          className={`block cursor-pointer rounded-xl border px-3 py-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${tileClass(article.status)}`}
+                        >
+                          <span className="block text-[13px] font-medium leading-snug">
+                            {article.title}
+                          </span>
+                          <span
+                            className={`mt-0.5 flex items-center gap-1.5 text-[11px] ${
+                              approved ? "text-white/70" : "text-steel"
+                            }`}
+                          >
+                            {ts(article.status)}
+                            {approved ? (
+                              <span className="font-semibold tabular-nums">
+                                {hourOf(article.scheduledFor)}
+                              </span>
+                            ) : null}
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
               </div>
