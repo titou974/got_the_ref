@@ -474,10 +474,26 @@ async function queryPerplexity(query: string): Promise<LiveEngineResult> {
 
 /* --------------------------------- Claude --------------------------------- */
 /**
+ * La seule consigne posée à un moteur du produit, et elle ne concerne que
+ * Claude.
+ *
+ * Les trois autres rendent la liste demandée sans qu'on leur dise rien. Claude,
+ * lui, répond à « les 10 meilleurs X » qu'aucun classement officiel n'existe et
+ * énumère quelques acteurs en prose — une réponse défendable, mais dont on ne
+ * peut lire aucun rang : le relevé revenait donc vide à chaque passage.
+ *
+ * Ce qui est écrit ici ne dicte donc pas un contenu, seulement une forme : va
+ * chercher sur le web, puis rends ce que tu y as trouvé sous forme de liste
+ * ordonnée. Le classement reste celui de Claude, formé de sa propre lecture du
+ * web ; on lui demande juste de ne pas le noyer dans un avertissement.
+ */
+const RANKING_SYSTEM = `Tu réponds comme un assistant grand public qui cherche sur le web avant de répondre. Quand on te demande un classement, cherche puis donne la liste demandée, ordonnée du meilleur au moins bon, en te fondant sur ce que tu as trouvé. Un ordre approximatif est attendu et suffit : n'explique pas qu'il n'existe pas de classement officiel, ne préviens pas des limites de l'exercice, ne pose pas de question. Réponds par la liste, et rien d'autre.`;
+
+/**
  * Reproduit Claude « grand public » : le SDK Anthropic, l'outil `web_search`
- * activé, aucun system prompt. Sans cet outil, Claude répondrait de mémoire et
- * rendrait une liste plausible plutôt qu'un relevé — c'est précisément ce qui
- * l'avait fait sortir des moteurs suivis la première fois.
+ * activé. Sans cet outil, Claude répondrait de mémoire et rendrait une liste
+ * plausible plutôt qu'un relevé — c'est précisément ce qui l'avait fait sortir
+ * des moteurs suivis la première fois.
  *
  * L'effort de réflexion est au plus bas : ce qu'on lui demande est une liste de
  * dix noms, pas un problème à démêler, et l'appel est payé à chaque relevé.
@@ -503,7 +519,7 @@ async function queryClaude(query: string): Promise<LiveEngineResult> {
     };
   }
 
-  const model = process.env.ANTHROPIC_MODEL || "claude-opus-5";
+  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
   const startedAt = Date.now();
   geoLog(`Claude — appel (${model}, web_search)…`, { requête: query.slice(0, 200) });
   try {
@@ -512,6 +528,7 @@ async function queryClaude(query: string): Promise<LiveEngineResult> {
       model,
       max_tokens: 2000,
       output_config: { effort: "low" },
+      system: RANKING_SYSTEM,
       tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
       messages: [{ role: "user", content: query }],
     });
