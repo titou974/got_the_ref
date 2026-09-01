@@ -33,6 +33,13 @@ export const ROUTES = {
   dashboardPresence: "/tableau-de-bord/presence",
   dashboardMaps: "/tableau-de-bord/google-maps",
   dashboardSettings: "/tableau-de-bord/reglages",
+  /**
+   * L'écran d'appairage d'un agent IA. L'agent affiche un code dans le
+   * terminal, le client le confirme ici — c'est le seul endroit où le
+   * rattachement se décide.
+   */
+  agentLink: "/agent",
+  agentLinkWithCode: (code: string) => `/agent?code=${encodeURIComponent(code)}`,
   analysis: (id: string) => `/analyse/${id}`,
   /** Retour de Stripe après paiement d'une analyse (création de compte). */
   checkoutSuccess: "/paiement/succes",

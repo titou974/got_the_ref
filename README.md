@@ -322,6 +322,78 @@ l'hébergeur. Ce qui n'est pas parti repart au passage suivant.
    Copiez le `whsec_…` affiché dans `STRIPE_WEBHOOK_SECRET`.
 3. Événements gérés : `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`.
 
+## Serveur MCP `got_the_ref`
+
+MCP (Model Context Protocol) est la prise standard entre un agent IA et un
+service. Celle-ci connecte l'agent du client — Claude Code, Codex, Cursor,
+Hermes — à son compte : l'agent relève lui-même le statut et les correctifs,
+puis les applique. Elle remplace le prompt qu'on copiait à la main.
+
+Le serveur **tourne dans cette application**, sur le même déploiement Vercel que
+le reste du site. Il n'y a rien à publier sur npm, rien à installer sur le poste
+du client, et aucune version installée quelque part ne peut diverger de celle
+qui est déployée.
+
+### Comment le client s'y branche
+
+Il crée sa clé depuis la modale du tableau de bord, puis colle une ligne :
+
+```bash
+# Claude Code
+claude mcp add --scope user --transport http got_the_ref https://gotheref.com/mcp/<clé>
+
+# Codex
+codex mcp add got_the_ref --url https://gotheref.com/mcp/<clé>
+```
+
+Cursor n'a pas de sous-commande `mcp add` : la modale lui donne un lien
+d'installation `cursor://`, avec le bloc `~/.cursor/mcp.json` en repli. Hermes
+se règle par le même bloc.
+
+### La clé
+
+La clé voyage dans le chemin de l'URL. C'est ce qui permet à la commande de
+tenir sur une ligne dans les quatre agents : Cursor et les configurations par
+fichier n'acceptent qu'une adresse, pas un en-tête. **Une adresse `/mcp/…` est
+donc un secret**, au même titre qu'un mot de passe :
+
+- le serveur n'en garde que l'empreinte (SHA-256) — elle n'existe en clair
+  qu'une fois, dans la réponse qui la crée ;
+- les réponses portent `Cache-Control: no-store` et `X-Robots-Tag: noindex`, et
+  `/mcp/` est écarté dans `robots.txt` ;
+- elle se coupe côté compte (`McpToken.revokedAt`), et une clé créée mais jamais
+  employée s'éteint dès qu'on en crée une neuve pour le même agent ;
+- l'en-tête `Authorization: Bearer` reste accepté pour les agents qui savent
+  l'envoyer.
+
+### Ce que l'agent peut faire
+
+| Outil | Rôle |
+| --- | --- |
+| `got_the_ref_statut` | Offre du compte, site suivi, dernière analyse, chantiers ouverts. |
+| `got_the_ref_correctifs` | Les correctifs à appliquer, avec les textes exacts. |
+| `got_the_ref_expliquer` | Explique l'analyse et les correctifs. |
+| `got_the_ref_signaler` | Rapporte à la plateforme ce qui a été posé. |
+
+Le prompt MCP `got_the_ref` active l'agent avec sa charte, laquelle part aussi
+dans les `instructions` du serveur, à la poignée de main.
+
+Le périmètre n'est pas une consigne qu'on demande à l'agent de respecter : c'est
+tout ce que le serveur sait produire. Les chantiers que l'offre du compte ne
+couvre pas arrivent nommés et **vides** — il n'y a rien à reconstituer. Révoquer
+un accès ne figure volontairement pas parmi les outils : c'est un geste du
+client, depuis son tableau de bord.
+
+### Où c'est écrit
+
+```
+src/app/mcp/[cle]/route.ts     Le point d'entrée HTTP (identité, débit, transport)
+src/features/mcp/server.ts     Les outils et la charte
+src/features/mcp/format.ts     La mise en pages servie à l'agent
+src/features/mcp/payload.ts    Ce que la plateforme sert : statut, correctifs
+src/constants/mcp.ts           Les commandes affichées dans la modale
+```
+
 ## Architecture
 
 ```

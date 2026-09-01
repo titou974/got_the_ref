@@ -4,9 +4,7 @@ import { isCredentialsKeySet } from "@/lib/crypto";
 import { ROUTES } from "@/constants/routes";
 import { connectorForStack } from "@/constants/site-platforms";
 import { getDashboardContext } from "@/features/dashboard/queries";
-import { writeSolutionPrompt } from "@/features/dashboard/solution-prompt";
 import type { SiteConnectSetup } from "@/components/tableau-de-bord/SiteConnectForm";
-import type { ArticleFact } from "@/lib/geo/solution-facts";
 import type { AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { SolveAgentsBar } from "@/components/dashboard/SolveAgentsBar";
@@ -14,51 +12,41 @@ import { SolveAgentsBar } from "@/components/dashboard/SolveAgentsBar";
 /**
  * La barre « résoudre avec les agents IA » du tableau de bord.
  *
- * C'est la même barre que celle du rapport d'analyse, à une différence près :
- * le prompt qu'elle porte ne couvre pas une section mais les six. Le client
- * n'a plus à passer d'onglet en onglet pour ramasser ses correctifs — il copie
- * une fois, son agent applique tout.
- *
  * Elle est posée dans la coque, pas dans une page : c'est le geste que le
  * produit vend, et il doit rester à portée de pouce sur les six onglets. Elle
  * n'était montée que sur l'accueil, et le client qui descendait dans le détail
  * d'une section perdait en route le bouton qui l'applique.
  *
- * L'écriture du prompt prend deux à trois secondes. Derrière une frontière
- * `Suspense` sans repli : la page s'affiche entière tout de suite, la barre
- * arrive après. Un repli qui montrerait la barre avec un prompt provisoire
- * fermerait la modale au moment de la bascule, en pleine lecture.
+ * Elle n'écrit plus rien. Auparavant elle rédigeait, à chaque affichage, le
+ * prompt de correction des six sections — deux à trois secondes d'appel au
+ * modèle pour un texte que le client copiait ensuite à la main. L'exécution
+ * passe désormais par le serveur MCP : l'agent va chercher lui-même les
+ * correctifs, et la barre n'a plus qu'à ouvrir la modale.
+ *
+ * Elle reste derrière une frontière `Suspense` sans repli. Ce qu'elle attend
+ * n'est plus un modèle mais le rattachement du site, lu en base : la coque
+ * s'affiche entière tout de suite, la barre arrive après.
  */
 export function SolveAgentsDock({
   userId,
   result,
   diagnostic,
-  articles,
   locked = false,
 }: {
   /** Le compte dont on lit le rattachement, pour l'ouvrir dans la modale. */
   userId: string;
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
-  /** Le planning éditorial : les articles rédigés partent dans le prompt. */
-  articles: ArticleFact[];
   /**
-   * Compte gratuit : la barre s'affiche et la modale s'ouvre, mais le prompt
-   * comme le rattachement du site en sont retirés. Le prompt n'est alors pas
-   * écrit du tout — c'est un appel au modèle de deux à trois secondes, et un
-   * texte qui n'atteint pas le navigateur ne se copie pas.
+   * Compte gratuit : la barre et la modale s'affichent à l'identique. Ce qui
+   * change est ce que l'agent recevra une fois connecté — le serveur ne lui
+   * sert que les chantiers ouverts par l'offre.
    */
   locked?: boolean;
 }) {
   return (
     <Suspense fallback={null}>
-      <Dock
-        userId={userId}
-        result={result}
-        diagnostic={diagnostic}
-        articles={articles}
-        locked={locked}
-      />
+      <Dock userId={userId} result={result} diagnostic={diagnostic} locked={locked} />
     </Suspense>
   );
 }
@@ -67,13 +55,11 @@ async function Dock({
   userId,
   result,
   diagnostic,
-  articles,
   locked,
 }: {
   userId: string;
   result: GeoAnalysisResult;
   diagnostic: AnalysisDiagnostic;
-  articles: ArticleFact[];
   locked: boolean;
 }) {
   const t = await getTranslations("analysisReport");
@@ -94,15 +80,6 @@ async function Dock({
       ? failing
       : diagnostic.architecture.checks.map((c) => `architecture.checks.${c.key}`)
   ).slice(0, 3);
-
-  const solutionPrompt = locked
-    ? ""
-    : await writeSolutionPrompt({
-        tab: "all",
-        result,
-        diagnostic,
-        articles,
-      });
 
   // Le rattachement du site s'ouvre dans la modale, et pas seulement dans les
   // réglages : c'est ici que le client demande qu'on corrige son site, donc
@@ -147,8 +124,6 @@ async function Dock({
         domain={result.domain}
         stack={result.signals.stack ?? null}
         issues={issueKeys.map((key) => t(key))}
-        solutionPrompt={solutionPrompt}
-        scope="dashboard"
         locked={locked}
         connect={connect}
         // Le compte gratuit passe par l'onglet Contenu avant d'ouvrir la

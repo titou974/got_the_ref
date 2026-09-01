@@ -47,6 +47,9 @@ model User {
   prospects          OutreachProspect[]
   googlePosts        GooglePost[]
   llmMentions        LlmMentionSnapshot?
+  mcpTokens          McpToken[]
+  mcpDeviceCodes     McpDeviceCode[]
+  mcpFixReports      McpFixReport[]
 }
 
 /// Une passe de réécriture demandée depuis l'onglet Contenu.
@@ -571,4 +574,96 @@ model LlmMentionSnapshot {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Un jeton d'accès MCP : la clé que porte l'agent IA du client (Claude Code,
+/// Codex, Cursor, Hermes) pour lire son statut et ses correctifs.
+///
+/// Seule l'empreinte est stockée. Le jeton en clair n'existe que deux fois : dans
+/// la réponse qui l'accorde, et dans le fichier local de l'agent. Une fuite de la
+/// table ne rend donc personne capable de se connecter — même règle que pour un
+/// mot de passe.
+///
+/// `revokedAt` plutôt qu'une suppression : un client qui coupe l'accès d'un poste
+/// doit pouvoir constater ensuite qu'il l'a bien coupé, et quand.
+model McpToken {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// SHA-256 du jeton en clair, en hexadécimal.
+  tokenHash String @unique
+  /// Le nom que l'agent s'est donné en s'appairant (« Claude Code », « Cursor »…).
+  clientName String @default("agent")
+
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// Un appairage en cours, façon « device flow » : l'agent demande un code, le
+/// client l'autorise depuis son navigateur, l'agent récupère son jeton.
+///
+/// L'agent tourne dans un terminal : il n'a ni cookie de session, ni écran de
+/// connexion. Le code affiché dans le terminal puis confirmé dans le navigateur
+/// est ce qui relie les deux — l'agent ne voit jamais le mot de passe du compte,
+/// et le navigateur n'a rien à recopier.
+///
+/// `grantedToken` porte le jeton en clair entre l'autorisation et le premier
+/// relevé de l'agent, quelques secondes plus tard. La ligne est détruite dès
+/// qu'il l'a lu, et de toute façon à l'expiration : c'est la seule fenêtre où le
+/// jeton existe ailleurs que chez l'agent.
+model McpDeviceCode {
+  id String @id @default(cuid())
+
+  /// Secret détenu par l'agent seul, avec lequel il interroge l'appairage.
+  deviceCode String @unique
+  /// Le code court lu à l'écran par le client (8 caractères, sans ambiguïté).
+  userCode   String @unique
+
+  /// pending · approved · denied.
+  status     String @default("pending")
+  clientName String @default("agent")
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  grantedToken String?
+
+  expiresAt  DateTime
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+/// Ce que l'agent rapporte après une passe : les correctifs qu'il a réellement
+/// posés, chantier par chantier.
+///
+/// Sans cette trace, le client autorise un agent puis n'apprend jamais ce qu'il
+/// a fait — il lui reste à relire son dépôt. La ligne alimente l'écran de
+/// rattachement : « Claude Code a appliqué 4 correctifs il y a trois minutes ».
+///
+/// Elle n'est pas une preuve : c'est l'agent qui la déclare. Elle dit ce qui a
+/// été tenté, pas ce que le prochain audit constatera.
+model McpFixReport {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le nom que portait l'agent au moment de la passe.
+  clientName String @default("agent")
+  /// L'onglet visé : results · content · architecture · articles · presence · maps.
+  chantier   String
+
+  /// Les correctifs déclarés appliqués, et ceux laissés de côté avec leur raison.
+  applied String[] @default([])
+  skipped String[] @default([])
+  note    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

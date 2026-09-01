@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { StackMark } from "@/components/StackMark";
+import { AgentLinkPanel } from "@/components/dashboard/AgentLinkPanel";
+import { MCP_FIRST_PROMPT } from "@/constants/mcp";
 import { ROUTES, signInWithNext } from "@/constants/routes";
 import {
   SiteConnectForm,
@@ -14,9 +15,13 @@ import {
 import type { DetectedStack } from "@/lib/geo/types";
 
 /**
- * Première étape du parcours « agents » : connecter le site. La logique de
- * connexion et de résolution viendra ensuite — cet écran pose l'intention et
- * montre, sur les vrais manques du rapport, ce que les agents vont corriger.
+ * Le parcours « agents » : brancher l'agent IA du client sur son compte, et
+ * rattacher son site.
+ *
+ * L'écran montre d'abord, sur les vrais manques du rapport, ce que les agents
+ * vont corriger ; puis il donne la prise à brancher. Le prompt à copier a
+ * disparu d'ici — c'est `AgentLinkPanel` qui tient désormais l'exécution, et
+ * l'agent va chercher lui-même les correctifs.
  */
 
 const FIX_INTERVAL_MS = 900; // une correction affichée toutes les 0,9 s
@@ -145,74 +150,43 @@ function AgentConsole({
 }
 
 /**
- * Les agents dans lesquels le prompt se colle. Les montrer évite la question
- * « c'est pour quel outil ? » : le client reconnaît le sien et sait quoi faire.
+ * Ce qu'on envoie au développeur quand le client ne pose pas les mains
+ * lui-même : l'adresse de la prise, la phrase. Deux lignes qui tiennent dans un
+ * SMS et qui suffisent à démarrer sans avoir accès au tableau de bord.
+ *
+ * On transmet l'adresse plutôt qu'une commande toute faite : le développeur
+ * n'utilise pas forcément l'agent que le client a choisi dans la modale, et
+ * une adresse de serveur MCP se branche partout. Sans clé créée, il n'y a rien
+ * à transmettre — on le dit franchement plutôt que d'envoyer une ligne qui
+ * échouera chez lui.
  */
-const AGENTS = [
-  { name: "ChatGPT", logo: "/chatgpt.png" },
-  { name: "Claude", logo: "/claude.svg" },
-  { name: "Cursor", logo: null },
-] as const;
+function handoffText(domain: string, endpoint: string | null): string {
+  const lines = [`Correctifs GEO à appliquer sur ${domain} (got_the_ref).`, ""];
 
-/** Le cube de Cursor, dessiné ici : aucun fichier de marque dans /public. */
-function CursorMark() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 2.6 20.5 7v10L12 21.4 3.5 17V7L12 2.6Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.9 7.3 12 12l8.1-4.7M12 12v9.2"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-    </svg>
+  lines.push(
+    endpoint
+      ? `1. Branche cette prise MCP dans ton agent IA : ${endpoint}`
+      : "1. Branche la prise MCP got_the_ref dans ton agent IA, avec l'adresse de connexion que je t'envoie à part.",
   );
-}
+  lines.push(`2. Demande-lui : « ${MCP_FIRST_PROMPT} »`);
 
-function AgentLogos() {
-  return (
-    <span className="flex items-center gap-1.5" aria-hidden>
-      {AGENTS.map((agent) =>
-        agent.logo ? (
-          <Image
-            key={agent.name}
-            src={agent.logo}
-            alt=""
-            width={16}
-            height={16}
-            className="h-4 w-4 rounded-[4px] bg-white object-contain p-px"
-          />
-        ) : (
-          <span
-            key={agent.name}
-            className="flex h-4 w-4 items-center justify-center"
-          >
-            <CursorMark />
-          </span>
-        ),
-      )}
-    </span>
-  );
+  return lines.join("\n");
 }
 
 /**
- * Ce que le compte gratuit voit à la place du prompt : le bouton qui mène aux
- * tarifs, et rien d'autre — le rattachement du site n'est pas non plus proposé
- * à ce niveau.
+ * L'appel vers les tarifs, pour le compte gratuit — à la place du rattachement
+ * du site, qui n'est pas proposé à ce niveau.
  *
- * Il n'y a plus de voile ici. Les boutons floutés qu'on posait dessous se
+ * Il n'y a pas de voile ici. Les boutons floutés qu'on posait dessous se
  * lisaient comme une salissure derrière le bouton — la pilule noire du décor
  * bavait autour de la vraie —, et ils ne montraient rien qu'on ne sache déjà :
  * la console des agents, nette juste au-dessus, a fait la démonstration, et le
  * titre de la modale a dit ce qui s'achète.
  *
- * Le prompt, lui, n'est pas seulement absent de l'écran : le serveur ne l'écrit
- * pas pour un compte gratuit (cf. `SolveAgentsDock`). Un voile CSS se contourne
- * avec l'inspecteur ; une chaîne absente, non.
+ * Ce que l'offre borne n'est d'ailleurs pas cet écran mais ce que le serveur
+ * MCP sert à l'agent une fois branché : les chantiers fermés arrivent nommés et
+ * vides. Un voile CSS se contourne avec l'inspecteur ; une réponse qui ne
+ * contient rien, non.
  */
 function LockedActions() {
   const t = useTranslations("analysisReport.solve.modal");
@@ -295,8 +269,6 @@ export function ConnectSiteModal({
   domain,
   stack,
   issues,
-  solutionPrompt,
-  scope = "report",
   locked = false,
   connect = null,
   onClose,
@@ -305,19 +277,10 @@ export function ConnectSiteModal({
   stack: DetectedStack | null;
   /** Manques relevés dans le rapport, rejoués dans l'en-tête (3 au plus). */
   issues: string[];
-  /** Le prompt de correction, pour qui préfère faire appliquer à la main. */
-  solutionPrompt: string;
   /**
-   * Depuis le rapport, le prompt ne couvre que le plan d'action ; depuis le
-   * tableau de bord, il couvre les six sections. Seul le libellé du bouton
-   * change — la promesse n'est pas la même.
-   */
-  scope?: "report" | "dashboard";
-  /**
-   * Compte gratuit : le prompt de correction laisse la place à l'appel vers les
-   * tarifs, et le rattachement du site disparaît avec lui. La modale se réduit
-   * alors à sa démonstration — la console qui rejoue les manques du site — et à
-   * l'offre qui l'ouvre.
+   * Compte gratuit : la prise de l'agent s'affiche à l'identique — c'est le
+   * serveur MCP qui borne ensuite ce qu'il reçoit —, mais le rattachement du
+   * site disparaît et l'appel vers les tarifs prend sa place.
    */
   locked?: boolean;
   /**
@@ -329,33 +292,26 @@ export function ConnectSiteModal({
   onClose: () => void;
 }) {
   const t = useTranslations("analysisReport.solve.modal");
-  const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
-  async function copyPrompt() {
-    try {
-      await navigator.clipboard.writeText(solutionPrompt);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* presse-papiers indisponible : rien à signaler, le bouton ne change pas */
-    }
-  }
+  // L'adresse de la prise, quand le client vient de créer sa clé dans le
+  // panneau. Elle remonte ici pour que la transmission au développeur porte la
+  // vraie adresse plutôt qu'une consigne d'aller la chercher.
+  const [endpoint, setEndpoint] = useState<string | null>(null);
 
   /**
-   * Passer le travail au développeur, c'est lui passer le prompt — pas un lien
-   * vers un écran auquel il n'a pas accès. Sur mobile, la feuille de partage du
-   * système l'envoie où le client veut ; ailleurs, il n'y a rien à ouvrir et la
-   * copie fait le même travail.
+   * Passer le travail au développeur, c'est lui passer l'installation — pas un
+   * lien vers un écran auquel il n'a pas accès. Sur mobile, la feuille de
+   * partage du système l'envoie où le client veut ; ailleurs, il n'y a rien à
+   * ouvrir et la copie fait le même travail.
    */
   async function shareWithDeveloper() {
+    const text = handoffText(domain, endpoint);
+
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({
-          title: t("shareDevTitle", { domain }),
-          text: solutionPrompt,
-        });
+        await navigator.share({ title: t("shareDevTitle", { domain }), text });
         return;
       } catch {
         // Partage annulé ou refusé : on retombe sur la copie.
@@ -363,11 +319,11 @@ export function ConnectSiteModal({
     }
 
     try {
-      await navigator.clipboard.writeText(solutionPrompt);
+      await navigator.clipboard.writeText(text);
       setShared(true);
       window.setTimeout(() => setShared(false), 2600);
     } catch {
-      /* presse-papiers indisponible : le prompt reste copiable à la main */
+      /* presse-papiers indisponible : l'adresse reste copiable à la main */
     }
   }
 
@@ -426,12 +382,25 @@ export function ConnectSiteModal({
             </p>
           )}
 
-          {/* Deux voies, et le client choisit : rattacher son site — les agents
-              publient alors eux-mêmes — ou repartir avec le prompt et le faire
-              appliquer à la main. Le rattachement passait auparavant par un
-              bouton désactivé marqué « bientôt » ; il est ouvert, donc il
-              s'ouvre ici, au moment où la console vient de montrer ce qu'il y a
-              à corriger. */}
+          {/* La prise de l'agent : la première chose à faire sur cet écran, et
+              celle que la console vient de démontrer. Elle passe avant le
+              rattachement du site — l'un branche l'agent du client sur son
+              dossier, l'autre nous donne la clé de sa maison, et le second ne
+              se demande qu'à celui qui a déjà vu le premier fonctionner.
+
+              Elle est là pour tout le monde, compte gratuit compris : c'est le
+              geste que le produit vend. Ce que l'offre borne, c'est ce que le
+              serveur MCP sert ensuite à l'agent. */}
+          {connecting && connect ? null : (
+            <div className="mt-5">
+              <AgentLinkPanel locked={locked} onEndpoint={setEndpoint} />
+            </div>
+          )}
+
+          {/* L'autre voie : rattacher son site, les agents publient alors
+              eux-mêmes. Elle passait auparavant par un bouton désactivé marqué
+              « bientôt » ; elle est ouverte, donc elle s'ouvre ici, au moment
+              où la console vient de montrer ce qu'il y a à corriger. */}
           <div className="mt-5 flex flex-col gap-2.5">
             {connecting && connect ? (
               <>
@@ -464,50 +433,10 @@ export function ConnectSiteModal({
               <ConnectAction connect={connect} onOpen={() => setConnecting(true)} />
             )}
 
-            {locked ? (
-              <LockedActions />
-            ) : (
-              <>
-            <button
-              type="button"
-              autoFocus
-              onClick={copyPrompt}
-              className="flex cursor-pointer items-center justify-center gap-2.5 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-            >
-              <span className="text-pretty">
-                {copied
-                  ? t("promptCopied")
-                  : scope === "dashboard"
-                    ? t("promptCtaAll")
-                    : t("promptCta")}
-              </span>
-            </button>
-
-            {/* Le début du prompt, sous le bouton.
-                Copier un texte qu'on n'a pas vu demande de la confiance ; en
-                montrer l'entrée coûte quatre lignes et lève la question. Les
-                logos passent au-dessus, à gauche : dans le bouton, ils
-                décalaient un libellé déjà long sans dire à quoi ils servaient.
-                Au-dessus du prompt, ils disent où le coller. */}
-            <div>
-              <div className="mb-2 flex items-center gap-2">
-                <AgentLogos />
-                <span className="text-xs text-muted">
-                  {t("promptPreviewLabel")}
-                </span>
-              </div>
-              <div className="relative">
-                <pre className="max-h-40 overflow-hidden whitespace-pre-wrap break-words rounded-2xl border border-fog bg-mist px-4 py-3 font-sans text-[11px] leading-relaxed text-muted">
-                  {solutionPrompt}
-                </pre>
-                {/* Le texte s'éteint vers le bas : c'est un extrait, et une
-                    coupe nette se lirait comme un prompt tronqué à la copie. */}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-px bottom-px h-16 rounded-b-2xl bg-gradient-to-b from-transparent to-mist"
-                />
-              </div>
-            </div>
+            {/* L'appel vers les tarifs, pour le compte gratuit. La prise, elle,
+                reste au-dessus : ce n'est pas elle qui s'achète, c'est ce que
+                le serveur sert ensuite à l'agent. */}
+            {locked ? <LockedActions /> : null}
 
             <button
               type="button"
@@ -516,8 +445,6 @@ export function ConnectSiteModal({
             >
               {shared ? t("shareDevDone") : t("shareDev")}
             </button>
-              </>
-            )}
 
             <button
               type="button"
