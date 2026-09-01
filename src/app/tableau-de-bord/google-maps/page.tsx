@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext, listGooglePosts } from "@/features/dashboard/queries";
+import { businessHint, getDashboardContext, listGooglePosts } from "@/features/dashboard/queries";
 import { Card, CardTitle, PageHeader, StatusDot } from "@/components/tableau-de-bord/Card";
 import { GooglePostPlanner } from "@/components/tableau-de-bord/GooglePostPlanner";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
@@ -25,7 +25,7 @@ export default async function GoogleMapsPage() {
   if (!context.isPhysical) notFound();
 
   const t = await getTranslations("dashboard.maps");
-  if (!context.analysis) return <PreparingAnalysis tier={context.tier} />;
+  if (!context.analysis) return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
 
   const analysis = context.analysis;
   const coherence = analysis.mapsCoherence ?? null;

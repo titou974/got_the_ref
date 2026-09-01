@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { authActionClient } from "@/lib/safe-action";
+import { sendEmail } from "@/lib/email";
+import { analysisReadyEmail } from "./emails";
 import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
@@ -14,7 +17,12 @@ import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
 import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
-import { getArticleQuota, getDashboardContext, readSiteCredentials } from "./queries";
+import {
+  getArticleQuota,
+  getDashboardContext,
+  isDashboardReady,
+  readSiteCredentials,
+} from "./queries";
 import {
   releaseArticleGeneration,
   releaseOnPageRewrite,
@@ -209,9 +217,49 @@ export const prepareDashboardAction = authActionClient
           select: { id: true },
         });
 
+    // Les résultats partent aussi par e-mail. Beaucoup de clients ferment
+    // l'onglet pendant les trois minutes d'audit ; sans ce message, ils ne
+    // reviennent pas voir ce qu'ils ont demandé. Il est expédié après la
+    // réponse — le tableau de bord n'a pas à attendre Resend — et son échec ne
+    // remet pas en cause l'analyse, qui est écrite.
+    const { subject, html, text } = analysisReadyEmail({
+      userName: ctx.auth.user.name,
+      analysis: result,
+    });
+    after(() =>
+      sendEmail({
+        to: ctx.auth.user.email,
+        subject,
+        html,
+        text,
+        // Adossée à l'analyse : la reprise après achat en réécrit une nouvelle
+        // et mérite son e-mail, un double rendu de l'écran d'attente n'en
+        // mérite pas un second.
+        idempotencyKey: `analysis-ready/${record.id}/${tier}`,
+      }),
+    );
+
     revalidateDashboard();
     return { id: record.id };
   });
+
+/**
+ * Le tableau de bord est-il prêt à prendre la place de l'écran d'attente ?
+ *
+ * L'écran d'attente ne peut pas se fier au seul retour de `prepareDashboardAction` :
+ * l'action peut avoir rendu la main pendant que la revalidation de la page
+ * n'est pas encore visible, et une analyse écrite mais pas encore relue
+ * laisserait le client sur une barre pleine à 100 % — le défaut que cette
+ * action existe pour supprimer. Il demande donc au serveur, en toutes lettres,
+ * si la page d'accueil afficherait autre chose que l'attente.
+ *
+ * Aucune écriture, aucun appel de modèle : deux lectures en base. C'est ce qui
+ * autorise à la répéter toutes les deux secondes le temps que l'écriture
+ * devienne visible.
+ */
+export const dashboardReadyAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => ({ ready: await isDashboardReady(ctx.auth.user.id) }));
 
 /** Le niveau d'accès inscrit dans une analyse enregistrée, s'il l'a été. */
 function readAnalysisTier(raw: string): AccessTier | null {

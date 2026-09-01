@@ -21,6 +21,12 @@ import { motion, useReducedMotion } from "framer-motion";
  * délavait — un capuchon noir à moitié transparent devient gris, et on ne
  * reconnaît plus le logo. L'appui se lit à la descente et à l'ombre, ce qui est
  * exactement ce qui le rend lisible sur un vrai clavier.
+ *
+ * La touche enfoncée peut venir du dehors (`active`) : sur l'écran d'analyse,
+ * c'est le moteur à qui la question est réellement posée qui s'enfonce, et il
+ * change quand la question change. Sans cette consigne, les trois se relaient
+ * d'elles-mêmes — c'est ce qu'il faut pendant un crawl, où l'on ne parle encore
+ * à personne en particulier.
  */
 
 const ENGINES = [
@@ -32,40 +38,55 @@ const ENGINES = [
 /** Une frappe toutes les 820 ms : le rythme d'une main qui réfléchit entre deux mots. */
 const STRIKE_MS = 820;
 
-const SHADOW_UP = "drop-shadow(0 8px 12px rgba(9, 9, 11, 0.20))";
-const SHADOW_DOWN = "drop-shadow(0 3px 5px rgba(9, 9, 11, 0.16))";
+const SHADOW_UP = "drop-shadow(0 10px 16px rgba(9, 9, 11, 0.22))";
+const SHADOW_DOWN = "drop-shadow(0 4px 6px rgba(9, 9, 11, 0.18))";
 
-export function AiKeycaps({ className = "" }: { className?: string }) {
+export function AiKeycaps({
+  className = "",
+  active,
+}: {
+  className?: string;
+  /** Index de la touche enfoncée. Sans lui, les trois se relaient d'elles-mêmes. */
+  active?: number;
+}) {
   const reduced = useReducedMotion();
-  const [pressed, setPressed] = useState(0);
+  const [cycled, setCycled] = useState(0);
+  const driven = active !== undefined;
 
   useEffect(() => {
-    if (reduced) return;
-    const timer = setInterval(() => setPressed((n) => (n + 1) % ENGINES.length), STRIKE_MS);
+    if (reduced || driven) return;
+    const timer = setInterval(() => setCycled((n) => (n + 1) % ENGINES.length), STRIKE_MS);
     return () => clearInterval(timer);
-  }, [reduced]);
+  }, [reduced, driven]);
+
+  const pressedIndex = driven ? active % ENGINES.length : cycled;
 
   return (
-    <div aria-hidden className={`flex items-center justify-center gap-1 ${className}`}>
+    // L'écart appartient à la touche, pas à l'appelant : deux capuchons de
+    // 96 px collés se lisent comme un seul bloc. Le passer en `className`
+    // laissait deux `gap-*` se disputer la même règle, arbitrées par l'ordre de
+    // la feuille Tailwind plutôt que par l'intention.
+    <div aria-hidden className={`flex items-center justify-center gap-3 sm:gap-4 ${className}`}>
       {ENGINES.map((engine, index) => {
-        // Mouvement réduit : les trois touches restent posées, aucune ne descend.
-        const down = !reduced && index === pressed;
+        // Mouvement réduit et aucune consigne extérieure : les trois touches
+        // restent posées, aucune ne descend d'elle-même.
+        const down = (!reduced || driven) && index === pressedIndex;
         return (
           <motion.span
             key={engine.name}
             animate={{
-              y: down ? 5 : 0,
+              y: down ? 6 : 0,
               scale: down ? 0.955 : 1,
               filter: down ? SHADOW_DOWN : SHADOW_UP,
             }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="block h-14 w-14 sm:h-16 sm:w-16"
+            className="block h-20 w-20 sm:h-24 sm:w-24"
           >
             <Image
               src={engine.logo}
               alt=""
-              width={64}
-              height={64}
+              width={96}
+              height={96}
               className="h-full w-full object-contain"
             />
           </motion.span>
