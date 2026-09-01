@@ -100,7 +100,7 @@ export function TierGate({
         <OfferBadge offer={offer} />
         {logo && <GateLogo logo={logo} logoAlt={logoAlt} />}
         <GateCopy item={item} values={values} align="center" size={compact ? "sm" : "md"} />
-        <GateLink offer={offer} item={item} className="mt-1" />
+        <GateLink offer={offer} item={item} values={values} className="mt-1" />
       </div>
     </section>
   );
@@ -138,7 +138,7 @@ function GateBar({
         </div>
       </div>
 
-      <GateLink offer={offer} item={item} className="shrink-0 self-stretch sm:self-center" />
+      <GateLink offer={offer} item={item} values={values} className="shrink-0 self-stretch sm:self-center" />
     </div>
   );
 }
@@ -178,7 +178,7 @@ export function GatePanel({
           <GateCopy item={item} values={values} align="center" size="sm" />
         </div>
 
-        <GateLink offer={offer} item={item} className="mt-4 w-full" />
+        <GateLink offer={offer} item={item} values={values} className="mt-4 w-full" />
       </div>
     </div>
   );
@@ -237,21 +237,25 @@ function GateCopy({
 function GateLink({
   offer,
   item,
+  values,
   className = "",
 }: {
   offer: UpsellOffer;
   item: string;
+  /** Mêmes valeurs que le titre : un bouton qui nomme un moteur les demande aussi. */
+  values?: Record<string, string | number>;
   className?: string;
 }) {
   const t = useTranslations("dashboard.gate");
+  const label = t(`items.${item}.cta`, values);
 
   return (
     <Link
       href={ROUTES.pricing}
-      aria-label={`${t(`items.${item}.cta`)}, avec ${t(`offers.${offer}`)}`}
+      aria-label={`${label}, avec ${t(`offers.${offer}`)}`}
       className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${className}`}
     >
-      {t(`items.${item}.cta`)}
+      {label}
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
         <path
           d="M5 12h14M13 6l6 6-6 6"

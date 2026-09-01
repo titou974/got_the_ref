@@ -9,7 +9,7 @@ import type {
   Competitor,
   TrendingKeywordsInsight,
 } from "./types";
-import { RETIRED_ENGINES } from "./types";
+import { DASHBOARD_ENGINES } from "./types";
 
 /** Élément on-page de repli : texte réel si connu, sinon état « non audité ». */
 function legacyCheck(text: string | null): OnPageCheck {
@@ -110,12 +110,12 @@ export function hydrateAnalysisResult(
     findings: [],
   };
 
-  // Les analyses enregistrées avant le retrait du troisième assistant portent
-  // encore son moteur. On l'écarte à la relecture : il n'a plus de logo, plus
-  // d'API, et son classement n'était de toute façon plus relevé.
+  // Une analyse enregistrée porte les moteurs du jour où elle a été faite. La
+  // liste des moteurs suivis, elle, bouge : on ne relit donc que ceux qui sont
+  // encore au produit, les autres n'ayant plus ni logo, ni API, ni relevé.
   const engines = Array.isArray(raw.engines)
     ? (raw.engines as LegacyEngine[])
-        .filter((e) => !(RETIRED_ENGINES as readonly string[]).includes(e.engine))
+        .filter((e) => (DASHBOARD_ENGINES as readonly string[]).includes(e.engine))
         .map((e) => normalizeEngine(e, profile.niche))
     : [];
 

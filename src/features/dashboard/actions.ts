@@ -271,7 +271,7 @@ function readAnalysisTier(raw: string): AccessTier | null {
 }
 
 /**
- * Relève à nouveau la place du commerce dans ChatGPT et Gemini.
+ * Relève à nouveau la place du commerce dans les moteurs suivis.
  *
  * Le classement est la seule partie de l'audit qui bouge d'une semaine à
  * l'autre sans que le site change : on la reprend seule, auprès des API des
@@ -307,9 +307,9 @@ export const refreshRankingsAction = authActionClient
     const isPhysical = profile?.businessKind !== "online";
 
     // Un compte gratuit ne fait mesurer que Gemini : son relevé passe par le
-    // grounding Google Search, sans appel facturé en plus. ChatGPT consomme un
-    // appel à l'outil de recherche d'OpenAI par passage — il n'est donc pas
-    // exécuté, et sa carte reste voilée plutôt que remplie d'un chiffre inventé.
+    // grounding Google Search, sans appel facturé en plus. ChatGPT, Perplexity
+    // et Claude se paient à chaque passage — ils ne sont donc pas exécutés, et
+    // leurs cartes restent voilées plutôt que remplies d'un chiffre inventé.
     const { tier } = await getAccess(userId);
     const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(tier, engine));
 

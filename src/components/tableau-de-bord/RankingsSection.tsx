@@ -21,13 +21,15 @@ import { GatePanel } from "./TierGate";
  *
  * Seuls les moteurs de `DASHBOARD_ENGINES` sont montrés. Le top 10 direct et
  * indirect qu'ils portent vient de leur propre réponse : ChatGPT par son outil
- * de recherche, Gemini par le grounding Google Search. Aucun modèle de service
- * ne fabrique un classement à leur place.
+ * de recherche, Gemini par le grounding Google Search, Perplexity par
+ * construction, Claude par son outil `web_search`. Aucun modèle de service ne
+ * fabrique un classement à leur place.
  *
- * Un compte gratuit ne fait mesurer que Gemini : la carte ChatGPT est bien à sa
- * place, à la bonne taille, mais sous voile — elle porte l'estimation du modèle,
- * pas un relevé, et la faire passer pour une position serait mentir. Le voile
- * dit ce qu'il en est et mène aux tarifs.
+ * Un compte gratuit ne fait mesurer que Gemini : les trois autres cartes sont
+ * bien à leur place, à la bonne taille, mais sous voile — elles portent
+ * l'estimation du modèle, pas un relevé, et les faire passer pour des positions
+ * serait mentir. Le voile dit ce qu'il en est et mène aux tarifs. Elles
+ * s'ouvrent au Coup de Boost, qui fait partir les quatre relevés.
  *
  * Sous ce voile, la carte ne montre donc rien du client : `decoyEngine` lui
  * reprend la forme de la carte ouverte — mêmes blocs, mêmes intitulés — et la
@@ -87,11 +89,10 @@ export function RankingsSection({
         <SearchLoader kind="audit" title={tr("refreshing")} />
       ) : (
         // Deux moteurs tiennent côte à côte sur un écran d'ordinateur : les
-        // empiler obligeait à faire défiler pour comparer ChatGPT et Gemini,
-        // alors que la comparaison est tout l'intérêt de la section. Au-delà de
-        // deux, la rangée redevient une pile — trois demi-largeurs tronqueraient
-        // les noms de concurrents.
-        <div className={shown.length === 2 ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
+        // empiler obligeait à faire défiler pour les comparer, alors que la
+        // comparaison est tout l'intérêt de la section. Deux par rangée et pas
+        // plus : trois demi-largeurs tronqueraient les noms de concurrents.
+        <div className={shown.length > 1 ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
           {shown.map((engine, i) => {
             const open = runsEngine(tier, engine.engine);
 
@@ -106,15 +107,19 @@ export function RankingsSection({
                 <EngineCard
                   engine={open ? engine : decoyEngine(engine, reference)}
                   delay={i * 0.05}
-                  compact={shown.length === 2}
+                  compact={shown.length > 1}
                   preview={!open}
                   overlay={
                     open ? undefined : (
+                      // Le voile nomme le moteur qu'il couvre : trois cartes
+                      // fermées portent le même appel, et un appel qui parlerait
+                      // de ChatGPT sur la carte Claude ne se rattacherait à rien.
                       <GatePanel
                         offer="boost"
                         item="rankings"
                         logo={ENGINE_LOGOS[engine.engine]}
                         logoAlt={engine.engine}
+                        values={{ engine: engine.engine }}
                       />
                     )
                   }
