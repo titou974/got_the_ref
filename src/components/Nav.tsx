@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { RiArrowLeftLine } from "@remixicon/react";
 import { Logo } from "./Logo";
 import { SignOutButton } from "./SignOutButton";
 import { NavCta } from "./NavCta";
@@ -7,7 +8,25 @@ import { MobileMenu } from "./MobileMenu";
 import { getCurrentUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 
-export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
+export async function Nav({
+  minimal = false,
+  backTo = null,
+}: {
+  minimal?: boolean;
+  /**
+   * D'où vient le client identifié, et où la flèche le ramène.
+   *
+   * Sur les tarifs, il arrive de son tableau de bord pour comparer deux offres,
+   * puis il veut y retourner. La barre lui tendait « Tableau de bord » et
+   * « Déconnexion » côte à côte, à droite : deux liens de même poids dont l'un
+   * ferme sa session, au moment précis où il hésite sur un prix. La flèche les
+   * remplace tous les deux, à gauche, où se trouve le retour partout ailleurs.
+   *
+   * Sans session, rien ne s'affiche : un visiteur qui découvre la page n'a pas
+   * de tableau de bord d'où revenir.
+   */
+  backTo?: string | null;
+} = {}) {
   const user = await getCurrentUser();
   const t = await getTranslations("common");
 
@@ -34,14 +53,14 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
   const accountLink = user ? (
     <Link
       href={ROUTES.dashboard}
-      className="cursor-pointer text-sm text-muted transition-colors duration-200 hover:text-text"
+      className="cursor-pointer truncate text-sm text-muted transition-colors duration-200 hover:text-text"
     >
       {t("account")}
     </Link>
   ) : (
     <Link
       href={ROUTES.signUp}
-      className="inline-flex cursor-pointer items-center justify-center rounded-full border border-graphite bg-snow px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+      className="inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-full border border-graphite bg-snow px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
     >
       {t("freeTrial")}
     </Link>
@@ -60,7 +79,17 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
       <nav className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 py-2.5">
         {/* Le déclencheur du tiroir se place à gauche du logo — c'est le premier
             geste attendu sur mobile, il vient donc avant la marque. */}
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
+          {backTo && user && (
+            <Link
+              href={backTo}
+              aria-label={t("backToDashboard")}
+              title={t("backToDashboard")}
+              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-fog text-steel transition-colors duration-200 hover:border-pebble hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+            >
+              <RiArrowLeftLine className="size-5" aria-hidden />
+            </Link>
+          )}
           {!minimal && (
             <MobileMenu
               links={links}
@@ -88,19 +117,38 @@ export async function Nav({ minimal = false }: { minimal?: boolean } = {}) {
             </Link>
           ))}
           {user ? (
-            <>
-              {accountLink}
-              <SignOutButton />
-            </>
+            // La flèche de retour porte déjà la sortie : répéter le lien du
+            // tableau de bord à droite, et poser la déconnexion à côté, ferait
+            // trois issues pour un écran qui n'en demande qu'une.
+            backTo ? null : (
+              <>
+                {accountLink}
+                <SignOutButton />
+              </>
+            )
           ) : (
             accountLink
           )}
           {!minimal && <NavCta label={t("analyzeMyBusiness")} />}
         </div>
 
-        {/* Mobile : le tiroir porte déjà la navigation là où il existe, mais le
-            compte reste accessible en un geste partout. */}
-        <div className="flex items-center gap-4 sm:hidden">{accountLink}</div>
+        {/* Mobile : plus de bouton d'inscription dans la barre.
+
+            Il n'y avait pas la place. « Commencer gratuitement » demande 194 px
+            sur une ligne ; à côté du logo (191 px) et de la gouttière, il en
+            faut 350, soit exactement la largeur utile d'un écran de 390 px. Le
+            libellé se repliait donc sur deux lignes, ce qui doublait la hauteur
+            de la barre, et à 320 px l'ensemble débordait de 33 px.
+
+            L'inscription reste atteignable : le tiroir la porte sur la page
+            d'accueil, et ailleurs ce sont les appels de la page elle-même —
+            cartes tarifaires, bandeau de fin de rapport — qui y mènent.
+
+            Un client identifié garde en revanche l'accès à son tableau de bord :
+            c'est un lien de texte, il tient à côté du logo. */}
+        {user && !backTo && (
+          <div className="flex min-w-0 items-center gap-4 sm:hidden">{accountLink}</div>
+        )}
       </nav>
     </header>
   );

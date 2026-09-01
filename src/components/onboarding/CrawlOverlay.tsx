@@ -46,7 +46,7 @@ export function CrawlOverlay() {
       aria-live="polite"
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg/95 px-6 backdrop-blur"
     >
-      <AiKeycaps className="gap-3" />
+      <AiKeycaps />
 
       <p className="mt-8 text-center text-lg font-semibold">{STEPS[index]}</p>
       <p className="mt-2 max-w-xs text-center text-sm text-muted">

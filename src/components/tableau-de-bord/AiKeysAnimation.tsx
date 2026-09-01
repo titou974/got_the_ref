@@ -1,27 +1,44 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { AiKeycaps } from "@/components/AiKeycaps";
 
 /**
- * Ce que l'audit est en train de faire, montré plutôt que décrit : quelqu'un
- * tape la question dans ChatGPT, puis dans Perplexity, puis dans Gemini.
+ * Ce que l'audit est en train de faire, montré plutôt que décrit : la question
+ * d'un client se tape sous les yeux du commerçant, dans ChatGPT, puis dans
+ * Perplexity, puis dans Gemini.
  *
- * L'attente dure de une à trois minutes. Une barre qui va et vient n'occupe que
- * l'écran ; voir la requête s'écrire touche par touche dit ce qui se joue — on
- * pose à trois moteurs la question que poseront les clients, et on regarde qui
- * ils citent.
+ * Les questions viennent de sa niche. « boulangerie artisanale au Havre » n'est
+ * pas une phrase d'ambiance : c'est la requête dont dépend son chiffre
+ * d'affaires, et la voir s'écrire pendant qu'on la mesure dit tout ce que
+ * l'écran a à dire. Tant que la niche n'est pas lue, on tape les questions
+ * génériques — le produit se raconte quand même, sans prétendre le connaître.
  *
- * Tout est en transform et opacity, sans mesure de la fenêtre : la boucle reste
- * fluide sur un portable qui, par ailleurs, attend une réponse réseau.
+ * Le clavier est l'objet signature de cet écran, et il est dessiné comme un
+ * objet : capuchons pleins sur un socle sourd, arête claire, et une lèvre
+ * intérieure sous chaque touche qui s'écrase à l'appui. C'est la même grammaire
+ * que la pilule noire du système — l'ombre inset qui donne le toucher de verre
+ * pressé —, appliquée à une touche. Les rangées sont décalées comme sur un vrai
+ * AZERTY : sans ce décalage, dix carrés alignés se lisent comme un tableau, pas
+ * comme un clavier.
+ *
+ * Au-dessus, les trois grosses touches des moteurs — celles du crawl et des
+ * recherches, ramenées ici. Elles ne tournent pas en rond : celle qui s'enfonce
+ * est le moteur à qui la question est réellement posée, et elle change quand la
+ * question change. C'est ce qui les rend meilleures que la pastille qu'elles
+ * remplacent dans la barre de saisie — un logo de seize pixels dit à qui l'on
+ * parle, une touche enfoncée dit qu'on est en train de lui parler.
+ *
+ * Tout est en transform, opacity et couleur, sans mesure de la fenêtre : la
+ * boucle reste fluide sur un portable qui, par ailleurs, attend une réponse
+ * réseau. Sans mouvement, la question s'affiche entière et les touches restent
+ * posées : il n'y a rien à comprendre dans l'appui, seulement dans le texte.
+ *
+ * Bloc décoratif du point de vue de l'assistance vocale : la barre de
+ * progression, au-dessus, annonce déjà l'étape en cours. Faire lire chaque
+ * changement de moteur ferait un fond sonore de trois minutes.
  */
-
-const ENGINES = [
-  { name: "ChatGPT", logo: "/logoopenai1.png", query: "meilleur restaurant près de moi" },
-  { name: "Perplexity", logo: "/logoperplexity1.png", query: "qui recommandes-tu dans ma ville" },
-  { name: "Gemini", logo: "/logogemini1.webp", query: "quelle adresse choisir ce soir" },
-] as const;
 
 /** Trois rangées, disposition française. Assez pour qu'on y reconnaisse un clavier. */
 const ROWS = [
@@ -30,118 +47,120 @@ const ROWS = [
   ["W", "X", "C", "V", "B", "N"],
 ];
 
+/** Le décalage de chaque rangée, en classes de retrait — l'escalier du clavier. */
+const ROW_INDENT = ["", "pl-3 sm:pl-5", "pl-8 sm:pl-[3.25rem]"];
+
 /** Une frappe toutes les 55 ms : le rythme d'une main qui va vite sans courir. */
 const TYPE_MS = 55;
-/** Le temps de lire la question une fois écrite, avant de passer au moteur suivant. */
-const HOLD_MS = 1600;
+/** Le temps de lire la question une fois écrite, avant de passer à la suivante. */
+const HOLD_MS = 1800;
+/** Sans mouvement, chaque question reste lisible le temps d'être lue en entier. */
+const STATIC_MS = 4500;
 
-export function AiKeysAnimation() {
-  const [engine, setEngine] = useState(0);
+/** Capuchon au repos : arête claire et lèvre intérieure, comme une touche moulée. */
+const CAP_UP = "inset 0 -2px 0 0 rgba(9, 9, 11, 0.09), 0 1px 1px 0 rgba(9, 9, 11, 0.04)";
+/** Capuchon enfoncé : la lèvre s'écrase, l'ombre portée disparaît. */
+const CAP_DOWN = "inset 0 1px 0 0 rgba(255, 255, 255, 0.18)";
+
+export function AiKeysAnimation({ prompts }: { prompts: string[] }) {
+  const reduced = useReducedMotion();
+  const [index, setIndex] = useState(0);
   const [typed, setTyped] = useState(0);
 
-  const current = ENGINES[engine];
-  const full = current.query;
+  const question = prompts[index % prompts.length] ?? "";
 
+  // Une seule horloge pour les deux régimes : on écrit lettre à lettre, puis on
+  // laisse lire, puis on passe à la question suivante. Sans mouvement, l'étape
+  // d'écriture est sautée — la question est posée d'un coup.
   useEffect(() => {
-    if (typed < full.length) {
+    if (reduced) {
+      const timer = setTimeout(() => setIndex((n) => n + 1), STATIC_MS);
+      return () => clearTimeout(timer);
+    }
+    if (typed < question.length) {
       const timer = setTimeout(() => setTyped((n) => n + 1), TYPE_MS);
       return () => clearTimeout(timer);
     }
-    // Question écrite : on la laisse à l'écran, puis on change de moteur.
     const timer = setTimeout(() => {
-      setEngine((n) => (n + 1) % ENGINES.length);
+      setIndex((n) => n + 1);
       setTyped(0);
     }, HOLD_MS);
     return () => clearTimeout(timer);
-  }, [typed, full.length]);
+  }, [reduced, typed, question.length]);
 
-  // La touche enfoncée est celle du dernier caractère écrit. L'espace et la
-  // ponctuation n'allument rien : aucune touche de la rangée ne leur correspond.
-  const lastChar = typed > 0 ? full[typed - 1].toUpperCase() : "";
+  const shown = reduced ? question : question.slice(0, typed);
+  // La touche enfoncée est celle du dernier caractère écrit. L'espace allume la
+  // barre, la ponctuation n'allume rien : aucune touche ne lui correspond.
+  const lastChar = !reduced && typed > 0 ? question[typed - 1].toUpperCase() : "";
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-label={`Interrogation de ${current.name}`}
-      className="relative isolate overflow-hidden rounded-[28px] border border-border bg-surface px-5 py-8 sm:px-8"
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 animate-[loader-drift_9s_ease-in-out_infinite] bg-[radial-gradient(120%_120%_at_20%_0%,rgba(9,9,11,0.055),transparent_58%),radial-gradient(110%_110%_at_100%_100%,rgba(9,9,11,0.035),transparent_58%)]"
-      />
+    <div aria-hidden className="flex flex-col items-center gap-5">
+      {/* Les trois moteurs. Celui à qui la question est posée reste enfoncé le
+          temps qu'elle s'écrive : c'est lui qu'on interroge, pas une ronde. */}
+      <AiKeycaps active={index} />
 
-      {/* Les trois moteurs. Celui qu'on interroge se détache, les autres attendent. */}
-      <div className="flex flex-wrap items-center justify-center gap-2.5">
-        {ENGINES.map((item, index) => {
-          const active = index === engine;
-          return (
-            <motion.span
-              key={item.name}
-              animate={{ opacity: active ? 1 : 0.42, scale: active ? 1 : 0.94 }}
-              transition={{ type: "spring", stiffness: 260, damping: 22 }}
-              className={`inline-flex items-center gap-2 rounded-pill border px-3 py-1.5 text-sm font-medium ${
-                active ? "border-obsidian/25 bg-snow" : "border-fog bg-mist"
-              }`}
-            >
-              <Image
-                src={item.logo}
-                alt=""
-                width={18}
-                height={18}
-                className="h-4 w-4 shrink-0 rounded"
-              />
-              {item.name}
-            </motion.span>
-          );
-        })}
-      </div>
-
-      {/* La barre de recherche : la question s'y écrit, curseur compris. */}
-      <div className="mx-auto mt-6 flex max-w-md items-center gap-2.5 rounded-pill border border-fog bg-snow px-4 py-3">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0 text-ash">
-          <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
-          <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-        <span className="min-w-0 flex-1 truncate text-sm text-text">
-          {full.slice(0, typed)}
+      {/* La question, dans la boîte où on la tape. Deux lignes réservées : la
+          boîte ne saute pas quand une question longue passe à la ligne. */}
+      <div className="w-full max-w-lg rounded-[20px] border border-pebble bg-snow px-4 py-3.5">
+        <p className="min-h-[2.5rem] text-sm leading-relaxed text-text">
+          {shown}
           <span className="ml-0.5 inline-block h-4 w-px animate-[blink_1s_step-end_infinite] bg-obsidian align-middle" />
-        </span>
+        </p>
       </div>
 
-      {/* Le clavier. La touche du dernier caractère s'enfonce. */}
-      <div aria-hidden className="mt-6 flex flex-col items-center gap-1.5">
+      {/* Le clavier. Socle sourd, capuchons pleins, rangées en escalier. */}
+      <div className="inline-flex flex-col gap-1.5 rounded-[24px] border border-fog bg-mist p-3 sm:gap-2 sm:p-4">
         {ROWS.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex gap-1.5">
-            {row.map((key) => {
-              const pressed = key === lastChar;
-              return (
-                <motion.span
-                  key={key}
-                  animate={{
-                    y: pressed ? 2 : 0,
-                    scale: pressed ? 0.94 : 1,
-                    backgroundColor: pressed ? "#09090b" : "rgba(255,255,255,0)",
-                    color: pressed ? "#ffffff" : "#71717a",
-                  }}
-                  transition={{ duration: 0.09 }}
-                  className="flex h-7 w-6 items-center justify-center rounded-md border border-fog text-[10px] font-semibold sm:h-8 sm:w-7 sm:text-[11px]"
-                >
-                  {key}
-                </motion.span>
-              );
-            })}
+          <div key={rowIndex} className={`flex gap-1.5 sm:gap-2 ${ROW_INDENT[rowIndex]}`}>
+            {row.map((key) => (
+              <Keycap key={key} label={key} pressed={key === lastChar} />
+            ))}
           </div>
         ))}
-        <motion.span
-          animate={{
-            y: lastChar === " " || full[typed - 1] === " " ? 2 : 0,
-            backgroundColor: full[typed - 1] === " " ? "#09090b" : "rgba(255,255,255,0)",
-          }}
-          transition={{ duration: 0.09 }}
-          className="mt-0.5 h-7 w-32 rounded-md border border-fog sm:h-8 sm:w-40"
-        />
+        {/* La barre d'espace est centrée sous les trois rangées, comme sur un
+            clavier : alignée sur le retrait de la dernière, elle tirait tout le
+            bloc vers la gauche. */}
+        <div className="flex justify-center">
+          <Keycap wide pressed={question[typed - 1] === " " && !reduced} />
+        </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Un capuchon de lettre. Au repos il porte sa lèvre et son ombre ; enfoncé il
+ * descend de deux pixels, se remplit de noir et perd son relief — la descente
+ * et la perte d'ombre font l'appui, la couleur ne fait que le confirmer.
+ *
+ * Les touches des moteurs, elles, ne passent pas par ici : leurs visuels de
+ * marque sont déjà dessinés en volume (cf. `AiKeycaps`), et les poser dans ce
+ * cadre ferait une touche dans une touche.
+ */
+function Keycap({
+  label,
+  pressed,
+  wide = false,
+}: {
+  label?: string;
+  pressed: boolean;
+  wide?: boolean;
+}) {
+  return (
+    <motion.span
+      animate={{
+        y: pressed ? 2 : 0,
+        backgroundColor: pressed ? "#09090b" : "#ffffff",
+        borderColor: pressed ? "#09090b" : "#d4d4d8",
+        color: pressed ? "#ffffff" : "#71717a",
+        boxShadow: pressed ? CAP_DOWN : CAP_UP,
+      }}
+      transition={{ duration: 0.09, ease: "easeOut" }}
+      className={`flex h-9 items-center justify-center rounded-xl border text-[11px] font-semibold sm:h-12 sm:text-[13px] ${
+        wide ? "w-40 sm:w-56" : "w-6 sm:w-10"
+      }`}
+    >
+      {label}
+    </motion.span>
   );
 }

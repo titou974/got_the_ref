@@ -122,21 +122,19 @@ export type Backlinks = {
 /**
  * Les assistants dont on relève réellement le classement.
  *
- * Deux, et deux seulement : ce sont les seuls qui vont lire le web avant de
- * répondre — ChatGPT par son outil de recherche, Gemini par le grounding Google
- * Search. Un troisième moteur qui répondrait de mémoire ne produirait pas un
- * classement mais une liste plausible, indiscernable d'un vrai top 10 une fois
- * affichée à côté des deux autres. Le classement est ce que le client vient
+ * Une seule règle les fait entrer ici : aller lire le web avant de répondre.
+ * ChatGPT le fait par son outil de recherche, Gemini par le grounding Google
+ * Search, Perplexity par construction — c'est un moteur de réponse —, et Claude
+ * par son outil `web_search`. Un moteur qui répondrait de mémoire ne produirait
+ * pas un classement mais une liste plausible, indiscernable d'un vrai top 10 une
+ * fois affichée à côté des autres. Le classement est ce que le client vient
  * vérifier chaque semaine : il ne peut pas être inventé.
  *
- * « Claude » a existé ici, servi d'abord par l'API Anthropic puis par DeepSeek.
- * Les deux sont partis, pour deux raisons différentes : la première par choix de
- * fournisseur, la seconde parce que DeepSeek n'a pas de recherche web.
+ * Claude a déjà figuré ici, puis en est sorti : il était alors servi par
+ * DeepSeek, faute de clé Anthropic, et DeepSeek ne cherche pas sur le web. Il
+ * revient interrogé par sa propre API, recherche web activée.
  */
-export type AiEngine = "ChatGPT" | "Gemini";
-
-/** Les moteurs disparus, encore présents dans les analyses déjà en base. */
-export const RETIRED_ENGINES = ["Claude"] as const;
+export type AiEngine = "ChatGPT" | "Gemini" | "Perplexity" | "Claude";
 
 /**
  * Classement d'un commerce pour UN moteur sur UNE requête.
@@ -182,12 +180,19 @@ export type BusinessProfile = {
 };
 
 /**
- * Les moteurs dont le tableau de bord relève et affiche le classement.
+ * Les moteurs dont le tableau de bord relève et affiche le classement, dans
+ * leur ordre d'affichage.
  *
- * Les mêmes que partout ailleurs désormais : il n'y a plus de moteur évalué
- * dans l'audit mais caché du tableau de bord.
+ * Les mêmes que partout ailleurs : il n'y a plus de moteur évalué dans l'audit
+ * mais caché du tableau de bord. L'ordre compte, les cartes tombant deux par
+ * rangée : d'abord les deux moteurs qu'un commerçant nomme de lui-même, puis
+ * les deux qu'on lui apprend à surveiller.
+ *
+ * La liste sert aussi de liste blanche à la relecture d'une analyse enregistrée.
+ * Un moteur retiré du produit reste écrit dans les analyses déjà en base : on
+ * l'écarte plutôt que d'afficher une carte sans logo ni relevé.
  */
-export const DASHBOARD_ENGINES: AiEngine[] = ["ChatGPT", "Gemini"];
+export const DASHBOARD_ENGINES: AiEngine[] = ["ChatGPT", "Gemini", "Perplexity", "Claude"];
 
 export type BusinessMode = "physical" | "online";
 
@@ -351,7 +356,7 @@ export type GeoAnalysisResult = {
 /** Simulation de recherche IA affichée sur le dashboard. */
 export type AiSimulation = {
   query: string;
-  engine: "ChatGPT" | "Gemini";
+  engine: AiEngine;
   appearsInResults: boolean;
   position: number | null;
   competitorsAhead: string[];

@@ -9,18 +9,42 @@ import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
 import { BlockedUrlError } from "@/lib/geo/fetcher";
 import { domainOf } from "@/lib/crawl/store";
-import { siteSchema } from "./schemas";
+import { businessKindSchema, siteSchema } from "./schemas";
 import { analyzeSite } from "./service";
 import { ensureOnboardingProfile } from "./queries";
-import { hasPhysicalPresence, LAST_STEP } from "./steps";
+import { hasPhysicalPresence, LAST_STEP, nextStep } from "./steps";
 
 /**
- * L'unique action de l'accueil client : l'adresse du site.
+ * Première étape : la forme du commerce.
+ *
+ * Elle commande la suivante. Une adresse où l'on vous trouve, et l'étape du
+ * site réclame la fiche Google Maps, le crawl cherche des villes et les
+ * classements se relèvent sur une zone. Pas d'adresse, et rien de tout cela
+ * n'est demandé ni cherché : poser la question une fois ici évite d'inventer
+ * une localisation à un logiciel vendu dans toute la France.
+ */
+export const saveBusinessKindAction = authActionClient
+  .inputSchema(businessKindSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await ensureOnboardingProfile(userId);
+
+    await prisma.onboardingProfile.update({
+      where: { userId },
+      data: { businessKind: parsedInput.businessKind, step: nextStep("activite") ?? LAST_STEP },
+    });
+
+    revalidatePath(ROUTES.onboarding);
+    redirect(ROUTES.onboardingStep(nextStep("activite") ?? LAST_STEP));
+  });
+
+/**
+ * Deuxième étape : l'adresse du site, et la fiche Maps s'il y a une adresse.
  *
  * C'est l'étape la plus lourde du produit — le site est crawlé, chaque page
  * conservée en base, puis relue par le modèle pour en tirer la langue, le pays,
- * les villes, un résumé de l'offre et la niche — et c'est désormais la seule.
- * Les cinq questions qui suivaient (marché, activité, concurrents, ton) sont
+ * les villes, un résumé de l'offre et la niche — et c'est la dernière.
+ * Les questions qui suivaient (marché, activité, concurrents, ton) sont
  * précisément ce que cette lecture répond ; ce qu'elle rate se corrige ensuite
  * dans les réglages, devant un tableau de bord déjà rempli.
  *

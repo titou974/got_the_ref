@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext, listGooglePosts } from "@/features/dashboard/queries";
+import { businessHint, getDashboardContext, listGooglePosts } from "@/features/dashboard/queries";
 import { Card, CardTitle, PageHeader, StatusDot } from "@/components/tableau-de-bord/Card";
 import { GooglePostPlanner } from "@/components/tableau-de-bord/GooglePostPlanner";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
-import { TierGate } from "@/components/tableau-de-bord/TierGate";
-import { canOpen, offerFor } from "@/constants/access";
+import { SectionGate } from "@/components/tableau-de-bord/SectionGate";
+import { canOpen } from "@/constants/access";
 
 export const maxDuration = 300;
 
@@ -25,7 +25,7 @@ export default async function GoogleMapsPage() {
   if (!context.isPhysical) notFound();
 
   const t = await getTranslations("dashboard.maps");
-  if (!context.analysis) return <PreparingAnalysis />;
+  if (!context.analysis) return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
 
   const analysis = context.analysis;
   const coherence = analysis.mapsCoherence ?? null;
@@ -38,7 +38,7 @@ export default async function GoogleMapsPage() {
     <>
       <PageHeader title={t("pageTitle")} />
 
-      <Gate locked={locked}>
+      <SectionGate section="maps" locked={locked}>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardTitle
@@ -130,17 +130,7 @@ export default async function GoogleMapsPage() {
           scheduledFor: post.scheduledFor?.toISOString() ?? null,
         }))}
       />
-      </Gate>
+      </SectionGate>
     </>
-  );
-}
-
-/** Le contenu de la page, voilé ou non — écrit une fois, montré des deux façons. */
-function Gate({ locked, children }: { locked: boolean; children: React.ReactNode }) {
-  if (!locked) return <>{children}</>;
-  return (
-    <TierGate offer={offerFor("maps")} item="maps">
-      {children}
-    </TierGate>
   );
 }

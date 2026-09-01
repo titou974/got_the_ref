@@ -8,6 +8,10 @@ import { BrandProof } from "@/components/BrandProof";
 import { PricingOffers } from "@/components/pricing/PricingOffers";
 import { PricingFaq } from "@/components/pricing/PricingFaq";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
+import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
+import { totalGainFor } from "@/lib/geo/traffic-gain";
+import { getCurrentUser } from "@/lib/auth";
+import { getDashboardContext } from "@/features/dashboard/queries";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
 import { BOOST, SUBSCRIPTION_PRICE, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
@@ -84,13 +88,21 @@ type Props = { searchParams: Promise<{ raison?: string; analyse?: string }> };
 export default async function TarifsPage({ searchParams }: Props) {
   const { raison, analyse } = await searchParams;
   const t = await getTranslations("pricing");
+  const tg = await getTranslations("trafficGain");
+
+  // Les visites à gagner ne s'affichent que si elles sont calculées sur le site
+  // du visiteur. Sans session, ou avec un compte dont l'analyse n'a pas encore
+  // tourné, il n'y a rien d'honnête à annoncer : un chiffre de site type se
+  // lirait comme une promesse chiffrée faite à quelqu'un dont on n'a rien lu.
+  const user = await getCurrentUser();
+  const analysis = user ? (await getDashboardContext(user.id)).analysis : null;
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
       {offersJsonLd().map((data, i) => (
         <JsonLd key={i} data={data} />
       ))}
-      <Nav minimal />
+      <Nav minimal backTo={ROUTES.dashboard} />
 
       <div className="flex flex-1 flex-col">
         <div className="mx-auto w-full max-w-6xl px-5 pt-12 sm:pt-16">
@@ -110,6 +122,18 @@ export default async function TarifsPage({ searchParams }: Props) {
               </p>
             )}
           </header>
+
+          {/* Ce que le client vient chercher avant le prix : ce que ça
+              rapporte, calculé sur son propre site. */}
+          {analysis && (
+            <div className="mt-10">
+              <TrafficGainCards
+                gain={totalGainFor(analysis)}
+                title={tg("pricingTitle")}
+                caption={tg("pricingCaption")}
+              />
+            </div>
+          )}
         </div>
 
         <ResultsCarousel className="py-10 sm:py-14" />

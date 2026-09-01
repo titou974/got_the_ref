@@ -3,10 +3,13 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
+import { analysisNeedsUpgrade, tierAtLeast } from "@/constants/access";
 import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { getDashboardContext } from "@/features/dashboard/queries";
+import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { CrispChat } from "@/components/CrispChat";
 import { DashboardShell } from "@/components/tableau-de-bord/DashboardShell";
+import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
 import { WelcomeModal } from "@/components/tableau-de-bord/WelcomeModal";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -26,6 +29,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const context = await getDashboardContext(user.id);
 
+  // La barre d'exécution ne se monte qu'une fois l'analyse en place. Avant
+  // ça — première ouverture, ou achat qui vient de rouvrir des mesures — les
+  // pages affichent l'écran d'attente, et une barre « résoudre » posée dessus
+  // proposerait de corriger un dossier qui n'est pas encore lu.
+  const analysis =
+    context.analysis && !analysisNeedsUpgrade(context.analysis.accessTier, context.tier)
+      ? context.analysis
+      : null;
+
   return (
     <>
       {/* La bulle de discussion : le client est abonné, quelqu'un lui répond. */}
@@ -43,6 +55,26 @@ export default async function DashboardLayout({ children }: { children: React.Re
         userName={user.name ?? user.email}
       >
         {children}
+
+        {/* L'exécution ne vit pas au bas d'une page : la barre fixe la porte, et
+            elle suit le client d'un onglet à l'autre. Elle mène aux deux voies —
+            rattacher le site, les agents publient alors eux-mêmes, ou brancher
+            son agent IA sur le serveur MCP, qui lui sert les six chantiers.
+
+            Elle est là pour tout le monde : c'est le geste que le produit vend,
+            et une page qui ne le montre pas ne le vend pas. Sur un compte
+            gratuit, elle ramène d'abord à l'onglet Contenu — le seul travail que
+            son offre lui ouvre — et n'y déploie la console des agents qu'une
+            fois arrivée. Ce que l'offre borne ensuite, c'est ce que le serveur
+            sert à l'agent : les chantiers fermés arrivent nommés et vides. */}
+        {analysis && (
+          <SolveAgentsDock
+            userId={user.id}
+            locked={!tierAtLeast(context.tier, "boost")}
+            result={analysis}
+            diagnostic={buildDiagnostic(analysis)}
+          />
+        )}
       </DashboardShell>
     </>
   );

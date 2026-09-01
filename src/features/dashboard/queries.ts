@@ -15,10 +15,13 @@ import {
 import {
   BOOST_ARTICLE_WINDOW_DAYS,
   FREE_CONTENT_REWRITES,
+  analysisNeedsUpgrade,
   tierAtLeast,
   type AccessTier,
 } from "@/constants/access";
+import type { BusinessHint } from "@/lib/geo/loading-prompts";
 import { getAccess } from "@/features/billing/access";
+import { departureFilter } from "./publish-queue";
 
 /**
  * Tout ce que le tableau de bord relit avant d'afficher quoi que ce soit.
@@ -29,7 +32,22 @@ import { getAccess } from "@/features/billing/access";
  * rendu qui, de toute façon, montre la barre latérale complète.
  */
 
-export type DashboardAnalysis = GeoAnalysisResult & { tier?: "free" | "paid" };
+export type DashboardAnalysis = GeoAnalysisResult & {
+  tier?: "free" | "paid";
+  /**
+   * Le niveau d'accès du compte au moment où l'analyse a été faite.
+   *
+   * Il ne dit pas ce que le compte a le droit de voir aujourd'hui — c'est
+   * `DashboardContext.tier` qui le dit — mais quels appels sont réellement
+   * partis ce jour-là. Une analyse faite en gratuit n'a interrogé qu'un moteur
+   * et sauté les relevés hors-site ; comparer les deux niveaux est ce qui
+   * déclenche la reprise après un achat (cf. `analysisNeedsUpgrade`).
+   *
+   * Absent sur les analyses d'avant cette règle : elles se lisent comme
+   * gratuites, ce qui les fait rejouer une fois pour un compte payant.
+   */
+  accessTier?: AccessTier;
+};
 
 export type SiteLink = {
   platform: string;
@@ -38,6 +56,8 @@ export type SiteLink = {
   capabilities: SiteCapability[];
   connectedAt: Date | null;
   lastError: string | null;
+  /** Le pilote automatique dépose aussi les articles rédigés jamais relus. */
+  autoPublish: boolean;
 };
 
 export type GoogleLinkState = {
@@ -151,6 +171,7 @@ export const getDashboardContext = cache(async function getDashboardContext(
           capabilities: siteLink.capabilities as SiteCapability[],
           connectedAt: siteLink.connectedAt,
           lastError: siteLink.lastError,
+          autoPublish: siteLink.autoPublish,
         }
       : null,
     brandVoice: voice ? { instructions: voice.instructions, banned: voice.banned } : null,
@@ -161,6 +182,53 @@ export const getDashboardContext = cache(async function getDashboardContext(
     },
   };
 });
+
+/**
+ * Le commerce tel que l'écran d'attente a besoin de le connaître.
+ *
+ * Il n'en faut pas plus pour écrire les questions tapées pendant l'analyse : la
+ * niche, la ville où l'on reçoit, et le fait de recevoir du public. Extrait ici
+ * plutôt que recopié sur chaque page, parce que les cinq onglets rendent le
+ * même écran d'attente et qu'une divergence entre eux ne se verrait pas.
+ */
+export function businessHint(context: DashboardContext): BusinessHint {
+  return {
+    niche: context.niche,
+    city: context.cities[0] ?? null,
+    isPhysical: context.isPhysical,
+  };
+}
+
+/**
+ * Le tableau de bord a-t-il de quoi s'afficher ?
+ *
+ * La question que l'écran d'attente pose au serveur pour savoir s'il doit
+ * s'effacer. La condition est exactement celle des pages : une analyse
+ * enregistrée, et faite au niveau d'accès actuel du compte. Elles doivent le
+ * rester — répondre « prêt » sur un critère plus large rendrait la main à une
+ * page qui, elle, réafficherait l'attente, et le client tournerait en rond.
+ *
+ * Lecture étroite plutôt qu'un `getDashboardContext` complet : cette fonction
+ * est appelée en boucle pendant la fin de l'analyse, et six requêtes toutes les
+ * deux secondes pour lire un booléen seraient six fois trop.
+ */
+export async function isDashboardReady(userId: string): Promise<boolean> {
+  const [access, profile] = await Promise.all([
+    getAccess(userId),
+    prisma.onboardingProfile.findUnique({ where: { userId }, select: { domain: true } }),
+  ]);
+
+  const record = await prisma.analysis.findFirst({
+    where: { userId, ...(profile?.domain ? { domain: profile.domain } : {}) },
+    orderBy: { createdAt: "desc" },
+    select: { data: true },
+  });
+
+  const analysis = record ? parseAnalysis(record.data) : null;
+  if (!analysis) return false;
+
+  return !analysisNeedsUpgrade(analysis.accessTier, access.tier);
+}
 
 /** Les identifiants du lien, déchiffrés. Réservé aux appels sortants. */
 export async function readSiteCredentials<T = Record<string, string>>(
@@ -173,15 +241,90 @@ export async function readSiteCredentials<T = Record<string, string>>(
   return decryptJson<T>(link?.credentials);
 }
 
-export async function listArticles(userId: string) {
+/**
+ * Le planning éditorial du compte, du plus proche au plus lointain.
+ *
+ * Mémorisé le temps de la requête : la coque du tableau de bord le lit pour
+ * nourrir le prompt de la barre d'exécution, et l'accueil comme l'onglet
+ * Articles le relisent pour leur calendrier. Sans cette mémoire, la même liste
+ * partirait deux fois en base à chaque affichage de page.
+ */
+export const listArticles = cache(async function listArticles(userId: string) {
   return prisma.article.findMany({
     where: { userId },
     orderBy: [{ scheduledFor: "asc" }, { createdAt: "desc" }],
   });
-}
+});
 
 export async function getArticle(userId: string, id: string) {
   return prisma.article.findFirst({ where: { id, userId } });
+}
+
+/**
+ * Ce que le compte a en attente de départ : le prochain, et combien derrière.
+ *
+ * La question est posée avec la règle de la file elle-même (`departureFilter`),
+ * pas avec une approximation qui lui ressemblerait. Un écran qui annonce « part
+ * mardi » alors que la file ne le prendra jamais est pire qu'un écran muet : le
+ * client attend, ne voit rien venir, et cesse de croire le calendrier.
+ *
+ * `blocked` compte à part les articles validés qui ne partiront pas faute de
+ * rattachement. Ce n'est pas la même conversation : là, il n'y a rien à
+ * attendre, il y a un site à brancher.
+ */
+export type PublishPlan = {
+  next: { id: string; title: string; status: string; scheduledFor: Date } | null;
+  /** Articles qui partiront tout seuls, celui de tête compris. */
+  queued: number;
+  /** Validés et rédigés qui attendent un rattachement pour bouger. */
+  blocked: number;
+  autoPublish: boolean;
+  /** Un site est rattaché et vérifié — sans dire ce qu'il autorise. */
+  linked: boolean;
+  /** Le lien est en place et sait déposer un article. */
+  canPublish: boolean;
+};
+
+export async function getPublishPlan(userId: string): Promise<PublishPlan> {
+  const [link, next, queued, blocked] = await Promise.all([
+    prisma.siteConnection.findUnique({
+      where: { userId },
+      select: { status: true, capabilities: true, autoPublish: true },
+    }),
+    prisma.article.findFirst({
+      where: departureFilter(userId),
+      orderBy: { scheduledFor: "asc" },
+      select: { id: true, title: true, status: true, scheduledFor: true },
+    }),
+    prisma.article.count({ where: departureFilter(userId) }),
+    prisma.article.count({
+      where: {
+        userId,
+        publishedAt: null,
+        body: { not: "" },
+        status: { in: ["approved", "drafted"] },
+        // Le miroir de la règle de départ : ce qui est prêt côté texte mais que
+        // le rattachement laisse à quai. Le filtre est pris sans compte — le
+        // `userId` ci-dessus le porte déjà, et le nier ici retirerait de la
+        // négation la seule condition qui ne doit pas y entrer.
+        NOT: departureFilter(),
+      },
+    }),
+  ]);
+
+  return {
+    // `scheduledFor` est non nul par construction du filtre ; TypeScript ne le
+    // sait pas, et le rétrécir ici évite de traîner un `Date | null` jusqu'aux
+    // écrans qui n'auraient rien à en faire.
+    next: next?.scheduledFor
+      ? { id: next.id, title: next.title, status: next.status, scheduledFor: next.scheduledFor }
+      : null,
+    queued,
+    blocked,
+    autoPublish: link?.autoPublish ?? false,
+    linked: link?.status === "connected",
+    canPublish: link?.status === "connected" && link.capabilities.includes("publish"),
+  };
 }
 
 export async function listProspects(userId: string) {
@@ -279,7 +422,7 @@ export type OnPageRewriteQuota = Record<OnPageElementKey, number>;
  * horloge donnerait à un client une journée qui commence à 2 h du matin. On
  * relit donc la date du jour dans le fuseau annoncé, et on en refait un instant.
  */
-function startOfDay(): Date {
+export function startOfDay(): Date {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: ON_PAGE_REWRITE_QUOTA.timeZone,
     year: "numeric",

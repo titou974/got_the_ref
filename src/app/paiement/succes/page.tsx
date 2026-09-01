@@ -13,6 +13,7 @@ import {
   grantBoostFromSession,
   unlockAnalysisFromSession,
 } from "@/features/billing/unlock";
+import { syncSubscriptionFromSession } from "@/features/billing/subscription";
 import { ensurePaidAnalysis } from "@/features/analysis/service";
 import { CLAIM_METADATA_KEY, claimMatches } from "@/features/billing/claim";
 import { isOnboardingComplete } from "@/features/onboarding/queries";
@@ -73,6 +74,11 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
   // bord, et il doit y trouver la structure ouverte.
   if (session) await grantBoostFromSession(session, unlocked?.userId);
 
+  // Même raison pour l'abonnement : le webhook peut arriver après, et il n'avait
+  // parfois aucun compte à rattacher au moment où il est passé. On rejoue donc
+  // le rattachement ici, tant que le payeur est identifiable.
+  if (session) await syncSubscriptionFromSession(session, unlocked?.userId);
+
   // Lance l'audit complet (DeepSeek + moteurs live) dès maintenant : le visiteur
   // patiente ici de toute façon, autant qu'il découvre le vrai rapport tout de
   // suite plutôt qu'au prochain chargement de la page d'analyse.
@@ -112,7 +118,7 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
   const user = await getCurrentUser();
   if (user) {
     if (!(await isOnboardingComplete(user.id))) redirect(ROUTES.onboarding);
-    redirect(unlocked ? ROUTES.analysis(unlocked.analysisId) : ROUTES.account);
+    redirect(unlocked ? ROUTES.analysis(unlocked.analysisId) : ROUTES.dashboard);
   }
 
   // Un compte existe déjà pour cet e-mail : on propose la connexion.

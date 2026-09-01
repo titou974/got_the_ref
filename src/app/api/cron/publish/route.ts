@@ -39,5 +39,6 @@ export async function GET(request: Request) {
     due: run.due,
     published: run.published,
     failed: run.failed,
+    skipped: run.skipped,
   });
 }

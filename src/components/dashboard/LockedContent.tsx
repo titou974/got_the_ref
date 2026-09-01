@@ -98,6 +98,32 @@ export function Veil({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * Un chiffre retenu, écrit « X ».
+ *
+ * Flouter un nombre ne marche pas : à travers le flou, un grand nombre reste un
+ * grand nombre, et on lit encore combien il a de chiffres. Un « X » posé à la
+ * place dit exactement la vérité — il y a une valeur ici, elle n'est pas donnée
+ * — tout en gardant la ligne à sa taille : « X visites », « X conversions »,
+ * « #X ». Le libellé, lui, reste net : on cache ce que la mesure a trouvé,
+ * jamais ce qu'elle a mesuré.
+ */
+export function Redacted({
+  className = "",
+  label,
+}: {
+  className?: string;
+  /** Ce que la valeur compte, lu à voix haute par le lecteur d'écran. */
+  label?: string;
+}) {
+  return (
+    <span className={`text-pebble ${className}`}>
+      <span aria-hidden>X</span>
+      <span className="sr-only">{label ?? "valeur masquée"}</span>
+    </span>
+  );
+}
+
+/**
  * En-tête de section : titre et sous-titre restent nets même verrouillés — ils
  * ne dépendent pas de l'analyse, ils disent seulement ce qui a été examiné.
  */

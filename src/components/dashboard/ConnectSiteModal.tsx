@@ -1,19 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { StackMark } from "@/components/StackMark";
 import { AgentLinkPanel } from "@/components/dashboard/AgentLinkPanel";
 import { MCP_FIRST_PROMPT } from "@/constants/mcp";
+import { ROUTES, signInWithNext } from "@/constants/routes";
+import {
+  SiteConnectForm,
+  type SiteConnectSetup,
+} from "@/components/tableau-de-bord/SiteConnectForm";
 import type { DetectedStack } from "@/lib/geo/types";
 
 /**
- * Le parcours « agents » : connecter l'agent IA du client à son compte.
+ * Le parcours « agents » : brancher l'agent IA du client sur son compte, et
+ * rattacher son site.
  *
  * L'écran montre d'abord, sur les vrais manques du rapport, ce que les agents
- * vont corriger ; puis il donne la prise à installer. Le prompt à copier a
- * disparu d'ici — c'est `AgentLinkPanel` qui tient désormais l'exécution.
+ * vont corriger ; puis il donne la prise à brancher. Le prompt à copier a
+ * disparu d'ici — c'est `AgentLinkPanel` qui tient désormais l'exécution, et
+ * l'agent va chercher lui-même les correctifs.
  */
 
 const FIX_INTERVAL_MS = 900; // une correction affichée toutes les 0,9 s
@@ -165,11 +173,104 @@ function handoffText(domain: string, endpoint: string | null): string {
   return lines.join("\n");
 }
 
+/**
+ * L'appel vers les tarifs, pour le compte gratuit — à la place du rattachement
+ * du site, qui n'est pas proposé à ce niveau.
+ *
+ * Il n'y a pas de voile ici. Les boutons floutés qu'on posait dessous se
+ * lisaient comme une salissure derrière le bouton — la pilule noire du décor
+ * bavait autour de la vraie —, et ils ne montraient rien qu'on ne sache déjà :
+ * la console des agents, nette juste au-dessus, a fait la démonstration, et le
+ * titre de la modale a dit ce qui s'achète.
+ *
+ * Ce que l'offre borne n'est d'ailleurs pas cet écran mais ce que le serveur
+ * MCP sert à l'agent une fois branché : les chantiers fermés arrivent nommés et
+ * vides. Un voile CSS se contourne avec l'inspecteur ; une réponse qui ne
+ * contient rien, non.
+ */
+function LockedActions() {
+  const t = useTranslations("analysisReport.solve.modal");
+
+  return (
+    <Link
+      href={ROUTES.pricing}
+      className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-center text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+    >
+      {t("lockedCta")}
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden
+        className="shrink-0"
+      >
+        <path
+          d="M5 12h14M13 6l6 6-6 6"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </Link>
+  );
+}
+
+/**
+ * L'entrée du rattachement, dans la modale.
+ *
+ * Depuis le tableau de bord, elle ouvre le formulaire sur place : le client
+ * vient de voir ses manques, il n'a pas à aller les chercher ailleurs. Depuis
+ * le rapport public, il n'y a pas de compte où poser un identifiant — le bouton
+ * mène aux réglages, en passant par la connexion.
+ *
+ * Quand le lien existe déjà, le bouton le dit et sert à le corriger : un
+ * « connecter le site » sur un site rattaché ferait douter de ce qui est en
+ * place.
+ */
+function ConnectAction({
+  connect,
+  onOpen,
+}: {
+  connect: SiteConnectSetup | null;
+  onOpen: () => void;
+}) {
+  const t = useTranslations("analysisReport.solve.modal");
+
+  const style =
+    "flex cursor-pointer items-center justify-center gap-2 rounded-full bg-obsidian px-5 py-3 text-center text-sm font-medium text-white transition-colors duration-200 hover:bg-obsidian/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40";
+
+  if (!connect) {
+    return (
+      <Link href={signInWithNext(ROUTES.dashboardSettings)} className={style}>
+        {t("cta")}
+      </Link>
+    );
+  }
+
+  const connected = connect.link?.status === "connected";
+
+  return (
+    <>
+      <button type="button" onClick={onOpen} className={style}>
+        {connected ? t("connectManage") : t("cta")}
+      </button>
+      {connected ? (
+        <p className="text-center text-xs text-muted">
+          {t("connectedNote", { site: connect.link?.siteUrl ?? "" })}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export function ConnectSiteModal({
   domain,
   stack,
   issues,
   locked = false,
+  connect = null,
   onClose,
 }: {
   domain: string;
@@ -177,16 +278,22 @@ export function ConnectSiteModal({
   /** Manques relevés dans le rapport, rejoués dans l'en-tête (3 au plus). */
   issues: string[];
   /**
-   * Compte gratuit. La prise reste offerte — c'est le geste que le produit
-   * vend, et le cacher reviendrait à ne pas le vendre. Ce qui change est ce que
-   * l'agent recevra : le serveur ne lui sert que les chantiers ouverts, et le
-   * panneau le dit en une ligne plutôt que sous un voile.
+   * Compte gratuit : la prise de l'agent s'affiche à l'identique — c'est le
+   * serveur MCP qui borne ensuite ce qu'il reçoit —, mais le rattachement du
+   * site disparaît et l'appel vers les tarifs prend sa place.
    */
   locked?: boolean;
+  /**
+   * De quoi rattacher le site sans quitter la modale. Nul depuis le rapport
+   * public : il n'y a pas de session, donc pas de compte où enregistrer un
+   * identifiant — le bouton mène alors à la page des réglages.
+   */
+  connect?: SiteConnectSetup | null;
   onClose: () => void;
 }) {
   const t = useTranslations("analysisReport.solve.modal");
   const [shared, setShared] = useState(false);
+  const [connecting, setConnecting] = useState(false);
 
   // L'adresse de la prise, quand le client vient de créer sa clé dans le
   // panneau. Elle remonte ici pour que la transmission au développeur porte la
@@ -216,7 +323,7 @@ export function ConnectSiteModal({
       setShared(true);
       window.setTimeout(() => setShared(false), 2600);
     } catch {
-      /* presse-papiers indisponible : les commandes restent copiables à la main */
+      /* presse-papiers indisponible : l'adresse reste copiable à la main */
     }
   }
 
@@ -275,27 +382,61 @@ export function ConnectSiteModal({
             </p>
           )}
 
-          {/* Le rattachement de l'agent : la seule chose à faire sur cet écran. */}
-          <div className="mt-5">
-            <AgentLinkPanel locked={locked} onEndpoint={setEndpoint} />
-          </div>
+          {/* La prise de l'agent : la première chose à faire sur cet écran, et
+              celle que la console vient de démontrer. Elle passe avant le
+              rattachement du site — l'un branche l'agent du client sur son
+              dossier, l'autre nous donne la clé de sa maison, et le second ne
+              se demande qu'à celui qui a déjà vu le premier fonctionner.
 
-          {/* La publication automatique sur le site arrive après. Le bouton
-              reste à sa place, désactivé et daté : masquer l'étape à venir
-              ferait croire qu'elle n'existe pas, et un bouton qui promet la
-              connexion sans la faire coûte encore plus cher. */}
+              Elle est là pour tout le monde, compte gratuit compris : c'est le
+              geste que le produit vend. Ce que l'offre borne, c'est ce que le
+              serveur MCP sert ensuite à l'agent. */}
+          {connecting && connect ? null : (
+            <div className="mt-5">
+              <AgentLinkPanel locked={locked} onEndpoint={setEndpoint} />
+            </div>
+          )}
+
+          {/* L'autre voie : rattacher son site, les agents publient alors
+              eux-mêmes. Elle passait auparavant par un bouton désactivé marqué
+              « bientôt » ; elle est ouverte, donc elle s'ouvre ici, au moment
+              où la console vient de montrer ce qu'il y a à corriger. */}
           <div className="mt-5 flex flex-col gap-2.5">
-            <button
-              type="button"
-              disabled
-              aria-disabled
-              className="flex cursor-not-allowed items-center justify-center gap-2 rounded-full border border-fog bg-mist px-5 py-3 text-sm font-medium text-muted"
-            >
-              {t("cta")}
-              <span className="rounded-full bg-obsidian/10 px-2 py-0.5 text-[11px] font-semibold text-graphite">
-                {t("connectSoon")}
-              </span>
-            </button>
+            {connecting && connect ? (
+              <>
+                <SiteConnectForm
+                  setup={connect}
+                  dense
+                  // Le lien accepté, on revient sur les actions : l'état du
+                  // rattachement s'y lit désormais sous le bouton.
+                  onConnected={() => setConnecting(false)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setConnecting(false)}
+                  className="cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+                >
+                  {t("connectBack")}
+                </button>
+              </>
+            ) : (
+              <>
+            {/* Le rattachement du site ne se propose pas à un compte gratuit.
+                Il n'ouvre rien pour lui : les agents ne publient qu'à partir du
+                Coup de Boost, et lui demander le mot de passe d'application de
+                son site pour ne rien y déposer ensuite est une demande sans
+                contrepartie. La modale du gratuit ne porte donc qu'une chose :
+                la console qui montre ce qui sera corrigé, et l'offre qui
+                l'ouvre. Le rattachement l'attend dans les réglages le jour où
+                il achète. */}
+            {locked ? null : (
+              <ConnectAction connect={connect} onOpen={() => setConnecting(true)} />
+            )}
+
+            {/* L'appel vers les tarifs, pour le compte gratuit. La prise, elle,
+                reste au-dessus : ce n'est pas elle qui s'achète, c'est ce que
+                le serveur sert ensuite à l'agent. */}
+            {locked ? <LockedActions /> : null}
 
             <button
               type="button"
@@ -312,11 +453,9 @@ export function ConnectSiteModal({
             >
               {t("later")}
             </button>
+              </>
+            )}
           </div>
-
-          <p className="mt-4 text-center text-xs leading-relaxed text-steel">
-            {t("reassurance")}
-          </p>
         </div>
       </motion.div>
     </motion.div>

@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getDashboardContext } from "@/features/dashboard/queries";
+import { businessHint, getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { CATEGORY_META } from "@/lib/geo/types";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
@@ -10,8 +10,8 @@ import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
 import { CategoryRadar } from "@/components/dashboard/CategoryRadar";
 import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
 import { CrawlerGrid, StackCard } from "@/components/geo/SiteProfile";
-import { TierGate } from "@/components/tableau-de-bord/TierGate";
-import { canOpen, offerFor } from "@/constants/access";
+import { SectionGate } from "@/components/tableau-de-bord/SectionGate";
+import { canOpen } from "@/constants/access";
 
 export const maxDuration = 300;
 
@@ -30,15 +30,16 @@ export default async function ArchitecturePage() {
   const t = await getTranslations("dashboard.architecture");
   const ta = await getTranslations("analysisReport");
 
-  if (!context.analysis) return <PreparingAnalysis />;
+  if (!context.analysis) return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
 
   const analysis = context.analysis;
   const diagnostic = buildDiagnostic(analysis);
   const crawl = analysis.signals.crawl;
 
   // La page entière passe sous voile quand l'offre ne l'ouvre pas : le client
-  // voit la forme de son diagnostic — l'anneau, le radar, la grille de contrôles
-  // — sans pouvoir en lire une seule valeur, et l'appel le mène aux tarifs.
+  // voit la forme d'un diagnostic — l'anneau, le radar, la grille de contrôles
+  // — sans qu'aucune de ses valeurs ne soit rendue, et l'appel le mène aux
+  // tarifs (cf. `SectionGate`).
   const locked = !canOpen(context.tier, "architecture");
 
   const radarData = analysis.categories
@@ -49,7 +50,7 @@ export default async function ArchitecturePage() {
     <>
       <PageHeader title={t("pageTitle")} />
 
-      <Gate locked={locked}>
+      <SectionGate section="architecture" locked={locked}>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <AnimatedCard className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left lg:col-span-2">
           <AnimatedScoreRing
@@ -95,23 +96,8 @@ export default async function ArchitecturePage() {
           />
         </dl>
       </Card>
-      </Gate>
+      </SectionGate>
     </>
-  );
-}
-
-/**
- * Le contenu de la page, voilé ou non. Écrit une fois ici plutôt qu'en double
- * dans le rendu : le balisage verrouillé et le balisage ouvert doivent rester
- * strictement le même, sinon le voile finirait par montrer autre chose que ce
- * qu'il cache.
- */
-function Gate({ locked, children }: { locked: boolean; children: React.ReactNode }) {
-  if (!locked) return <>{children}</>;
-  return (
-    <TierGate offer={offerFor("architecture")} item="architecture">
-      {children}
-    </TierGate>
   );
 }
 

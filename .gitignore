@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Le modèle, lui, se suit : sans lui, un déploiement neuf ne sait pas quelles
+# clés poser. Il ne contient que des valeurs d'exemple.
+!.env.example
 
 # vercel
 .vercel

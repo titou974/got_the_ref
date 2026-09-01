@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
@@ -18,8 +19,10 @@ import {
 import type { OutlineSection } from "@/features/dashboard/outline";
 import { buildArticlePublishPrompt } from "@/lib/geo/article-publish-prompt";
 import { readHeadings } from "@/lib/article-doc";
+import { ROUTES } from "@/constants/routes";
 import { BrandToneBar } from "../BrandToneBar";
 import { PublishPromptPanel } from "../PublishPromptPanel";
+import { ScheduleFields } from "../ScheduleFields";
 import { SearchLoader } from "@/components/SearchLoader";
 import { DocumentCanvas } from "./DocumentCanvas";
 import { OutlineRail } from "./OutlineRail";
@@ -56,12 +59,20 @@ export type EditorArticle = {
   externalUrl: string | null;
 };
 
-/** L'état d'un article, dit par une couleur du système plutôt qu'un mot de plus. */
+/**
+ * L'état d'un article, dit par une couleur du système plutôt qu'un mot de plus.
+ *
+ * Accordé au calendrier (`ArticleMonth`) : le noir plein y signifie « validé, à
+ * quai », et il doit signifier la même chose ici. Il était posé sur « rédigé »,
+ * ce qui donnait au client deux langages pour un seul planning — le pavé noir
+ * du calendrier et la pastille noire de l'atelier ne parlaient pas du même
+ * moment.
+ */
 const STATUS_CLASS: Record<string, string> = {
   planned: "bg-mist text-steel",
-  drafted: "bg-obsidian text-white",
-  approved: "bg-success/12 text-success",
-  published: "bg-success text-white",
+  drafted: "bg-mist text-ink ring-1 ring-inset ring-pebble",
+  approved: "bg-obsidian text-white",
+  published: "bg-success/12 text-success",
   rejected: "bg-mist text-ash line-through",
 };
 
@@ -70,6 +81,7 @@ export function ArticleWorkspace({
   tone,
   voice,
   canPublish,
+  locked = false,
   quotaRemaining,
   domain,
   platform,
@@ -78,6 +90,17 @@ export function ArticleWorkspace({
   tone: { summary: string | null; color: string | null; sampleUrl: string | null };
   voice: { instructions: string; banned: string[] } | null;
   canPublish: boolean;
+  /**
+   * L'offre du compte n'ouvre pas la rédaction.
+   *
+   * Le sujet reste lisible — titre, mot-clé, plan : c'est ce qu'on a préparé
+   * pour ce client, et le lui cacher n'aurait rien vendu. Ce qui disparaît,
+   * c'est la rangée d'actions : valider, publier, écarter. Un seul bouton la
+   * remplace, vers les tarifs. Les actions correspondantes sont de toute façon
+   * refusées côté serveur (`requireSection`) ; ce verrou-ci évite au client de
+   * les découvrir par un message d'erreur.
+   */
+  locked?: boolean;
   /** Rédactions encore disponibles cette semaine, lues à l'ouverture de la page. */
   quotaRemaining: number;
   /** Le domaine suivi, nommé dans le prompt de publication. */
@@ -105,6 +128,11 @@ export function ArticleWorkspace({
   // l'ouverture recopierait l'article entier dans le HTML envoyé au navigateur,
   // pour un bouton que la plupart des visites ne touchent pas.
   const [publishPrompt, setPublishPrompt] = useState<string | null>(null);
+
+  // Le calendrier de la barre de commande, replié tant qu'on ne le demande pas :
+  // ouvrir l'atelier sur deux champs de date détournerait l'œil du texte, qui
+  // est ce qu'on vient y faire.
+  const [scheduling, setScheduling] = useState(false);
 
   const editor = useEditor({
     // Le rendu part du client : côté serveur, ProseMirror n'a pas de DOM et la
@@ -264,6 +292,16 @@ export function ArticleWorkspace({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {locked ? (
+            <Link
+              href={ROUTES.pricing}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
+            >
+              {t("unlockToPublish")}
+            </Link>
+          ) : null}
+
+          {locked ? null : (
           <button
             type="button"
             disabled={busy || !editor}
@@ -272,8 +310,9 @@ export function ArticleWorkspace({
           >
             {save.isPending ? t("saving") : t("save")}
           </button>
+          )}
 
-          {article.status === "drafted" ? (
+          {!locked && article.status === "drafted" ? (
             <button
               type="button"
               disabled={busy}
@@ -284,20 +323,37 @@ export function ArticleWorkspace({
             </button>
           ) : null}
 
-          {article.status === "approved" && canPublish ? (
+          {!locked && article.status === "approved" && canPublish ? (
             <button
               type="button"
               disabled={busy}
               onClick={() => publish.execute({ id: article.id })}
               className="cursor-pointer rounded-pill bg-obsidian px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
             >
-              {publish.isPending ? t("publishing") : t("publish")}
+              {publish.isPending ? t("publishing") : t("publishNow")}
             </button>
           ) : null}
 
-          {/* Site non rattaché : « publier maintenant » ne dépose pas, il écrit
-              le prompt qui dépose. Le geste reste le même pour le client. */}
-          {article.status === "approved" && !canPublish ? (
+          {/* Planifier reste ouvert dès qu'il y a une date à poser, pas
+              seulement sur un article validé : le client date souvent son sujet
+              avant de le faire écrire, et lui refuser le calendrier tant que le
+              texte n'existe pas l'obligerait à revenir. Publié, en revanche, il
+              n'y a plus de départ à venir. */}
+          {!locked && article.status !== "published" && article.status !== "rejected" ? (
+            <button
+              type="button"
+              onClick={() => setScheduling((open) => !open)}
+              aria-expanded={scheduling}
+              className="cursor-pointer rounded-pill border border-graphite px-4 py-2 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist"
+            >
+              {t("schedule")}
+            </button>
+          ) : null}
+
+          {/* Site non rattaché : rien ne peut être déposé d'ici. Le geste change
+              donc de nom en même temps que de nature — il prépare le prompt qui
+              publiera, il ne publie pas. */}
+          {!locked && article.status === "approved" && !canPublish ? (
             <button
               type="button"
               disabled={busy || !editor}
@@ -316,11 +372,11 @@ export function ArticleWorkspace({
               }
               className="cursor-pointer rounded-pill bg-obsidian px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
             >
-              {t("publishNow")}
+              {t("preparePublish")}
             </button>
           ) : null}
 
-          {article.status !== "published" ? (
+          {!locked && article.status !== "published" ? (
             <button
               type="button"
               disabled={busy}
@@ -331,6 +387,18 @@ export function ArticleWorkspace({
             </button>
           ) : null}
         </div>
+
+        {/* Le formulaire s'ouvre dans la barre, sous les boutons : la date qu'on
+            pose est une décision de la barre de commande, pas un écran à part. */}
+        {scheduling ? (
+          <div className="w-full">
+            <ScheduleFields
+              articleId={article.id}
+              current={article.scheduledFor}
+              onDone={() => setScheduling(false)}
+            />
+          </div>
+        ) : null}
       </div>
 
       {publishPrompt ? <PublishPromptPanel prompt={publishPrompt} /> : null}
@@ -380,30 +448,46 @@ export function ArticleWorkspace({
               </p>
             ) : null}
 
-            <button
-              type="button"
-              disabled={busy || remaining <= 0}
-              onClick={() =>
-                write.execute({ id: article.id, instruction: instruction.trim() || undefined })
-              }
-              className="mt-3 w-full cursor-pointer rounded-pill bg-obsidian px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {write.isPending
-                ? t("writing")
-                : article.body.trim()
-                  ? t("rewriteCta")
-                  : t("writeCta")}
-            </button>
+            {/* Rédiger est le travail vendu : sur une offre qui ne l'ouvre
+                pas, le bouton mène aux tarifs plutôt qu'à un refus du
+                serveur. Le sujet, lui, reste entier au-dessus. */}
+            {locked ? (
+              <Link
+                href={ROUTES.pricing}
+                className="mt-3 block w-full cursor-pointer rounded-pill bg-cta px-5 py-2.5 text-center text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
+              >
+                {t("unlockToWrite")}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={busy || remaining <= 0}
+                onClick={() =>
+                  write.execute({ id: article.id, instruction: instruction.trim() || undefined })
+                }
+                className="mt-3 w-full cursor-pointer rounded-pill bg-obsidian px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {write.isPending
+                  ? t("writing")
+                  : article.body.trim()
+                    ? t("rewriteCta")
+                    : t("writeCta")}
+              </button>
+            )}
 
             {/* Le budget de la semaine, sous le bouton qui le consomme : c'est
                 là qu'il pèse dans la décision de relancer une reprise. */}
-            <p className="mt-2 text-xs text-muted">
-              {remaining > 0
-                ? `${remaining} rédaction${remaining > 1 ? "s" : ""} restante${
-                    remaining > 1 ? "s" : ""
-                  } cette semaine. Une reprise en consomme une.`
-                : "Rédactions de la semaine épuisées. Votre brouillon reste modifiable à la main."}
-            </p>
+            {locked ? (
+              <p className="mt-2 text-xs text-muted">{t("lockedQuota")}</p>
+            ) : (
+              <p className="mt-2 text-xs text-muted">
+                {remaining > 0
+                  ? `${remaining} rédaction${remaining > 1 ? "s" : ""} restante${
+                      remaining > 1 ? "s" : ""
+                    } cette semaine. Une reprise en consomme une.`
+                  : "Rédactions de la semaine épuisées. Votre brouillon reste modifiable à la main."}
+              </p>
+            )}
 
             {write.isPending ? (
               <SearchLoader kind="writing" compact title={t("writing")} className="mt-3" />

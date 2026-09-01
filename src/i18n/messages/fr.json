@@ -12,6 +12,7 @@
     "signIn": "Connexion",
     "signUp": "Inscription",
     "account": "Mon tableau de bord",
+    "backToDashboard": "Retour au tableau de bord",
     "freeTrial": "Commencer gratuitement",
     "analyzeMyBusiness": "Analyser mon commerce",
     "menu": "Menu",
@@ -164,7 +165,7 @@
       "diagnosisTitle": "Diagnostic d'architecture",
       "diagnosisSubtitle": "L'ossature technique que les IA lisent en premier.",
       "engineScoresTitle": "Score et position par moteur IA",
-      "engineScoresSubtitle": "Ce que ChatGPT et Gemini répondent quand on cherche votre activité.",
+      "engineScoresSubtitle": "Ce que ChatGPT, Gemini, Perplexity et Claude répondent quand on cherche votre activité.",
       "testedOn": "Position mesurée sur la requête « {query} »",
       "measured": "Mesuré",
       "estimated": "Estimé",
@@ -200,6 +201,7 @@
     },
     "solve": {
       "cta": "Résoudre avec les agents IA",
+      "ctaContent": "Corriger le contenu",
       "share": "Partager",
       "copied": "Lien copié",
       "shareTitle": "Analyse GEO de {domain}",
@@ -207,9 +209,10 @@
         "title": "Connecter votre agent IA",
         "body": "Installez la prise got_the_ref dans votre agent : il relève vos correctifs et les applique sur votre code, avec les textes exacts. Vous validez chaque changement avant publication.",
         "detected": "Plateforme détectée : {name}",
-        "cta": "Publier automatiquement sur le site",
-        "connectSoon": "Bientôt",
-        "soonNote": "Wordpress et Shopify seront connectables prochainement.",
+        "cta": "Connecter le site",
+        "connectManage": "Mettre le lien du site à jour",
+        "connectedNote": "{site} est rattaché : les agents y publient et y corrigent.",
+        "connectBack": "Revenir en arrière",
         "shareDev": "Envoyer l'installation à votre développeur",
         "shareDevDone": "Installation copiée, envoyez-la à votre développeur",
         "shareDevTitle": "Connecter votre agent IA à got_the_ref pour {domain}",
@@ -345,7 +348,7 @@
       "signIn": "Se connecter",
       "rankings": {
         "title": "Classements IA",
-        "subtitle": "Votre position réelle sur ChatGPT et Gemini, face à vos concurrents.",
+        "subtitle": "Votre position réelle sur ChatGPT, Gemini, Perplexity et Claude, face à vos concurrents.",
         "pitch": "Les moteurs ont été interrogés, mais les positions restent fermées sur l'aperçu gratuit."
       },
       "recommendations": {
@@ -567,8 +570,8 @@
         "L'analyse des mots-clés page par page : leur pertinence, ceux qui manquent, et la formulation à reprendre pour être trouvé sur les requêtes qui comptent."
       ],
       "rankings": [
-        "Votre position réelle dans ChatGPT et Gemini sur les requêtes de votre activité, et le nom des concurrents cités avant vous.",
-        "Ce que répondent réellement ChatGPT et Gemini quand un client cherche ce que vous vendez, et à quel rang vous apparaissez, si vous apparaissez.",
+        "Votre position réelle dans ChatGPT, Gemini, Perplexity et Claude sur les requêtes de votre activité, et le nom des concurrents cités avant vous.",
+        "Ce que répondent réellement ChatGPT, Gemini, Perplexity et Claude quand un client cherche ce que vous vendez, et à quel rang vous apparaissez, si vous apparaissez.",
         "Le classement mesuré, moteur par moteur, avec les établissements qui occupent les places devant vous."
       ],
       "recommendations": [
@@ -731,6 +734,7 @@
         "Analyses continues et illimitées, e-commerce, SaaS ou commerce physique (fiche Google Maps comprise.)",
         "Vos positions réelles sur ChatGPT et Gemini, remesurées en continu",
         "Corrections automatiques sur votre site",
+        "Vos backlinks, votre notoriété web et votre fiche Google Maps travaillés semaine après semaine",
         "Aucune compétence technique requise, tout est fait en pilote automatique"
       ],
       "tagline": "Tout ce qu'il faut pour être recommandé par les IA et par Google, en pilote automatique.",
@@ -739,7 +743,7 @@
     },
     "boost": {
       "rhythm": "Payé une seule fois",
-      "badge": "Le plus pris pour démarrer",
+      "badge": "Le plus populaire",
       "eyebrow": "Intervention unique",
       "name": "Coup de Boost",
       "tagline": "Une passe complète unique des agents IA sur votre site qui mesurent, corrigent et publient pour vous.",
@@ -750,6 +754,7 @@
         "measure": "Vos positions sur ChatGPT, Gemini et Google mesurées avant et après corrections",
         "fix": "Les agents IA got_the_ref corrigent automatiquement ce qui vous empêche d'être cité dans les IA et sur Google.",
         "articles": "{count} articles rédigés et publiés pour installer votre visibilité",
+        "traffic": "Le trafic que les IA envoient sur votre site, relevé dans votre Analytics",
         "report": "Un rapport de référencement IA et Google à la fin de la passe, avec les bonnes pratiques à conserver"
       },
       "limit": "Pas de remesure et travaille en continu, pas d'articles programmés dans la durée : ça, c'est l'abonnement.",
@@ -831,7 +836,7 @@
         },
         {
           "q": "Que voit-on sans rien payer ?",
-          "a": "Ouvrez un compte, donnez l'adresse de votre site : nous le lisons et votre tableau de bord s'ouvre avec la niche détectée et les corrections de contenu adossées à vos mots-clés. Les autres sections — structure, articles, backlinks, Google Maps — restent visibles mais voilées, et s'ouvrent avec le Coup de Boost ou l'abonnement Tout-en-un."
+          "a": "Ouvrez un compte, donnez l'adresse de votre site : nous le lisons, et votre tableau de bord s'ouvre avec la niche détectée, votre position mesurée sur Gemini, les corrections de contenu adossées à vos mots-clés et les quatre premiers sujets d'articles de la semaine, datés. Les faire rédiger et publier demande le Coup de Boost. Les autres sections, structure, backlinks et Google Maps, restent visibles mais voilées."
         }
       ]
     }
@@ -852,7 +857,6 @@
     "agendaTitle": "Ce qu'on couvre pendant l'appel",
     "agendaSubtitle": "Un tour complet de votre position dans les moteurs qui répondent à vos clients, et du chemin pour la changer.",
     "agendaItems": [
-      "Suivi de vos mentions dans les IA",
       "Requêtes réelles de vos clients",
       "Audit GEO / SEO de votre site",
       "Fiche Google et ancrage local",
@@ -1542,56 +1546,62 @@
       "points": ["Restaurants & hôtels", "Artisans & BTP", "Santé & bien-être"]
     }
   },
+  "trafficGain": {
+    "perMonth": "par mois",
+    "unit": "visites / mois",
+    "contentTitle": "Visites supplémentaires estimées",
+    "contentCaption": "Ce que les corrections de cette page rapportent une fois posées sur votre site : balise title, meta description, H1 et paragraphe d'introduction réécrits avec les mots-clés de votre niche.",
+    "homeTitle": "Visites supplémentaires estimées, tout le plan appliqué",
+    "homeCaption": "Ce que rapportent les corrections ci-dessous quand elles sont toutes appliquées, structure et données structurées comprises.",
+    "pricingTitle": "Visites supplémentaires estimées avec got_the_ref",
+    "pricingCaption": "Ce que votre site peut capter chaque mois sur les quatre moteurs, une fois les agents passés sur tout le plan d'action."
+  },
   "dashboard": {
     "gate": {
       "offers": {
         "boost": "Coup de Boost",
         "allin": "Tout-en-un"
       },
-      "cta": {
-        "boost": "Débloquer avec le Coup de Boost",
-        "allin": "Passer au Tout-en-un"
-      },
       "items": {
         "architecture": {
-          "title": "Les corrections de structure vous attendent",
-          "body": "Le diagnostic est fait : chaque contrôle raté a son correctif, prêt à être appliqué par les agents. Le Coup de Boost les exécute sur votre site en une passe."
+          "title": "Le diagnostic de structure et ses correctifs",
+          "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Chaque contrôle raté a son correctif, prêt à poser. Le Coup de Boost ouvre la page et laisse les agents faire la passe.",
+          "cta": "Voir ma structure"
         },
         "articles": {
-          "title": "Une semaine d'articles écrits pour votre niche",
-          "body": "Les sujets sont déjà calés sur vos mots-clés. Le Coup de Boost lance la rédaction pendant une semaine ; l'abonnement Tout-en-un, lui, ne s'arrête pas."
+          "title": "La rédaction et la publication de vos articles",
+          "body": "Les sujets sont déjà au calendrier, datés et calés sur vos mots-clés : vous les voyez, vous ne pouvez pas encore les faire écrire. Le Coup de Boost lance la rédaction pendant une semaine et pose le mois entier au planning. L'abonnement Tout-en-un, lui, ne s'arrête pas.",
+          "cta": "Voir mes articles"
         },
         "presence": {
           "title": "Vos backlinks et votre notoriété web",
-          "body": "Qui parle de vous, avec quelle autorité, et à qui écrire pour que ça bouge. C'est un travail qui court dans la durée : il est réservé à l'abonnement Tout-en-un."
+          "body": "Qui parle de vous, avec quelle autorité, et à qui écrire pour que ça bouge. Le travail se fait dans la durée, il est donc réservé à l'abonnement Tout-en-un.",
+          "cta": "Voir ma notoriété"
         },
         "maps": {
           "title": "Votre fiche Google Maps, tenue à jour",
-          "body": "Cohérence avec le site, avis, posts programmés : la fiche se travaille semaine après semaine. Elle est réservée à l'abonnement Tout-en-un."
+          "body": "Cohérence avec le site, avis, posts programmés : la fiche se travaille semaine après semaine. Elle est réservée à l'abonnement Tout-en-un.",
+          "cta": "Voir ma fiche Google"
         },
         "diagnostic": {
           "title": "Le diagnostic complet de votre site",
-          "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Le Coup de Boost l'ouvre et corrige dans la foulée."
+          "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Le Coup de Boost l'ouvre et corrige dans la foulée.",
+          "cta": "Voir mon diagnostic"
         },
         "recommendations": {
-          "title": "Le plan d'action, priorisé",
-          "body": "Chaque manque relevé, son correctif et son impact sur votre visibilité. Le Coup de Boost laisse les agents l'appliquer."
-        },
-        "mentions": {
-          "title": "Vos mentions dans les IA, mois après mois",
-          "body": "Combien de fois ChatGPT et Gemini prononcent votre nom, et comment ça bouge. Une mesure qui ne vaut que dans la durée : elle est réservée à l'abonnement Tout-en-un."
+          "title": "+{count} corrections critiques pour votre classement",
+          "body": "Nous avons relevé {count} corrections à faire pour monter votre site en haut des réponses IA. Le Coup de Boost les ouvre une par une et les agents les appliquent.",
+          "cta": "Voir mes corrections"
         },
         "traffic": {
-          "title": "Les visites que les IA vous envoient",
-          "body": "Le trafic réellement amené par ChatGPT, Gemini et Perplexity, relevé dans votre Analytics. Le Coup de Boost l'ouvre, et l'abonnement Tout-en-un le tient à jour."
-        },
-        "agenda": {
-          "title": "Votre calendrier de publication",
-          "body": "Les sujets à venir, datés, prêts à être rédigés. Le Coup de Boost ouvre une semaine de rédaction."
+          "title": "X visites amenées par les IA",
+          "body": "Le compte exact, jour par jour, relevé dans votre Analytics. Le Coup de Boost l'ouvre.",
+          "cta": "Voir ma visibilité"
         },
         "rankings": {
-          "title": "Votre position sur ChatGPT",
-          "body": "Votre compte gratuit fait mesurer Gemini. Le relevé ChatGPT, lui, n'a pas été lancé : il s'ouvre avec le Coup de Boost, sur les deux moteurs."
+          "title": "Votre position sur {engine}",
+          "body": "Votre compte gratuit fait mesurer Gemini. {engine} n'a pas été interrogé : chaque relevé lui coûte un appel de recherche. Le Coup de Boost ouvre les quatre moteurs, avant et après les corrections.",
+          "cta": "Voir ma position sur {engine}"
         }
       }
     },
@@ -1615,11 +1625,31 @@
       "priorities": "À corriger en premier",
       "prioritiesHint": "Classé par ce que ça rapporte, pas par difficulté."
     },
+    "niche": {
+      "nicheLabel": "Niche détectée",
+      "zoneLabel": "Zone détectée",
+      "zoneLabelOnline": "Zone couverte",
+      "zoneOnline": "Tout le web"
+    },
+    "notices": {
+      "dailyTitle": "Faites une analyse tous les jours",
+      "dailyBody": "Les IA ne répondent pas la même chose d'un jour à l'autre. Un relevé quotidien montre si vos corrections vous font monter, et à partir de quand.",
+      "dailyCta": "Relancer l'analyse",
+      "dailyPending": "Relevé en cours, environ 30 secondes…",
+      "dailyLater": "Plus tard",
+      "desktopTitle": "Ouvrez votre tableau de bord sur ordinateur",
+      "desktopBody": "Les classements se lisent côte à côte, la courbe de trafic tient en entier et le calendrier montre le mois complet. Sur téléphone, tout s'empile et vous faites défiler trois fois plus.",
+      "desktopCta": "Copier le lien",
+      "desktopCopied": "Lien copié",
+      "desktopDismiss": "Continuer sur téléphone",
+      "close": "Fermer"
+    },
     "traffic": {
       "title": "Trafic amené par les IA",
       "hint": "Les visites arrivées depuis un assistant.",
       "period": "{days} derniers jours",
       "share": "soit {value} % de vos visites",
+      "shareMasked": "soit X % de vos visites",
       "geminiNote": "Gemini n'ajoute rien à ses liens : seuls les clics venus de l'application sont reconnus. Ceux des aperçus IA de Google partent de google.com et restent mélangés au référencement classique.",
       "demoBadge": "Données d'exemple",
       "periodFilter": "Période",
@@ -1651,11 +1681,43 @@
       "refresh": "Reprendre le relevé",
       "refreshing": "Interrogation des trois moteurs…"
     },
+    "dock": {
+      "eyebrow": "Prochain départ",
+      "queued": "{count, plural, one {# à quai} other {# à quai}}",
+      "inDays": "{count, plural, =0 {aujourd'hui} =1 {demain} other {dans # jours}}",
+      "late": "en retard, part au prochain passage",
+      "publishNow": "Publier maintenant",
+      "publishing": "Publication…",
+      "publishFailed": "La publication a échoué. Ouvrez l'article pour lire ce que le site a répondu.",
+      "schedule": "Planifier",
+      "scheduleDay": "Jour",
+      "scheduleHour": "Heure",
+      "scheduleFixedHour": "Les articles partent à {time}, une fois par jour : choisissez le jour, l'heure est la même pour tous.",
+      "scheduleConfirm": "Enregistrer la date",
+      "scheduleSaving": "Enregistrement…",
+      "scheduleCancel": "Annuler",
+      "open": "Ouvrir l'article",
+      "emptyTitle": "Rien à quai",
+      "emptyBody": "Validez un article rédigé : il partira tout seul à sa date, sans que vous ayez à revenir.",
+      "manualTitle": "Dépôt à la main",
+      "manualBody": "Votre site est rattaché, mais il n'ouvre pas sa rédaction à une API : les articles restent à déposer depuis son éditeur. Ouvrez un article validé, le tableau de bord vous donne le texte et le prompt qui le pose.",
+      "unconnectedTitle": "Aucun site rattaché",
+      "unconnectedBody": "Vos articles sont prêts, il manque la porte. Rattachez votre site et ils partiront à la date prévue.",
+      "unconnectedWaiting": "{count, plural, one {# article attend un site où être déposé.} other {# articles attendent un site où être déposés.}} Rattachez le vôtre et ils partiront à leur date.",
+      "connect": "Rattacher mon site",
+      "autoTitle": "Pilote automatique",
+      "autoOffLabel": "Ce que je valide",
+      "autoOffBody": "Seuls les articles que vous avez validés partent. Les autres attendent votre relecture.",
+      "autoOnLabel": "Tout, dès que c'est écrit",
+      "autoOnBody": "Les articles rédigés partent aussi, sans relecture. Le planning se déroule sans vous."
+    },
     "agenda": {
       "title": "Prochains articles",
       "hint": "Le calendrier tenu par les agents.",
       "all": "Tout voir",
-      "empty": "Aucun sujet au planning. Demandez-en depuis la page Articles.",
+      "unlockAll": "Débloquer la rédaction",
+      "lockedHint": "Ces sujets ont été écrits pour votre niche. Les faire rédiger et publier demande le Coup de Boost ou l'abonnement Tout-en-un.",
+      "empty": "Aucun sujet au planning pour l'instant.",
       "undated": "sans date",
       "publishedTitle": "Articles publiés",
       "publishedHint": "Déposés sur votre site.",
@@ -1672,7 +1734,15 @@
       "title": "Calendrier des publications",
       "hint": "Ce que les agents déposent sur votre site, jour par jour.",
       "count": "{count} au planning",
-      "empty": "Aucune date de publication sur ce mois. Demandez un planning depuis la page Articles."
+      "empty": "Aucune date de publication sur ce mois. Demandez un planning depuis la page Articles.",
+      "prevMonth": "Mois précédent",
+      "nextMonth": "Mois suivant",
+      "prevWeek": "Semaine précédente",
+      "nextWeek": "Semaine suivante",
+      "backToday": "Aujourd'hui",
+      "range": "Du {from} au {to}",
+      "dayEmpty": "Rien de prévu",
+      "weekCount": "{count, plural, =0 {Aucune publication sur ces sept jours} one {# publication sur ces sept jours} other {# publications sur ces sept jours}}"
     },
     "checks": {
       "allGood": "Tous les contrôles passent.",
@@ -1689,9 +1759,17 @@
       "body": "Nous lisons vos pages, testons votre place dans les IA et relevons ce qui manque. Comptez une à trois minutes selon la taille du site.",
       "articlesTitle": "Préparation de votre mois d'articles",
       "articlesBody": "Douze sujets sont planifiés pour les quatre prochaines semaines, à raison de trois par semaine. Les trois premiers sont en cours de rédaction.",
-      "progressAudit": "Lecture du site et relevé dans les IA",
-      "progressArticles": "Planification de vos articles",
+      "articlesBodyFree": "Quatre sujets sont planifiés pour la semaine qui vient, avec leur mot-clé et leur plan. Les faire rédiger demande le Coup de Boost.",
+      "phaseSite": "Lecture de votre site, page par page",
+      "phaseCrawlers": "Contrôle de l'accès des robots d'IA",
+      "phaseCitability": "Évaluation de ce que les IA peuvent citer",
+      "phaseEngines": "Vos questions posées à ChatGPT, Perplexity et Gemini",
+      "phaseRankings": "Relevé de votre place et de vos concurrents",
+      "phaseArticles": "Notation, plan d'action et mois d'articles",
       "progressDone": "Terminé, votre tableau de bord s'ouvre",
+      "stalledTitle": "Votre analyse est prête",
+      "stalledBody": "Le tableau de bord n'a pas pris le relais tout seul. Ouvrez-le : tout ce qui vient d'être calculé vous y attend.",
+      "openDashboard": "Ouvrir le tableau de bord",
       "retry": "Relancer"
     },
     "keywords": {
@@ -1786,15 +1864,21 @@
       "writing": "Rédaction…",
       "writeCta": "Rédiger l'article",
       "rewriteCta": "Réécrire",
+      "unlockToPublish": "Débloquer pour publier",
+      "unlockToWrite": "Débloquer la rédaction",
+      "lockedQuota": "Le sujet, le mot-clé et le plan sont prêts. La rédaction s'ouvre avec le Coup de Boost, qui écrit vos articles pendant une semaine.",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "approve": "Valider",
-      "publish": "Publier sur mon site",
+      "publishNow": "Publier maintenant",
+      "preparePublish": "Préparer la publication",
+      "schedule": "Planifier",
       "publishing": "Publication…",
       "drop": "Écarter ce sujet",
       "seeOnline": "Voir l'article en ligne",
       "bodyPlaceholder": "Écrivez l'article. Une réponse nette par section, dès la première phrase.",
       "scheduled": "Prévu le {date}",
+      "scheduledAt": "Prévu {date} à {time}",
       "undated": "Sans date de publication",
       "back": "Retour aux articles",
       "status": {
@@ -1834,7 +1918,6 @@
       "words": "{count} mots",
       "unsaved": "Modifications non enregistrées",
       "savedState": "Enregistré",
-      "publishNow": "Publier maintenant",
       "publishPromptTitle": "Prompt de publication",
       "publishPromptHint": "À coller dans votre agent IA ou à envoyer à votre développeur : il contient l'article entier et où le poser.",
       "publishPromptCopy": "Copier le prompt",
@@ -1917,11 +2000,10 @@
     },
     "welcome": {
       "headline": "Bienvenue sur votre tableau de bord",
-      "intro": "Vous êtes chez vous. Votre note, votre place dans les réponses de ChatGPT, Perplexity et Gemini, et les articles à écrire pour y grimper : tout est ici.",
+      "intro": "Votre note, votre place dans ChatGPT, Perplexity et Gemini, et les articles à écrire pour y grimper : tout est ici.",
       "sourceChip": "Votre première analyse",
-      "desktop": "**Ouvrez got_the_ref sur ordinateur dès que vous pouvez.** Les classements, les graphiques et l'éditeur d'articles y tiennent en entier.",
-      "chat": "**Une question, un doute ? Cliquez sur la bulle de discussion**, en bas à droite de l'écran : un membre de l'équipe vous répond directement.",
-      "closing": "Bonne visite, et bonne montée dans les réponses !",
+      "desktop": "**Passez sur ordinateur** pour les classements, les graphiques et l'éditeur.",
+      "chat": "**Une question ? La bulle en bas à droite** : l'équipe vous répond.",
       "dismiss": "C'est parti",
       "dismissAria": "Fermer le mot de bienvenue"
     },
@@ -1975,6 +2057,141 @@
         "banned": "Termes à bannir",
         "bannedPlaceholder": "Un terme par ligne",
         "bannedHint": "Noms de concurrents, mots interdits par votre marque."
+      },
+      "site": {
+        "title": "Votre site",
+        "body": "Le lien par lequel les agents déposent vos articles et corrigent vos textes. Sans lui, tout se prépare ici et se recopie à la main chez vous.",
+        "platform": "Plateforme",
+        "pickTitle": "Sur quoi tourne votre site ?",
+        "pickBody": "Choisissez votre plateforme : on vous montre ensuite où prendre les identifiants qu'elle demande.",
+        "pickSoon": "Bientôt",
+        "pickDetected": "Détecté",
+        "pickChosen": "Plateforme : {name}",
+        "pickChange": "Changer",
+        "guideTitle": "Rattacher un site {name}, pas à pas",
+        "guides": {
+          "wordpress": {
+            "steps": [
+              "Connectez-vous à votre site WordPress avec un compte administrateur.",
+              "Ouvrez « Utilisateurs → Profil », puis descendez jusqu'à la section « Mots de passe d'application ».",
+              "Saisissez le nom « got_the_ref », puis cliquez sur « Ajouter un nouveau mot de passe d'application ».",
+              "Copiez le mot de passe affiché : WordPress ne le montrera plus. Les espaces qu'il contient sont sans importance.",
+              "Votre identifiant est celui affiché en haut du même écran, sous « Nom d'utilisateur ».",
+              "Collez l'adresse de votre site, cet identifiant et ce mot de passe dans les champs ci-dessous."
+            ],
+            "caution": "Le site doit être en HTTPS : WordPress désactive les mots de passe d'application sur une connexion en clair. Si le rattachement est refusé alors que le mot de passe est bon, votre hébergeur retire l'en-tête « Authorization » — la directive « CGIPassAuth On » dans le fichier .htaccess le rétablit."
+          },
+          "woocommerce": {
+            "steps": [
+              "WooCommerce est une extension de WordPress : le rattachement passe par votre compte WordPress, pas par les réglages de la boutique.",
+              "Connectez-vous à votre site avec un compte administrateur, puis ouvrez « Utilisateurs → Profil ».",
+              "Descendez jusqu'à la section « Mots de passe d'application », saisissez le nom « got_the_ref », puis cliquez sur « Ajouter un nouveau mot de passe d'application ».",
+              "Copiez le mot de passe affiché : WordPress ne le montrera plus. Les espaces qu'il contient sont sans importance.",
+              "Votre identifiant est celui affiché en haut du même écran, sous « Nom d'utilisateur ».",
+              "Collez l'adresse de votre boutique, cet identifiant et ce mot de passe dans les champs ci-dessous."
+            ],
+            "caution": "Le site doit être en HTTPS : WordPress désactive les mots de passe d'application sur une connexion en clair. Attention à ne pas confondre : les clés « Consumer key » et « Consumer secret » de WooCommerce ouvrent le catalogue et les commandes, jamais les articles ni les pages — ce n'est pas ce qu'il faut ici."
+          },
+          "shopify": {
+            "steps": [
+              "Dans l'administration Shopify, ouvrez « Paramètres → Applications et canaux de vente ».",
+              "Cliquez sur « Développer des applications », puis « Créer une application ». Nommez-la got_the_ref.",
+              "Onglet « Configuration » → « Admin API » : cochez les portées read_content et write_content, puis enregistrez.",
+              "Cliquez sur « Installer l'application » pour l'activer sur la boutique.",
+              "Onglet « Identifiants API » : révélez le « Jeton d'accès Admin API » et copiez-le. Shopify ne l'affiche qu'une seule fois.",
+              "L'adresse de la boutique est celle en « .myshopify.com » (Paramètres → Domaines), pas votre domaine de vente."
+            ],
+            "caution": "Le champ « Blog visé » est facultatif : sans indication, les articles vont dans le premier blog de la boutique. Une boutique sans aucun blog reste rattachable, mais ses articles resteront à déposer à la main."
+          },
+          "wix": {
+            "steps": [
+              "Ouvrez manage.wix.com, cliquez sur votre compte en haut à droite, puis « Paramètres du compte » → « Clés API ».",
+              "Cliquez sur « Générer une clé API » et nommez-la got_the_ref.",
+              "Dans les autorisations, cochez « Blog » en lecture et en écriture, puis restreignez la clé à ce seul site si Wix vous le propose.",
+              "Copiez la clé affichée : Wix ne la montre qu'une seule fois.",
+              "L'identifiant du site se lit sur la même page, colonne « ID du site » ; à défaut, il apparaît dans l'adresse de votre tableau de bord Wix, juste après « /dashboard/ ».",
+              "Collez cet identifiant et cette clé dans les champs ci-dessous."
+            ],
+            "caution": "Wix demande un forfait payant et un blog déjà ajouté au site pour accepter des articles ; sans blog, le lien reste bon mais les articles resteront à déposer à la main. Les textes de la page d'accueil, eux, ne s'écrivent que dans l'éditeur Wix : le tableau de bord vous rendra le texte exact et le chemin du menu."
+          },
+          "prestashop": {
+            "steps": [
+              "Dans le back-office, ouvrez « Paramètres avancés → Webservice » et passez « Activer le service web » sur Oui.",
+              "Cliquez sur « Ajouter une nouvelle clé webservice », puis sur « Générer » pour obtenir la clé.",
+              "Donnez-lui la description got_the_ref et laissez le statut sur Actif.",
+              "Dans le tableau des permissions, cochez « content_management_system » en Voir, Ajouter et Modifier, et « languages » en Voir.",
+              "Enregistrez, puis copiez la clé : elle reste consultable dans cette même liste.",
+              "Collez l'adresse de la boutique et cette clé dans les champs ci-dessous."
+            ],
+            "caution": "PrestaShop n'a pas de blog : les articles sont déposés en pages de contenu, que vous retrouverez sous « Design → Pages ». Les métadonnées de la page d'accueil se règlent à la main dans « Configurer → Paramètres de la boutique → Trafic et SEO » ; le tableau de bord vous en donnera le texte exact."
+          }
+        },
+        "connect": "Rattacher le site",
+        "reconnect": "Mettre le lien à jour",
+        "connecting": "Vérification en cours…",
+        "disconnect": "Détacher",
+        "docs": "Voir la documentation de la plateforme",
+        "statusConnected": "Rattaché",
+        "statusError": "Refusé",
+        "statusPending": "En attente",
+        "connectedOn": "Rattaché le {date}.",
+        "canPublish": "Vos articles partent tout seuls, à la date prévue.",
+        "canEditOnly": "Les corrections de textes passent. Les articles, eux, restent à déposer à la main : cette plateforme ne les ouvre pas à une API.",
+        "noKey": "Le stockage sécurisé des identifiants n'est pas configuré sur ce serveur : le rattachement restera indisponible tant que la clé CREDENTIALS_KEY n'y est pas posée.",
+        "secretHint": "Jamais réaffiché. Pour changer le lien, saisissez-le à nouveau.",
+        "confirmDisconnect": "Détacher ce site ? Les identifiants seront effacés et les publications programmées s'arrêteront.",
+        "fields": {
+          "siteUrl": {
+            "label": "Adresse du site",
+            "placeholder": "https://mon-site.fr"
+          },
+          "username": {
+            "label": "Identifiant WordPress",
+            "hint": "Le compte qui publiera : administrateur ou éditeur."
+          },
+          "applicationPassword": {
+            "label": "Mot de passe d'application",
+            "hint": "Dans WordPress : Utilisateurs → Profil → Mots de passe d'application. Ce n'est pas votre mot de passe de connexion."
+          },
+          "shopDomain": {
+            "label": "Adresse de la boutique",
+            "placeholder": "ma-boutique.myshopify.com",
+            "hint": "L'adresse en « .myshopify.com », pas le domaine de vente."
+          },
+          "adminAccessToken": {
+            "label": "Jeton d'accès Admin",
+            "hint": "Dans Shopify : Paramètres → Applications et canaux de vente → Développer des applications. Portées à cocher : read_content et write_content."
+          },
+          "blogHandle": {
+            "label": "Blog visé",
+            "placeholder": "news",
+            "hint": "Facultatif. Sans indication, les articles vont dans le premier blog de la boutique."
+          },
+          "siteId": {
+            "label": "Identifiant du site",
+            "placeholder": "4339fba7-b533-4d10-a91b-822d825f29a5",
+            "hint": "Chez Wix : Paramètres du compte → Clés API, colonne « ID du site ». Il apparaît aussi dans l'adresse du tableau de bord, après « /dashboard/ »."
+          },
+          "apiKey": {
+            "label": "Clé d'API",
+            "hint": "Chez Wix : menu du compte → Paramètres du compte → Clés API. Autorisations à cocher : « Blog » en lecture et en écriture."
+          },
+          "apiToken": {
+            "label": "Jeton d'API"
+          },
+          "adminApiKey": {
+            "label": "Clé d'API Admin"
+          },
+          "webserviceKey": {
+            "label": "Clé du webservice",
+            "hint": "Dans PrestaShop : Paramètres avancés → Webservice. Permissions à cocher : content_management_system en Voir, Ajouter et Modifier, languages en Voir."
+          },
+          "webhookUrl": {
+            "label": "Webhook de publication",
+            "placeholder": "https://mon-site.fr/api/articles",
+            "hint": "Facultatif. Sans lui, les articles restent à déposer à la main."
+          }
+        }
       }
     },
     "siteSelect": {

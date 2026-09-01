@@ -1,12 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { authActionClient } from "@/lib/safe-action";
+import { sendEmail } from "@/lib/email";
+import { analysisReadyEmail } from "./emails";
 import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
 import { encryptJson, isCredentialsKeySet } from "@/lib/crypto";
 import { connectorFor } from "@/constants/site-platforms";
+import { preferredPassOnDay } from "@/constants/publishing";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { regenerateOnPageElement } from "@/lib/geo/keywords";
@@ -17,11 +21,25 @@ import { buildStructureFiles } from "@/lib/geo/structure-files";
 import {
   getArticleQuota,
   getDashboardContext,
-  getOnPageRewriteQuota,
+  isDashboardReady,
   readSiteCredentials,
 } from "./queries";
+import {
+  releaseArticleGeneration,
+  releaseOnPageRewrite,
+  reserveArticleGeneration,
+  reserveOnPageRewrite,
+} from "./quota";
 import { ARTICLE_QUOTAS, ON_PAGE_REWRITE_QUOTA } from "@/constants/plans";
-import { FREE_CONTENT_REWRITES, runsEngine, tierAtLeast } from "@/constants/access";
+import {
+  FREE_CONTENT_REWRITES,
+  analysisNeedsUpgrade,
+  articleTopicsFor,
+  draftsSeedArticles,
+  runsEngine,
+  tierAtLeast,
+  type AccessTier,
+} from "@/constants/access";
 import { getAccess, requireSection } from "@/features/billing/access";
 import { parseOutline, serializeOutline } from "./outline";
 import {
@@ -34,6 +52,7 @@ import {
 } from "./service";
 import {
   articleIdSchema,
+  autoPublishSchema,
   brandVoiceSchema,
   connectSiteSchema,
   disconnectSiteSchema,
@@ -43,6 +62,7 @@ import {
   prospectIdSchema,
   prospectStatusSchema,
   regenerateOnPageSchema,
+  scheduleArticleSchema,
   settingsSchema,
   updateArticleSchema,
   writeArticleSchema,
@@ -83,12 +103,21 @@ const revalidateDashboard = () => {
 // ── Analyse d'entrée ─────────────────────────────────────────────────────────
 
 /**
- * L'analyse du site, lancée avant la première ouverture du tableau de bord.
+ * L'analyse du site, lancée avant la première ouverture du tableau de bord —
+ * et rejouée une fois, le jour où le compte achète.
  *
  * Le tunnel d'accueil a déjà crawlé le site ; ce qui manque ici, c'est l'audit
  * GEO complet, celui qui alimente les onglets Contenu et Architecture. Refaire
  * l'analyse à chaque visite n'aurait pas de sens : elle n'est déclenchée que
  * lorsque le compte n'en a aucune sur son domaine.
+ *
+ * Avec une exception, et c'est tout l'objet du niveau inscrit dans l'analyse.
+ * Celle d'un compte gratuit est volontairement étroite : un seul moteur
+ * interrogé, aucun relevé hors-site — on ne paie pas des appels dont le
+ * résultat finira sous un voile. Le jour où ce compte prend le Coup de Boost ou
+ * l'abonnement, ces appels-là ont enfin un écran où s'afficher : l'analyse est
+ * donc refaite une fois, à son nouveau niveau, et remplace la précédente.
+ * Ensuite elle est de nouveau à jour, et plus rien ne repart.
  */
 export const prepareDashboardAction = authActionClient
   .inputSchema(disconnectSiteSchema)
@@ -115,15 +144,6 @@ export const prepareDashboardAction = authActionClient
       );
     }
 
-    const existing = await prisma.analysis.findFirst({
-      where: { userId, ...(profile.domain ? { domain: profile.domain } : {}) },
-      select: { id: true },
-    });
-    if (existing) return { id: existing.id };
-
-    const mode = profile.businessKind === "online" ? "online" : "physical";
-    const signals = await collectSignals(profile.siteUrl);
-
     // Un compte gratuit reçoit bien l'audit complet — c'est lui qui détecte la
     // niche et sort les mots-clés, les deux choses qu'il a le droit de voir —
     // mais ses classements ne sont relevés que sur Gemini (cf. `FREE_ENGINES`).
@@ -131,6 +151,22 @@ export const prepareDashboardAction = authActionClient
     // onglets qui resteront sous voile, on ne les paie donc pas.
     const { tier } = await getAccess(userId);
     const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(tier, engine));
+
+    const existing = await prisma.analysis.findFirst({
+      where: { userId, ...(profile.domain ? { domain: profile.domain } : {}) },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, data: true },
+    });
+
+    // Une analyse déjà faite au niveau du compte n'a aucune raison d'être
+    // refaite : elle a coûté ce qu'elle devait coûter, et rejouer l'audit à
+    // chaque ouverture reviendrait à repayer le même rapport.
+    if (existing && !analysisNeedsUpgrade(readAnalysisTier(existing.data), tier)) {
+      return { id: existing.id };
+    }
+
+    const mode = profile.businessKind === "online" ? "online" : "physical";
+    const signals = await collectSignals(profile.siteUrl);
 
     const result = await analyzeSite(
       signals,
@@ -149,27 +185,96 @@ export const prepareDashboardAction = authActionClient
       "paid",
     );
 
-    const record = await prisma.analysis.create({
-      data: {
-        url: result.url,
-        domain: result.domain,
-        businessName: result.businessName,
-        businessType: result.businessType,
-        mapsUrl: profile.mapsUrl ?? null,
-        overallScore: result.overallScore,
-        data: JSON.stringify({ ...result, mapsUrl: profile.mapsUrl ?? null, tier: "paid" }),
-        unlocked: true,
-        userId,
-      },
-      select: { id: true },
+    // Le niveau est écrit dans l'analyse elle-même : c'est lui qui dira, à la
+    // prochaine ouverture, si les appels qu'on vient de sauter ont désormais un
+    // écran où s'afficher.
+    const data = JSON.stringify({
+      ...result,
+      mapsUrl: profile.mapsUrl ?? null,
+      tier: "paid",
+      accessTier: tier,
     });
+
+    const columns = {
+      url: result.url,
+      domain: result.domain,
+      businessName: result.businessName,
+      businessType: result.businessType,
+      mapsUrl: profile.mapsUrl ?? null,
+      overallScore: result.overallScore,
+      data,
+      unlocked: true,
+    };
+
+    // Mise à jour plutôt que création quand l'analyse existait déjà : le client
+    // garde le même identifiant d'un bout à l'autre, et rien ne pointe vers un
+    // rapport devenu orphelin.
+    const record = existing
+      ? await prisma.analysis.update({
+          where: { id: existing.id },
+          data: columns,
+          select: { id: true },
+        })
+      : await prisma.analysis.create({
+          data: { ...columns, userId },
+          select: { id: true },
+        });
+
+    // Les résultats partent aussi par e-mail. Beaucoup de clients ferment
+    // l'onglet pendant les trois minutes d'audit ; sans ce message, ils ne
+    // reviennent pas voir ce qu'ils ont demandé. Il est expédié après la
+    // réponse — le tableau de bord n'a pas à attendre Resend — et son échec ne
+    // remet pas en cause l'analyse, qui est écrite.
+    const { subject, html, text } = analysisReadyEmail({
+      userName: ctx.auth.user.name,
+      analysis: result,
+    });
+    after(() =>
+      sendEmail({
+        to: ctx.auth.user.email,
+        subject,
+        html,
+        text,
+        // Adossée à l'analyse : la reprise après achat en réécrit une nouvelle
+        // et mérite son e-mail, un double rendu de l'écran d'attente n'en
+        // mérite pas un second.
+        idempotencyKey: `analysis-ready/${record.id}/${tier}`,
+      }),
+    );
 
     revalidateDashboard();
     return { id: record.id };
   });
 
 /**
- * Relève à nouveau la place du commerce dans ChatGPT et Gemini.
+ * Le tableau de bord est-il prêt à prendre la place de l'écran d'attente ?
+ *
+ * L'écran d'attente ne peut pas se fier au seul retour de `prepareDashboardAction` :
+ * l'action peut avoir rendu la main pendant que la revalidation de la page
+ * n'est pas encore visible, et une analyse écrite mais pas encore relue
+ * laisserait le client sur une barre pleine à 100 % — le défaut que cette
+ * action existe pour supprimer. Il demande donc au serveur, en toutes lettres,
+ * si la page d'accueil afficherait autre chose que l'attente.
+ *
+ * Aucune écriture, aucun appel de modèle : deux lectures en base. C'est ce qui
+ * autorise à la répéter toutes les deux secondes le temps que l'écriture
+ * devienne visible.
+ */
+export const dashboardReadyAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => ({ ready: await isDashboardReady(ctx.auth.user.id) }));
+
+/** Le niveau d'accès inscrit dans une analyse enregistrée, s'il l'a été. */
+function readAnalysisTier(raw: string): AccessTier | null {
+  try {
+    return (JSON.parse(raw) as { accessTier?: AccessTier }).accessTier ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Relève à nouveau la place du commerce dans les moteurs suivis.
  *
  * Le classement est la seule partie de l'audit qui bouge d'une semaine à
  * l'autre sans que le site change : on la reprend seule, auprès des API des
@@ -205,9 +310,9 @@ export const refreshRankingsAction = authActionClient
     const isPhysical = profile?.businessKind !== "online";
 
     // Un compte gratuit ne fait mesurer que Gemini : son relevé passe par le
-    // grounding Google Search, sans appel facturé en plus. ChatGPT consomme un
-    // appel à l'outil de recherche d'OpenAI par passage — il n'est donc pas
-    // exécuté, et sa carte reste voilée plutôt que remplie d'un chiffre inventé.
+    // grounding Google Search, sans appel facturé en plus. ChatGPT, Perplexity
+    // et Claude se paient à chaque passage — ils ne sont donc pas exécutés, et
+    // leurs cartes restent voilées plutôt que remplies d'un chiffre inventé.
     const { tier } = await getAccess(userId);
     const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(tier, engine));
 
@@ -238,69 +343,106 @@ export const refreshRankingsAction = authActionClient
 
 // ── Mois éditorial d'accueil ─────────────────────────────────────────────────
 
-/** Trois publications par semaine : lundi, mercredi, vendredi. */
-const SEED_WEEKDAYS = [1, 3, 5] as const;
-/** Quatre semaines : le mois entier est posé avant la première visite. */
-const SEED_WEEKS = 4;
-const SEED_COUNT = SEED_WEEKDAYS.length * SEED_WEEKS;
-/** Publication à 9 h : l'heure où le planning se lit comme un agenda. */
-const SEED_HOUR = 9;
+/** Une publication par jour ouvré : du lundi au vendredi, samedi et dimanche off. */
+const SEED_WEEKDAYS = [1, 2, 3, 4, 5] as const;
+/**
+ * Combien d'articles sont rédigés dans la foulée de la planification.
+ *
+ * Trois, et pas les cinq jours de la semaine ouvrée : ces rédactions partent en
+ * parallèle derrière l'écran d'attente, et cinq appels au grand modèle lancés
+ * ensemble dépassent le budget de la préparation. Le reste du mois attend la
+ * demande du client, article par article.
+ */
+const SEED_DRAFTS = 3;
 
 /**
- * Les douze dates du mois, à partir du lundi qui vient.
+ * Les dates du mois éditorial, à partir du lundi qui vient.
  *
  * On part toujours d'un lundi, jamais d'« aujourd'hui plus sept jours » : un
  * planning qui tombe le mardi puis le jeudi puis le samedi ne se lit pas comme
  * un calendrier éditorial, et le client ne sait plus quel jour il publie.
+ *
+ * Les dates sont produites au compte demandé, pas à un nombre de semaines fixe :
+ * le volume du planning est une décision d'offre (`articleTopicsFor`), et cette
+ * fonction n'a qu'à poser autant de jours ouvrés qu'il y a de sujets. Vingt-deux
+ * sujets couvrent ainsi quatre semaines pleines plus deux jours.
  */
-function seedSchedule(from: Date): Date[] {
-  const monday = new Date(from);
-  monday.setHours(SEED_HOUR, 0, 0, 0);
-  // getDay() : 0 = dimanche. Le lundi suivant est à 1..7 jours d'ici, jamais
+function seedSchedule(from: Date, count: number): Date[] {
+  // Tout le calcul de jours se fait en UTC. Les variantes locales de `Date`
+  // donnaient un lundi différent selon le fuseau de la machine : en production
+  // le serveur est en UTC et l'écart ne se voyait pas, sur un poste à Paris le
+  // planning glissait d'un jour.
+  const monday = new Date(
+    Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()),
+  );
+  // getUTCDay() : 0 = dimanche. Le lundi suivant est à 1..7 jours d'ici, jamais
   // aujourd'hui — le premier article doit laisser le temps de la relecture.
-  monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7));
+  monday.setUTCDate(monday.getUTCDate() + ((8 - monday.getUTCDay()) % 7 || 7));
 
   const dates: Date[] = [];
-  for (let week = 0; week < SEED_WEEKS; week += 1) {
-    for (const weekday of SEED_WEEKDAYS) {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + week * 7 + (weekday - 1));
-      dates.push(date);
-    }
+  for (let index = 0; index < count; index += 1) {
+    const week = Math.floor(index / SEED_WEEKDAYS.length);
+    const weekday = SEED_WEEKDAYS[index % SEED_WEEKDAYS.length];
+    const day = new Date(monday);
+    day.setUTCDate(monday.getUTCDate() + week * 7 + (weekday - 1));
+    // L'heure vient du rythme de la file, pas d'une constante posée ici. Elle
+    // valait 9 h, quand la tâche planifiée passe à 8 h : chaque article était
+    // daté une heure après le seul passage de sa journée, et repartait le
+    // lendemain. Vingt-deux sujets, vingt-deux jours de retard silencieux.
+    dates.push(new Date(preferredPassOnDay(day.toISOString().slice(0, 10))));
   }
   return dates;
 }
 
 /**
- * Le mois d'articles posé avant la première ouverture du tableau de bord.
+ * Les sujets d'articles posés avant la première ouverture du tableau de bord,
+ * et complétés le jour de l'achat.
  *
  * Un calendrier vide, à l'arrivée, demande au client de deviner quoi écrire :
- * c'est exactement le travail qu'il vient de déléguer. Douze sujets sont donc
- * planifiés d'un coup — trois par semaine sur quatre semaines — et les trois de
- * la première semaine sont rédigés dans la foulée, pour qu'il ait du texte à
- * lire, pas seulement des titres.
+ * c'est exactement le travail qu'il vient de déléguer. On en pose donc d'entrée,
+ * mais pas la même quantité selon ce que le compte a payé.
  *
- * Ces trois rédactions ne sont pas décomptées du quota hebdomadaire : elles
- * sont offertes avec la mise en route, et un client qui arriverait à zéro
- * passe ne pourrait plus rien reprendre de sa semaine.
+ *   — gratuit : quatre sujets, la semaine qui vient. Ils sont datés, ils
+ *     portent le mot-clé et l'angle, et ils s'affichent en clair sur l'accueil.
+ *     Aucun n'est rédigé : écrire est le travail vendu, et trois appels au
+ *     grand modèle pour un onglet resté sous voile ne servent personne. Cette
+ *     planification-là tient en UN appel — le même qu'il rende quatre sujets ou
+ *     vingt-deux —, c'est ce qui la rend tenable sur un compte qui ne paie rien.
+ *   — Coup de Boost et abonnement : le mois entier, vingt-deux sujets à raison
+ *     d'un par jour ouvré, dont les trois premiers rédigés dans la foulée.
  *
- * L'action est sans effet si le compte a déjà des articles : elle est appelée
- * juste après l'analyse d'entrée, qui peut être rejouée.
+ * L'action est donc appelée deux fois dans la vie d'un compte gratuit qui
+ * achète : à la mise en route, puis derrière l'écran d'attente de l'achat. Le
+ * second passage ne refait pas ce qui existe — il complète jusqu'au volume du
+ * nouveau niveau, en reprenant le planning là où le précédent s'était arrêté,
+ * et rédige la première semaine.
+ *
+ * Ces rédactions offertes ne sont pas décomptées du quota hebdomadaire : elles
+ * viennent avec la mise en route, et un client qui arriverait à zéro passe ne
+ * pourrait plus rien reprendre de sa semaine.
  */
 export const seedEditorialMonthAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
     const userId = ctx.auth.user.id;
 
+    const { tier } = await getAccess(userId);
+    const target = articleTopicsFor(tier);
+
     const existing = await prisma.article.count({ where: { userId } });
-    if (existing > 0) return { planned: 0, written: 0 };
+    if (existing >= target) return { planned: 0, written: 0 };
 
     const context = await getDashboardContext(userId);
-    const topics = await planArticleTopics(context, SEED_COUNT);
-    const dates = seedSchedule(new Date());
+    const missing = target - existing;
+    const topics = await planArticleTopics(context, missing);
+    // Le planning complet est calculé d'un bloc, puis on n'en prend que les
+    // dates encore libres : les quatre sujets du compte gratuit gardent leur
+    // place, et les suivants s'ajoutent derrière eux au lieu de tomber le même
+    // jour.
+    const dates = seedSchedule(new Date(), target).slice(existing);
 
     await prisma.article.createMany({
-      data: topics.slice(0, SEED_COUNT).map((topic, index) => ({
+      data: topics.slice(0, missing).map((topic, index) => ({
         userId,
         title: topic.title,
         keyword: topic.keyword,
@@ -313,13 +455,20 @@ export const seedEditorialMonthAction = authActionClient
       })),
     });
 
-    // Les trois premiers du planning, rédigés ensemble : trois appels en
-    // parallèle tiennent dans le budget de la préparation, trois à la suite
-    // non.
+    // Un compte gratuit s'arrête là : ses sujets sont au calendrier, lisibles,
+    // et le bouton de publication mène aux tarifs.
+    if (!draftsSeedArticles(tier)) {
+      revalidateDashboard();
+      return { planned: topics.length, written: 0 };
+    }
+
+    // Les trois premiers du planning encore à l'état de sujet, rédigés
+    // ensemble : trois appels en parallèle tiennent dans le budget de la
+    // préparation, trois à la suite non.
     const firstWeek = await prisma.article.findMany({
-      where: { userId },
+      where: { userId, status: "planned" },
       orderBy: { scheduledFor: "asc" },
-      take: SEED_WEEKDAYS.length,
+      take: SEED_DRAFTS,
     });
 
     const drafts = await Promise.allSettled(
@@ -358,6 +507,16 @@ export const connectSiteAction = authActionClient
     const userId = ctx.auth.user.id;
     const connector = connectorFor(parsedInput.platform);
     if (!connector) throw new AppError("Plateforme inconnue.", "UNKNOWN_PLATFORM", 400);
+
+    // Le formulaire grise les plateformes qui ne sont pas ouvertes ; l'inspecteur
+    // du navigateur, lui, ne grise rien. Le refus tient ici.
+    if (!connector.ready) {
+      throw new AppError(
+        `Le rattachement ${connector.name} n'est pas encore ouvert.`,
+        "PLATFORM_NOT_READY",
+        400,
+      );
+    }
 
     if (!isCredentialsKeySet()) {
       throw new AppError(
@@ -450,6 +609,7 @@ export const applyOnPageAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
     const userId = ctx.auth.user.id;
+    await requireSection(userId, "architecture");
     const { link, credentials } = await requireEditableLink(userId);
 
     const context = await getDashboardContext(userId);
@@ -493,6 +653,9 @@ export const applyStructureAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
     const userId = ctx.auth.user.id;
+    // Les fichiers de structure sont le livrable du Coup de Boost : le voile
+    // posé sur l'onglet ne les protège pas, la réponse renvoie leur contenu.
+    await requireSection(userId, "architecture");
     const { link, credentials } = await requireEditableLink(userId);
 
     const context = await getDashboardContext(userId);
@@ -529,6 +692,10 @@ export const applyStructureAction = authActionClient
 export const rewriteOnPageAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
+    // Une réécriture complète du on-page, sans compteur : c'est un appel au
+    // modèle par clic. L'élément par élément, lui, a son quota
+    // (`regenerateOnPageAction`) et reste ouvert au compte gratuit.
+    await requireSection(ctx.auth.user.id, "architecture");
     const context = await getDashboardContext(ctx.auth.user.id);
     if (!context.analysis) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
     return rewriteOnPage(context);
@@ -539,8 +706,9 @@ export const rewriteOnPageAction = authActionClient
  *
  * Trois par élément et par jour : le plafond est vérifié ici, jamais dans le
  * composant — un bouton grisé côté client n'empêche personne d'appeler l'action.
- * La passe n'est comptée qu'une fois le texte obtenu : un appel au modèle qui
- * échoue ne coûte pas une des trois demandes du client.
+ * La passe est réservée avant l'appel au modèle et rendue s'il échoue : un texte
+ * qui n'arrive pas ne coûte rien, et deux clics simultanés ne peuvent pas
+ * consommer deux fois la même place (cf. `quota.ts`).
  *
  * Le client d'action est celui de tout le tableau de bord, pas
  * `subscriberActionClient` : l'accès à la section est déjà la garde, et exiger
@@ -553,10 +721,7 @@ export const regenerateOnPageAction = authActionClient
     const userId = ctx.auth.user.id;
     const { element } = parsedInput;
 
-    const [context, quota] = await Promise.all([
-      getDashboardContext(userId),
-      getOnPageRewriteQuota(userId),
-    ]);
+    const context = await getDashboardContext(userId);
 
     const analysis = context.analysis;
     if (!analysis || !context.analysisId) {
@@ -570,12 +735,17 @@ export const regenerateOnPageAction = authActionClient
         400,
       );
     }
-    if (quota[element] <= 0) {
+
+    // La place est prise avant l'appel au modèle, pas après : deux clics
+    // simultanés liraient sinon le même compteur et dépenseraient deux passes
+    // pour une seule autorisée.
+    const reservation = await reserveOnPageRewrite(userId, element);
+    if (!reservation.ok) {
       // Deux refus différents, parce que ce ne sont pas les mêmes limites : le
       // compte gratuit a épuisé son unique essai — il n'y a pas de lendemain à
       // lui promettre —, l'abonné retrouvera son compteur demain matin.
       throw new AppError(
-        tierAtLeast(context.tier, "boost")
+        tierAtLeast(reservation.tier, "boost")
           ? `Vous avez utilisé vos ${ON_PAGE_REWRITE_QUOTA.daily} réécritures du jour sur cet élément. Le compteur repart demain.`
           : `Votre offre gratuite comprend ${FREE_CONTENT_REWRITES} réécriture. Passez au Coup de Boost pour laisser les agents reprendre tout votre contenu.`,
         "QUOTA_EXCEEDED",
@@ -583,15 +753,23 @@ export const regenerateOnPageAction = authActionClient
       );
     }
 
-    const rewritten = await regenerateOnPageElement(
-      analysis.profile,
-      analysis.signals,
-      insight.keywords,
-      element,
-      insight.suggested,
-      context.tone.summary,
-    );
+    let rewritten;
+    try {
+      rewritten = await regenerateOnPageElement(
+        analysis.profile,
+        analysis.signals,
+        insight.keywords,
+        element,
+        insight.suggested,
+        context.tone.summary,
+      );
+    } catch (error) {
+      // Un appel qui échoue ne coûte pas une passe : la place est rendue.
+      await releaseOnPageRewrite(reservation.id);
+      throw error;
+    }
     if (!rewritten) {
+      await releaseOnPageRewrite(reservation.id);
       throw new AppError("La réécriture n'a rien donné. Réessayez.", "REWRITE_FAILED", 502);
     }
 
@@ -600,16 +778,13 @@ export const regenerateOnPageAction = authActionClient
       trendingKeywords: { ...insight, suggested: { ...insight.suggested, ...rewritten } },
     };
 
-    await Promise.all([
-      prisma.analysis.update({
-        where: { id: context.analysisId },
-        data: { data: JSON.stringify(updated) },
-      }),
-      prisma.onPageRewrite.create({ data: { userId, element } }),
-    ]);
+    await prisma.analysis.update({
+      where: { id: context.analysisId },
+      data: { data: JSON.stringify(updated) },
+    });
 
     revalidatePath(ROUTES.dashboardContent);
-    return { remaining: quota[element] - 1 };
+    return { remaining: reservation.remaining };
   });
 
 // ── Articles ─────────────────────────────────────────────────────────────────
@@ -644,7 +819,15 @@ export const planArticlesAction = authActionClient
           topic.outline.map((heading) => ({ heading, level: 2 as const, instruction: "" })),
         ),
         excerpt: topic.angle,
-        scheduledFor: new Date(start.getTime() + step * (index + 1)),
+        // Calé sur le passage de la file, comme les sujets du planning initial.
+        // Une date posée entre deux passages n'avance rien : l'article attend
+        // le suivant, et l'écart entre ce qu'annonce le calendrier et ce qui
+        // se produit est exactement ce qu'on cherche à supprimer.
+        scheduledFor: new Date(
+          preferredPassOnDay(
+            new Date(start.getTime() + step * (index + 1)).toISOString().slice(0, 10),
+          ),
+        ),
         status: "planned",
       })),
     });
@@ -661,12 +844,14 @@ export const writeArticleAction = authActionClient
     const article = await prisma.article.findFirst({ where: { id: parsedInput.id, userId } });
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
 
-    // Le quota se vérifie avant l'appel au modèle, pas après : une rédaction
-    // refusée ne doit rien coûter.
-    const quota = await getArticleQuota(userId);
-    if (quota.remaining <= 0) {
+    // La place est prise avant l'appel au modèle, et rendue s'il échoue : une
+    // rédaction qui n'aboutit pas ne coûte rien, et deux demandes lancées en
+    // même temps ne peuvent pas consommer deux fois la dernière passe.
+    const reservation = await reserveArticleGeneration(userId, article.id);
+    if (!reservation.ok) {
       // Sans date de renouvellement, il n'y a rien à attendre : c'est la semaine
       // du Coup de Boost qui s'est refermée, et la suite s'appelle l'abonnement.
+      const quota = await getArticleQuota(userId);
       throw new AppError(
         quota.renewsAt
           ? `Vous avez utilisé vos ${ARTICLE_QUOTAS.weekly} rédactions de la semaine. La prochaine se libère ${formatRenewal(quota.renewsAt)}.`
@@ -676,29 +861,30 @@ export const writeArticleAction = authActionClient
       );
     }
 
-    const context = await getDashboardContext(userId);
-    const outline = parseOutline(article.outline);
-    const draft = await writeArticle(
-      context,
-      { title: article.title, keyword: article.keyword, outline },
-      parsedInput.instruction ?? null,
-    );
+    let draft;
+    try {
+      const context = await getDashboardContext(userId);
+      const outline = parseOutline(article.outline);
+      draft = await writeArticle(
+        context,
+        { title: article.title, keyword: article.keyword, outline },
+        parsedInput.instruction ?? null,
+      );
+    } catch (error) {
+      await releaseArticleGeneration(reservation.id);
+      throw error;
+    }
 
-    await prisma.$transaction([
-      prisma.article.update({
-        where: { id: article.id },
-        data: {
-          title: draft.title,
-          excerpt: draft.excerpt,
-          body: draft.body,
-          status: "drafted",
-          revisions: article.body ? article.revisions + 1 : article.revisions,
-        },
-      }),
-      // La passe n'est décomptée qu'une fois le texte obtenu : un modèle qui
-      // échoue ne doit pas consommer la semaine du client.
-      prisma.articleGeneration.create({ data: { userId, articleId: article.id } }),
-    ]);
+    await prisma.article.update({
+      where: { id: article.id },
+      data: {
+        title: draft.title,
+        excerpt: draft.excerpt,
+        body: draft.body,
+        status: "drafted",
+        revisions: article.body ? article.revisions + 1 : article.revisions,
+      },
+    });
 
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(article.id));
@@ -709,7 +895,7 @@ export const writeArticleAction = authActionClient
       title: draft.title,
       body: draft.body,
       excerpt: draft.excerpt,
-      remaining: quota.remaining - 1,
+      remaining: reservation.remaining,
     };
   });
 
@@ -747,6 +933,61 @@ export const approveArticleAction = authActionClient
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
     return { ok: true };
+  });
+
+/**
+ * Déplace la date de publication d'un article.
+ *
+ * Le geste est réversible et sans effet de bord : il ne valide pas, ne rédige
+ * pas, ne dépose rien. Un article validé et redaté repart simplement à la
+ * nouvelle heure ; un sujet encore à écrire garde sa place au calendrier.
+ *
+ * La date passée est un instant complet, pas un jour : c'est l'écran qui a
+ * composé le jour et l'heure dans le fuseau du client, et la file compare des
+ * instants.
+ */
+export const scheduleArticleAction = authActionClient
+  .inputSchema(scheduleArticleSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "articles");
+
+    const { count } = await prisma.article.updateMany({
+      // Un article déjà déposé n'a plus de date à venir : le redater laisserait
+      // croire qu'il repartira, alors que la file écarte tout ce qui porte un
+      // `publishedAt`.
+      where: { id: parsedInput.id, userId, publishedAt: null },
+      data: { scheduledFor: new Date(parsedInput.scheduledFor) },
+    });
+    if (!count) throw new AppError("Article introuvable ou déjà publié.", "NOT_FOUND", 404);
+
+    revalidatePath(ROUTES.dashboardArticles);
+    revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
+    return { ok: true };
+  });
+
+/**
+ * Le pilote automatique : ce que la file s'autorise à déposer sans relecture.
+ *
+ * Fermé, elle ne dépose que les articles que le client a validés. Ouvert, elle
+ * dépose aussi ceux qui sont rédigés et jamais ouverts. C'est un consentement,
+ * et il se donne ici explicitement — jamais par défaut, jamais en effet de bord
+ * d'un autre réglage.
+ */
+export const setAutoPublishAction = authActionClient
+  .inputSchema(autoPublishSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "articles");
+
+    const { count } = await prisma.siteConnection.updateMany({
+      where: { userId },
+      data: { autoPublish: parsedInput.autoPublish },
+    });
+    if (!count) throw new AppError("Aucun site rattaché.", "NO_SITE_CONNECTION", 400);
+
+    revalidatePath(ROUTES.dashboardArticles);
+    return { autoPublish: parsedInput.autoPublish };
   });
 
 /** Dépose l'article sur le site du client, via le lien enregistré. */
@@ -887,6 +1128,9 @@ export const findProspectsAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
     const userId = ctx.auth.user.id;
+    // La recherche coûte un appel au modèle et la liste se relit ensuite en
+    // base : le voile de l'onglet ne suffit pas à la réserver à l'abonnement.
+    await requireSection(userId, "presence");
     const context = await getDashboardContext(userId);
     const sites = await findProspects(context);
 
@@ -913,6 +1157,7 @@ export const draftProspectMessageAction = authActionClient
   .inputSchema(prospectIdSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
+    await requireSection(userId, "presence");
     const prospect = await prisma.outreachProspect.findFirst({
       where: { id: parsedInput.id, userId },
     });
@@ -940,8 +1185,10 @@ export const draftProspectMessageAction = authActionClient
 export const setProspectStatusAction = authActionClient
   .inputSchema(prospectStatusSchema)
   .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "presence");
     const { count } = await prisma.outreachProspect.updateMany({
-      where: { id: parsedInput.id, userId: ctx.auth.user.id },
+      where: { id: parsedInput.id, userId },
       data: {
         status: parsedInput.status,
         contactedAt: parsedInput.status === "contacted" ? new Date() : undefined,
@@ -959,6 +1206,9 @@ export const planGooglePostsAction = authActionClient
   .inputSchema(planGooglePostsSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
+    // Même raison que la présence web : la rédaction des posts coûte un appel
+    // au modèle, et le calendrier produit se relit en base.
+    await requireSection(userId, "maps");
     const context = await getDashboardContext(userId);
     const posts = await planGooglePosts(context, parsedInput.count);
 
@@ -988,8 +1238,10 @@ export const planGooglePostsAction = authActionClient
 export const approveGooglePostAction = authActionClient
   .inputSchema(googlePostIdSchema)
   .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "maps");
     const { count } = await prisma.googlePost.updateMany({
-      where: { id: parsedInput.id, userId: ctx.auth.user.id },
+      where: { id: parsedInput.id, userId },
       data: { status: "approved" },
     });
     if (!count) throw new AppError("Post introuvable.", "NOT_FOUND", 404);

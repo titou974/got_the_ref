@@ -7,8 +7,9 @@ import { refreshRankingsAction } from "@/features/dashboard/actions";
 import { EngineCard, ENGINE_LOGOS } from "@/components/geo/EngineRankings";
 import { SearchLoader } from "@/components/SearchLoader";
 import { DASHBOARD_ENGINES, type EngineScore } from "@/lib/geo/types";
+import { decoyEngine } from "@/lib/geo/decoy-ranking";
 import { runsEngine, type AccessTier } from "@/constants/access";
-import { TierGate } from "./TierGate";
+import { GatePanel } from "./TierGate";
 
 /**
  * La place du commerce dans les moteurs suivis, et le bouton qui la reprend.
@@ -20,13 +21,21 @@ import { TierGate } from "./TierGate";
  *
  * Seuls les moteurs de `DASHBOARD_ENGINES` sont montrés. Le top 10 direct et
  * indirect qu'ils portent vient de leur propre réponse : ChatGPT par son outil
- * de recherche, Gemini par le grounding Google Search. Aucun modèle de service
- * ne fabrique un classement à leur place.
+ * de recherche, Gemini par le grounding Google Search, Perplexity par
+ * construction, Claude par son outil `web_search`. Aucun modèle de service ne
+ * fabrique un classement à leur place.
  *
- * Un compte gratuit ne fait mesurer que Gemini : la carte ChatGPT est bien à sa
- * place, à la bonne taille, mais sous voile — elle porte l'estimation du modèle,
- * pas un relevé, et la faire passer pour une position serait mentir. Le voile
- * dit ce qu'il en est et mène aux tarifs.
+ * Un compte gratuit ne fait mesurer que Gemini : les trois autres cartes sont
+ * bien à leur place, à la bonne taille, mais sous voile — elles portent
+ * l'estimation du modèle, pas un relevé, et les faire passer pour des positions
+ * serait mentir. Le voile dit ce qu'il en est et mène aux tarifs. Elles
+ * s'ouvrent au Coup de Boost, qui fait partir les quatre relevés.
+ *
+ * Sous ce voile, la carte ne montre donc rien du client : `decoyEngine` lui
+ * reprend la forme de la carte ouverte — mêmes blocs, mêmes intitulés — et la
+ * remplit d'un top 10 fictif, sans ligne surlignée. C'est ce qui lui donne
+ * exactement la hauteur de sa jumelle : les deux cartes de la rangée se
+ * terminent au même endroit, voile compris.
  */
 export function RankingsSection({
   engines,
@@ -40,6 +49,11 @@ export function RankingsSection({
   const router = useRouter();
 
   const shown = engines.filter((engine) => DASHBOARD_ENGINES.includes(engine.engine));
+
+  // La carte ouverte sert de patron aux cartes voilées : c'est elle qui dit
+  // combien de blocs de classement afficher, et sous quels intitulés.
+  const reference =
+    shown.find((engine) => runsEngine(tier, engine.engine) && engine.rankings.length > 0) ?? null;
 
   const { execute, isPending, result } = useAction(refreshRankingsAction, {
     onSuccess: () => router.refresh(),
@@ -75,31 +89,42 @@ export function RankingsSection({
         <SearchLoader kind="audit" title={tr("refreshing")} />
       ) : (
         // Deux moteurs tiennent côte à côte sur un écran d'ordinateur : les
-        // empiler obligeait à faire défiler pour comparer ChatGPT et Gemini,
-        // alors que la comparaison est tout l'intérêt de la section. Au-delà de
-        // deux, la rangée redevient une pile — trois demi-largeurs tronqueraient
-        // les noms de concurrents.
-        <div className={shown.length === 2 ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
+        // empiler obligeait à faire défiler pour les comparer, alors que la
+        // comparaison est tout l'intérêt de la section. Deux par rangée et pas
+        // plus : trois demi-largeurs tronqueraient les noms de concurrents.
+        <div className={shown.length > 1 ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
           {shown.map((engine, i) => {
-            const card = (
-              <EngineCard engine={engine} delay={i * 0.05} compact={shown.length === 2} />
-            );
-            return runsEngine(tier, engine.engine) ? (
-              <div key={engine.engine}>{card}</div>
-            ) : (
-              // Le logo du moteur est repris net sur le voile : sous le flou,
-              // celui de la carte n'est plus lisible, et l'appel doit dire de
-              // quel moteur il parle avant de dire ce qu'il coûte.
-              <TierGate
-                key={engine.engine}
-                offer="boost"
-                item="rankings"
-                compact
-                logo={ENGINE_LOGOS[engine.engine]}
-                logoAlt={engine.engine}
-              >
-                {card}
-              </TierGate>
+            const open = runsEngine(tier, engine.engine);
+
+            // La carte reste lisible : on doit voir quel moteur a été
+            // interrogé, sur quelles requêtes, et qu'un top 10 existe. Seules
+            // les bandes du classement et la note sont retenues, et l'appel se
+            // pose dessus — pas en pied de carte, où il faudrait faire le lien
+            // soi-même entre le flou du milieu et l'offre du bas. Le logo y est
+            // repris net : sous le flou, celui de la carte n'est plus lisible.
+            return (
+              <div key={engine.engine}>
+                <EngineCard
+                  engine={open ? engine : decoyEngine(engine, reference)}
+                  delay={i * 0.05}
+                  compact={shown.length > 1}
+                  preview={!open}
+                  overlay={
+                    open ? undefined : (
+                      // Le voile nomme le moteur qu'il couvre : trois cartes
+                      // fermées portent le même appel, et un appel qui parlerait
+                      // de ChatGPT sur la carte Claude ne se rattacherait à rien.
+                      <GatePanel
+                        offer="boost"
+                        item="rankings"
+                        logo={ENGINE_LOGOS[engine.engine]}
+                        logoAlt={engine.engine}
+                        values={{ engine: engine.engine }}
+                      />
+                    )
+                  }
+                />
+              </div>
             );
           })}
         </div>

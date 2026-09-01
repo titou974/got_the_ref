@@ -78,16 +78,19 @@ export function canOpen(tier: AccessTier, section: DashboardSection): boolean {
  * qu'on le voit, sa note, et surtout la niche détectée — c'est la première
  * chose qu'il vient vérifier, et celle qui prouve que la lecture a eu lieu.
  *
- * Tout le reste — corrections de structure, trafic envoyé par les IA,
- * calendrier de rédaction, suivi des mentions — passe sous un voile surmonté
- * d'un appel vers les tarifs.
+ * Le calendrier de rédaction reste lui aussi en clair : un compte gratuit
+ * reçoit les premiers sujets de la semaine, datés, et voit donc l'atelier
+ * tourner avant d'avoir payé. Ce qu'il ne peut pas faire, c'est publier —
+ * le bouton mène alors aux tarifs.
+ *
+ * Tout le reste — corrections de structure, trafic envoyé par les IA — passe
+ * sous un voile surmonté d'un appel vers les tarifs.
  */
 export const HOME_BLOCKS = [
   "profile",
   "rankings",
   "diagnostic",
   "recommendations",
-  "mentions",
   "traffic",
   "agenda",
 ] as const;
@@ -99,8 +102,8 @@ export const HOME_BLOCK_TIER: Record<HomeBlock, AccessTier> = {
   profile: "free",
   /**
    * Les classements restent à l'écran en gratuit, mais seul Gemini y est
-   * réellement mesuré (cf. `FREE_ENGINES`) : la carte ChatGPT reste sous voile,
-   * faute d'avoir été exécutée.
+   * réellement mesuré (cf. `FREE_ENGINES`) : les cartes ChatGPT, Perplexity et
+   * Claude restent sous voile, faute d'avoir été exécutées.
    */
   rankings: "free",
   /**
@@ -117,8 +120,6 @@ export const HOME_BLOCK_TIER: Record<HomeBlock, AccessTier> = {
    * `FREE_RECOMMENDATION_CATEGORIES`).
    */
   recommendations: "boost",
-  /** Les mentions dans les IA, mois après mois : une mesure qui court. */
-  mentions: "allin",
   /**
    * Les visites envoyées par les IA, relevées dans Analytics. Ouvertes dès le
    * Coup de Boost : c'est la preuve que la passe a servi à quelque chose, et la
@@ -126,8 +127,16 @@ export const HOME_BLOCK_TIER: Record<HomeBlock, AccessTier> = {
    * jamais lui en montrer l'effet.
    */
   traffic: "boost",
-  /** Le calendrier de rédaction. */
-  agenda: "boost",
+  /**
+   * Le calendrier de rédaction, ouvert à tous les niveaux.
+   *
+   * C'est la seule pièce du produit qui se montre bien mieux qu'elle ne se
+   * raconte : des sujets datés, écrits pour la niche du client, posés sur les
+   * jours qui viennent. Un compte gratuit en reçoit les premiers
+   * (`FREE_ARTICLE_TOPICS`) ; la rédaction et la publication, elles, restent
+   * derrière l'onglet Articles, qui s'achète.
+   */
+  agenda: "free",
 };
 
 /** Le bloc d'accueil est-il en clair à ce niveau ? */
@@ -158,10 +167,14 @@ export function offerForBlock(block: HomeBlock): UpsellOffer {
  * Les moteurs réellement interrogés à ce niveau.
  *
  * Un compte gratuit n'a que Gemini : son relevé passe par le grounding Google
- * Search, qui ne coûte rien de plus que l'appel. ChatGPT, lui, consomme un
- * appel à l'outil de recherche d'OpenAI par relevé — il n'est donc pas exécuté
- * pour un compte gratuit, et sa carte reste floutée plutôt que vide. Montrer un
- * classement fabriqué serait pire que ne rien montrer.
+ * Search, qui ne coûte rien de plus que l'appel. Les trois autres se paient à
+ * chaque relevé — la recherche web d'OpenAI, l'appel Perplexity, l'outil
+ * `web_search` de Claude — et ils partent deux fois par passage, une fois sur
+ * la niche et une fois sur la catégorie. Ils ne sont donc pas exécutés pour un
+ * compte gratuit, et leurs cartes restent floutées plutôt que vides : montrer
+ * un classement fabriqué serait pire que ne rien montrer.
+ *
+ * Le Coup de Boost les ouvre tous les quatre (cf. `runsEngine`).
  */
 export const FREE_ENGINES = ["Gemini"] as const;
 
@@ -200,6 +213,26 @@ export const FREE_RECOMMENDATION_CATEGORIES = ["contentEEAT"] as const;
  */
 export const FREE_RECOMMENDATION_LIMIT = 3;
 
+/**
+ * Combien de correctifs fermés se montrent, floutés, sous la barre d'appel.
+ *
+ * Deux. La liste entière — quinze cartes grises à faire défiler — repoussait
+ * l'offre hors de l'écran et n'apprenait rien de plus : une carte floutée dit la
+ * même chose que la quinzième. Deux suffisent à montrer la forme, et le compte
+ * réel de ce qui reste est écrit sur la barre juste en dessous.
+ */
+export const VEILED_RECOMMENDATION_PREVIEW = 2;
+
+/**
+ * La fourchette dans laquelle s'annonce le nombre de corrections restantes.
+ *
+ * En dessous de dix, la passe ne vaut pas son prix ; au-dessus de vingt, le
+ * client lit une condamnation plutôt qu'un plan de travail. Le compte affiché
+ * reste celui du site (contrôles ratés et correctifs fermés), simplement ramené
+ * entre ces deux bornes.
+ */
+export const PENDING_FIXES_RANGE: readonly [number, number] = [10, 20];
+
 /** Ce correctif est-il lisible à ce niveau ? */
 export function seesRecommendation(tier: AccessTier, category: string): boolean {
   if (tierAtLeast(tier, "boost")) return true;
@@ -215,6 +248,70 @@ export function seesRecommendation(tier: AccessTier, category: string): boolean 
  * frontière annoncée sur la carte tarifaire.
  */
 export const BOOST_ARTICLE_WINDOW_DAYS = 7;
+
+/**
+ * Combien de sujets d'articles sont planifiés à la mise en route, par niveau.
+ *
+ * Un compte gratuit en reçoit quatre : la semaine qui vient, datée, visible sur
+ * son accueil. C'est une seule demande au modèle — le même appel qu'il en
+ * rende quatre ou vingt-deux — et c'est ce qui rend le calendrier crédible sans
+ * rien offrir de ce qui se vend : aucun de ces quatre sujets n'est rédigé, et le
+ * bouton de publication mène aux tarifs.
+ *
+ * Dès le Coup de Boost, le mois entier est posé — vingt-deux sujets, un par jour
+ * ouvré — et la première semaine est rédigée dans la foulée. C'est ce complément
+ * qui part au moment de l'achat, sans que le client ait à redemander quoi que ce
+ * soit.
+ */
+export const FREE_ARTICLE_TOPICS = 4;
+
+/**
+ * Le mois éditorial complet, posé dès le Coup de Boost.
+ *
+ * Vingt-deux, c'est le nombre de jours ouvrés d'un mois : la grille se remplit
+ * du lundi au vendredi, sans trou au milieu de la semaine. Un calendrier à
+ * trois publications hebdomadaires laissait le mardi et le jeudi vides, et une
+ * grille à moitié blanche se lit comme un planning qu'on n'a pas fini d'écrire.
+ */
+export const PAID_ARTICLE_TOPICS = 22;
+
+/** Combien de sujets ce niveau fait planifier à la mise en route. */
+export function articleTopicsFor(tier: AccessTier): number {
+  return tierAtLeast(tier, "boost") ? PAID_ARTICLE_TOPICS : FREE_ARTICLE_TOPICS;
+}
+
+/**
+ * Les sujets planifiés sont-ils rédigés dans la foulée ?
+ *
+ * Non en gratuit : la rédaction est le travail vendu, et écrire trois articles
+ * que le client ne pourra ni lire en entier ni publier reviendrait à payer trois
+ * appels au grand modèle pour un onglet resté sous voile.
+ */
+export function draftsSeedArticles(tier: AccessTier): boolean {
+  return tierAtLeast(tier, "boost");
+}
+
+/**
+ * L'analyse enregistrée a-t-elle été faite à un niveau plus étroit que celui du
+ * compte aujourd'hui ?
+ *
+ * C'est la question posée après un achat. L'analyse d'un compte gratuit est
+ * volontairement partielle : un seul moteur interrogé, aucun relevé hors-site.
+ * Le jour où ce compte prend le Coup de Boost ou l'abonnement, ces appels-là
+ * doivent partir — sinon le client paie pour des cartes qui restent vides. On
+ * compare donc le niveau inscrit dans l'analyse à celui du compte, et l'accueil
+ * relance la préparation derrière son écran d'attente habituel.
+ *
+ * Une analyse sans niveau inscrit est une analyse d'avant cette règle : on la
+ * lit comme gratuite, ce qui la fait rejouer une fois pour un compte payant et
+ * la laisse tranquille pour un compte gratuit.
+ */
+export function analysisNeedsUpgrade(
+  storedTier: AccessTier | null | undefined,
+  tier: AccessTier,
+): boolean {
+  return RANK[tier] > RANK[storedTier ?? "free"];
+}
 
 /**
  * Le niveau d'un compte, déduit de son offre et de son abonnement.

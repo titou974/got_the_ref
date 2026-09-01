@@ -1,29 +1,34 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import {
+  businessHint,
   getDashboardContext,
   listArticles,
 } from "@/features/dashboard/queries";
 import { fetchAiTraffic } from "@/features/dashboard/ga4";
-import { fetchLlmMentions } from "@/features/dashboard/llmMentions";
 import { buildDemoAiTraffic } from "@/features/dashboard/demoTraffic";
-import { buildDemoLlmMentions } from "@/features/dashboard/demoLlmMentions";
-import { buildDiagnostic } from "@/lib/geo/diagnostic";
+import { buildDiagnostic, type AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
+import type { Recommendation } from "@/lib/geo/types";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
-import { LlmMentionsCard } from "@/components/tableau-de-bord/LlmMentionsCard";
-import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
-import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
+import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
+import { DashboardNotices } from "@/components/tableau-de-bord/DashboardNotices";
+import { NicheBand } from "@/components/tableau-de-bord/NicheBand";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { RankingsSection } from "@/components/tableau-de-bord/RankingsSection";
 import { SiteScreenshot } from "@/components/dashboard/SiteScreenshot";
 import { AnimatedScoreRing } from "@/components/dashboard/AnimatedScoreRing";
 import { PaidReportCard } from "@/components/dashboard/PaidReportCard";
 import { Recommendations } from "@/components/geo/Recommendations";
-import { TierGate } from "@/components/tableau-de-bord/TierGate";
+import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
+import { totalGainFor } from "@/lib/geo/traffic-gain";
+import { GatePanel, TierGate } from "@/components/tableau-de-bord/TierGate";
 import {
   FREE_RECOMMENDATION_LIMIT,
+  PENDING_FIXES_RANGE,
+  VEILED_RECOMMENDATION_PREVIEW,
+  analysisNeedsUpgrade,
   canSee,
   offerForBlock,
   seesRecommendation,
@@ -36,27 +41,48 @@ export const maxDuration = 300;
 /**
  * L'accueil du tableau de bord, dans l'ordre où le client se pose ses questions.
  *
- * En haut, ce qu'il vient vérifier : son site tel qu'on le voit, la note posée
- * dessus, puis le constat écrit à la frappe. Ce sont les blocs du rapport
- * d'analyse, repris tels quels : l'écran qu'il a découvert en achetant doit
- * rester reconnaissable ensuite, semaine après semaine.
+ * En haut, ce qu'il vient vérifier : son site tel qu'on le voit, avec la note
+ * posée dessus, et le constat écrit à la frappe juste en dessous. Les deux ne
+ * se séparent pas : c'est le couple qu'il a découvert en achetant son analyse,
+ * et le texte dit à voix haute ce que la note résume en un chiffre.
  *
- * La rangée de chiffres qui suivait (note, visites, corrections en attente) a
- * disparu : elle répétait la note du hero, une valeur vide tant qu'Analytics
- * n'est pas rattaché, et un décompte que la barre du bas porte déjà.
+ * Viennent ensuite les deux réponses qu'il est venu chercher — sa place dans
+ * les moteurs suivis, et ce qu'il faut corriger pour la gagner.
  *
- * En dessous, ce qui explique ces chiffres : la niche retenue, le diagnostic
- * d'architecture contrôle par contrôle, le plan d'action, le calendrier. Et
- * l'exécution ne vit plus au bas de la page : elle tient dans la barre fixe
- * « résoudre avec les agents IA », à portée de pouce d'un bout à l'autre.
+ * En bas, ce qui court dans la durée : le trafic amené par les IA et le
+ * calendrier de rédaction, posé sur sa grille de jours. Et l'exécution ne vit
+ * pas dans la page : elle tient dans la barre fixe « résoudre avec les agents
+ * IA », à portée de pouce d'un bout à l'autre.
+ *
+ * Ce qu'une offre n'ouvre pas encore garde sa carte entière et lisible : seuls
+ * les chiffres et les tracés sont retenus — « X visites », « #X », une courbe
+ * floutée — et l'appel descend en pied de carte (cf. `TierGate` en mode
+ * `reveal`). Le client voit la forme exacte de ce qu'il achète, sans en lire
+ * une valeur.
+ *
+ * Le suivi des mentions dans les IA a été retiré de cet écran : le relevé
+ * n'était vendu qu'à l'abonnement, coûtait un appel DataForSEO par visite, et
+ * n'a pas trouvé son public. Le module reste en place dans le code
+ * (`features/dashboard/llmMentions`), simplement plus appelé.
  */
 export default async function DashboardHomePage() {
   const user = await requireUser();
   const context = await getDashboardContext(user.id);
   const t = await getTranslations("dashboard.home");
   const ta = await getTranslations("analysisReport");
+  const tg = await getTranslations("trafficGain");
 
-  if (!context.analysis) return <PreparingAnalysis />;
+  // Aucune analyse : c'est la première ouverture, l'écran d'attente la lance.
+  //
+  // Une analyse plus étroite que l'offre du compte : c'est un achat qui vient
+  // d'avoir lieu. Le compte gratuit n'avait fait mesurer qu'un moteur et aucun
+  // relevé hors-site ; le Coup de Boost et l'abonnement les ouvrent, et ces
+  // appels-là doivent partir maintenant. On repasse donc par le même écran
+  // d'attente que la mise en route — même barre, même animation : le client
+  // reconnaît ce qu'il regarde, et il n'a rien à cliquer.
+  if (!context.analysis || analysisNeedsUpgrade(context.analysis.accessTier, context.tier)) {
+    return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
+  }
 
   const analysis = context.analysis;
   const diagnostic = buildDiagnostic(analysis);
@@ -68,20 +94,17 @@ export default async function DashboardHomePage() {
   const tier = context.tier;
   const sees = (block: Parameters<typeof canSee>[1]) => canSee(tier, block);
 
-  // Sous le voile, on montre une carte d'exemple, jamais la vraie donnée : les
-  // deux relevés qui coûtent un appel — Analytics et le suivi des mentions —
-  // ne sont donc lancés que pour qui les verra. Les cartes savent déjà quoi
-  // faire d'un rapport absent : elles basculent sur leur version de
-  // démonstration.
-  const [traffic, mentions, articles] = await Promise.all([
+  // Sous le voile, on montre une carte d'exemple, jamais la vraie donnée : le
+  // seul relevé qui coûte un appel ici — Analytics — n'est donc lancé que pour
+  // qui le verra. La carte sait déjà quoi faire d'un rapport absent : elle
+  // bascule sur sa version de démonstration.
+  //
+  // Les articles, eux, sont relus pour tout le monde : le calendrier est ouvert
+  // à tous les niveaux, et c'est une lecture en base, pas un appel de modèle.
+  const [traffic, articles] = await Promise.all([
     sees("traffic") ? fetchAiTraffic(user.id, 30) : null,
-    sees("mentions")
-      ? fetchLlmMentions(user.id, context.domain ?? analysis.domain, context.country)
-      : null,
     listArticles(user.id),
   ]);
-
-  const upcoming = articles.filter((article) => article.status !== "published");
 
   // Le plan d'action se coupe en deux sur un compte gratuit : les correctifs de
   // contenu se lisent — l'onglet qui les exécute est ouvert —, les autres
@@ -94,6 +117,17 @@ export default async function DashboardHomePage() {
     (r) => !openRecommendations.includes(r),
   );
 
+  // Sous voile, deux cartes suffisent. Une liste de quinze correctifs floutés
+  // faisait défiler un écran entier de gris avant d'arriver à l'appel : le
+  // client n'y lisait rien de plus qu'en deux cartes, et l'offre arrivait trop
+  // tard. Les deux montrées sont les plus urgentes ; le compte total, lui, est
+  // écrit sur la barre.
+  const veiledRecommendations = [...lockedRecommendations]
+    .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
+    .slice(0, VEILED_RECOMMENDATION_PREVIEW);
+
+  const pendingFixes = countPendingFixes(diagnostic, lockedRecommendations.length);
+
   const date = new Date(analysis.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
@@ -102,6 +136,10 @@ export default async function DashboardHomePage() {
 
   return (
     <>
+      {/* Ce qui se dit avant la première carte, et seulement sur téléphone : le
+          relevé du jour, et l'écran où le produit se lit le mieux. */}
+      <DashboardNotices tier={tier} />
+
       <PageHeader />
 
       {/* 1. La fenêtre du site, assombrie, avec la note posée dessus. */}
@@ -145,54 +183,58 @@ export default async function DashboardHomePage() {
         </div>
       </SiteScreenshot>
 
-      {/* 1bis. Le constat écrit à la frappe, comme sur le rapport d'analyse. Il
-             n'est jamais voilé : c'est le texte qui dit au client ce qu'on a vu
-             chez lui. En gratuit, il ne rend compte que de ce qui est ouvert —
-             le contenu, le classement Gemini — et annonce le reste sans le
-             détailler. */}
+      {/* 2. Le constat écrit à la frappe, collé à la capture : le client vient
+             de voir son site et sa note, il lit dans la foulée ce qu'on a
+             relevé chez lui. Il n'est jamais voilé. En gratuit, il ne rend
+             compte que de ce qui est ouvert — le contenu, le classement Gemini
+             — et annonce le reste sans le détailler. */}
       <PaidReportCard
         result={analysis}
         diagnostic={diagnostic}
         scope={tierAtLeast(tier, "boost") ? "dashboard" : "free"}
       />
 
-      {/* 2. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
-             n'est pas rattaché. Les dates sont lues ici, côté serveur, pour que
-             le navigateur reçoive le même axe que le rendu initial. */}
-      <Block block="traffic" open={sees("traffic")}>
-        <AiTrafficCard
-          report={traffic}
-          demo={buildDemoAiTraffic()}
-          domain={context.domain ?? analysis.domain}
-        />
-      </Block>
+      {/* 3. Sur quoi et où nous l'avons interrogé. Les classements qui suivent
+             ne veulent rien dire sans ces deux mots-là : c'est la requête
+             elle-même, écrite en clair juste avant son résultat. */}
+      <NicheBand
+        niche={context.niche ?? analysis.profile.niche ?? null}
+        location={analysis.profile.location ?? context.cities[0] ?? null}
+        isPhysical={context.isPhysical && analysis.profile.isPhysical}
+      />
 
-      {/* 2bis. Combien de fois chaque modèle cite le commerce. La mesure précède
-             celle du dessus : on est cité avant d'être cliqué, et le relevé
-             DataForSEO lit l'archive des réponses plutôt que d'en provoquer. */}
-      <Block block="mentions" open={sees("mentions")}>
-        <LlmMentionsCard
-          report={mentions}
-          demo={buildDemoLlmMentions(context.domain ?? analysis.domain)}
-          domain={context.domain ?? analysis.domain}
-        />
-      </Block>
-
-      {/* 3. La place du commerce dans ChatGPT et Gemini. Le voile y est posé
-             moteur par moteur : un compte gratuit fait mesurer Gemini, et voit
-             la carte ChatGPT sous voile — faute d'avoir été exécutée. */}
+      {/* 4. La place du commerce dans les moteurs suivis. C'est la question qui
+             amène le client ici. Le voile y est posé moteur par moteur : un
+             compte gratuit fait mesurer Gemini, et voit les trois autres cartes
+             sous voile — faute d'avoir été exécutées. */}
       <RankingsSection engines={analysis.engines} tier={tier} />
 
-      {/* ---- Ce qui explique les chiffres du haut ---- */}
-
+      {/* 5. Les corrections, dans la foulée du classement : le client vient de
+             lire sa place, il doit lire tout de suite ce qui la lui coûte. */}
       <section>
         <div className="mb-3">
           <h2 className="text-lg font-bold">{t("priorities")}</h2>
           <p className="text-sm text-muted">{t("prioritiesHint")}</p>
         </div>
-        {/* En clair, les correctifs de contenu ; sous voile, tout le reste. Les
-            deux listes se suivent sans rupture : le client lit trois cartes,
-            puis voit la forme de celles qu'il n'a pas encore. */}
+
+        {/* Ce que la liste rapporte, avant la liste. Une suite de correctifs se
+            lit comme une corvée tant qu'on n'a pas dit ce qu'elle paie ; le
+            chiffre est posé entre le titre de la section et son premier
+            correctif, à l'endroit exact où la question se pose. Il couvre tout
+            le plan, voilé compris — c'est bien ce que le client obtient s'il va
+            au bout. */}
+        <div className="mb-4">
+          <TrafficGainCards
+            gain={totalGainFor(analysis)}
+            title={tg("homeTitle")}
+            caption={tg("homeCaption")}
+          />
+        </div>
+
+        {/* En clair, les correctifs que l'offre ouvre ; sous voile, deux cartes
+            et le compte de ce qui reste. Les deux listes se suivent sans
+            rupture : le client lit ce qu'il peut appliquer aujourd'hui, puis
+            voit la forme de ce qui l'attend et combien il en reste. */}
         <div className="space-y-4">
           {openRecommendations.length > 0 && (
             <Recommendations
@@ -200,13 +242,19 @@ export default async function DashboardHomePage() {
               emptyLabel={ta("results.noRecommendations")}
             />
           )}
-          {lockedRecommendations.length > 0 && (
-            <Block block="recommendations" open={sees("recommendations")}>
+          {veiledRecommendations.length > 0 && (
+            <TierGate
+              offer={offerForBlock("recommendations")}
+              item="recommendations"
+              reveal
+              values={{ count: pendingFixes }}
+            >
               <Recommendations
-                recommendations={lockedRecommendations}
+                recommendations={veiledRecommendations}
                 emptyLabel={ta("results.noRecommendations")}
+                veiled
               />
-            </Block>
+            </TierGate>
           )}
           {openRecommendations.length === 0 && lockedRecommendations.length === 0 && (
             <Recommendations
@@ -217,48 +265,75 @@ export default async function DashboardHomePage() {
         </div>
       </section>
 
-      <Block block="agenda" open={sees("agenda")}>
-        <ArticleAgenda articles={upcoming} limit={4} />
-      </Block>
+      {/* ---- Ce qui court dans la durée ---- */}
 
-      {/* L'exécution ne passe plus par un prompt à copier : la barre ouvre le
-          rattachement de l'agent IA du client, qui va chercher lui-même les six
-          chantiers et les applique.
+      {/* 6. La courbe du trafic amené par les IA — d'exemple tant qu'Analytics
+             n'est pas rattaché. Les dates sont lues ici, côté serveur, pour que
+             le navigateur reçoive le même axe que le rendu initial. */}
+      <AiTrafficCard
+        report={traffic}
+        demo={buildDemoAiTraffic()}
+        domain={context.domain ?? analysis.domain}
+        veiled={!sees("traffic")}
+        overlay={
+          sees("traffic") ? undefined : (
+            <GatePanel offer={offerForBlock("traffic")} item="traffic" />
+          )
+        }
+      />
 
-          Elle est là pour tout le monde. Un compte gratuit installe la même
-          prise qu'un abonné — c'est le geste que le produit vend, et une page
-          qui ne le montre pas ne le vend pas. Ce que l'offre borne, c'est ce
-          que le serveur MCP sert ensuite à l'agent : les chantiers fermés
-          arrivent nommés et vides, jamais floutés. */}
-      <SolveAgentsDock
+      {/* 7. Le calendrier de rédaction, en clair à tous les niveaux. Sur grand
+             écran, le mois entier sur sa grille de jours — vingt-deux
+             publications alignées du lundi au vendredi disent le rythme d'un
+             coup d'œil, là où quatre lignes ressemblaient à une liste de
+             tâches — et les flèches font défiler les mois. Sur téléphone, la
+             grille cède la place aux sept jours qui viennent, un par ligne,
+             avec le sujet écrit en toutes lettres. Ce que le client ne peut pas
+             faire, c'est publier — l'onglet Articles s'achète, et les sujets
+             mènent alors aux tarifs.
+
+             La journée en cours est lue ici, côté serveur : elle sert de
+             repère au rail du téléphone, et un `new Date()` appelé dans le
+             navigateur ferait diverger le premier rendu de l'hydratation. */}
+      <ArticleMonth
+        today={new Date().toISOString().slice(0, 10)}
+        articles={articles.map((article) => ({
+          id: article.id,
+          title: article.title,
+          status: article.status,
+          scheduledFor: article.scheduledFor?.toISOString() ?? null,
+        }))}
         locked={!tierAtLeast(tier, "boost")}
-        result={analysis}
-        diagnostic={diagnostic}
       />
     </>
   );
 }
 
+/** L'ordre d'urgence des correctifs, pour ne montrer que les plus pressants. */
+const PRIORITY_RANK: Record<Recommendation["priority"], number> = {
+  critique: 0,
+  haute: 1,
+  moyenne: 2,
+  basse: 3,
+};
+
 /**
- * Un bloc de l'accueil, en clair ou sous voile.
+ * Combien de corrections séparent ce site du haut des réponses IA.
  *
- * Le contenu est écrit une seule fois : c'est le même balisage qui se montre et
- * qui se cache, sinon le voile finirait par promettre autre chose que ce qu'il
- * y a dessous.
+ * Le compte est réel : chaque contrôle raté du diagnostic — structure et
+ * contenu — est une correction à faire, et chaque correctif encore fermé en est
+ * une autre. C'est le seul chiffre du voile qui reste en clair, et il ne doit
+ * donc rien à une estimation.
+ *
+ * Il est ensuite ramené dans la fourchette annoncée sur la barre d'appel : un
+ * site déjà propre n'a pas de quoi remplir une passe, et un site en ruine en
+ * afficherait quarante, ce qui décourage au lieu de vendre.
  */
-function Block({
-  block,
-  open,
-  children,
-}: {
-  block: Parameters<typeof offerForBlock>[0];
-  open: boolean;
-  children: React.ReactNode;
-}) {
-  if (open) return <>{children}</>;
-  return (
-    <TierGate offer={offerForBlock(block)} item={block}>
-      {children}
-    </TierGate>
-  );
+function countPendingFixes(diagnostic: AnalysisDiagnostic, lockedCount: number): number {
+  const failed = [...diagnostic.architecture.checks, ...diagnostic.content.checks].filter(
+    (check) => check.status === "ko" || check.status === "warn",
+  ).length;
+
+  const [min, max] = PENDING_FIXES_RANGE;
+  return Math.min(max, Math.max(min, failed + lockedCount));
 }

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import type { AiTrafficReport } from "@/features/dashboard/ga4";
 import type { DemoAiTraffic } from "@/features/dashboard/demoTraffic";
+import { Obscured, Redacted } from "@/components/dashboard/LockedContent";
 import { AiTrafficDemoCard } from "./AiTrafficDemoCard";
 import { Card, CardTitle, Delta } from "./Card";
 import { TrafficChart, type Point } from "./Charts";
@@ -20,15 +21,28 @@ export function AiTrafficCard({
   report,
   demo,
   domain,
+  veiled = false,
+  overlay,
 }: {
   report: AiTrafficReport | null;
   demo: DemoAiTraffic;
   /** Le domaine suivi, montré dans la barre de filtres de la carte d'exemple. */
   domain: string | null;
+  /**
+   * L'offre du compte n'ouvre pas encore le trafic : la carte reste entière,
+   * les totaux s'écrivent « X » et la courbe se floute.
+   */
+  veiled?: boolean;
+  /** L'appel de l'offre, posé par-dessus la courbe floutée. */
+  overlay?: React.ReactNode;
 }) {
   const t = useTranslations("dashboard.traffic");
 
-  if (!report) return <AiTrafficDemoCard demo={demo} domain={domain} />;
+  if (!report) {
+    return (
+      <AiTrafficDemoCard demo={demo} domain={domain} veiled={veiled} overlay={overlay} />
+    );
+  }
 
   const data: Point[] = report.series.map((point) => ({
     date: point.date,
@@ -56,17 +70,33 @@ export function AiTrafficCard({
       <CardTitle title={t("title")} hint={t("period", { days: report.days })} />
 
       <div className="flex flex-wrap items-end gap-3">
-        <p className="text-[32px] font-bold leading-none tabular-nums">{report.totalSessions}</p>
-        <Delta value={change} />
-        {share !== null ? (
+        <p className="text-[32px] font-bold leading-none tabular-nums">
+          {veiled ? <Redacted label="visites masquées" /> : report.totalSessions}
+        </p>
+        {veiled ? null : <Delta value={change} />}
+        {veiled ? (
+          <p className="text-sm text-muted">{t("shareMasked")}</p>
+        ) : share !== null ? (
           <p className="text-sm text-muted">
             {t("share", { value: share < 1 ? share.toFixed(1) : String(Math.round(share)) })}
           </p>
         ) : null}
       </div>
 
-      <div className="mt-4">
-        <TrafficChart data={data} labels={labels} />
+      {/* Seule la courbe se floute : l'axe des dates et la hauteur de la carte
+          restent les mêmes, et le client voit qu'il y a une mesure à lire.
+          L'appel de l'offre se pose dessus, là où le voile se voit. */}
+      <div className={`relative isolate mt-4 ${veiled ? "min-h-[17rem]" : ""}`}>
+        {veiled ? (
+          <>
+            <Obscured>
+              <TrafficChart data={data} labels={labels} />
+            </Obscured>
+            {overlay}
+          </>
+        ) : (
+          <TrafficChart data={data} labels={labels} />
+        )}
       </div>
 
       <ul className="mt-4 space-y-2 border-t border-border pt-4">
@@ -74,14 +104,22 @@ export function AiTrafficCard({
           <li key={engine.id} className="flex items-center justify-between gap-3 text-sm">
             <span className="text-muted">{engine.label}</span>
             <span className="flex items-center gap-2">
-              <span className="font-semibold tabular-nums">{engine.sessions}</span>
-              <Delta
-                value={
-                  engine.previousSessions > 0
-                    ? ((engine.sessions - engine.previousSessions) / engine.previousSessions) * 100
-                    : null
-                }
-              />
+              <span className="font-semibold tabular-nums">
+                {veiled ? (
+                  <Redacted label={`visites depuis ${engine.label}, masquées`} />
+                ) : (
+                  engine.sessions
+                )}
+              </span>
+              {veiled ? null : (
+                <Delta
+                  value={
+                    engine.previousSessions > 0
+                      ? ((engine.sessions - engine.previousSessions) / engine.previousSessions) * 100
+                      : null
+                  }
+                />
+              )}
             </span>
           </li>
         ))}

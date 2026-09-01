@@ -12,6 +12,8 @@
  * toujours les mêmes bandes d'un chargement à l'autre.
  */
 
+import type { EngineScore } from "./types";
+
 const PREFIXES = [
   "Maison",
   "Atelier",
@@ -80,4 +82,31 @@ export function decoyRanking(seedKey: string, count = 7): DecoyEntry[] {
     out.push({ rank: out.length + 1, name });
   }
   return out;
+}
+
+/**
+ * La carte de démonstration d'un moteur laissé sous voile.
+ *
+ * Un compte gratuit ne fait mesurer qu'un moteur : l'autre n'a ni relevé, ni
+ * toujours de classement estimé, et sa carte se réduisait alors à son en-tête.
+ * Posée à côté de sa jumelle pleine, elle laissait le voile deux fois moins haut
+ * que la carte voisine — l'appel flottait dans le vide et la rangée penchait.
+ *
+ * On lui rend donc la forme de la carte ouverte : les mêmes blocs de classement
+ * (mêmes portées, mêmes intitulés), que la carte remplira de bandes fictives.
+ * Aucune donnée du client n'y passe — ni son rang, ni ses concurrents réels : le
+ * rang est effacé et la liste vidée avant même le rendu.
+ */
+export function decoyEngine(engine: EngineScore, reference: EngineScore | null): EngineScore {
+  const shape = engine.rankings.length > 0 ? engine.rankings : (reference?.rankings ?? []);
+
+  return {
+    ...engine,
+    rankings: shape.map((ranking) => ({
+      ...ranking,
+      targetRank: null,
+      competitors: [],
+      measuredAt: null,
+    })),
+  };
 }
