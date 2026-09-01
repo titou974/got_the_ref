@@ -35,6 +35,22 @@ export const writeArticleSchema = z.object({
   instruction: z.string().max(600).optional(),
 });
 
+/**
+ * Déplacer la date de publication, sans toucher au texte.
+ *
+ * Séparé de `updateArticleSchema`, qui exige le titre et le corps : planifier
+ * depuis le calendrier n'a pas l'article sous la main, et le lui faire porter
+ * pour changer une date renverrait quatre-vingts kilo-octets de Markdown au
+ * serveur pour écrire un horodatage.
+ */
+export const scheduleArticleSchema = z.object({
+  id: z.string().min(1),
+  scheduledFor: z.string().datetime(),
+});
+
+/** Le réglage du pilote automatique, porté par le rattachement du site. */
+export const autoPublishSchema = z.object({ autoPublish: z.boolean() });
+
 export const updateArticleSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(4).max(160),

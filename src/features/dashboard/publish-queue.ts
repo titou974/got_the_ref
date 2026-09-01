@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { Prisma } from "../../../prisma/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { decryptJson } from "@/lib/crypto";
 import { publishArticle, type Credentials } from "./connectors";
@@ -57,32 +58,53 @@ export type PublishRun = {
   outcomes: PublishOutcome[];
 };
 
+/**
+ * Ce qu'un article doit être pour partir tout seul.
+ *
+ * Sorti de la passe pour que le tableau de bord puisse poser exactement la même
+ * question : « qu'est-ce qui va partir, et quand ? ». Le quai de départ de la
+ * page Articles annonce une date au client — si sa règle et celle-ci se
+ * séparaient d'une ligne, il annoncerait un départ qui n'arrive jamais.
+ *
+ * `userId` restreint au compte quand on interroge pour un écran ; la passe, qui
+ * balaie tout le parc, l'omet.
+ */
+export function departureFilter(userId?: string): Prisma.ArticleWhereInput {
+  return {
+    ...(userId ? { userId } : {}),
+    publishedAt: null,
+    scheduledFor: { not: null },
+    // Un sujet sans corps n'a rien à déposer : il attend sa rédaction.
+    body: { not: "" },
+    OR: [
+      // Validé par le client : il part, quel que soit le réglage.
+      {
+        status: "approved",
+        user: { siteConnection: { status: "connected", capabilities: { has: "publish" } } },
+      },
+      // Rédigé mais jamais ouvert : seulement si le client a demandé le pilote
+      // automatique complet.
+      {
+        status: "drafted",
+        user: {
+          siteConnection: {
+            status: "connected",
+            capabilities: { has: "publish" },
+            autoPublish: true,
+          },
+        },
+      },
+    ],
+  };
+}
+
 export async function publishDueArticles(now: Date = new Date()): Promise<PublishRun> {
   const due = await prisma.article.findMany({
     where: {
-      publishedAt: null,
+      ...departureFilter(),
+      // La passe ne prend que ce qui est arrivé à échéance ; le tableau de bord,
+      // lui, regarde aussi devant.
       scheduledFor: { not: null, lte: now },
-      // Un sujet sans corps n'a rien à déposer : il attend sa rédaction.
-      body: { not: "" },
-      OR: [
-        // Validé par le client : il part, quel que soit le réglage.
-        {
-          status: "approved",
-          user: { siteConnection: { status: "connected", capabilities: { has: "publish" } } },
-        },
-        // Rédigé mais jamais ouvert : seulement si le client a demandé le
-        // pilote automatique complet.
-        {
-          status: "drafted",
-          user: {
-            siteConnection: {
-              status: "connected",
-              capabilities: { has: "publish" },
-              autoPublish: true,
-            },
-          },
-        },
-      ],
     },
     orderBy: { scheduledFor: "asc" },
     take: BATCH,

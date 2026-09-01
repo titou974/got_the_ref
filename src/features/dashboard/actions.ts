@@ -43,6 +43,7 @@ import {
 } from "./service";
 import {
   articleIdSchema,
+  autoPublishSchema,
   brandVoiceSchema,
   connectSiteSchema,
   disconnectSiteSchema,
@@ -52,6 +53,7 @@ import {
   prospectIdSchema,
   prospectStatusSchema,
   regenerateOnPageSchema,
+  scheduleArticleSchema,
   settingsSchema,
   updateArticleSchema,
   writeArticleSchema,
@@ -867,6 +869,61 @@ export const approveArticleAction = authActionClient
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
     return { ok: true };
+  });
+
+/**
+ * Déplace la date de publication d'un article.
+ *
+ * Le geste est réversible et sans effet de bord : il ne valide pas, ne rédige
+ * pas, ne dépose rien. Un article validé et redaté repart simplement à la
+ * nouvelle heure ; un sujet encore à écrire garde sa place au calendrier.
+ *
+ * La date passée est un instant complet, pas un jour : c'est l'écran qui a
+ * composé le jour et l'heure dans le fuseau du client, et la file compare des
+ * instants.
+ */
+export const scheduleArticleAction = authActionClient
+  .inputSchema(scheduleArticleSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "articles");
+
+    const { count } = await prisma.article.updateMany({
+      // Un article déjà déposé n'a plus de date à venir : le redater laisserait
+      // croire qu'il repartira, alors que la file écarte tout ce qui porte un
+      // `publishedAt`.
+      where: { id: parsedInput.id, userId, publishedAt: null },
+      data: { scheduledFor: new Date(parsedInput.scheduledFor) },
+    });
+    if (!count) throw new AppError("Article introuvable ou déjà publié.", "NOT_FOUND", 404);
+
+    revalidatePath(ROUTES.dashboardArticles);
+    revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
+    return { ok: true };
+  });
+
+/**
+ * Le pilote automatique : ce que la file s'autorise à déposer sans relecture.
+ *
+ * Fermé, elle ne dépose que les articles que le client a validés. Ouvert, elle
+ * dépose aussi ceux qui sont rédigés et jamais ouverts. C'est un consentement,
+ * et il se donne ici explicitement — jamais par défaut, jamais en effet de bord
+ * d'un autre réglage.
+ */
+export const setAutoPublishAction = authActionClient
+  .inputSchema(autoPublishSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "articles");
+
+    const { count } = await prisma.siteConnection.updateMany({
+      where: { userId },
+      data: { autoPublish: parsedInput.autoPublish },
+    });
+    if (!count) throw new AppError("Aucun site rattaché.", "NO_SITE_CONNECTION", 400);
+
+    revalidatePath(ROUTES.dashboardArticles);
+    return { autoPublish: parsedInput.autoPublish };
   });
 
 /** Dépose l'article sur le site du client, via le lien enregistré. */

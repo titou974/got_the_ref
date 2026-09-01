@@ -6,6 +6,11 @@ import { requireUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 import { getArticle, getArticleQuota, getDashboardContext } from "@/features/dashboard/queries";
 import { parseOutline } from "@/features/dashboard/outline";
+import {
+  formatPublishDate,
+  formatPublishTime,
+  nextPublishPass,
+} from "@/constants/publishing";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { canOpen } from "@/constants/access";
 import { ArticleWorkspace } from "@/components/tableau-de-bord/article/ArticleWorkspace";
@@ -43,14 +48,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     <div className={`${editorial.variable} space-y-6`}>
       <PageHeader
         title={article.title}
+        // La date seule laissait le client deviner l'heure — et il n'y a pas de
+        // planning tenu sans heure. Le moment annoncé est celui du départ réel,
+        // calculé comme sur la page Articles : la file ne repasse pas en
+        // continu, et une date de 14 h 20 part au passage suivant.
         subtitle={
           article.scheduledFor
-            ? t("scheduled", {
-                date: article.scheduledFor.toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                }),
+            ? t("scheduledAt", {
+                date: formatPublishDate(nextPublishPass(article.scheduledFor)),
+                time: formatPublishTime(nextPublishPass(article.scheduledFor)),
               })
             : t("undated")
         }

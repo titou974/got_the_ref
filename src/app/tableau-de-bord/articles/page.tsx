@@ -1,9 +1,21 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { getArticleQuota, getDashboardContext, listArticles } from "@/features/dashboard/queries";
+import {
+  getArticleQuota,
+  getDashboardContext,
+  getPublishPlan,
+  listArticles,
+} from "@/features/dashboard/queries";
+import {
+  formatPublishDate,
+  formatPublishTime,
+  nextPublishPass,
+  publishDayGap,
+} from "@/constants/publishing";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ArticleAgenda } from "@/components/tableau-de-bord/ArticleAgenda";
 import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
+import { PublishDock } from "@/components/tableau-de-bord/PublishDock";
 import { PlanArticlesButton } from "@/components/tableau-de-bord/PlanArticlesButton";
 import { ArticleQuotaBar } from "@/components/tableau-de-bord/ArticleQuotaBar";
 import { BrandVoicePanel } from "@/components/tableau-de-bord/BrandVoicePanel";
@@ -26,12 +38,21 @@ export const maxDuration = 300;
  */
 export default async function ArticlesPage() {
   const user = await requireUser();
-  const [context, articles, quota] = await Promise.all([
+  const [context, articles, quota, plan] = await Promise.all([
     getDashboardContext(user.id),
     listArticles(user.id),
     getArticleQuota(user.id),
+    getPublishPlan(user.id),
   ]);
   const t = await getTranslations("dashboard.articles");
+
+  // Le moment annoncé au client est celui du départ, pas celui de la consigne :
+  // la file ne tourne pas en continu, et une date de 14 h 20 part au passage
+  // suivant. Le calcul se fait ici, une fois, dans le fuseau de publication —
+  // le composant reçoit des chaînes déjà composées et ne peut pas en dériver
+  // d'autres au premier rendu du navigateur.
+  const now = new Date();
+  const departure = plan.next ? nextPublishPass(plan.next.scheduledFor, now) : null;
 
   const upcoming = articles.filter((article) => article.status !== "published");
   const published = articles.filter((article) => article.status === "published");
@@ -51,6 +72,32 @@ export default async function ArticlesPage() {
     <>
       <PageHeader title={t("pageTitle")} />
 
+      {/* Le quai de départ ouvre la page : avant de choisir quoi écrire, le
+          client veut savoir ce qui part et quand. Il ne s'affiche pas sur une
+          offre qui n'ouvre pas la publication — il n'y aurait rien à y armer. */}
+      {locked ? null : (
+        <PublishDock
+          next={
+            plan.next && departure
+              ? {
+                  id: plan.next.id,
+                  title: plan.next.title,
+                  status: plan.next.status,
+                  dateLabel: formatPublishDate(departure),
+                  timeLabel: formatPublishTime(departure),
+                  days: publishDayGap(departure, now),
+                  iso: plan.next.scheduledFor.toISOString(),
+                }
+              : null
+          }
+          queued={plan.queued}
+          blocked={plan.blocked}
+          autoPublish={plan.autoPublish}
+          linked={plan.linked}
+          canPublish={plan.canPublish}
+        />
+      )}
+
       <SectionGate section="articles" locked={locked} compact>
         {/* La demande de planning est posée sur la page, pas dans l'en-tête :
             le temps que le modèle réponde, elle laisse place à l'attente
@@ -61,7 +108,7 @@ export default async function ArticlesPage() {
       </SectionGate>
 
         <ArticleMonth
-          today={new Date().toISOString().slice(0, 10)}
+          today={now.toISOString().slice(0, 10)}
           articles={articles.map((article) => ({
             id: article.id,
             title: article.title,
