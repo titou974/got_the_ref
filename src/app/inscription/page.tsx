@@ -13,10 +13,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * L'inscription ouvre un compte, puis l'accueil : le questionnaire arme les
- * agents, et le tableau de bord suit. Elle ne dépose plus personne sur la
- * grille tarifaire — c'est le compte gratuit qui montre le produit, et l'offre
- * se vend depuis le tableau de bord (cf. `destination.ts`).
+ * L'inscription ouvre un compte, puis les tarifs : c'est là que se prend
+ * l'essai de trois jours, et le questionnaire d'accueil vient après (cf.
+ * `destination.ts`).
+ *
+ * Le `callbackURL` posé ici — le tableau de bord, faute de mieux — ne décide
+ * donc de rien pour un compte neuf : `resolveAuthDestination` ne l'honore qu'une
+ * fois l'accueil terminé. C'est exprès. Ce défaut-là n'est le souhait de
+ * personne, c'est le repli d'un formulaire, et le suivre sautait par-dessus les
+ * tarifs.
  *
  * Pour qui possède déjà un compte — le cas courant depuis que Google ouvre une
  * session au lieu de refuser une adresse connue —, `resolveAuthDestination` le
