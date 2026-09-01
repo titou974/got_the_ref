@@ -16,15 +16,38 @@
 /**
  * L'intervalle entre deux passages de la file, en minutes.
  *
- * Une heure : c'est ce qui rend le choix d'une heure de publication honnête. À
- * un passage par jour, proposer au client de choisir son heure serait un
- * décor — son article partirait au prochain matin quoi qu'il choisisse.
+ * Un jour : l'hébergement est en formule Hobby chez Vercel, qui n'accepte
+ * qu'une tâche planifiée quotidienne. C'est la contrainte, et tout ce fichier
+ * en découle — à commencer par le fait que l'heure de publication ne se
+ * choisit pas (voir `PUBLISH_HOUR_IS_CHOSEN`).
  *
- * À tenir d'accord avec le champ `crons` de `vercel.json`. Si l'hébergement
- * repasse à un passage quotidien, cette valeur passe à 1440 et l'interface
- * annonce d'elle-même le bon moment : rien d'autre n'est à corriger.
+ * À tenir d'accord avec le champ `crons` de `vercel.json`. Le jour où
+ * l'hébergement accepte un passage par heure, ces deux valeurs passent à 60 et
+ * 0 : le sélecteur d'heure réapparaît de lui-même et les écrans annoncent le
+ * bon moment, sans autre correction.
  */
-export const PUBLISH_PASS_MINUTES = 60;
+export const PUBLISH_PASS_MINUTES = 1440;
+
+/**
+ * À quelle minute après minuit UTC tombe le passage.
+ *
+ * Huit heures — l'expression `0 8 * * *` de `vercel.json`. Sans ce décalage, on
+ * calculerait les passages sur les multiples de minuit et l'on annoncerait
+ * minuit à des articles qui partent le matin : à un passage par jour, l'oubli
+ * se paie de huit heures d'erreur sur chaque date affichée.
+ */
+export const PUBLISH_PASS_OFFSET_MINUTES = 8 * 60;
+
+/**
+ * L'heure de publication se choisit-elle ?
+ *
+ * Seulement s'il y a plus d'un passage par jour. Sinon la question n'a pas de
+ * réponse honnête : l'article partira au passage suivant quelle que soit
+ * l'heure demandée, et un sélecteur d'heure ne serait qu'un décor qui promet
+ * une maîtrise que le système n'a pas. On ne fait donc choisir que le jour, et
+ * l'écran annonce l'heure au lieu de la demander.
+ */
+export const PUBLISH_HOUR_IS_CHOSEN = PUBLISH_PASS_MINUTES < 1440;
 
 /**
  * Les heures proposées au client quand il planifie un article.
@@ -33,10 +56,19 @@ export const PUBLISH_PASS_MINUTES = 60;
  * de vingt-quatre entrées se parcourt moins vite qu'elle ne se lit. Les heures
  * pleines seulement — la file ne passe pas plus finement que l'heure, et
  * proposer 14 h 30 promettrait une précision qui n'existe pas.
+ *
+ * Inemployées tant que `PUBLISH_HOUR_IS_CHOSEN` est faux, et gardées pour ce
+ * jour-là.
  */
 export const PUBLISH_HOURS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] as const;
 
-/** L'heure retenue quand le client planifie sans en choisir une. */
+/**
+ * L'heure que l'on vise, faute d'en choisir une.
+ *
+ * Ce n'est pas l'heure du départ mais celle qu'on souhaite : le départ est le
+ * passage qui suit (`preferredPassOnDay`). Neuf heures — le moment où un
+ * planning éditorial se lit comme un agenda.
+ */
 export const PUBLISH_DEFAULT_HOUR = 9;
 
 /**
@@ -73,9 +105,25 @@ export function nextPublishPass(scheduledFor: Date, now: Date = new Date()): Dat
  */
 export function alignToPass(at: Date): Date {
   const step = PUBLISH_PASS_MINUTES * 60_000;
-  // Les passages tombent sur les multiples de l'intervalle depuis minuit UTC,
-  // ce qui est la lecture d'une expression cron à minutes fixes.
-  return new Date(Math.ceil(at.getTime() / step) * step);
+  const offset = PUBLISH_PASS_OFFSET_MINUTES * 60_000;
+  // Les passages tombent tous les `step`, décalés de `offset` après minuit UTC :
+  // c'est la lecture d'une expression cron à heure et minute fixes.
+  return new Date(Math.ceil((at.getTime() - offset) / step) * step + offset);
+}
+
+/**
+ * Le départ que vaut un jour choisi au calendrier.
+ *
+ * On vise l'heure de publication souhaitée sur ce jour-là, puis on prend le
+ * passage qui suit. À un passage quotidien, cela tombe sur ce passage-là même —
+ * le client choisit un jour, l'article part ce jour-là. À un passage horaire,
+ * cela tombe sur l'heure souhaitée elle-même. La même fonction sert donc les
+ * deux cadences, et c'est elle qui date aussi les articles du planning
+ * automatique : un sujet posé par les agents et un sujet daté à la main partent
+ * au même moment de la journée.
+ */
+export function preferredPassOnDay(day: string): string {
+  return alignToPass(new Date(toPublishInstant(day, PUBLISH_DEFAULT_HOUR))).toISOString();
 }
 
 /**

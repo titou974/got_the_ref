@@ -1678,6 +1678,7 @@
       "schedule": "Planifier",
       "scheduleDay": "Jour",
       "scheduleHour": "Heure",
+      "scheduleFixedHour": "Les articles partent à {time}, une fois par jour : choisissez le jour, l'heure est la même pour tous.",
       "scheduleConfirm": "Enregistrer la date",
       "scheduleSaving": "Enregistrement…",
       "scheduleCancel": "Annuler",

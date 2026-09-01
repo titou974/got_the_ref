@@ -3,7 +3,7 @@ import "server-only";
 import { SignJWT } from "jose";
 import { AppError } from "@/lib/errors";
 import { markdownToHtml } from "@/lib/markdown-html";
-import type { SiteCapability } from "@/constants/site-platforms";
+import { SITE_CONNECTORS, type SiteCapability } from "@/constants/site-platforms";
 
 /**
  * Les appels sortants vers le site du client : vérifier le lien, puis publier.
@@ -706,207 +706,203 @@ async function shortError(response: Response): Promise<string> {
 
 // ── Publication ──────────────────────────────────────────────────────────────
 
-export async function publishArticle(
-  platform: string,
-  credentials: Credentials,
-  input: PublishInput,
-): Promise<PublishResult> {
-  // Les articles sont stockés en Markdown ; aucun CMS d'ici ne le lit. Déposé
-  // tel quel, le texte s'affichait chez le client avec ses dièses et ses
-  // astérisques : la conversion se fait donc en un seul endroit, à la porte.
-  const article = { ...input, body: markdownToHtml(input.body) };
+/**
+ * Ce que sait faire une plateforme quand on lui confie un article.
+ *
+ * Le corps reçu est déjà en HTML : la conversion depuis le Markdown se fait une
+ * fois, à la porte, et aucun de ces dépôts n'a à s'en soucier.
+ */
+type Publisher = (credentials: Credentials, article: PublishInput) => Promise<PublishResult>;
 
-  switch (platform) {
-    case "wordpress":
-    case "woocommerce": {
-      const site = wpSite(credentials.siteUrl ?? "");
-      const response = await call(`${site}/wp-json/wp/v2/posts`, {
-        method: "POST",
-        headers: {
-          Authorization: basic(
-            credentials.username.trim(),
-            appPassword(credentials.applicationPassword),
-          ),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: article.title,
-          content: article.body,
-          excerpt: article.excerpt ?? "",
-          slug: article.slug ?? undefined,
-          status: "publish",
-        }),
-      });
-      if (!response.ok) throw new AppError(await wordpressError(response), "PUBLISH_FAILED", 502);
+const publishWordpress: Publisher = async (credentials, article) => {
+  const site = wpSite(credentials.siteUrl ?? "");
+  const response = await call(`${site}/wp-json/wp/v2/posts`, {
+    method: "POST",
+    headers: {
+      Authorization: basic(
+        credentials.username.trim(),
+        appPassword(credentials.applicationPassword),
+      ),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: article.title,
+      content: article.body,
+      excerpt: article.excerpt ?? "",
+      slug: article.slug ?? undefined,
+      status: "publish",
+    }),
+  });
+  if (!response.ok) throw new AppError(await wordpressError(response), "PUBLISH_FAILED", 502);
 
-      const payload = (await response.json()) as { id?: number; link?: string };
-      return { url: payload.link ?? null, externalId: payload.id ? String(payload.id) : null };
-    }
+  const payload = (await response.json()) as { id?: number; link?: string };
+  return { url: payload.link ?? null, externalId: payload.id ? String(payload.id) : null };
+};
 
-    case "shopify": {
-      // Shopify range les articles dans un blog, et une boutique en a au moins
-      // un (« News ») créé d'office. Le client peut en désigner un autre par sa
-      // poignée ; sans indication, on écrit dans le premier.
-      //
-      // Le nom de la boutique voyage dans le même appel : `author` est déclaré
-      // non nul dans le schéma de création, et sans lui Shopify rejette la
-      // requête avant même de la lire.
-      const { shop, blogs } = await shopifyGraphql<{
-        shop: { name: string; primaryDomain?: { url?: string } };
-        blogs: { nodes: { id: string; handle: string }[] };
-      }>(
-        credentials,
-        `query { shop { name primaryDomain { url } } blogs(first: 50) { nodes { id handle } } }`,
-      );
+const publishShopify: Publisher = async (credentials, article) => {
+  // Shopify range les articles dans un blog, et une boutique en a au moins
+  // un (« News ») créé d'office. Le client peut en désigner un autre par sa
+  // poignée ; sans indication, on écrit dans le premier.
+  //
+  // Le nom de la boutique voyage dans le même appel : `author` est déclaré
+  // non nul dans le schéma de création, et sans lui Shopify rejette la
+  // requête avant même de la lire.
+  const { shop, blogs } = await shopifyGraphql<{
+    shop: { name: string; primaryDomain?: { url?: string } };
+    blogs: { nodes: { id: string; handle: string }[] };
+  }>(
+    credentials,
+    `query { shop { name primaryDomain { url } } blogs(first: 50) { nodes { id handle } } }`,
+  );
 
-      const wanted = credentials.blogHandle?.trim().toLowerCase();
-      const blog = wanted
-        ? blogs.nodes.find((node) => node.handle.toLowerCase() === wanted)
-        : blogs.nodes[0];
+  const wanted = credentials.blogHandle?.trim().toLowerCase();
+  const blog = wanted
+    ? blogs.nodes.find((node) => node.handle.toLowerCase() === wanted)
+    : blogs.nodes[0];
 
-      if (!blog) {
-        throw new AppError(
-          wanted
-            ? `Aucun blog « ${wanted} » sur cette boutique.`
-            : "Aucun blog sur cette boutique : créez-en un dans Shopify, rubrique Boutique en ligne › Articles de blog.",
-          "PUBLISH_FAILED",
-          502,
-        );
-      }
+  if (!blog) {
+    throw new AppError(
+      wanted
+        ? `Aucun blog « ${wanted} » sur cette boutique.`
+        : "Aucun blog sur cette boutique : créez-en un dans Shopify, rubrique Boutique en ligne › Articles de blog.",
+      "PUBLISH_FAILED",
+      502,
+    );
+  }
 
-      const created = await shopifyGraphql<{
-        articleCreate: {
-          article: { id: string; handle: string; blog: { handle: string } } | null;
-          userErrors: { message?: string }[];
-        };
-      }>(
-        credentials,
-        `mutation Publish($article: ArticleCreateInput!) {
+  const created = await shopifyGraphql<{
+    articleCreate: {
+      article: { id: string; handle: string; blog: { handle: string } } | null;
+      userErrors: { message?: string }[];
+    };
+  }>(
+    credentials,
+    `mutation Publish($article: ArticleCreateInput!) {
           articleCreate(article: $article) {
             article { id handle blog { handle } }
             userErrors { field message }
           }
         }`,
+    {
+      article: {
+        blogId: blog.id,
+        title: article.title,
+        // Obligatoire côté Shopify. À défaut de signature portée par
+        // l'article, la boutique signe de son propre nom.
+        author: { name: article.author?.trim() || shop.name },
+        body: article.body,
+        summary: article.excerpt ?? undefined,
+        handle: article.slug ?? undefined,
+        isPublished: true,
+      },
+    },
+  );
+
+  const errors = created.articleCreate.userErrors;
+  if (errors.length > 0) {
+    throw new AppError(
+      errors.map((error) => error.message ?? "refusé").join(" · "),
+      "PUBLISH_FAILED",
+      502,
+    );
+  }
+
+  const published = created.articleCreate.article;
+  if (!published) throw new AppError("Shopify n'a rien créé.", "PUBLISH_FAILED", 502);
+
+  // L'article se lit sur le domaine de vente, pas sur l'adresse
+  // d'administration : c'est ce lien-là que le client ouvrira.
+  const home = trimSlash(
+    shop.primaryDomain?.url ?? `https://${shopHost(credentials.shopDomain ?? "")}`,
+  );
+  return {
+    url: `${home}/blogs/${published.blog.handle}/${published.handle}`,
+    externalId: published.id,
+  };
+};
+
+const publishGhost: Publisher = async (credentials, article) => {
+  const site = trimSlash(credentials.siteUrl ?? "");
+  const token = await ghostToken(credentials.adminApiKey);
+  const response = await call(`${site}/ghost/api/admin/posts/?source=html`, {
+    method: "POST",
+    headers: { Authorization: `Ghost ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      posts: [
         {
-          article: {
-            blogId: blog.id,
-            title: article.title,
-            // Obligatoire côté Shopify. À défaut de signature portée par
-            // l'article, la boutique signe de son propre nom.
-            author: { name: article.author?.trim() || shop.name },
-            body: article.body,
-            summary: article.excerpt ?? undefined,
-            handle: article.slug ?? undefined,
-            isPublished: true,
-          },
+          title: article.title,
+          html: article.body,
+          custom_excerpt: article.excerpt ?? undefined,
+          slug: article.slug ?? undefined,
+          status: "published",
         },
-      );
+      ],
+    }),
+  });
+  if (!response.ok) throw new AppError(await shortError(response), "PUBLISH_FAILED", 502);
 
-      const errors = created.articleCreate.userErrors;
-      if (errors.length > 0) {
-        throw new AppError(
-          errors.map((error) => error.message ?? "refusé").join(" · "),
-          "PUBLISH_FAILED",
-          502,
-        );
-      }
+  const payload = (await response.json()) as { posts?: { id?: string; url?: string }[] };
+  return { url: payload.posts?.[0]?.url ?? null, externalId: payload.posts?.[0]?.id ?? null };
+};
 
-      const published = created.articleCreate.article;
-      if (!published) throw new AppError("Shopify n'a rien créé.", "PUBLISH_FAILED", 502);
+const publishWix: Publisher = async (credentials, article) => {
+  // Wix écrit un article en deux temps : un brouillon, puis sa publication.
+  // Le corps doit d'abord passer dans le format d'édition de la plateforme,
+  // sans quoi l'article arriverait en un seul bloc de texte.
+  const richContent = await wixRicos(credentials, article.body);
 
-      // L'article se lit sur le domaine de vente, pas sur l'adresse
-      // d'administration : c'est ce lien-là que le client ouvrira.
-      const home = trimSlash(
-        shop.primaryDomain?.url ?? `https://${shopHost(credentials.shopDomain ?? "")}`,
-      );
-      return {
-        url: `${home}/blogs/${published.blog.handle}/${published.handle}`,
-        externalId: published.id,
-      };
-    }
-
-    case "ghost": {
-      const site = trimSlash(credentials.siteUrl ?? "");
-      const token = await ghostToken(credentials.adminApiKey);
-      const response = await call(`${site}/ghost/api/admin/posts/?source=html`, {
-        method: "POST",
-        headers: { Authorization: `Ghost ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          posts: [
-            {
-              title: article.title,
-              html: article.body,
-              custom_excerpt: article.excerpt ?? undefined,
-              slug: article.slug ?? undefined,
-              status: "published",
-            },
-          ],
-        }),
-      });
-      if (!response.ok) throw new AppError(await shortError(response), "PUBLISH_FAILED", 502);
-
-      const payload = (await response.json()) as { posts?: { id?: string; url?: string }[] };
-      return { url: payload.posts?.[0]?.url ?? null, externalId: payload.posts?.[0]?.id ?? null };
-    }
-
-    case "wix": {
-      // Wix écrit un article en deux temps : un brouillon, puis sa publication.
-      // Le corps doit d'abord passer dans le format d'édition de la plateforme,
-      // sans quoi l'article arriverait en un seul bloc de texte.
-      const richContent = await wixRicos(credentials, article.body);
-
-      const created = await wixJson<{ draftPost?: { id?: string } }>(
-        credentials,
-        "/blog/v3/draft-posts",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            draftPost: {
-              title: article.title,
-              richContent,
-              // Le chapô que Wix affiche dans la liste des articles. L'adresse
-              // de la page, elle, est laissée à Wix : il la tire du titre selon
-              // la convention du blog, et lui en imposer une autre casserait la
-              // cohérence des URL du site.
-              excerpt: article.excerpt ?? undefined,
-            },
-          }),
+  const created = await wixJson<{ draftPost?: { id?: string } }>(
+    credentials,
+    "/blog/v3/draft-posts",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        draftPost: {
+          title: article.title,
+          richContent,
+          // Le chapô que Wix affiche dans la liste des articles. L'adresse
+          // de la page, elle, est laissée à Wix : il la tire du titre selon
+          // la convention du blog, et lui en imposer une autre casserait la
+          // cohérence des URL du site.
+          excerpt: article.excerpt ?? undefined,
         },
-      );
+      }),
+    },
+  );
 
-      const draftId = created.draftPost?.id;
-      if (!draftId) throw new AppError("Wix n'a pas créé le brouillon.", "PUBLISH_FAILED", 502);
+  const draftId = created.draftPost?.id;
+  if (!draftId) throw new AppError("Wix n'a pas créé le brouillon.", "PUBLISH_FAILED", 502);
 
-      const published = await wixJson<{ postId?: string }>(
-        credentials,
-        `/blog/v3/draft-posts/${draftId}/publish`,
-        { method: "POST", body: "{}" },
-      );
+  const published = await wixJson<{ postId?: string }>(
+    credentials,
+    `/blog/v3/draft-posts/${draftId}/publish`,
+    { method: "POST", body: "{}" },
+  );
 
-      const postId = published.postId ?? draftId;
+  const postId = published.postId ?? draftId;
 
-      // La publication ne rend que l'identifiant : l'adresse se relit ensuite.
-      // Un article publié sans lien à montrer reste un article publié — d'où le
-      // filet plutôt qu'une erreur.
-      const url = await wixJson<{ post?: { url?: unknown } }>(
-        credentials,
-        `/blog/v3/posts/${postId}?fieldsets=URL`,
-      )
-        .then((payload) => wixUrl(payload.post?.url))
-        .catch(() => null);
+  // La publication ne rend que l'identifiant : l'adresse se relit ensuite.
+  // Un article publié sans lien à montrer reste un article publié — d'où le
+  // filet plutôt qu'une erreur.
+  const url = await wixJson<{ post?: { url?: unknown } }>(
+    credentials,
+    `/blog/v3/posts/${postId}?fieldsets=URL`,
+  )
+    .then((payload) => wixUrl(payload.post?.url))
+    .catch(() => null);
 
-      return { url, externalId: postId };
-    }
+  return { url, externalId: postId };
+};
 
-    case "prestashop": {
-      // PrestaShop n'a pas de blog : une page de contenu est le seul foyer
-      // natif d'un article, et c'est celui que le back-office ouvrira sous
-      // « Design → Pages ».
-      const site = siteRoot(credentials.siteUrl ?? "");
-      const languageId = await prestashopLanguage(site, credentials);
-      const slug = slugify(article.slug ?? article.title);
+const publishPrestashop: Publisher = async (credentials, article) => {
+  // PrestaShop n'a pas de blog : une page de contenu est le seul foyer
+  // natif d'un article, et c'est celui que le back-office ouvrira sous
+  // « Design → Pages ».
+  const site = siteRoot(credentials.siteUrl ?? "");
+  const languageId = await prestashopLanguage(site, credentials);
+  const slug = slugify(article.slug ?? article.title);
 
-      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
   <content>
     <id_cms_category>1</id_cms_category>
@@ -920,53 +916,120 @@ export async function publishArticle(
   </content>
 </prestashop>`;
 
-      const response = await call(`${site}/api/content_management_system?output_format=JSON`, {
-        method: "POST",
-        headers: { ...prestashopHeaders(credentials), "Content-Type": "text/xml" },
-        body: xml,
-      });
-      if (!response.ok) throw new AppError(await prestashopError(response), "PUBLISH_FAILED", 502);
+  const response = await call(`${site}/api/content_management_system?output_format=JSON`, {
+    method: "POST",
+    headers: { ...prestashopHeaders(credentials), "Content-Type": "text/xml" },
+    body: xml,
+  });
+  if (!response.ok) throw new AppError(await prestashopError(response), "PUBLISH_FAILED", 502);
 
-      const payload = (await response.json().catch(() => null)) as {
-        content?: { id?: number | string };
-      } | null;
-      const id = payload?.content?.id;
-      if (!id) throw new AppError("PrestaShop n'a pas créé la page.", "PUBLISH_FAILED", 502);
+  const payload = (await response.json().catch(() => null)) as {
+    content?: { id?: number | string };
+  } | null;
+  const id = payload?.content?.id;
+  if (!id) throw new AppError("PrestaShop n'a pas créé la page.", "PUBLISH_FAILED", 502);
 
-      // L'adresse d'une page de contenu suit toujours la même forme quand les
-      // URL simplifiées sont actives, ce qui est le réglage par défaut.
-      return { url: `${site}/content/${id}-${slug}`, externalId: String(id) };
-    }
+  // L'adresse d'une page de contenu suit toujours la même forme quand les
+  // URL simplifiées sont actives, ce qui est le réglage par défaut.
+  return { url: `${site}/content/${id}-${slug}`, externalId: String(id) };
+};
 
-    case "custom": {
-      const hook = credentials.webhookUrl ? trimSlash(credentials.webhookUrl) : null;
-      if (!hook) {
-        throw new AppError(
-          "Ce site n'a pas de webhook de publication : l'article reste à déposer à la main.",
-          "PUBLISH_UNSUPPORTED",
-          400,
-        );
-      }
-
-      const response = await call(hook, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(credentials.apiToken ? { Authorization: `Bearer ${credentials.apiToken}` } : {}),
-        },
-        body: JSON.stringify(article),
-      });
-      if (!response.ok) throw new AppError(await shortError(response), "PUBLISH_FAILED", 502);
-
-      const payload = (await response.json().catch(() => ({}))) as { url?: string; id?: string };
-      return { url: payload.url ?? null, externalId: payload.id ?? null };
-    }
-
-    default:
-      throw new AppError(
-        "Cette plateforme n'ouvre pas sa publication à une API : l'article est à copier dans son éditeur.",
-        "PUBLISH_UNSUPPORTED",
-        400,
-      );
+const publishCustom: Publisher = async (credentials, article) => {
+  const hook = credentials.webhookUrl ? trimSlash(credentials.webhookUrl) : null;
+  if (!hook) {
+    throw new AppError(
+      "Ce site n'a pas de webhook de publication : l'article reste à déposer à la main.",
+      "PUBLISH_UNSUPPORTED",
+      400,
+    );
   }
+
+  const response = await call(hook, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(credentials.apiToken ? { Authorization: `Bearer ${credentials.apiToken}` } : {}),
+    },
+    body: JSON.stringify(article),
+  });
+  if (!response.ok) throw new AppError(await shortError(response), "PUBLISH_FAILED", 502);
+
+  const payload = (await response.json().catch(() => ({}))) as { url?: string; id?: string };
+  return { url: payload.url ?? null, externalId: payload.id ?? null };
+};
+
+/**
+ * Qui dépose chez qui.
+ *
+ * Une table plutôt qu'un `switch`, et ce n'est pas une question de goût : le
+ * registre des connecteurs (`constants/site-platforms`) promet au client, écran
+ * par écran, que telle plateforme publie toute seule. Rien ne reliait cette
+ * promesse au code qui la tient — ouvrir un connecteur sans écrire son dépôt
+ * passait la compilation, passait la connexion, et n'échouait qu'au premier
+ * article, chez le client, des semaines plus tard. Une table se relit ; c'est
+ * ce que fait `assertPublishersCoverRegistry` juste en dessous.
+ *
+ * WooCommerce partage la fonction de WordPress : c'en est une extension, et
+ * c'est l'API du cœur qui dépose l'article.
+ */
+const PUBLISHERS: Record<string, Publisher> = {
+  wordpress: publishWordpress,
+  woocommerce: publishWordpress,
+  shopify: publishShopify,
+  ghost: publishGhost,
+  wix: publishWix,
+  prestashop: publishPrestashop,
+  custom: publishCustom,
+};
+
+/**
+ * Toute plateforme ouverte qui promet la publication sait-elle publier ?
+ *
+ * La vérification tourne au chargement du module, et elle n'a pas la même
+ * sévérité des deux côtés. En développement elle lève : c'est une faute de
+ * câblage, elle doit arrêter net celui qui vient de la commettre. En production
+ * elle se contente de le crier dans les journaux — couper la page Articles d'un
+ * parc entier pour un connecteur mal déclaré ferait plus de dégât que le défaut
+ * lui-même, et l'exécution retombe de toute façon sur un refus honnête
+ * (`PUBLISH_UNSUPPORTED`), qui renvoie le client à son éditeur.
+ *
+ * `custom` n'y figure pas au même titre : son dépôt existe, mais il dépend du
+ * webhook que le client fournit, et son absence se dit à l'exécution.
+ */
+function assertPublishersCoverRegistry(): void {
+  const missing = SITE_CONNECTORS.filter(
+    (connector) =>
+      connector.ready && connector.capabilities.includes("publish") && !PUBLISHERS[connector.id],
+  ).map((connector) => connector.name);
+
+  if (missing.length === 0) return;
+
+  const message =
+    `Connecteurs ouverts à la publication sans dépôt écrit : ${missing.join(", ")}. ` +
+    "Ajoutez-les à PUBLISHERS dans features/dashboard/connectors, ou retirez-leur « publish » dans constants/site-platforms.";
+
+  if (process.env.NODE_ENV === "production") console.error(message);
+  else throw new Error(message);
+}
+
+assertPublishersCoverRegistry();
+
+export async function publishArticle(
+  platform: string,
+  credentials: Credentials,
+  input: PublishInput,
+): Promise<PublishResult> {
+  const publisher = PUBLISHERS[platform];
+  if (!publisher) {
+    throw new AppError(
+      "Cette plateforme n'ouvre pas sa publication à une API : l'article est à copier dans son éditeur.",
+      "PUBLISH_UNSUPPORTED",
+      400,
+    );
+  }
+
+  // Les articles sont stockés en Markdown ; aucun CMS d'ici ne le lit. Déposé
+  // tel quel, le texte s'affichait chez le client avec ses dièses et ses
+  // astérisques : la conversion se fait donc en un seul endroit, à la porte.
+  return publisher(credentials, { ...input, body: markdownToHtml(input.body) });
 }

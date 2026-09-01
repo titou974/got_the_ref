@@ -7,6 +7,7 @@ import { ROUTES } from "@/constants/routes";
 import { AppError } from "@/lib/errors";
 import { encryptJson, isCredentialsKeySet } from "@/lib/crypto";
 import { connectorFor } from "@/constants/site-platforms";
+import { preferredPassOnDay } from "@/constants/publishing";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { regenerateOnPageElement } from "@/lib/geo/keywords";
@@ -296,8 +297,6 @@ export const refreshRankingsAction = authActionClient
 
 /** Une publication par jour ouvré : du lundi au vendredi, samedi et dimanche off. */
 const SEED_WEEKDAYS = [1, 2, 3, 4, 5] as const;
-/** Publication à 9 h : l'heure où le planning se lit comme un agenda. */
-const SEED_HOUR = 9;
 /**
  * Combien d'articles sont rédigés dans la foulée de la planification.
  *
@@ -321,19 +320,28 @@ const SEED_DRAFTS = 3;
  * sujets couvrent ainsi quatre semaines pleines plus deux jours.
  */
 function seedSchedule(from: Date, count: number): Date[] {
-  const monday = new Date(from);
-  monday.setHours(SEED_HOUR, 0, 0, 0);
-  // getDay() : 0 = dimanche. Le lundi suivant est à 1..7 jours d'ici, jamais
+  // Tout le calcul de jours se fait en UTC. Les variantes locales de `Date`
+  // donnaient un lundi différent selon le fuseau de la machine : en production
+  // le serveur est en UTC et l'écart ne se voyait pas, sur un poste à Paris le
+  // planning glissait d'un jour.
+  const monday = new Date(
+    Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()),
+  );
+  // getUTCDay() : 0 = dimanche. Le lundi suivant est à 1..7 jours d'ici, jamais
   // aujourd'hui — le premier article doit laisser le temps de la relecture.
-  monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7));
+  monday.setUTCDate(monday.getUTCDate() + ((8 - monday.getUTCDay()) % 7 || 7));
 
   const dates: Date[] = [];
   for (let index = 0; index < count; index += 1) {
     const week = Math.floor(index / SEED_WEEKDAYS.length);
     const weekday = SEED_WEEKDAYS[index % SEED_WEEKDAYS.length];
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + week * 7 + (weekday - 1));
-    dates.push(date);
+    const day = new Date(monday);
+    day.setUTCDate(monday.getUTCDate() + week * 7 + (weekday - 1));
+    // L'heure vient du rythme de la file, pas d'une constante posée ici. Elle
+    // valait 9 h, quand la tâche planifiée passe à 8 h : chaque article était
+    // daté une heure après le seul passage de sa journée, et repartait le
+    // lendemain. Vingt-deux sujets, vingt-deux jours de retard silencieux.
+    dates.push(new Date(preferredPassOnDay(day.toISOString().slice(0, 10))));
   }
   return dates;
 }
@@ -763,7 +771,15 @@ export const planArticlesAction = authActionClient
           topic.outline.map((heading) => ({ heading, level: 2 as const, instruction: "" })),
         ),
         excerpt: topic.angle,
-        scheduledFor: new Date(start.getTime() + step * (index + 1)),
+        // Calé sur le passage de la file, comme les sujets du planning initial.
+        // Une date posée entre deux passages n'avance rien : l'article attend
+        // le suivant, et l'écart entre ce qu'annonce le calendrier et ce qui
+        // se produit est exactement ce qu'on cherche à supprimer.
+        scheduledFor: new Date(
+          preferredPassOnDay(
+            new Date(start.getTime() + step * (index + 1)).toISOString().slice(0, 10),
+          ),
+        ),
         status: "planned",
       })),
     });
