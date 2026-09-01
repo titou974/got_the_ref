@@ -1,16 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
 import {
-  MCP_AGENTS,
+  MCP_AGENT_IDS,
+  MCP_AGENT_NAMES,
   MCP_FIRST_PROMPT,
   MCP_SERVER_NAME,
+  mcpAgentSetups,
   type McpAgentId,
 } from "@/constants/mcp";
+import { createAgentKeyAction } from "@/features/mcp/actions";
 import { ROUTES } from "@/constants/routes";
 
 /**
@@ -21,19 +25,24 @@ import { ROUTES } from "@/constants/routes";
  * zéro à chaque nouvelle mesure, et personne, ici, ne savait jamais s'il avait
  * été appliqué.
  *
- * À la place, une prise. Le client installe le serveur MCP dans son agent une
- * fois, autorise le rattachement une fois, et l'agent va chercher lui-même les
- * correctifs à chaque passe. Ce qui se copie ici n'est donc plus la matière,
- * c'est une ligne de commande — et une ligne de commande, ça se lit avant de se
- * coller.
+ * À la place, une prise. Le client crée sa clé ici, colle une ligne dans son
+ * agent, et l'agent va chercher lui-même les correctifs à chaque passe — sans
+ * rien installer, la prise étant servie par le site. Ce qui se copie n'est donc
+ * plus la matière, c'est une ligne de commande — et une ligne de commande, ça
+ * se lit avant de se coller.
  *
  * D'où la forme : le bloc sombre en police à chasse fixe dit ce qu'il est, un
  * terminal. Il prolonge la console des agents en tête de modale, où les manques
  * du site passent en « corrigé » les uns après les autres.
  *
+ * La commande n'apparaît qu'une fois demandée, et une seule fois : elle porte
+ * la clé du compte, dont le serveur ne garde que l'empreinte. C'est aussi
+ * pourquoi elle ne s'affiche pas d'office à l'ouverture de la modale — un
+ * secret ne se met pas à l'écran de quelqu'un qui n'a rien demandé.
+ *
  * Le rail des trois étapes est la seule chose qui bouge. Il se remplit pour de
  * vrai : la dernière étape ne s'allume que lorsqu'un agent s'est réellement
- * appairé — la modale le demande à la plateforme pendant qu'elle est ouverte.
+ * connecté — la modale le demande à la plateforme pendant qu'elle est ouverte.
  */
 
 /** Rythme de relevé pendant que la modale attend l'appairage. */
@@ -134,11 +143,10 @@ function CopyButton({
  * autoriser, corriger —, pas une progression décorative : la troisième pastille
  * ne verdit que lorsqu'un agent s'est appairé pour de bon.
  */
-function Rail({ connected }: { connected: boolean }) {
+function Rail({ reached }: { reached: number }) {
   const t = useTranslations("analysisReport.solve.modal.mcp");
   const reduced = useReducedMotion();
   const steps = [t("stepInstall"), t("stepAuthorize"), t("stepFix")];
-  const reached = connected ? 3 : 1;
 
   return (
     <ol className="flex items-center gap-1.5">
@@ -178,13 +186,37 @@ function relativeTime(iso: string | null): string | null {
   return formatter.format(-Math.round(hours / 24), "day");
 }
 
-export function AgentLinkPanel({ locked = false }: { locked?: boolean }) {
+export function AgentLinkPanel({
+  locked = false,
+  onEndpoint,
+}: {
+  locked?: boolean;
+  /** Remonte l'adresse créée, pour la transmission à un développeur. */
+  onEndpoint?: (endpoint: string | null) => void;
+}) {
   const t = useTranslations("analysisReport.solve.modal.mcp");
   const [agent, setAgent] = useState<McpAgentId>("claude");
   const [state, setState] = useState<AgentsPayload | null>(null);
+  const [endpoint, setEndpoint] = useState<string | null>(null);
 
-  const setup = MCP_AGENTS.find((item) => item.id === agent) ?? MCP_AGENTS[0];
-  const connected = (state?.agents.length ?? 0) > 0;
+  // La clé n'existe en clair que dans la réponse de l'action : on la garde ici,
+  // le temps de la modale, et nulle part ailleurs.
+  const createKey = useAction(createAgentKeyAction, {
+    onSuccess: ({ data }) => {
+      setEndpoint(data?.adresse ?? null);
+      onEndpoint?.(data?.adresse ?? null);
+    },
+  });
+
+  const setup = useMemo(() => {
+    if (!endpoint) return null;
+    const setups = mcpAgentSetups(endpoint);
+    return setups.find((item) => item.id === agent) ?? setups[0];
+  }, [endpoint, agent]);
+
+  // Une clé qui existe ne prouve rien : c'est son premier usage qui dit que
+  // l'agent est branché pour de bon.
+  const connected = state?.agents.some((item) => item.dernierUsage) ?? false;
   const lastPass = relativeTime(state?.derniere?.date ?? null);
 
   const load = useCallback(async () => {
@@ -218,13 +250,13 @@ export function AgentLinkPanel({ locked = false }: { locked?: boolean }) {
       {/* Le choix de l'agent. Quatre onglets, pas un menu déroulant : le client
           doit voir tout de suite que le sien est pris en charge. */}
       <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5">
-        {MCP_AGENTS.map((item) => {
-          const active = item.id === agent;
+        {MCP_AGENT_IDS.map((id) => {
+          const active = id === agent;
           return (
             <button
-              key={item.id}
+              key={id}
               type="button"
-              onClick={() => setAgent(item.id)}
+              onClick={() => setAgent(id)}
               aria-pressed={active}
               className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${
                 active
@@ -232,8 +264,8 @@ export function AgentLinkPanel({ locked = false }: { locked?: boolean }) {
                   : "border-fog bg-snow text-muted hover:border-pebble hover:text-text"
               }`}
             >
-              <AgentMark id={item.id} />
-              {item.name}
+              <AgentMark id={id} />
+              {MCP_AGENT_NAMES[id]}
             </button>
           );
         })}
@@ -243,9 +275,28 @@ export function AgentLinkPanel({ locked = false }: { locked?: boolean }) {
           où elle sera collée. */}
       <div>
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-steel">
-          {t("installLabel", { where: setup.where })}
+          {setup ? t("installLabel", { where: setup.where }) : t("keyLabel")}
         </p>
-        {setup.kind === "link" ? (
+
+        {!setup ? (
+          // La commande porte la clé du compte : elle ne s'affiche que sur
+          // demande, et le serveur n'en garde ensuite que l'empreinte.
+          <div className="rounded-[18px] border border-fog bg-mist p-3">
+            <button
+              type="button"
+              onClick={() => createKey.execute({ agent })}
+              disabled={createKey.isPending}
+              className="w-full cursor-pointer rounded-[14px] bg-obsidian px-4 py-2.5 text-[13px] font-semibold text-white transition-colors duration-200 hover:bg-graphite focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 disabled:cursor-wait disabled:opacity-60"
+            >
+              {createKey.isPending
+                ? t("keyPending")
+                : t("keyCta", { name: MCP_AGENT_NAMES[agent] })}
+            </button>
+            <p className="mt-2 text-[12px] leading-relaxed text-muted">
+              {createKey.hasErrored ? t("keyError") : t("keyNote")}
+            </p>
+          </div>
+        ) : setup.kind === "link" ? (
           // Cursor n'a pas de sous-commande d'installation : il a un lien, que
           // le navigateur remet à l'éditeur. On le donne donc comme un lien,
           // cliquable, plutôt que comme une ligne à recopier.
@@ -275,7 +326,11 @@ export function AgentLinkPanel({ locked = false }: { locked?: boolean }) {
 
         {/* Le repli manuel, replié : il n'est utile qu'au client dont le lien
             n'a pas atteint l'éditeur, et il n'a pas à peser sur les autres. */}
-        {setup.fallback ? (
+        {setup ? (
+          <p className="mt-2 text-[12px] leading-relaxed text-muted">{t("keyOnce")}</p>
+        ) : null}
+
+        {setup?.fallback ? (
           <details className="group mt-2">
             <summary className="cursor-pointer list-none text-[12px] text-muted transition-colors duration-200 hover:text-text">
               {t("fallbackLabel", { where: setup.fallback.where })}
@@ -313,7 +368,7 @@ export function AgentLinkPanel({ locked = false }: { locked?: boolean }) {
         </div>
       </div>
 
-      <Rail connected={connected} />
+      <Rail reached={connected ? 3 : endpoint ? 2 : 1} />
 
       {/* L'état réel du rattachement, relevé côté plateforme. */}
       <AnimatePresence mode="wait">

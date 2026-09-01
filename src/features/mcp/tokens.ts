@@ -42,6 +42,23 @@ export async function mintToken(userId: string, clientName: string): Promise<str
   return token;
 }
 
+/**
+ * Accorde la clé d'un agent et retire les clés du même agent restées
+ * inutilisées.
+ *
+ * Une clé créée puis jamais employée est une commande que le client n'a pas
+ * collée — il a fermé la modale, ou l'a rouverte pour en reprendre une. La
+ * laisser vivre encombrerait la liste de ses agents d'entrées qui n'ont jamais
+ * rien ouvert, et laisserait traîner autant d'accès valides.
+ */
+export async function mintAgentKey(userId: string, clientName: string): Promise<string> {
+  await prisma.mcpToken.updateMany({
+    where: { userId, clientName, revokedAt: null, lastUsedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  return mintToken(userId, clientName);
+}
+
 /** Le porteur lu dans l'en-tête `Authorization: Bearer …`, ou `null`. */
 function readBearer(request: Request): string | null {
   const header = request.headers.get("authorization");
@@ -51,8 +68,13 @@ function readBearer(request: Request): string | null {
   return value.trim();
 }
 
+/** Vrai si la chaîne a la forme d'une clé d'agent — sans dire si elle est valide. */
+export function looksLikeToken(value: string): boolean {
+  return value.startsWith(PREFIX) && value.length > PREFIX.length;
+}
+
 /**
- * Identifie l'agent derrière une requête, ou rend `null`.
+ * Identifie l'agent derrière une clé en clair, ou rend `null`.
  *
  * La comparaison passe par `timingSafeEqual` sur les empreintes plutôt que par
  * l'égalité de deux chaînes : la recherche se fait bien par index (`tokenHash`
@@ -62,9 +84,8 @@ function readBearer(request: Request): string | null {
  * `lastUsedAt` est écrit après la réponse : c'est une trace pour l'écran des
  * appareils du client, pas une donnée dont dépend la requête en cours.
  */
-export async function identify(request: Request): Promise<McpIdentity | null> {
-  const raw = readBearer(request);
-  if (!raw || !raw.startsWith(PREFIX)) return null;
+export async function identifyToken(raw: string | null): Promise<McpIdentity | null> {
+  if (!raw || !looksLikeToken(raw)) return null;
 
   const digest = hash(raw);
   const record = await prisma.mcpToken.findUnique({
@@ -86,6 +107,11 @@ export async function identify(request: Request): Promise<McpIdentity | null> {
   );
 
   return { userId: record.userId, tokenId: record.id, clientName: record.clientName };
+}
+
+/** Identifie l'agent derrière une requête portant `Authorization: Bearer …`. */
+export async function identify(request: Request): Promise<McpIdentity | null> {
+  return identifyToken(readBearer(request));
 }
 
 /** Coupe l'accès d'un agent. Le jeton reste en base, daté de sa révocation. */

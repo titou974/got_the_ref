@@ -3,8 +3,9 @@
 import { z } from "zod";
 import { authActionClient } from "@/lib/safe-action";
 import { AppError } from "@/lib/errors";
+import { MCP_AGENT_IDS, MCP_AGENT_NAMES, mcpEndpoint } from "@/constants/mcp";
 import { approveDevice, denyDevice, normalizeUserCode } from "./device";
-import { revokeToken } from "./tokens";
+import { mintAgentKey, revokeToken } from "./tokens";
 
 /**
  * Les gestes que le client pose depuis son navigateur sur les agents appairés :
@@ -14,6 +15,21 @@ import { revokeToken } from "./tokens";
  * n'est jamais pris en entrée. Sans quoi le code d'appairage affiché sur un
  * écran de terminal suffirait à rattacher un agent au compte d'autrui.
  */
+
+/**
+ * La clé de connexion de l'agent, et l'adresse qui la porte.
+ *
+ * L'adresse rendue ici est un secret : elle vaut accès au dossier du compte.
+ * Elle n'existe en clair qu'une fois, le temps de cette réponse — le serveur
+ * n'en garde que l'empreinte. Un client qui la perd n'a rien à récupérer, il en
+ * demande une neuve, et la précédente s'éteint si elle n'a jamais servi.
+ */
+export const createAgentKeyAction = authActionClient
+  .inputSchema(z.object({ agent: z.enum(MCP_AGENT_IDS) }))
+  .action(async ({ parsedInput, ctx }) => {
+    const cle = await mintAgentKey(ctx.auth.user.id, MCP_AGENT_NAMES[parsedInput.agent]);
+    return { adresse: mcpEndpoint(cle) };
+  });
 
 const codeSchema = z.object({
   code: z

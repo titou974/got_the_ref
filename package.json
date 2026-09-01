@@ -18,13 +18,11 @@
     "set:demo": "node scripts/set-demo-plan.mjs",
     "set:demo:essais": "node scripts/set-demo-plan.mjs --essais",
     "export:leads": "node scripts/export-leads.mjs",
-    "check:dataforseo": "node scripts/check-dataforseo.mjs",
-    "mcp:build": "npm --prefix mcp run build",
-    "mcp:publish": "npm --prefix mcp publish",
-    "mcp:pack": "npm --prefix mcp run pack"
+    "check:dataforseo": "node scripts/check-dataforseo.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
+    "@modelcontextprotocol/server": "^2.0.0",
     "@next-safe-action/adapter-better-auth": "^0.1.6",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
@@ -44,6 +42,7 @@
     "framer-motion": "^12.40.0",
     "jose": "^6.2.3",
     "lottie-react": "^2.4.1",
+    "mcp-handler": "^2.1.1",
     "next": "16.2.9",
     "next-intl": "^4.13.0",
     "next-safe-action": "^8.5.4",

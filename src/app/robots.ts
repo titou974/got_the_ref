@@ -5,9 +5,15 @@ import { SITE } from "@/constants/site";
  * Pages sans valeur SEO ou strictement personnelles : comptes, paiement,
  * authentification, API, rapports d'analyse individuels (contenu dupliqué,
  * données propres à un visiteur).
+ *
+ * `/mcp/` s'y trouve pour une autre raison que le référencement : chaque
+ * adresse y porte la clé d'un compte. Les réponses portent déjà un
+ * `X-Robots-Tag`, mais une consigne qu'un robot doit récupérer suppose qu'il
+ * ait d'abord demandé la page — autant l'écarter avant.
  */
 const PRIVATE_PATHS = [
   "/api/",
+  "/mcp/",
   "/compte",
   "/connexion",
   "/inscription",

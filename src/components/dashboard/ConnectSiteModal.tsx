@@ -5,8 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { StackMark } from "@/components/StackMark";
 import { AgentLinkPanel } from "@/components/dashboard/AgentLinkPanel";
-import { MCP_FIRST_PROMPT, MCP_PACKAGE } from "@/constants/mcp";
-import { ROUTES } from "@/constants/routes";
+import { MCP_FIRST_PROMPT } from "@/constants/mcp";
 import type { DetectedStack } from "@/lib/geo/types";
 
 /**
@@ -144,17 +143,26 @@ function AgentConsole({
 
 /**
  * Ce qu'on envoie au développeur quand le client ne pose pas les mains
- * lui-même : la prise, la phrase, l'adresse. Trois lignes qui tiennent dans un
+ * lui-même : l'adresse de la prise, la phrase. Deux lignes qui tiennent dans un
  * SMS et qui suffisent à démarrer sans avoir accès au tableau de bord.
+ *
+ * On transmet l'adresse plutôt qu'une commande toute faite : le développeur
+ * n'utilise pas forcément l'agent que le client a choisi dans la modale, et
+ * une adresse de serveur MCP se branche partout. Sans clé créée, il n'y a rien
+ * à transmettre — on le dit franchement plutôt que d'envoyer une ligne qui
+ * échouera chez lui.
  */
-function handoffText(domain: string, origin: string): string {
-  return [
-    `Correctifs GEO à appliquer sur ${domain} (got_the_ref).`,
-    "",
-    `1. Installe la prise dans ton agent IA : npx -y ${MCP_PACKAGE}`,
-    `2. Demande-lui : « ${MCP_FIRST_PROMPT} »`,
-    `3. Il affichera un code à confirmer sur ${origin}${ROUTES.agentLink}`,
-  ].join("\n");
+function handoffText(domain: string, endpoint: string | null): string {
+  const lines = [`Correctifs GEO à appliquer sur ${domain} (got_the_ref).`, ""];
+
+  lines.push(
+    endpoint
+      ? `1. Branche cette prise MCP dans ton agent IA : ${endpoint}`
+      : "1. Branche la prise MCP got_the_ref dans ton agent IA, avec l'adresse de connexion que je t'envoie à part.",
+  );
+  lines.push(`2. Demande-lui : « ${MCP_FIRST_PROMPT} »`);
+
+  return lines.join("\n");
 }
 
 export function ConnectSiteModal({
@@ -180,6 +188,11 @@ export function ConnectSiteModal({
   const t = useTranslations("analysisReport.solve.modal");
   const [shared, setShared] = useState(false);
 
+  // L'adresse de la prise, quand le client vient de créer sa clé dans le
+  // panneau. Elle remonte ici pour que la transmission au développeur porte la
+  // vraie adresse plutôt qu'une consigne d'aller la chercher.
+  const [endpoint, setEndpoint] = useState<string | null>(null);
+
   /**
    * Passer le travail au développeur, c'est lui passer l'installation — pas un
    * lien vers un écran auquel il n'a pas accès. Sur mobile, la feuille de
@@ -187,7 +200,7 @@ export function ConnectSiteModal({
    * ouvrir et la copie fait le même travail.
    */
   async function shareWithDeveloper() {
-    const text = handoffText(domain, window.location.origin);
+    const text = handoffText(domain, endpoint);
 
     if (typeof navigator.share === "function") {
       try {
@@ -264,7 +277,7 @@ export function ConnectSiteModal({
 
           {/* Le rattachement de l'agent : la seule chose à faire sur cet écran. */}
           <div className="mt-5">
-            <AgentLinkPanel locked={locked} />
+            <AgentLinkPanel locked={locked} onEndpoint={setEndpoint} />
           </div>
 
           {/* La publication automatique sur le site arrive après. Le bouton
