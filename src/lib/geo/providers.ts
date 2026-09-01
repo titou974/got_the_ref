@@ -422,13 +422,16 @@ async function queryPerplexity(query: string): Promise<LiveEngineResult> {
 
     const choices = (data.choices as Array<Record<string, unknown>>) ?? [];
     const answerText =
-      ((choices[0]?.message as Record<string, unknown> | undefined)?.content as string) ?? "";
+      ((choices[0]?.message as Record<string, unknown> | undefined)
+        ?.content as string) ?? "";
 
     // `search_results` porte le titre de la page en plus de son URL ; les
     // réponses plus anciennes de l'API ne rendaient qu'une liste d'URL brutes
     // dans `citations`. On lit la première, et on retombe sur la seconde.
     const results =
-      (data.search_results as Array<{ title?: string; url?: string }> | undefined) ?? [];
+      (data.search_results as
+        | Array<{ title?: string; url?: string }>
+        | undefined) ?? [];
     const rawCitations: EngineCitation[] = results.length
       ? results.map((r, i) => ({
           rank: i + 1,
@@ -459,7 +462,10 @@ async function queryPerplexity(query: string): Promise<LiveEngineResult> {
       citations: dedupeCitations(rawCitations.filter((c) => c.url || c.title)),
     };
   } catch (err) {
-    geoLog(`Perplexity — ❌ échec après ${Date.now() - startedAt} ms`, String(err));
+    geoLog(
+      `Perplexity — ❌ échec après ${Date.now() - startedAt} ms`,
+      String(err),
+    );
     return {
       engine,
       available: true,
@@ -488,6 +494,9 @@ async function queryPerplexity(query: string): Promise<LiveEngineResult> {
  * on distingue les deux avant de parcourir, sinon le relevé casserait sur une
  * réponse que l'API a pourtant bien rendue.
  */
+
+const RANKING_SYSTEM = `Tu réponds comme un assistant grand public qui cherche sur le web avant de répondre. Quand on te demande un classement, cherche puis donne la liste demandée, ordonnée du meilleur au moins bon, en te fondant sur ce que tu as trouvé. Un ordre approximatif est attendu et suffit : n'explique pas qu'il n'existe pas de classement officiel, ne préviens pas des limites de l'exercice, ne pose pas de question. Réponds par la liste, et rien d'autre.`;
+
 async function queryClaude(query: string): Promise<LiveEngineResult> {
   const engine: AiEngine = "Claude";
   const key = process.env.ANTHROPIC_API_KEY;
@@ -503,11 +512,12 @@ async function queryClaude(query: string): Promise<LiveEngineResult> {
     };
   }
 
-  const model = process.env.ANTHROPIC_MODEL || "claude-opus-5";
   const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
   const startedAt = Date.now();
-  geoLog(`Claude — appel (${model}, web_search)…`, { requête: query.slice(0, 200) });
+  geoLog(`Claude — appel (${model}, web_search)…`, {
+    requête: query.slice(0, 200),
+  });
   try {
     const client = new Anthropic({ apiKey: key, timeout: FETCH_TIMEOUT_MS });
     const message = await client.messages.create({
