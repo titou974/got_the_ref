@@ -13,7 +13,13 @@ import { draftsSeedArticles, type AccessTier } from "@/constants/access";
 import { buildLoadingPrompts, type BusinessHint } from "@/lib/geo/loading-prompts";
 import { Card } from "./Card";
 import { AiKeysAnimation } from "./AiKeysAnimation";
-import { ARTICLES_PHASE, AUDIT_PHASES, PHASE_LABEL_KEYS, PhaseAnimation } from "./AnalysisPhases";
+import {
+  ARTICLES_PHASE,
+  KEYBOARD_PHASE,
+  PHASE_LABEL_KEYS,
+  PhaseAnimation,
+  auditPhaseFor,
+} from "./AnalysisPhases";
 
 /**
  * L'analyse lancée à la première ouverture du tableau de bord — et rejouée le
@@ -38,11 +44,12 @@ import { ARTICLES_PHASE, AUDIT_PHASES, PHASE_LABEL_KEYS, PhaseAnimation } from "
  *
  * ## Ce que l'écran montre
  *
- * Sept animations, une par temps du travail, et la question d'un client tapée
- * en dessous sur un clavier. Les deux disent la même chose à deux échelles :
- * l'animation dit où en est la machine, le clavier dit pourquoi ça compte —
- * « boulangerie artisanale au Havre » est la requête dont dépend le chiffre
- * d'affaires du commerçant, et elle est posée à ChatGPT pendant qu'il regarde.
+ * Une scène à la fois, comme sur l'écran d'analyse d'origine : l'animation du
+ * temps en cours, son nom, la barre. Sur l'étape des moteurs, cette scène est
+ * le clavier — la question du client s'y écrit, « boulangerie artisanale au
+ * Havre », et c'est la requête dont dépend son chiffre d'affaires. C'est de
+ * loin l'étape la plus longue, parce que c'est la seule où il y a quelque
+ * chose à lire plutôt qu'à regarder.
  *
  * La barre de progression n'est pas un pourcentage mesuré — personne ne sait à
  * l'avance combien de pages a un site. C'est une avance dans le temps, bornée
@@ -260,11 +267,11 @@ export function PreparingAnalysis({
   // parce que le travail est fini, pas parce qu'un effet l'a poussée là.
   const shown = done ? 100 : progress;
 
-  // L'étape illustrée sort de la barre elle-même : les six passes de l'audit se
-  // partagent la montée vers 70 %, la septième est la planification.
-  const phase = seedPending || done
-    ? ARTICLES_PHASE
-    : Math.min(Math.floor(progress / (AUDIT_CEILING / AUDIT_PHASES)), AUDIT_PHASES - 1);
+  // L'étape sort de la barre elle-même : les cinq passes de l'audit se
+  // partagent la montée vers 70 %, chacune selon son poids, et la sixième est
+  // la planification des articles.
+  const phase =
+    seedPending || done ? ARTICLES_PHASE : auditPhaseFor(progress, AUDIT_CEILING);
 
   const failed = Boolean(result.serverError) && !isPending;
 
@@ -300,11 +307,20 @@ export function PreparingAnalysis({
       </header>
 
       <section className="rounded-[36px] border border-border bg-surface px-5 py-7 sm:px-8 sm:py-9">
-        {/* Où en est la machine : l'image de l'étape, son nom, et la barre. */}
         <div className="flex flex-col items-center">
-          <PhaseAnimation index={phase} />
+          {/* Une seule scène à la fois. Sur l'étape des moteurs, le clavier
+              prend toute la place : c'est le moment où le client a quelque
+              chose à lire — sa propre requête — plutôt qu'à regarder. */}
+          {phase === KEYBOARD_PHASE ? (
+            <AiKeysAnimation prompts={prompts} />
+          ) : (
+            <PhaseAnimation index={phase} />
+          )}
 
-          <p aria-live="polite" className="mt-1 text-center text-sm font-semibold sm:text-base">
+          <p
+            aria-live="polite"
+            className="mt-5 text-center text-sm font-semibold sm:text-base"
+          >
             {phaseLabel}
           </p>
 
@@ -327,14 +343,6 @@ export function PreparingAnalysis({
             </p>
           </div>
         </div>
-
-        <hr className="my-7 h-px border-0 bg-border sm:my-8" />
-
-        {/* Pourquoi ça compte : la question d'un client, tapée pour de vrai. */}
-        <p className="mb-4 text-center text-[11px] font-semibold uppercase tracking-wider text-steel">
-          {t("promptsEyebrow")}
-        </p>
-        <AiKeysAnimation prompts={prompts} />
       </section>
     </div>
   );

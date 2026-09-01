@@ -60,17 +60,22 @@ function repaint(node, counts) {
 // ── Neutralisation ───────────────────────────────────────────────────────────
 //
 // Les six animations ci-dessus venaient de la même série et partageaient trois
-// verts exacts : une correspondance couleur par couleur suffisait. Celle de
-// l'assistant vient d'ailleurs — cyan, bleu, orange et un dégradé arc-en-ciel —
-// et n'a aucune couleur en commun avec elles. Aucune table de correspondance ne
-// la ramènerait à la charte.
+// verts exacts : une correspondance couleur par couleur suffisait. Une
+// animation venue d'ailleurs n'a aucune couleur en commun avec elles, et aucune
+// table de correspondance ne la ramènerait à la charte.
 //
-// On la convertit donc par la luminance : chaque couleur est remplacée par le
+// On la convertit alors par la luminance : chaque couleur est remplacée par le
 // gris du thème dont elle a la clarté. Le dessin garde ses contrastes — ce qui
 // se détachait se détache encore, ce qui servait de fond reste en fond — et
-// perd sa teinte, qui était le seul problème. C'est la conversion d'une image
-// couleur en noir et blanc, appliquée à un fichier vectoriel.
-const NEUTRALIZE = new Set(["ai-assistant.json"]);
+// perd sa teinte. C'est la conversion d'une image couleur en noir et blanc,
+// appliquée à un fichier vectoriel.
+//
+// Vide aujourd'hui, et c'est délibéré. `ai-assistant.json` y était passée le
+// temps de servir l'écran d'attente ; elle n'y sert plus, et deux autres écrans
+// l'affichent en couleur depuis toujours. La neutraliser leur retirait une
+// couleur qu'ils n'avaient pas demandé à perdre. Le mécanisme reste, pour la
+// prochaine animation venue d'une autre série.
+const NEUTRALIZE = new Set([]);
 
 /** La rampe neutre du thème, de l'obsidienne au blanc, en clarté. */
 const NEUTRALS = [0.035, 0.247, 0.443, 0.631, 0.831, 0.925, 1];
