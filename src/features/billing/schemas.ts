@@ -31,6 +31,17 @@ export const subscriptionCheckoutSchema = z.object({
 export type SubscriptionCheckoutInput = z.infer<typeof subscriptionCheckoutSchema>;
 
 /**
+ * Ouverture de l'essai de trois jours. Même forme que la souscription — c'est
+ * le même abonnement, ouvert avec `trial_period_days` : le cycle choisi sur la
+ * carte décide du tarif prélevé à la fin de l'essai.
+ */
+export const trialCheckoutSchema = z.object({
+  cycle: billingCycleSchema,
+});
+
+export type TrialCheckoutInput = z.infer<typeof trialCheckoutSchema>;
+
+/**
  * « Coup de Boost » : paiement unique, sans cycle de facturation. L'analyse est
  * facultative — la carte vit sur la page tarifs comme au bas d'un rapport.
  */

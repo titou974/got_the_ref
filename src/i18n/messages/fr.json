@@ -695,7 +695,7 @@
   },
   "pricing": {
     "metaTitle": "Tarifs",
-    "metaDescription": "got_the_ref : 49 € en une passe unique avec le Coup de Boost — analyse, corrections et articles publiés —, ou 79 €/mois avec l'abonnement Tout-en-un pour des agents IA qui mesurent et corrigent en continu votre visibilité sur ChatGPT, Gemini et Google.",
+    "metaDescription": "got_the_ref : 49 € en une passe unique avec le Coup de Boost — analyse, corrections et articles publiés —, ou 79 €/mois avec l'abonnement Tout-en-un pour des agents IA qui mesurent et corrigent en continu votre visibilité sur ChatGPT, Gemini et Google. 3 jours d'essai gratuit.",
     "keywords": "tarifs GEO, prix référencement IA, abonnement visibilité IA, coût agence GEO, prix ChatGPT SEO, audit GEO sans abonnement",
     "eyebrow": "Tarifs",
     "headingBefore": "Des agents qui travaillent votre visibilité ",
@@ -705,12 +705,15 @@
     "perYear": " par an",
     "redirecting": "Redirection…",
     "secureNote": "Paiement sécurisé par Stripe · Coup de Boost débité une seule fois, abonnement résiliable à tout moment",
+    "secureNoteTrial": "Paiement sécurisé par Stripe · Essai de {days} jours gratuit, résiliable avant la fin sans être débité de l'abonnement · Coup de Boost débité une seule fois",
     "plan": {
       "eyebrow": "Accès complet",
       "name": "Tout-en-un",
       "terms": "{price}/mois, accès complet. Résiliable à tout moment.",
       "cta": "Prendre l'abonnement Tout-en-un",
+      "ctaTrial": "Commencer l'essai de {days} jours",
       "ctaNote": "Sans engagement · résiliable à tout moment depuis votre espace",
+      "ctaNoteTrial": "Rien n'est débité avant {days} jours · résiliable pendant l'essai depuis votre espace",
       "features": [
         "Un tableau de bord simple à comprendre qui détaille toutes vos statistiques de référencement",
         "Agents IA entraînés sur les données de votre niche qui travaillent 24h/24",
@@ -818,6 +821,10 @@
           "a": "49 € en un seul paiement, sans abonnement : une analyse complète, les corrections des agents, 10 articles rédigés et publiés, puis un rapport final."
         },
         {
+          "q": "Comment fonctionne l'essai de 3 jours ?",
+          "a": "Vous ouvrez l'abonnement Tout-en-un sans être débité : votre carte est enregistrée chez Stripe, et le premier prélèvement n'a lieu qu'au bout de 3 jours. Pendant l'essai, votre tableau de bord s'ouvre dans sa version gratuite — la niche détectée, votre note, votre position sur Gemini et vos correctifs de contenu ; le reste apparaît au premier prélèvement. Résiliez avant la fin et rien ne vous est débité. Si vous prenez le Coup de Boost ou l'abonnement pendant l'essai, celui-ci s'arrête aussitôt : le prélèvement du troisième jour n'a pas lieu."
+        },
+        {
           "q": "Que voit-on sans rien payer ?",
           "a": "Ouvrez un compte, donnez l'adresse de votre site : nous le lisons, et votre tableau de bord s'ouvre avec la niche détectée, votre position mesurée sur Gemini, les corrections de contenu adossées à vos mots-clés et les quatre premiers sujets d'articles de la semaine, datés. Les faire rédiger et publier demande le Coup de Boost. Les autres sections, structure, backlinks et Google Maps, restent visibles mais voilées."
         }
@@ -912,9 +919,9 @@
     "headingAfter": "en pilote automatique",
     "engines": ["ChatGPT", "Gemini", "Perplexity", "Google"],
     "subtitle": "On apporte de la visibilité aux commerces français, locaux comme en ligne, en les référençant dans les IA et sur Google. Sans qu’ils aient à payer une agence ni à lever le petit doigt !",
-    "cta": "Commencer l'analyse gratuite",
+    "cta": "Démarrer {days} jours gratuits",
     "ctaDashboard": "Ouvrir mon tableau de bord",
-    "trialBarCta": "Commencer l'analyse gratuite",
+    "trialBarCta": "Démarrer l'essai de {days} jours",
     "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
     "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
     "scrollHint": "Analyser mon site",

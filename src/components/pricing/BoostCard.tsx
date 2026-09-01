@@ -6,7 +6,7 @@ import { BOOST } from "@/constants/plans";
 /** Montant formaté à la française, sans décimales (49 €). */
 const euros = (amount: number) => `${amount.toLocaleString("fr-FR")} €`;
 
-function Check() {
+function Check({ dark }: { dark: boolean }) {
   return (
     <svg
       width="16"
@@ -14,7 +14,7 @@ function Check() {
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden
-      className="mt-0.5 shrink-0 text-white"
+      className={`mt-0.5 shrink-0 ${dark ? "text-white" : "text-obsidian"}`}
     >
       <path
         d="M5 13l4 4L19 7"
@@ -47,6 +47,7 @@ export async function BoostCard({
   analysisId,
   compact = false,
   showAgents = true,
+  tone = "dark",
   className = "",
 }: {
   /** Rapport à l'origine de l'achat, s'il y en a un : il est débloqué au retour. */
@@ -54,9 +55,16 @@ export async function BoostCard({
   /** Version resserrée, pour le bas de la home. */
   compact?: boolean;
   showAgents?: boolean;
+  /**
+   * La surface sombre appartient à l'offre qu'on met en avant, et il n'y en a
+   * qu'une : `light` la rend à l'abonnement quand celui-ci ouvre un essai et
+   * passe en tête (cf. `PricingOffers`).
+   */
+  tone?: "dark" | "light";
   className?: string;
 }) {
   const t = await getTranslations("pricing");
+  const dark = tone === "dark";
 
   // En bas de home, la carte perd son roster d'agents : la liste complète
   // pousserait l'abonnement, juste dessous, hors du premier écran. On y garde
@@ -107,15 +115,23 @@ export async function BoostCard({
         </div>
 
         <section
-          className={`flex w-full flex-col rounded-[36px] bg-obsidian text-white shadow-[var(--shadow-md)] ${
-            compact ? "p-6 pt-7 sm:p-7 sm:pt-8" : "p-6 pt-8 sm:p-9 sm:pt-10"
-          }`}
+          className={`flex w-full flex-col rounded-[36px] shadow-[var(--shadow-md)] ${
+            dark ? "bg-obsidian text-white" : "border border-pebble bg-snow"
+          } ${compact ? "p-6 pt-7 sm:p-7 sm:pt-8" : "p-6 pt-8 sm:p-9 sm:pt-10"}`}
         >
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
+          <p
+            className={`text-xs font-semibold uppercase tracking-wider ${
+              dark ? "text-white/50" : "text-steel"
+            }`}
+          >
             {t("boost.eyebrow")}
           </p>
           <h2 className="mt-2 text-2xl font-bold">{t("boost.name")}</h2>
-          <p className="mt-2 max-w-md text-sm leading-relaxed text-white/60">
+          <p
+            className={`mt-2 max-w-md text-sm leading-relaxed ${
+              dark ? "text-white/60" : "text-muted"
+            }`}
+          >
             {t("boost.tagline")}
           </p>
 
@@ -129,28 +145,39 @@ export async function BoostCard({
             >
               {euros(BOOST.price)}
             </span>
-            <span className="text-base text-white/50">{t("boost.onceLabel")}</span>
+            <span className={`text-base ${dark ? "text-white/50" : "text-muted"}`}>
+              {t("boost.onceLabel")}
+            </span>
           </div>
 
           {/* Même réserve de hauteur que la note de l'abonnement, en dessous :
               les deux cartes gardent ainsi la même respiration sous le prix. */}
           <p
-            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed text-white/30 ${
-              compact ? "mt-3" : "mt-4"
-            }`}
+            className={`min-h-[3.75rem] max-w-sm text-xs leading-relaxed ${
+              dark ? "text-white/30" : "text-steel"
+            } ${compact ? "mt-3" : "mt-4"}`}
           >
             {t("boost.terms")}
           </p>
 
           <div className={compact ? "mt-5" : "mt-7"}>
-            <BoostCheckoutButton label={t("boost.cta")} analysisId={analysisId} tone="light" />
-            <p className="mt-2.5 text-center text-xs text-white/50">{t("boost.ctaNote")}</p>
+            <BoostCheckoutButton
+              label={t("boost.cta")}
+              analysisId={analysisId}
+              tone={dark ? "light" : "dark"}
+            />
+            <p className={`mt-2.5 text-center text-xs ${dark ? "text-white/50" : "text-muted"}`}>
+              {t("boost.ctaNote")}
+            </p>
           </div>
 
           <ul className={`space-y-2.5 ${compact ? "mt-6" : "mt-7"}`}>
             {features.map((f) => (
-              <li key={f} className="flex items-start gap-2.5 text-sm text-white/85">
-                <Check />
+              <li
+                key={f}
+                className={`flex items-start gap-2.5 text-sm ${dark ? "text-white/85" : "text-ink"}`}
+              >
+                <Check dark={dark} />
                 <span>{f}</span>
               </li>
             ))}
@@ -163,8 +190,12 @@ export async function BoostCard({
               dit ce que cette offre ne fait pas, et l'abonnement juste en
               dessous n'a d'autre raison d'être que cette phrase. */}
           <div className="mt-7 flex flex-1 flex-col justify-end gap-3">
-            {showAgents && <AgentRoster />}
-            <p className="rounded-2xl bg-white/5 px-4 py-3 text-xs leading-relaxed text-white/45">
+            {showAgents && dark && <AgentRoster />}
+            <p
+              className={`rounded-2xl px-4 py-3 text-xs leading-relaxed ${
+                dark ? "bg-white/5 text-white/45" : "bg-mist text-steel"
+              }`}
+            >
               {t("boost.limit")}
             </p>
           </div>

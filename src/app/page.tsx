@@ -21,6 +21,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { resolveAuthDestination } from "@/features/auth/destination";
 import { ROUTES } from "@/constants/routes";
+import { TRIAL } from "@/constants/plans";
 
 /**
  * La home suit une progression volontaire : promesse → secteurs → méthode →
@@ -98,7 +99,11 @@ export default async function Home() {
           l'entrée reste à portée sur toute la longueur de la page. Il ne se
           dédouble plus selon le visiteur : seul un anonyme lit encore cette
           page, les autres ont été renvoyés chez eux plus haut. */}
-      <StickyCtaBar label={t("trialBarCta")} heroId={HERO_ID} href={ROUTES.signUp} />
+      <StickyCtaBar
+        label={t("trialBarCta", { days: TRIAL.days })}
+        heroId={HERO_ID}
+        href={ROUTES.signUp}
+      />
     </main>
   );
 }

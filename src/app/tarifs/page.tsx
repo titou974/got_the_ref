@@ -4,6 +4,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { AnalysisCheckoutButton } from "@/components/AnalysisCheckoutButton";
 import { SubscriptionCheckoutButton } from "@/components/SubscriptionCheckoutButton";
+import { TrialCheckoutButton } from "@/components/TrialCheckoutButton";
 import { BrandProof } from "@/components/BrandProof";
 import { PricingOffers } from "@/components/pricing/PricingOffers";
 import { PricingFaq } from "@/components/pricing/PricingFaq";
@@ -14,8 +15,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
-import { BOOST, SUBSCRIPTION_PRICE, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
+import { BOOST, SUBSCRIPTION_PRICE, TRIAL, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
 import { SITE } from "@/constants/site";
+import { getCurrentUser } from "@/lib/auth";
+import { ANONYMOUS_TRIAL_STATE, getTrialState } from "@/features/billing/trial";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("pricing");
@@ -90,12 +93,15 @@ export default async function TarifsPage({ searchParams }: Props) {
   const t = await getTranslations("pricing");
   const tg = await getTranslations("trafficGain");
 
-  // Les visites à gagner ne s'affichent que si elles sont calculées sur le site
-  // du visiteur. Sans session, ou avec un compte dont l'analyse n'a pas encore
-  // tourné, il n'y a rien d'honnête à annoncer : un chiffre de site type se
-  // lirait comme une promesse chiffrée faite à quelqu'un dont on n'a rien lu.
+  // L'essai n'est proposé qu'à qui peut encore le prendre : un visiteur sans
+  // compte, ou un compte gratuit qui n'a jamais ouvert d'abonnement. Pendant
+  // l'essai comme après, la page reprend sa forme habituelle — Coup de Boost en
+  // tête, abonnement à son prix dessous — sans reproposer trois jours déjà
+  // consommés (cf. `features/billing/trial.ts`).
   const user = await getCurrentUser();
-  const analysis = user ? (await getDashboardContext(user.id)).analysis : null;
+  const { available: trial } = user
+    ? await getTrialState(user.id)
+    : ANONYMOUS_TRIAL_STATE;
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
@@ -139,15 +145,23 @@ export default async function TarifsPage({ searchParams }: Props) {
         <ResultsCarousel className="py-10 sm:py-14" />
 
         <div className="mx-auto w-full max-w-6xl flex-1 px-5 pb-12 sm:pb-16">
-          {/* Les deux offres, l'une sous l'autre : le Coup de Boost en carte
-              sombre, puis l'abonnement Tout-en-un. */}
+          {/* Les deux offres, l'une sous l'autre. Qui n'a pas encore ouvert son
+              essai le voit en premier, en carte sombre, à 0 € aujourd'hui ; les
+              autres — essai en cours, essai passé, client — retrouvent le Coup
+              de Boost en tête et l'abonnement à son prix en dessous. */}
           <div className="mx-auto w-full">
             <PricingOffers
               analysisId={analyse}
+              trial={trial}
               subscriptionCta={
                 analyse ? (
                   // Venu d'un rapport précis : on le rattache à l'abonnement souscrit.
+                  // Pas d'essai sur ce chemin — c'est le rapport qu'on vient ouvrir,
+                  // et trois jours de niveau gratuit ne l'ouvriraient pas.
                   <AnalysisCheckoutButton analysisId={analyse} label={t("plan.cta")} tone="dark" />
+                ) : trial ? (
+                  // L'essai : même abonnement, ouvert sur trois jours gratuits.
+                  <TrialCheckoutButton label={t("plan.ctaTrial", { days: TRIAL.days })} />
                 ) : (
                   // Sans rapport à rattacher, le bouton part quand même sur Stripe :
                   // renvoyer vers la home faisait reculer d'un cran un visiteur déjà
@@ -158,7 +172,9 @@ export default async function TarifsPage({ searchParams }: Props) {
             />
           </div>
 
-          <p className="mt-10 text-sm text-muted">{t("secureNote")}</p>
+          <p className="mt-10 text-sm text-muted">
+            {trial ? t("secureNoteTrial", { days: TRIAL.days }) : t("secureNote")}
+          </p>
         </div>
       </div>
 
