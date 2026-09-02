@@ -101,8 +101,11 @@ export default async function DashboardHomePage() {
   //
   // Les articles, eux, sont relus pour tout le monde : le calendrier est ouvert
   // à tous les niveaux, et c'est une lecture en base, pas un appel de modèle.
+  //
+  // Le compte de démonstration ne le lance pas non plus : sa carte montre la
+  // courbe d'exemple quoi qu'il arrive, et le rapport partirait à la poubelle.
   const [traffic, articles] = await Promise.all([
-    sees("traffic") ? fetchAiTraffic(user.id, 30) : null,
+    sees("traffic") && tier !== "demo" ? fetchAiTraffic(user.id, 30) : null,
     listArticles(user.id),
   ]);
 
@@ -275,6 +278,7 @@ export default async function DashboardHomePage() {
         demo={buildDemoAiTraffic()}
         domain={context.domain ?? analysis.domain}
         veiled={!sees("traffic")}
+        showcase={tier === "demo"}
         overlay={
           sees("traffic") ? undefined : (
             <GatePanel offer={offerForBlock("traffic")} item="traffic" />

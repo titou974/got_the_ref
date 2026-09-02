@@ -4,12 +4,13 @@
  *
  * Sans rattachement, `fetchAiTraffic` ne renvoie rien et la carte restait vide.
  * Une carte vide ne dit pourtant qu'une chose : « il manque un branchement ».
- * Elle ne montre pas ce que le client verra une fois branché. Ces chiffres sont
- * donc fictifs et annoncés comme tels — la carte porte un bandeau « données
- * d'exemple » et garde la phrase qui explique le rattachement manquant.
+ * Elle ne montre pas ce que le client verra une fois branché.
  *
- * Les valeurs sont écrites en dur plutôt que tirées au sort : un graphique qui
- * change de forme à chaque rechargement se lit comme une vraie mesure erratique.
+ * Les valeurs sont tirées au sort, mais une seule fois pour toutes : le tirage
+ * part d'une graine écrite en dur, donc la même série sort à chaque rendu, sur
+ * le serveur comme dans le navigateur. Un graphique qui change de forme à
+ * chaque rechargement se lirait comme une vraie mesure erratique, et un tirage
+ * refait côté navigateur ferait diverger l'hydratation du rendu serveur.
  * Seules les dates suivent l'horloge, pour que l'axe ressemble au mois en cours.
  */
 
@@ -38,25 +39,59 @@ export type DemoAiTraffic = {
   siteSessions: number;
 };
 
+/** Le nombre de jours couverts par l'exemple. */
+const DEMO_DAYS = 30;
+
+/** Le plancher et le plafond des visites quotidiennes tirées au sort. */
+const MIN_DAILY = 100;
+const MAX_DAILY = 1000;
+
+/**
+ * Une graine par assistant : deux séries tirées de la même graine seraient
+ * identiques, et les trois courbes se superposeraient exactement.
+ */
+const SEEDS: Record<DemoEngine, number> = {
+  ChatGPT: 0x5f3a91,
+  Gemini: 0x2c8b47,
+  Perplexity: 0x7d1e63,
+};
+
+/**
+ * Un tirage pseudo-aléatoire reproductible (mulberry32).
+ *
+ * `Math.random()` ne convient pas ici : il donnerait une série au serveur et
+ * une autre au navigateur, et la courbe changerait à chaque rechargement.
+ */
+function seeded(seed: number): () => number {
+  let state = seed >>> 0;
+
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let value = Math.imul(state ^ (state >>> 15), 1 | state);
+    value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Les visites quotidiennes d'un assistant, entre le plancher et le plafond. */
+function dailyFor(engine: DemoEngine): number[] {
+  const next = seeded(SEEDS[engine]);
+
+  return Array.from({ length: DEMO_DAYS }, () =>
+    Math.round(MIN_DAILY + next() * (MAX_DAILY - MIN_DAILY)),
+  );
+}
+
 /**
  * Trente jours de visites, une ligne par assistant.
  *
- * L'allure raconte ce que vend le produit : ChatGPT devant et en hausse nette,
- * Gemini qui suit à la moitié, Perplexity plus petit mais régulier.
+ * Tiré une seule fois, au chargement du module : le même tableau sert ensuite
+ * tous les rendus.
  */
 const DAILY: Record<DemoEngine, number[]> = {
-  ChatGPT: [
-    41, 38, 47, 52, 49, 58, 61, 55, 64, 70, 66, 74, 79, 72, 83, 88, 81, 94, 99, 92, 105, 110, 103,
-    117, 122, 114, 128, 134, 127, 141,
-  ],
-  Gemini: [
-    18, 21, 19, 24, 26, 23, 29, 31, 28, 34, 36, 33, 39, 42, 38, 45, 47, 44, 50, 53, 49, 56, 59, 55,
-    62, 65, 61, 68, 71, 67,
-  ],
-  Perplexity: [
-    9, 11, 8, 13, 12, 15, 14, 17, 16, 19, 18, 21, 20, 23, 22, 25, 24, 27, 26, 29, 28, 31, 30, 33,
-    32, 35, 34, 37, 36, 39,
-  ],
+  ChatGPT: dailyFor("ChatGPT"),
+  Gemini: dailyFor("Gemini"),
+  Perplexity: dailyFor("Perplexity"),
 };
 
 /**
