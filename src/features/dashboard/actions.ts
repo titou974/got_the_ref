@@ -52,6 +52,7 @@ import {
   writeArticle,
 } from "./service";
 import {
+  approveArticleSchema,
   articleIdSchema,
   autoPublishSchema,
   brandVoiceSchema,
@@ -986,12 +987,20 @@ export const updateArticleAction = authActionClient
     return { ok: true };
   });
 
+/**
+ * Valide un article — et pose sa date de départ si la modale en a fait choisir
+ * une. Sans date, la file ne prendrait jamais l'article : la valider et la
+ * dater sont une seule décision côté client, elles le restent ici.
+ */
 export const approveArticleAction = authActionClient
-  .inputSchema(articleIdSchema)
+  .inputSchema(approveArticleSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { count } = await prisma.article.updateMany({
       where: { id: parsedInput.id, userId: ctx.auth.user.id, body: { not: "" } },
-      data: { status: "approved" },
+      data: {
+        status: "approved",
+        scheduledFor: parsedInput.scheduledFor ? new Date(parsedInput.scheduledFor) : undefined,
+      },
     });
     if (!count) throw new AppError("Article introuvable ou pas encore rédigé.", "NOT_FOUND", 404);
 

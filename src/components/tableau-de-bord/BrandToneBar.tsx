@@ -2,28 +2,34 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ROUTES } from "@/constants/routes";
 
 /**
- * Le ton de la marque, posé au-dessus de l'atelier.
+ * Le ton de la marque, tel qu'il a été relevé.
  *
- * Il est relevé pendant l'analyse du tableau de bord, sur les textes du client :
+ * Il est lu pendant l'analyse du tableau de bord, sur les textes du client :
  * l'article qu'il a désigné, un article trouvé dans le crawl de son site, ou à
  * défaut sa page d'accueil. La pastille de couleur vient du même relevé — celle
- * des boutons de son site, ou celle que sa charte déclare. Il est en tête
- * de l'écran, avant le plan et avant le texte, parce que c'est la contrainte qui
- * s'applique à tout ce qui suit — la relire avant de corriger un paragraphe
- * évite de demander trois fois la même reprise.
+ * des boutons de son site, ou celle que sa charte déclare.
  *
- * Les consignes ajoutées depuis la page Articles s'affichent à côté : elles
- * corrigent le ton relevé, elles ne l'effacent pas.
+ * Il vivait en tête de l'atelier d'article, au-dessus du texte. L'atelier ne
+ * garde plus que ce qui s'y décide — la date de départ et l'enregistrement — et
+ * le ton est remonté dans les réglages, contre le formulaire qui l'amende. Le
+ * relevé et les consignes s'y lisent côte à côte, à l'endroit où l'on écrit les
+ * secondes : elles corrigent le premier, elles ne l'effacent pas.
  */
 export function BrandToneBar({
   tone,
   voice,
+  editHref = null,
 }: {
   tone: { summary: string | null; color: string | null; sampleUrl: string | null };
   voice: { instructions: string; banned: string[] } | null;
+  /**
+   * Où l'on va corriger le ton. Nul quand la carte est déjà posée sur cet
+   * écran-là : un lien qui recharge la page où l'on se trouve ne fait rien de
+   * visible, et laisse croire qu'on a raté quelque chose.
+   */
+  editHref?: string | null;
 }) {
   const t = useTranslations("dashboard.article.tone");
 
@@ -45,12 +51,14 @@ export function BrandToneBar({
             <p className="mt-0.5 text-sm text-muted">{t("hint")}</p>
           </div>
         </div>
-        <Link
-          href={ROUTES.dashboardArticles}
-          className="shrink-0 cursor-pointer text-sm font-medium text-text underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:decoration-obsidian"
-        >
-          {t("edit")}
-        </Link>
+        {editHref ? (
+          <Link
+            href={editHref}
+            className="shrink-0 cursor-pointer text-sm font-medium text-text underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:decoration-obsidian"
+          >
+            {t("edit")}
+          </Link>
+        ) : null}
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">

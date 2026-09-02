@@ -278,6 +278,16 @@ export type PublishPlan = {
   queued: number;
   /** Validés et rédigés qui attendent un rattachement pour bouger. */
   blocked: number;
+  /**
+   * Articles rédigés que le client n'a pas encore validés.
+   *
+   * C'est la seule chose qu'on lui demande sur cette page : le reste se fait
+   * sans lui. Le compte est donc affiché en haut, à côté du prochain départ, et
+   * mène directement au premier de la pile.
+   */
+  toApprove: number;
+  /** Le premier de cette pile, pour que le compteur ouvre quelque chose. */
+  firstToApprove: string | null;
   autoPublish: boolean;
   /** Un site est rattaché et vérifié — sans dire ce qu'il autorise. */
   linked: boolean;
@@ -285,8 +295,13 @@ export type PublishPlan = {
   canPublish: boolean;
 };
 
+/** Les articles rédigés qui attendent la validation du client. */
+function reviewFilter(userId: string) {
+  return { userId, publishedAt: null, status: "drafted", body: { not: "" } } as const;
+}
+
 export async function getPublishPlan(userId: string): Promise<PublishPlan> {
-  const [link, next, queued, blocked] = await Promise.all([
+  const [link, next, queued, blocked, toApprove, firstToApprove] = await Promise.all([
     prisma.siteConnection.findUnique({
       where: { userId },
       select: { status: true, capabilities: true, autoPublish: true },
@@ -310,6 +325,15 @@ export async function getPublishPlan(userId: string): Promise<PublishPlan> {
         NOT: departureFilter(),
       },
     }),
+    // Ce qui attend une signature : rédigé, jamais validé, jamais déposé. Le
+    // pilote automatique ne change pas ce compte — il change ce que la file
+    // s'autorise à prendre, pas ce que le client a relu.
+    prisma.article.count({ where: reviewFilter(userId) }),
+    prisma.article.findFirst({
+      where: reviewFilter(userId),
+      orderBy: [{ scheduledFor: "asc" }, { createdAt: "asc" }],
+      select: { id: true },
+    }),
   ]);
 
   return {
@@ -321,6 +345,8 @@ export async function getPublishPlan(userId: string): Promise<PublishPlan> {
       : null,
     queued,
     blocked,
+    toApprove,
+    firstToApprove: firstToApprove?.id ?? null,
     autoPublish: link?.autoPublish ?? false,
     linked: link?.status === "connected",
     canPublish: link?.status === "connected" && link.capabilities.includes("publish"),

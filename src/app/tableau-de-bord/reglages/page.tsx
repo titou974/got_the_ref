@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { Divider } from "@/components/tableau-de-bord/Field";
 import { SettingsForm } from "@/components/tableau-de-bord/SettingsForm";
 import { SiteConnectionPanel } from "@/components/tableau-de-bord/SiteConnectionPanel";
+import { AutoPublishChoice } from "@/components/tableau-de-bord/AutoPublishChoice";
+import { BrandToneBar } from "@/components/tableau-de-bord/BrandToneBar";
 
 /**
  * Le libellé d'offre affiché dans les réglages.
@@ -85,6 +87,18 @@ export default async function SettingsPage() {
         toneBanned={voice?.banned ?? []}
       />
 
+      {/* Ce que les agents ont relevé de votre manière d'écrire, contre le
+          formulaire qui l'amende. La carte était en tête de l'atelier
+          d'article ; elle y répétait à chaque ouverture une contrainte qu'on
+          pose une fois. Ici, le relevé et les consignes se lisent côte à côte,
+          à l'endroit où l'on écrit les secondes. */}
+      <div className="mt-6">
+        <BrandToneBar
+          tone={context.tone}
+          voice={voice ? { instructions: voice.instructions, banned: voice.banned } : null}
+        />
+      </div>
+
       <Divider className="my-12" />
 
       <SiteConnectionPanel
@@ -106,6 +120,17 @@ export default async function SettingsPage() {
         suggestedSiteUrl={context.siteUrl ?? (context.domain ? `https://${context.domain}` : null)}
         credentialsKeyReady={isCredentialsKeySet()}
       />
+
+      {/* Le pilote automatique se règle sous la porte qu'il commande, et non
+          plus en tête de la page Articles : c'est un consentement qu'on donne
+          une fois, pas une décision qu'on reprend à chaque planning. Il n'a de
+          sens que si le site accepte le dépôt — sinon rien ne part, coché ou
+          non. */}
+      {context.site?.status === "connected" && context.site.capabilities.includes("publish") ? (
+        <div className="mt-6">
+          <AutoPublishChoice enabled={context.site.autoPublish} />
+        </div>
+      ) : null}
     </>
   );
 }
