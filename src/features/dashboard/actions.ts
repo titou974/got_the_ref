@@ -41,6 +41,7 @@ import {
   type AccessTier,
 } from "@/constants/access";
 import { getAccess, requireSection } from "@/features/billing/access";
+import { detectBrandIdentity } from "@/features/onboarding/service";
 import { parseOutline, serializeOutline } from "./outline";
 import {
   draftOutreachMessage,
@@ -119,6 +120,67 @@ const revalidateDashboard = () => {
  * donc refaite une fois, à son nouveau niveau, et remplace la précédente.
  * Ensuite elle est de nouveau à jour, et plus rien ne repart.
  */
+/**
+ * Le ton de la marque et sa couleur, relevés une fois, sous abonnement.
+ *
+ * Cette lecture-là ne se vend pas à l'unité : elle ne sert que là où des textes
+ * sortent en continu au nom du client — les articles, les réécritures on-page,
+ * les posts. Un compte gratuit n'en publie aucun, et un Coup de Boost a déjà
+ * ses dix articles écrits quand la question se poserait. La question n'est donc
+ * posée qu'au niveau « Tout-en-un » : ailleurs, on ne paie pas un appel dont
+ * personne ne lira le résultat.
+ *
+ * D'où le fait qu'elle vive ici, dans l'analyse du tableau de bord, et pas dans
+ * le tunnel d'accueil. Un client qui ouvre un compte gratuit puis s'abonne trois
+ * semaines plus tard ne repasse pas par l'accueil ; il repasse en revanche par
+ * cette analyse, refaite une fois au niveau qu'il vient d'acheter. Le ton se
+ * relève donc au moment exact où il devient utile, sans lui redemander quoi que
+ * ce soit.
+ *
+ * Best-effort de bout en bout : un site injoignable ou un modèle muet rend le
+ * ton déjà en base (souvent `null`), et l'audit continue. Rien de ce qui est
+ * ici ne vaut de faire échouer l'analyse que le client attend à l'écran.
+ */
+async function ensureBrandIdentity(
+  userId: string,
+  tier: AccessTier,
+  profile: {
+    siteUrl: string | null;
+    toneSummary: string | null;
+    toneSampleUrl: string | null;
+    brandColor: string | null;
+  },
+): Promise<string | null> {
+  if (!tierAtLeast(tier, "allin")) return profile.toneSummary;
+
+  // Déjà relevés : la voix d'une marque ne change pas d'une analyse à l'autre,
+  // et la relire à chaque remesure serait un appel de modèle pour rien.
+  if (profile.toneSummary && profile.brandColor) return profile.toneSummary;
+
+  try {
+    const brand = await detectBrandIdentity({
+      siteUrl: profile.siteUrl,
+      sampleUrl: profile.toneSampleUrl,
+    });
+
+    // Écriture champ par champ : une seconde passe qui ne retrouve que la
+    // couleur ne doit pas effacer le ton relevé à la première.
+    const data = {
+      ...(brand.tone ? { toneSummary: brand.tone } : {}),
+      ...(brand.color ? { brandColor: brand.color } : {}),
+      ...(brand.sourceUrl ? { toneSampleUrl: brand.sourceUrl } : {}),
+    };
+    if (Object.keys(data).length > 0) {
+      await prisma.onboardingProfile.update({ where: { userId }, data });
+    }
+
+    return brand.tone ?? profile.toneSummary;
+  } catch (err) {
+    console.error("Relevé du ton de marque échoué :", err);
+    return profile.toneSummary;
+  }
+}
+
 export const prepareDashboardAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
@@ -133,6 +195,8 @@ export const prepareDashboardAction = authActionClient
         niche: true,
         cities: true,
         toneSummary: true,
+        toneSampleUrl: true,
+        brandColor: true,
       },
     });
 
@@ -166,6 +230,7 @@ export const prepareDashboardAction = authActionClient
     }
 
     const mode = profile.businessKind === "online" ? "online" : "physical";
+    const brandTone = await ensureBrandIdentity(userId, tier, profile);
     const signals = await collectSignals(profile.siteUrl);
 
     const result = await analyzeSite(
@@ -177,10 +242,10 @@ export const prepareDashboardAction = authActionClient
         mapsUrl: profile.mapsUrl ?? null,
         declaredNiche: profile.niche,
         declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
-        // L'étape « tonalité » précède le tableau de bord : quand elle a
-        // abouti, les correctifs on-page de l'audit sont écrits dans la voix du
-        // client, pas dans celle d'un modèle.
-        brandTone: profile.toneSummary,
+        // Relevé juste au-dessus sous abonnement : les correctifs on-page de
+        // l'audit sont alors écrits dans la voix du client, pas dans celle d'un
+        // modèle. En gratuit il n'y en a pas, et ils restent neutres.
+        brandTone,
       },
       "paid",
     );
