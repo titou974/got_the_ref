@@ -10,7 +10,10 @@ import { buildDemoAiTraffic } from "@/features/dashboard/demoTraffic";
 import { buildDiagnostic, type AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import type { Recommendation } from "@/lib/geo/types";
+import { getAnalysisProgress, getRefreshState } from "@/features/dashboard/progress";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
+import { AnalysisProgressCard } from "@/components/tableau-de-bord/AnalysisProgressCard";
+import { AnalysisRefreshBanner } from "@/components/tableau-de-bord/AnalysisRefreshBanner";
 import { AiTrafficCard } from "@/components/tableau-de-bord/AiTrafficCard";
 import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 import { DashboardNotices } from "@/components/tableau-de-bord/DashboardNotices";
@@ -101,9 +104,15 @@ export default async function DashboardHomePage() {
   //
   // Les articles, eux, sont relus pour tout le monde : le calendrier est ouvert
   // à tous les niveaux, et c'est une lecture en base, pas un appel de modèle.
-  const [traffic, articles] = await Promise.all([
+  // La reprise quotidienne et son résultat : l'état du bouton d'un côté, ce qui
+  // a bougé depuis la mesure précédente de l'autre. Deux lectures en base, sans
+  // aucun appel de modèle — elles partent donc pour tout le monde, comme les
+  // articles.
+  const [traffic, articles, refresh, progress] = await Promise.all([
     sees("traffic") ? fetchAiTraffic(user.id, 30) : null,
     listArticles(user.id),
+    getRefreshState(user.id, context.domain),
+    getAnalysisProgress(user.id),
   ]);
 
   // Le plan d'action se coupe en deux sur un compte gratuit : les correctifs de
@@ -136,8 +145,19 @@ export default async function DashboardHomePage() {
 
   return (
     <>
-      {/* Ce qui se dit avant la première carte, et seulement sur téléphone : le
-          relevé du jour, et l'écran où le produit se lit le mieux. */}
+      {/* 0. La reprise du jour, avant tout le reste : c'est le geste qui rend
+             vrai ce qui suit. Tout ce que le client lit plus bas — sa note, son
+             plan d'action, son diagnostic — date de la dernière mesure, et le
+             bandeau est l'endroit où il la refait. */}
+      <AnalysisRefreshBanner
+        tier={tier}
+        availableToday={refresh.availableToday}
+        lastRefreshedAt={refresh.lastRefreshedAt?.toISOString() ?? null}
+        progressHref={progress ? "#progression" : undefined}
+      />
+
+      {/* Ce qui se dit avant la première carte, et seulement sur téléphone :
+          l'écran où le produit se lit le mieux. */}
       <DashboardNotices tier={tier} />
 
       <PageHeader />
@@ -193,6 +213,14 @@ export default async function DashboardHomePage() {
         diagnostic={diagnostic}
         scope={tierAtLeast(tier, "boost") ? "dashboard" : "free"}
       />
+
+      {/* 2 bis. Ce que la dernière reprise a fait bouger. Collé au constat, et
+             pas relégué en bas de page : le client vient de lire sa note, la
+             question suivante est « est-ce que je monte ? ». La carte ne paraît
+             qu'à partir de la deuxième mesure — avant, il n'y a rien à
+             comparer. Elle est ouverte à tous les niveaux : c'est une lecture
+             en base, et la progression est ce qui donne envie de continuer. */}
+      {progress ? <AnalysisProgressCard progress={progress} /> : null}
 
       {/* 3. Sur quoi et où nous l'avons interrogé. Les classements qui suivent
              ne veulent rien dire sans ces deux mots-là : c'est la requête

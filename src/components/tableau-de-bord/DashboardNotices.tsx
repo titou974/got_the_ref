@@ -1,45 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
-import { RiCalendarCheckLine, RiCloseLine, RiComputerLine } from "@remixicon/react";
-import { refreshRankingsAction } from "@/features/dashboard/actions";
+import { RiCloseLine, RiComputerLine } from "@remixicon/react";
 import { tierAtLeast, type AccessTier } from "@/constants/access";
 
 /**
- * Les deux mots posés en haut du tableau de bord, sur téléphone seulement.
+ * Le mot posé en haut du tableau de bord, sur téléphone seulement.
  *
- * Sur un grand écran, ils n'ont rien à dire : les classements y sont déjà côte
- * à côte, et le bouton de relevé est visible sans faire défiler. Sur téléphone,
- * les deux manquent, et c'est là qu'un mot vaut la place qu'il prend.
+ * Il ne s'adresse qu'aux comptes gratuits, ceux qui découvrent l'écran : il dit
+ * où le produit se lit le mieux et laisse repartir en un lien. Refusé une fois,
+ * il ne revient pas — ce n'est pas un rappel, c'est un conseil.
  *
- * Le premier rappelle le geste qui fait vivre le produit : relever sa position
- * tous les jours. Il revient chaque jour, et c'est voulu — un rappel quotidien
- * rangé après un seul refus ne rappelle plus rien. Une fois traité, il se tait
- * jusqu'au lendemain.
- *
- * Il ne s'adresse qu'aux comptes qui peuvent réellement le suivre : les comptes
- * de démonstration et l'abonnement Tout-en-un. Un relevé quotidien n'a de sens
- * que si les moteurs sont tous interrogés et que rien ne s'arrête au bout d'une
- * semaine ; le proposer à un compte gratuit ou à une passe de Coup de Boost,
- * c'est vendre une habitude que l'offre ne tient pas.
- *
- * Le second ne s'adresse qu'aux comptes gratuits, ceux qui découvrent l'écran :
- * il dit où le produit se lit le mieux et laisse repartir en un lien. Refusé
- * une fois, il ne revient pas — ce n'est pas un rappel, c'est un conseil.
+ * Le rappel quotidien qui l'accompagnait a été retiré : il relançait les seuls
+ * classements, sous le même mot — « relancer l'analyse » — que le bandeau de
+ * reprise posé depuis en tête d'écran (`AnalysisRefreshBanner`), qui refait
+ * l'audit entier. Deux boutons voisins portant la même promesse et ne faisant
+ * pas la même chose, c'est un de trop ; le relevé des classements garde le sien,
+ * au-dessus des cartes de moteurs.
  */
-const DAILY_KEY = "gotref:notice:daily";
 const DESKTOP_KEY = "gotref:notice:desktop:v1";
 
 /** Le temps que la page se pose avant que les mots ne montent. */
 const APPEAR_MS = 320;
-
-/** La journée en cours, en clé de stockage : « 2026-08-31 ». */
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function read(key: string): string | null {
   try {
@@ -63,42 +46,27 @@ export function DashboardNotices({ tier }: { tier: AccessTier }) {
   // Le premier rendu ne montre rien : ce que le navigateur a retenu ne se lit
   // qu'après hydratation, et deviner ici donnerait deux balisages différents.
   const [mounted, setMounted] = useState(false);
-  const [showDaily, setShowDaily] = useState(false);
   const [showDesktop, setShowDesktop] = useState(false);
 
   const free = !tierAtLeast(tier, "boost");
-  // Le relevé quotidien ne se propose qu'aux niveaux qui l'exécutent en entier
-  // et dans la durée : l'abonnement Tout-en-un, et les comptes de
-  // démonstration qui passent devant lui (cf. `RANK` dans `constants/access`).
-  const daily = tierAtLeast(tier, "allin");
 
   useEffect(() => {
     // Le mot se pose une fois la page arrivée, plutôt que de sauter au premier
     // rendu : sur téléphone, un bloc qui apparaît sous le doigt pendant qu'on
     // commence à faire défiler déplace tout ce qu'on lisait.
     const timer = setTimeout(() => {
-      setShowDaily(daily && read(DAILY_KEY) !== today());
       setShowDesktop(read(DESKTOP_KEY) !== "1");
       setMounted(true);
     }, APPEAR_MS);
 
     return () => clearTimeout(timer);
-  }, [daily]);
+  }, []);
 
   if (!mounted) return null;
-  if (!showDaily && !(free && showDesktop)) return null;
+  if (!(free && showDesktop)) return null;
 
   return (
     <div className="space-y-3 lg:hidden">
-      {showDaily && (
-        <DailyNotice
-          onDismiss={() => {
-            write(DAILY_KEY, today());
-            setShowDaily(false);
-          }}
-        />
-      )}
-
       {free && showDesktop && (
         <DesktopNotice
           onDismiss={() => {
@@ -108,49 +76,6 @@ export function DashboardNotices({ tier }: { tier: AccessTier }) {
         />
       )}
     </div>
-  );
-}
-
-/** Relancer le relevé, depuis le haut de l'écran. */
-function DailyNotice({ onDismiss }: { onDismiss: () => void }) {
-  const t = useTranslations("dashboard.notices");
-  const router = useRouter();
-
-  const { execute, isPending } = useAction(refreshRankingsAction, {
-    onSuccess: () => {
-      onDismiss();
-      router.refresh();
-    },
-  });
-
-  return (
-    <NoticeCard
-      icon={<RiCalendarCheckLine className="size-4" aria-hidden />}
-      title={t("dailyTitle")}
-      body={t("dailyBody")}
-      onDismiss={onDismiss}
-      action={
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => execute({})}
-          className="inline-flex cursor-pointer items-center justify-center rounded-pill bg-cta px-4 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:bg-ash disabled:shadow-none"
-        >
-          {isPending ? t("dailyPending") : t("dailyCta")}
-        </button>
-      }
-      secondary={
-        isPending ? null : (
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="cursor-pointer text-sm font-medium text-muted underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:text-text"
-          >
-            {t("dailyLater")}
-          </button>
-        )
-      }
-    />
   );
 }
 
