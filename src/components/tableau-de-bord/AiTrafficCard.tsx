@@ -22,6 +22,7 @@ export function AiTrafficCard({
   demo,
   domain,
   veiled = false,
+  showcase = false,
   overlay,
 }: {
   report: AiTrafficReport | null;
@@ -33,14 +34,25 @@ export function AiTrafficCard({
    * les totaux s'écrivent « X » et la courbe se floute.
    */
   veiled?: boolean;
+  /**
+   * Le compte de démonstration : la courbe d'exemple passe devant le rapport,
+   * et se montre finie — sans bandeau ni panneau de rattachement.
+   */
+  showcase?: boolean;
   /** L'appel de l'offre, posé par-dessus la courbe floutée. */
   overlay?: React.ReactNode;
 }) {
   const t = useTranslations("dashboard.traffic");
 
-  if (!report) {
+  if (!report || showcase) {
     return (
-      <AiTrafficDemoCard demo={demo} domain={domain} veiled={veiled} overlay={overlay} />
+      <AiTrafficDemoCard
+        demo={demo}
+        domain={domain}
+        veiled={veiled}
+        showcase={showcase}
+        overlay={overlay}
+      />
     );
   }
 
