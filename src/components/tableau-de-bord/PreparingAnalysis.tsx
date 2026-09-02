@@ -68,7 +68,12 @@ import {
  * cette attente. On procède par degrés, du plus doux au plus brutal.
  *
  * 1. On demande au serveur s'il est prêt (`dashboardReadyAction`) plutôt que de
- *    le supposer. Tant qu'il dit non, on redemande toutes les deux secondes.
+ *    le supposer, et on le demande dès l'ouverture de l'écran, pas seulement une
+ *    fois le travail rendu. C'est la seule façon de rattraper le cas où l'analyse
+ *    est bel et bien écrite — le courriel de fin est parti — mais où la réponse
+ *    de l'audit n'est jamais revenue au navigateur : sans cette sonde, rien ne
+ *    déclenche la suite et l'écran attend jusqu'à ce que le client recharge.
+ *    Tant qu'il dit non, on redemande toutes les deux secondes.
  * 2. Dès qu'il dit oui, `router.refresh()` rejoue le rendu serveur ; la page
  *    d'accueil prend la place de ce composant, qui se démonte.
  * 3. Si six secondes plus tard ce composant est toujours monté, c'est que le
@@ -104,6 +109,20 @@ const READY_POLL_MS = 2000;
 const HARD_RELOAD_MS = 6000;
 /** Au-delà, on cesse d'insister et on passe la main au client. */
 const SETTLE_TIMEOUT_MS = 60_000;
+
+/**
+ * Le serveur dit avoir l'analyse : ce qu'on laisse encore à la passe en cours
+ * avant de rendre la main.
+ *
+ * Rien en vol — la réponse de l'audit s'est perdue en route —, quinze secondes
+ * suffisent à écarter la simple latence réseau, puis on lance la planification
+ * nous-mêmes et on ouvre le tableau de bord : le serveur, lui, a fini. Une passe
+ * de planification réellement en cours a droit à trois minutes, parce qu'elle
+ * écrit des articles ; passé ce délai on ouvre quand même, la rédaction se
+ * poursuit côté serveur et le calendrier se remplira sans public.
+ */
+const READY_GRACE_MS = 15_000;
+const SEED_GRACE_MS = 180_000;
 
 /**
  * Le rechargement forcé n'a lieu qu'une fois par session de navigation.
@@ -153,6 +172,8 @@ export function PreparingAnalysis({
 
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
+  /** Le serveur a l'analyse, que le navigateur l'ait appris ou non. */
+  const [ready, setReady] = useState(false);
   /** Le travail est fini mais le serveur ne l'a pas encore montré. */
   const [stalled, setStalled] = useState(false);
 
@@ -171,8 +192,22 @@ export function PreparingAnalysis({
     onSettled: () => setDone(true),
   });
 
+  // La planification part de deux endroits — la fin de l'audit, ou le garde-fou
+  // qui constate que le serveur a fini sans que la réponse soit revenue. Un seul
+  // départ, quelle que soit la porte : deux passes écriraient deux fois le mois.
+  const seedStarted = useRef(false);
+  const seedRef = useRef(seed.execute);
+  useEffect(() => {
+    seedRef.current = seed.execute;
+  }, [seed.execute]);
+  const startSeed = useCallback(() => {
+    if (seedStarted.current) return;
+    seedStarted.current = true;
+    seedRef.current({});
+  }, []);
+
   const { execute, result, isPending } = useAction(prepareDashboardAction, {
-    onSuccess: () => seed.execute({}),
+    onSuccess: startSeed,
     // L'audit a échoué : on ne lance pas la planification, et l'écran d'erreur
     // prend la main plutôt que de laisser une barre monter dans le vide.
     onError: () => setProgress(0),
@@ -189,7 +224,9 @@ export function PreparingAnalysis({
 
   const relaunch = useCallback(() => {
     markReloaded(false);
+    seedStarted.current = false;
     setDone(false);
+    setReady(false);
     setStalled(false);
     setProgress(0);
     execute({});
@@ -216,6 +253,51 @@ export function PreparingAnalysis({
     }, TICK_MS);
     return () => clearInterval(id);
   }, [seedPending, done]);
+
+  // La sonde de disponibilité tourne dès l'ouverture, sans attendre que le
+  // navigateur apprenne quoi que ce soit. C'est elle qui rattrape le cas où
+  // l'analyse est écrite — le courriel de fin est parti — mais où la réponse de
+  // l'action n'est jamais revenue : le serveur sait, l'écran l'ignore.
+  useEffect(() => {
+    if (ready) return;
+
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const poll = async () => {
+      if (!alive) return;
+      const outcome = await probeRef.current({});
+      if (!alive) return;
+      if (outcome?.data?.ready) {
+        setReady(true);
+        return;
+      }
+      timer = setTimeout(poll, READY_POLL_MS);
+    };
+
+    timer = setTimeout(poll, READY_POLL_MS);
+
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [ready]);
+
+  // Le serveur a l'analyse. On laisse sa chance à la passe en cours, bornée,
+  // puis on rend la main : l'écran d'attente n'a plus rien à faire attendre.
+  // Si aucune planification n'est partie, c'est qu'elle n'est jamais partie —
+  // on la lance ici, et elle finira son mois sans public.
+  useEffect(() => {
+    if (!ready || done) return;
+    const id = setTimeout(
+      () => {
+        startSeed();
+        setDone(true);
+      },
+      seedPending ? SEED_GRACE_MS : READY_GRACE_MS,
+    );
+    return () => clearTimeout(id);
+  }, [ready, done, seedPending, startSeed]);
 
   // Le travail est fini : on négocie la sortie de cet écran, par degrés.
   // Tous les minuteurs meurent avec le composant — s'il est démonté, c'est que
