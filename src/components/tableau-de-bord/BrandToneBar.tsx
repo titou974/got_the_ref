@@ -7,9 +7,10 @@ import { ROUTES } from "@/constants/routes";
 /**
  * Le ton de la marque, posé au-dessus de l'atelier.
  *
- * Il vient du tunnel d'accueil, où il est relevé sur les textes du client :
+ * Il est relevé pendant l'analyse du tableau de bord, sur les textes du client :
  * l'article qu'il a désigné, un article trouvé dans le crawl de son site, ou à
- * défaut sa page d'accueil. Il est en tête
+ * défaut sa page d'accueil. La pastille de couleur vient du même relevé — celle
+ * des boutons de son site, ou celle que sa charte déclare. Il est en tête
  * de l'écran, avant le plan et avant le texte, parce que c'est la contrainte qui
  * s'applique à tout ce qui suit — la relire avant de corriger un paragraphe
  * évite de demander trois fois la même reprise.

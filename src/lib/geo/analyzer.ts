@@ -52,7 +52,11 @@ export type AnalysisContext = {
   declaredNiche?: string | null;
   declaredLocation?: string | null;
   /**
-   * La manière d'écrire relevée à l'étape « tonalité » de l'accueil.
+   * La manière d'écrire du client, relevée sur ses propres textes.
+   *
+   * Elle n'existe que sous abonnement « Tout-en-un » : c'est là qu'elle est
+   * lue, juste avant l'audit (cf. `ensureBrandIdentity`). Ailleurs elle vaut
+   * `null` et les correctifs restent dans une voix neutre.
    *
    * Elle n'entre pas dans la notation — un site ne se note pas sur son style —
    * mais elle entre dans les CORRECTIFS : le H1 et le premier paragraphe
