@@ -5,13 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
-import { useEditor, type Editor } from "@tiptap/react";
+import { useEditor } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "@tiptap/markdown";
 import {
-  approveArticleAction,
-  publishArticleAction,
   rejectArticleAction,
   updateArticleAction,
   writeArticleAction,
@@ -19,14 +17,18 @@ import {
 import type { OutlineSection } from "@/features/dashboard/outline";
 import { buildArticlePublishPrompt } from "@/lib/geo/article-publish-prompt";
 import { readHeadings } from "@/lib/article-doc";
+import {
+  PUBLISH_HOUR_IS_CHOSEN,
+  formatPublishTime,
+  preferredPassOnDay,
+  splitPublishInstant,
+} from "@/constants/publishing";
 import { ROUTES } from "@/constants/routes";
-import { BrandToneBar } from "../BrandToneBar";
 import { PublishPromptPanel } from "../PublishPromptPanel";
-import { ScheduleFields } from "../ScheduleFields";
 import { SearchLoader } from "@/components/SearchLoader";
+import { ArticleActionBar } from "./ArticleActionBar";
 import { DocumentCanvas } from "./DocumentCanvas";
 import { OutlineRail } from "./OutlineRail";
-import { useDocumentStructure } from "./useDocumentStructure";
 
 /**
  * L'atelier d'un article.
@@ -39,11 +41,17 @@ import { useDocumentStructure } from "./useDocumentStructure";
  * citations, gras, liens) arrive donc mis en forme, et ressort à
  * l'enregistrement dans le même Markdown, sans passe de reformatage.
  *
- * L'écran tient en trois pièces : la barre de commande, qui dit l'état de
- * l'article et porte les décisions ; le rail de citabilité à gauche, qui lit le
- * plan dans le document et signale les ouvertures de section trop courtes ou
- * trop longues pour être citées ; la feuille à droite, à la mesure de l'article
- * publié.
+ * L'écran tient en trois pièces. En haut, une barre qui ne pose que deux
+ * questions : quel jour l'article part, et enregistre-t-on ce qui vient d'être
+ * écrit. Elle en portait huit — état, compteur de mots, versions, valider,
+ * publier, planifier, préparer, écarter — et le client devait lire une rangée
+ * de boutons avant de lire son texte. Les décisions de départ sont descendues
+ * dans la barre d'action du bas (`ArticleActionBar`), où elles se prennent le
+ * document sous les yeux.
+ *
+ * À gauche, le rail de citabilité, qui lit le plan dans le document et signale
+ * les ouvertures de section trop courtes ou trop longues pour être citées. À
+ * droite, la feuille, à la mesure de l'article publié.
  */
 
 export type EditorArticle = {
@@ -59,27 +67,8 @@ export type EditorArticle = {
   externalUrl: string | null;
 };
 
-/**
- * L'état d'un article, dit par une couleur du système plutôt qu'un mot de plus.
- *
- * Accordé au calendrier (`ArticleMonth`) : le noir plein y signifie « validé, à
- * quai », et il doit signifier la même chose ici. Il était posé sur « rédigé »,
- * ce qui donnait au client deux langages pour un seul planning — le pavé noir
- * du calendrier et la pastille noire de l'atelier ne parlaient pas du même
- * moment.
- */
-const STATUS_CLASS: Record<string, string> = {
-  planned: "bg-mist text-steel",
-  drafted: "bg-mist text-ink ring-1 ring-inset ring-pebble",
-  approved: "bg-obsidian text-white",
-  published: "bg-success/12 text-success",
-  rejected: "bg-mist text-ash line-through",
-};
-
 export function ArticleWorkspace({
   article,
-  tone,
-  voice,
   canPublish,
   locked = false,
   quotaRemaining,
@@ -87,16 +76,14 @@ export function ArticleWorkspace({
   platform,
 }: {
   article: EditorArticle;
-  tone: { summary: string | null; color: string | null; sampleUrl: string | null };
-  voice: { instructions: string; banned: string[] } | null;
   canPublish: boolean;
   /**
    * L'offre du compte n'ouvre pas la rédaction.
    *
    * Le sujet reste lisible — titre, mot-clé, plan : c'est ce qu'on a préparé
    * pour ce client, et le lui cacher n'aurait rien vendu. Ce qui disparaît,
-   * c'est la rangée d'actions : valider, publier, écarter. Un seul bouton la
-   * remplace, vers les tarifs. Les actions correspondantes sont de toute façon
+   * c'est ce qui fait partir l'article : la barre du bas mène alors aux tarifs,
+   * et le bouton de rédaction avec elle. Les actions correspondantes sont de toute façon
    * refusées côté serveur (`requireSection`) ; ce verrou-ci évite au client de
    * les découvrir par un message d'erreur.
    */
@@ -129,10 +116,20 @@ export function ArticleWorkspace({
   // pour un bouton que la plupart des visites ne touchent pas.
   const [publishPrompt, setPublishPrompt] = useState<string | null>(null);
 
-  // Le calendrier de la barre de commande, replié tant qu'on ne le demande pas :
-  // ouvrir l'atelier sur deux champs de date détournerait l'œil du texte, qui
-  // est ce qu'on vient y faire.
-  const [scheduling, setScheduling] = useState(false);
+  /**
+   * Le jour de départ, tel que la barre du haut le montre.
+   *
+   * Il vit dans le même enregistrement que le texte : un article se relit, se
+   * corrige et se date d'un seul geste, et deux boutons « enregistrer » pour
+   * une seule page auraient demandé au client de deviner lequel garde quoi.
+   *
+   * Vide tant que le sujet n'est pas daté — le champ reste alors vide plutôt
+   * que de proposer aujourd'hui, ce qui daterait par inadvertance un sujet que
+   * personne n'a encore programmé.
+   */
+  const [day, setDay] = useState(
+    () => (article.scheduledFor ? splitPublishInstant(article.scheduledFor).day : ""),
+  );
 
   const editor = useEditor({
     // Le rendu part du client : côté serveur, ProseMirror n'a pas de DOM et la
@@ -164,8 +161,9 @@ export function ArticleWorkspace({
       router.refresh();
     },
   });
-  const approve = useAction(approveArticleAction, { onSuccess: () => router.refresh() });
-  const publish = useAction(publishArticleAction, { onSuccess: () => router.refresh() });
+  // Valider et publier sont portés par la barre du bas, qui tient leurs
+  // fenêtres de confirmation. Écarter reste ici : c'est l'atelier qui sait si
+  // une autre action est déjà en cours.
   const reject = useAction(rejectArticleAction, { onSuccess: () => router.refresh() });
 
   const write = useAction(writeArticleAction, {
@@ -182,15 +180,10 @@ export function ArticleWorkspace({
     },
   });
 
-  const busy =
-    write.isPending || save.isPending || approve.isPending || publish.isPending || reject.isPending;
+  const busy = write.isPending || save.isPending || reject.isPending;
 
   const error =
-    write.result.serverError ??
-    save.result.serverError ??
-    approve.result.serverError ??
-    publish.result.serverError ??
-    reject.result.serverError;
+    write.result.serverError ?? save.result.serverError ?? reject.result.serverError;
 
   // Le plan enregistré est celui du document : les titres tels qu'ils sont
   // écrits au moment de l'enregistrement, chacun avec sa consigne. Il est relu
@@ -216,8 +209,12 @@ export function ArticleWorkspace({
       title,
       body: editor.getMarkdown() || " ",
       outline: outlineOf(),
+      // Le jour choisi vaut le passage de ce jour-là : la file ne repasse
+      // qu'une fois, et c'est elle qui fixe l'heure. Un champ laissé vide
+      // n'efface pas la date déjà posée — il ne dit rien.
+      scheduledFor: day ? preferredPassOnDay(day) : undefined,
     });
-  }, [editor, save, article.id, title, outlineOf]);
+  }, [editor, save, article.id, title, outlineOf, day]);
 
   const persistRef = useRef(persist);
   useEffect(() => {
@@ -261,144 +258,58 @@ export function ArticleWorkspace({
 
   return (
     <div className="space-y-4">
-      <BrandToneBar tone={tone} voice={voice} />
-
-      {/* Barre de commande : l'état de l'article à gauche, ce qu'on peut en
-          décider à droite. Elle ne bouge pas quand on descend dans le texte. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card-compact border border-border bg-surface px-5 py-3.5">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <span
-            className={`rounded-pill px-2.5 py-1 text-[11px] font-semibold ${
-              STATUS_CLASS[article.status] ?? "bg-mist text-steel"
-            }`}
-          >
-            {t(`status.${article.status}`)}
+      {/* La barre du haut : le jour de départ, et l'enregistrement. Rien
+          d'autre. Publier et valider se décident en bas de l'écran, une fois le
+          texte lu — les poser ici demandait de trancher avant d'avoir lu. */}
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-card-compact border border-border bg-surface px-5 py-4">
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-steel">
+            {t("departureDay")}
           </span>
-          {editor ? <WordCount editor={editor} /> : null}
-          <span
-            className={`flex items-center gap-1.5 text-[12px] ${dirty ? "text-warning" : "text-muted"}`}
-          >
-            <span
-              aria-hidden
-              className={`size-1.5 rounded-pill ${dirty ? "bg-warning" : "bg-success"}`}
-            />
-            {dirty ? t("unsaved") : t("savedState")}
-          </span>
-          {article.revisions > 0 ? (
-            <span className="text-[12px] text-muted">
-              {t("revisions")} : {article.revisions}
-            </span>
-          ) : null}
-        </div>
+          <input
+            type="date"
+            value={day}
+            disabled={locked}
+            onChange={(event) => {
+              setDay(event.target.value);
+              setDirty(true);
+            }}
+            className="h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 text-sm text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 disabled:cursor-not-allowed disabled:opacity-60"
+          />
+        </label>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
+          {/* L'heure est annoncée, pas demandée : la file ne repasse qu'une
+              fois par jour, et un sélecteur d'heure promettrait une maîtrise
+              que le service n'a pas. */}
+          {PUBLISH_HOUR_IS_CHOSEN ? null : (
+            <p className="text-[13px] text-muted">
+              {t("fixedHour", { time: formatPublishTime(new Date(preferredPassOnDay(day || todayInParis()))) })}
+            </p>
+          )}
+
           {locked ? (
             <Link
               href={ROUTES.pricing}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
+              className="inline-flex cursor-pointer items-center rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
             >
               {t("unlockToPublish")}
             </Link>
-          ) : null}
-
-          {locked ? null : (
-          <button
-            type="button"
-            disabled={busy || !editor}
-            onClick={persist}
-            className="cursor-pointer rounded-pill border border-graphite px-4 py-2 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist disabled:opacity-60"
-          >
-            {save.isPending ? t("saving") : t("save")}
-          </button>
+          ) : (
+            /* Un seul bouton, dont l'état dit tout : « Enregistrer » tant qu'il
+               reste quelque chose à garder, « Enregistré » sinon. La pastille
+               de couleur et la phrase « modifications non enregistrées »
+               disaient la même chose une deuxième fois. */
+            <button
+              type="button"
+              disabled={busy || !editor || !dirty}
+              onClick={persist}
+              className="cursor-pointer rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover disabled:cursor-default disabled:bg-mist disabled:text-steel disabled:shadow-none"
+            >
+              {save.isPending ? t("saving") : dirty ? t("save") : t("savedState")}
+            </button>
           )}
-
-          {!locked && article.status === "drafted" ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => approve.execute({ id: article.id })}
-              className="cursor-pointer rounded-pill bg-obsidian px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
-            >
-              {t("approve")}
-            </button>
-          ) : null}
-
-          {!locked && article.status === "approved" && canPublish ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => publish.execute({ id: article.id })}
-              className="cursor-pointer rounded-pill bg-obsidian px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
-            >
-              {publish.isPending ? t("publishing") : t("publishNow")}
-            </button>
-          ) : null}
-
-          {/* Planifier reste ouvert dès qu'il y a une date à poser, pas
-              seulement sur un article validé : le client date souvent son sujet
-              avant de le faire écrire, et lui refuser le calendrier tant que le
-              texte n'existe pas l'obligerait à revenir. Publié, en revanche, il
-              n'y a plus de départ à venir. */}
-          {!locked && article.status !== "published" && article.status !== "rejected" ? (
-            <button
-              type="button"
-              onClick={() => setScheduling((open) => !open)}
-              aria-expanded={scheduling}
-              className="cursor-pointer rounded-pill border border-graphite px-4 py-2 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist"
-            >
-              {t("schedule")}
-            </button>
-          ) : null}
-
-          {/* Site non rattaché : rien ne peut être déposé d'ici. Le geste change
-              donc de nom en même temps que de nature — il prépare le prompt qui
-              publiera, il ne publie pas. */}
-          {!locked && article.status === "approved" && !canPublish ? (
-            <button
-              type="button"
-              disabled={busy || !editor}
-              onClick={() =>
-                setPublishPrompt(
-                  buildArticlePublishPrompt({
-                    title,
-                    keyword: article.keyword,
-                    excerpt: article.excerpt,
-                    body: editor?.getMarkdown() ?? article.body,
-                    scheduledFor: article.scheduledFor,
-                    domain,
-                    platform,
-                  }),
-                )
-              }
-              className="cursor-pointer rounded-pill bg-obsidian px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:opacity-60"
-            >
-              {t("preparePublish")}
-            </button>
-          ) : null}
-
-          {!locked && article.status !== "published" ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => reject.execute({ id: article.id })}
-              className="cursor-pointer text-sm text-muted underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:text-danger"
-            >
-              {t("drop")}
-            </button>
-          ) : null}
         </div>
-
-        {/* Le formulaire s'ouvre dans la barre, sous les boutons : la date qu'on
-            pose est une décision de la barre de commande, pas un écran à part. */}
-        {scheduling ? (
-          <div className="w-full">
-            <ScheduleFields
-              articleId={article.id}
-              current={article.scheduledFor}
-              onDone={() => setScheduling(false)}
-            />
-          </div>
-        ) : null}
       </div>
 
       {publishPrompt ? <PublishPromptPanel prompt={publishPrompt} /> : null}
@@ -522,19 +433,40 @@ export function ArticleWorkspace({
           )}
         </div>
       </div>
+
+      {/* La barre d'action, au bas de l'écran : ce que devient cet article. Elle
+          prend la place de « résoudre avec les agents IA », qui parle du site
+          entier — sur un article ouvert, la question est celle de cet
+          article-là. */}
+      <ArticleActionBar
+        articleId={article.id}
+        status={article.status}
+        scheduledFor={day ? preferredPassOnDay(day) : article.scheduledFor}
+        hasBody={Boolean(editor ? editor.getText().trim() : article.body.trim())}
+        canPublish={canPublish}
+        locked={locked}
+        domain={domain}
+        onDrop={() => reject.execute({ id: article.id })}
+        dropPending={busy}
+        onPreparePublish={() =>
+          setPublishPrompt(
+            buildArticlePublishPrompt({
+              title,
+              keyword: article.keyword,
+              excerpt: article.excerpt,
+              body: editor?.getMarkdown() ?? article.body,
+              scheduledFor: article.scheduledFor,
+              domain,
+              platform,
+            }),
+          )
+        }
+      />
     </div>
   );
 }
 
-/**
- * La longueur du document, dans la barre de commande.
- *
- * Séparée du reste de l'écran : elle change à chaque frappe, et redessiner la
- * page entière pour un compteur ferait ramer un article de mille mots.
- */
-function WordCount({ editor }: { editor: Editor }) {
-  const t = useTranslations("dashboard.article");
-  const { words } = useDocumentStructure(editor);
-
-  return <span className="text-[12px] tabular-nums text-muted">{t("words", { count: words })}</span>;
+/** Aujourd'hui dans le fuseau de publication, au format du champ de date. */
+function todayInParis(): string {
+  return splitPublishInstant(new Date().toISOString()).day;
 }
