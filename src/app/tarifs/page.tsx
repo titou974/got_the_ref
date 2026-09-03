@@ -17,7 +17,12 @@ import { getDashboardContext } from "@/features/dashboard/queries";
 import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
-import { BOOST, SUBSCRIPTION_PRICE, TRIAL, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
+import {
+  BOOST,
+  SUBSCRIPTION_PRICE,
+  TRIAL,
+  YEARLY_MONTHLY_PRICE,
+} from "@/constants/plans";
 import { SITE } from "@/constants/site";
 import { ANONYMOUS_TRIAL_STATE, getTrialState } from "@/features/billing/trial";
 
@@ -26,7 +31,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("metaTitle"),
     description: t("metaDescription"),
-    keywords: t("keywords").split(",").map((k) => k.trim()),
+    keywords: t("keywords")
+      .split(",")
+      .map((k) => k.trim()),
     alternates: { canonical: ROUTES.pricing },
     openGraph: {
       title: `${t("metaTitle")} · ${SITE.name}`,
@@ -47,7 +54,8 @@ function offersJsonLd() {
       "@context": "https://schema.org",
       "@type": "Product",
       name: `${SITE.name} — Tout-en-un`,
-      description: "Agents IA qui mesurent et corrigent en continu la visibilité d'un site sur ChatGPT, Gemini et Google.",
+      description:
+        "Agents IA qui mesurent et corrigent en continu la visibilité d'un site sur ChatGPT, Gemini et Google.",
       brand: { "@type": "Brand", name: SITE.name },
       offers: [
         {
@@ -187,15 +195,24 @@ export default async function TarifsPage({ searchParams }: Props) {
                   // Venu d'un rapport précis : on le rattache à l'abonnement souscrit.
                   // Pas d'essai sur ce chemin — c'est le rapport qu'on vient ouvrir,
                   // et trois jours de niveau gratuit ne l'ouvriraient pas.
-                  <AnalysisCheckoutButton analysisId={analyse} label={t("plan.cta")} tone="dark" />
+                  <AnalysisCheckoutButton
+                    analysisId={analyse}
+                    label={t("plan.cta")}
+                    tone="dark"
+                  />
                 ) : trial ? (
                   // L'essai : même abonnement, ouvert sur trois jours gratuits.
-                  <TrialCheckoutButton label={t("plan.ctaTrial", { days: TRIAL.days })} />
+                  <TrialCheckoutButton
+                    label={t("plan.ctaTrial", { days: TRIAL.days })}
+                  />
                 ) : (
                   // Sans rapport à rattacher, le bouton part quand même sur Stripe :
                   // renvoyer vers la home faisait reculer d'un cran un visiteur déjà
                   // venu voir le prix.
-                  <SubscriptionCheckoutButton label={t("plan.cta")} tone="dark" />
+                  <SubscriptionCheckoutButton
+                    label={t("plan.cta")}
+                    tone="dark"
+                  />
                 )
               }
             />
@@ -214,7 +231,13 @@ export default async function TarifsPage({ searchParams }: Props) {
                 className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:text-text hover:decoration-obsidian"
               >
                 {t("freeDemoCta")}
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden
+                >
                   <path
                     d="M5 12h14M13 6l6 6-6 6"
                     stroke="currentColor"
@@ -224,18 +247,11 @@ export default async function TarifsPage({ searchParams }: Props) {
                   />
                 </svg>
               </Link>
-              <p className="mt-1.5 text-xs text-muted/80">{t("freeDemoNote")}</p>
             </div>
           )}
-
-          <p className="mt-10 text-sm text-muted">
-            {trial ? t("secureNoteTrial", { days: TRIAL.days }) : t("secureNote")}
-          </p>
         </div>
       </div>
-
       <PricingFaq className="pb-16" />
-
       <Footer />
     </main>
   );
