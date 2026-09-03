@@ -107,7 +107,7 @@ export default async function DashboardHomePage() {
   //
   // Le compte de démonstration ne le lance pas non plus : sa carte montre la
   // courbe d'exemple quoi qu'il arrive, et le rapport partirait à la poubelle.
-  const [traffic, articles] = await Promise.all([
+  const [traffic, articles, refresh, progress] = await Promise.all([
     sees("traffic") && tier !== "demo" ? fetchAiTraffic(user.id, 30) : null,
     listArticles(user.id),
     getRefreshState(user.id, context.domain),
