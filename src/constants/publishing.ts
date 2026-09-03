@@ -143,6 +143,22 @@ export function formatPublishDate(at: Date): string {
   });
 }
 
+/**
+ * La même date, abrégée : « mar. 8 sept. ».
+ *
+ * C'est la forme que porte la barre de l'atelier, où la date partage la ligne
+ * avec le compteur de mots et le bouton d'aperçu : « mardi 8 septembre » y
+ * poussait le reste hors de vue sur un portable.
+ */
+export function formatPublishDateShort(at: Date): string {
+  return at.toLocaleDateString("fr-FR", {
+    timeZone: PUBLISH_TIME_ZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
 /** L'heure d'un départ : « 09:00 », en chiffres qui s'alignent. */
 export function formatPublishTime(at: Date): string {
   return at.toLocaleTimeString("fr-FR", {

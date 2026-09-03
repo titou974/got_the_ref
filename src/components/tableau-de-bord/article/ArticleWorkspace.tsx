@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
-import { useEditor } from "@tiptap/react";
+import { useEditor, type Editor } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "@tiptap/markdown";
@@ -17,21 +17,24 @@ import {
 import type { OutlineSection } from "@/features/dashboard/outline";
 import { buildArticlePublishPrompt } from "@/lib/geo/article-publish-prompt";
 import { readHeadings } from "@/lib/article-doc";
+import { lockScroll } from "@/lib/scroll-lock";
 import {
   PUBLISH_HOUR_IS_CHOSEN,
+  formatPublishDateShort,
   formatPublishTime,
   preferredPassOnDay,
   splitPublishInstant,
 } from "@/constants/publishing";
 import { ROUTES } from "@/constants/routes";
 import { PublishPromptPanel } from "../PublishPromptPanel";
-import { SearchLoader } from "@/components/SearchLoader";
 import { ArticleActionBar } from "./ArticleActionBar";
 import { DocumentCanvas } from "./DocumentCanvas";
 import { OutlineRail } from "./OutlineRail";
+import { RewriteBar } from "./RewriteBar";
+import { useDocumentStructure } from "./useDocumentStructure";
 
 /**
- * L'atelier d'un article.
+ * L'atelier d'un article : un écran entier, rien d'autre dessus.
  *
  * Le corps reste stocké en Markdown — c'est ce que les connecteurs déposent sur
  * le site du client, et la structure que les moteurs de réponse lisent. Mais on
@@ -41,17 +44,24 @@ import { OutlineRail } from "./OutlineRail";
  * citations, gras, liens) arrive donc mis en forme, et ressort à
  * l'enregistrement dans le même Markdown, sans passe de reformatage.
  *
- * L'écran tient en trois pièces. En haut, une barre qui ne pose que deux
- * questions : quel jour l'article part, et enregistre-t-on ce qui vient d'être
- * écrit. Elle en portait huit — état, compteur de mots, versions, valider,
- * publier, planifier, préparer, écarter — et le client devait lire une rangée
- * de boutons avant de lire son texte. Les décisions de départ sont descendues
- * dans la barre d'action du bas (`ArticleActionBar`), où elles se prennent le
- * document sous les yeux.
+ * L'atelier sort du tableau de bord et prend l'écran. Il en occupait la colonne
+ * de contenu, entre la navigation de gauche, le bandeau de titre et la barre des
+ * agents : la feuille finissait à quarante pour cent de la largeur, et un
+ * article de mille mots se lisait dans une fenêtre. Écrire est un travail à part
+ * — le seul du produit qui demande de rester concentré sur un texte — et il
+ * mérite qu'on ferme le reste. La sortie est nommée en haut à gauche, elle est
+ * la première chose de l'écran.
  *
- * À gauche, le rail de citabilité, qui lit le plan dans le document et signale
- * les ouvertures de section trop courtes ou trop longues pour être citées. À
- * droite, la feuille, à la mesure de l'article publié.
+ * Trois zones, et une décision. En haut, une barre sombre : la sortie, l'état
+ * d'enregistrement, le jour de départ au centre, la longueur du texte et
+ * l'aperçu. À gauche, le sommaire, qui lit le plan dans le document et mesure la
+ * citabilité de chaque ouverture. Au milieu, la feuille, à la mesure de
+ * l'article publié, avec ses outils en marge. En bas, une seule pilule : ce que
+ * devient cet article.
+ *
+ * Sur téléphone, la même chose sans le rail : la barre du haut se fait claire,
+ * le sommaire passe dans un tiroir, et les gestes tiennent au pouce en bas de
+ * l'écran.
  */
 
 export type EditorArticle = {
@@ -83,9 +93,9 @@ export function ArticleWorkspace({
    * Le sujet reste lisible — titre, mot-clé, plan : c'est ce qu'on a préparé
    * pour ce client, et le lui cacher n'aurait rien vendu. Ce qui disparaît,
    * c'est ce qui fait partir l'article : la barre du bas mène alors aux tarifs,
-   * et le bouton de rédaction avec elle. Les actions correspondantes sont de toute façon
-   * refusées côté serveur (`requireSection`) ; ce verrou-ci évite au client de
-   * les découvrir par un message d'erreur.
+   * et le champ de reprise avec elle. Les actions correspondantes sont de toute
+   * façon refusées côté serveur (`requireSection`) ; ce verrou-ci évite au
+   * client de les découvrir par un message d'erreur.
    */
   locked?: boolean;
   /** Rédactions encore disponibles cette semaine, lues à l'ouverture de la page. */
@@ -102,6 +112,13 @@ export function ArticleWorkspace({
   const [dirty, setDirty] = useState(false);
   const [instruction, setInstruction] = useState("");
   const [remaining, setRemaining] = useState(quotaRemaining);
+
+  /** L'aperçu : la feuille seule, sans outil ni sommaire, et non modifiable. */
+  const [preview, setPreview] = useState(false);
+  /** Le sommaire en tiroir, sur téléphone. */
+  const [planOpen, setPlanOpen] = useState(false);
+  /** La consigne de reprise, ouverte depuis la pilule du bas. */
+  const [rewriteOpen, setRewriteOpen] = useState(false);
 
   // Les consignes de section sont classées par titre : c'est la seule clé que
   // le document et le plan enregistré ont en commun une fois le texte retouché.
@@ -127,8 +144,8 @@ export function ArticleWorkspace({
    * que de proposer aujourd'hui, ce qui daterait par inadvertance un sujet que
    * personne n'a encore programmé.
    */
-  const [day, setDay] = useState(
-    () => (article.scheduledFor ? splitPublishInstant(article.scheduledFor).day : ""),
+  const [day, setDay] = useState(() =>
+    article.scheduledFor ? splitPublishInstant(article.scheduledFor).day : "",
   );
 
   const editor = useEditor({
@@ -153,6 +170,29 @@ export function ArticleWorkspace({
     },
   });
 
+  /* ------------------------------- L'écran -------------------------------- */
+
+  // L'atelier couvre la page : ce qu'il y a derrière ne doit pas défiler sous
+  // lui, sans quoi la fermeture rend le tableau de bord au milieu de nulle part.
+  useEffect(() => lockScroll(), []);
+
+  // La bulle de discussion se retire le temps de l'écriture. Elle est utile
+  // partout ailleurs — quelqu'un répond — mais ici elle recouvre le coin où se
+  // prennent les décisions, et interrompt le seul écran du produit qui demande
+  // de ne pas être interrompu.
+  useEffect(() => {
+    window.$crisp?.push(["do", "chat:hide"]);
+    return () => {
+      window.$crisp?.push(["do", "chat:show"]);
+    };
+  }, []);
+
+  // L'aperçu montre l'article, il ne le modifie pas : le curseur ne doit pas
+  // pouvoir y écrire une lettre qu'on croirait enregistrée.
+  useEffect(() => {
+    editor?.setEditable(!preview);
+  }, [editor, preview]);
+
   /* ------------------------------- Actions -------------------------------- */
 
   const save = useAction(updateArticleAction, {
@@ -175,6 +215,7 @@ export function ArticleWorkspace({
       if (data?.title) setTitle(data.title);
       if (data?.body) editor?.commands.setContent(data.body, { contentType: "markdown" });
       setInstruction("");
+      setRewriteOpen(false);
       setDirty(false);
       router.refresh();
     },
@@ -243,6 +284,7 @@ export function ArticleWorkspace({
 
   const jump = (pos: number) => {
     editor?.chain().focus().setTextSelection(pos + 1).scrollIntoView().run();
+    setPlanOpen(false);
   };
 
   const addSection = () => {
@@ -254,215 +296,395 @@ export function ArticleWorkspace({
     setDirty(true);
   };
 
+  const rail = editor ? (
+    <OutlineRail
+      editor={editor}
+      instructions={briefs}
+      keyword={article.keyword}
+      onInstruction={(heading, value) => {
+        setBriefs((current) => ({ ...current, [heading]: value }));
+        setDirty(true);
+      }}
+      onJump={jump}
+      onAddSection={addSection}
+    />
+  ) : null;
+
+  const saved = !dirty && !save.isPending;
+
   /* -------------------------------- Rendu --------------------------------- */
 
   return (
-    <div className="space-y-4">
-      {/* La barre du haut : le jour de départ, et l'enregistrement. Rien
-          d'autre. Publier et valider se décident en bas de l'écran, une fois le
-          texte lu — les poser ici demandait de trancher avant d'avoir lu. */}
-      <div className="flex flex-wrap items-end justify-between gap-3 rounded-card-compact border border-border bg-surface px-5 py-4">
-        <label className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-steel">
-            {t("departureDay")}
-          </span>
-          <input
-            type="date"
-            value={day}
-            disabled={locked}
-            onChange={(event) => {
-              setDay(event.target.value);
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-surface lg:bg-mist">
+      {/* --------------------- La barre du haut, grand écran -------------- */}
+      {/* Sombre : elle borde l'écran d'écriture au lieu de s'y fondre, et les
+          trois choses qu'elle porte — sortir, dater, relire — se retrouvent
+          sans quitter le texte des yeux. */}
+      <div className="hidden h-15 shrink-0 items-center gap-4 bg-obsidian px-5 lg:flex">
+        <Link
+          href={ROUTES.dashboardArticles}
+          className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-pill border border-graphite px-3.5 py-[7px] text-[13px] font-medium text-white transition-colors duration-200 hover:bg-white/10"
+        >
+          <span aria-hidden>←</span>
+          {t("backShort")}
+        </Link>
+
+        <SaveState
+          saved={saved}
+          pending={save.isPending}
+          disabled={busy || !editor}
+          onSave={persist}
+          className="shrink-0"
+        />
+
+        <span aria-hidden className="flex-1" />
+
+        <DeparturePill
+          day={day}
+          locked={locked}
+          onDay={(value) => {
+            setDay(value);
+            setDirty(true);
+          }}
+        />
+
+        <span aria-hidden className="flex-1" />
+
+        {editor ? (
+          <DocumentMeter editor={editor} className="shrink-0 text-[13px] tabular-nums text-ash" />
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => setPreview((on) => !on)}
+          aria-pressed={preview}
+          className={`shrink-0 cursor-pointer rounded-pill border px-4 py-2 text-[13px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
+            preview
+              ? "border-white bg-white text-obsidian"
+              : "border-graphite text-white hover:bg-white/10"
+          }`}
+        >
+          {preview ? t("edit") : t("preview")}
+        </button>
+      </div>
+
+      {/* ---------------------- La barre du haut, téléphone --------------- */}
+      <div className="flex h-13 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 lg:hidden">
+        <Link
+          href={ROUTES.dashboardArticles}
+          aria-label={t("back")}
+          className="cursor-pointer text-[15px] font-medium text-graphite"
+        >
+          <span aria-hidden>←</span>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setPlanOpen(true)}
+          className="inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-steel"
+        >
+          <span aria-hidden>☰</span>
+          {t("outline")}
+        </button>
+
+        <span aria-hidden className="flex-1" />
+
+        <SaveState saved={saved} pending={save.isPending} disabled={busy || !editor} onSave={persist} />
+      </div>
+
+      {/* ----------------------------- Le corps --------------------------- */}
+      <div className="flex min-h-0 flex-1">
+        {preview ? null : (
+          <aside className="hidden w-72 shrink-0 border-r border-border bg-surface lg:block">
+            {rail}
+          </aside>
+        )}
+
+        {editor ? (
+          <DocumentCanvas
+            editor={editor}
+            title={title}
+            preview={preview}
+            onTitleChange={(value) => {
+              setTitle(value);
               setDirty(true);
             }}
-            className="h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 text-sm text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 disabled:cursor-not-allowed disabled:opacity-60"
-          />
-        </label>
+          >
+            {/* Les pastilles du téléphone : l'état de l'article et sa date, là
+                où la barre du haut n'a pas la place de les porter. */}
+            <div className="mb-3.5 flex flex-wrap items-center gap-2 lg:hidden">
+              <span className="rounded-pill bg-mist px-3 py-1.5 text-[11px] font-semibold text-slate">
+                {t(`status.${article.status}`)}
+              </span>
+              <MobileDeparture
+                day={day}
+                locked={locked}
+                onDay={(value) => {
+                  setDay(value);
+                  setDirty(true);
+                }}
+              />
+            </div>
 
-        <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
-          {/* L'heure est annoncée, pas demandée : la file ne repasse qu'une
-              fois par jour, et un sélecteur d'heure promettrait une maîtrise
-              que le service n'a pas. */}
+            {error ? (
+              <p className="mb-5 rounded-3xl border border-danger/30 bg-danger/5 px-5 py-3 text-sm text-danger">
+                {error}
+              </p>
+            ) : null}
+
+            {publishPrompt ? (
+              <div className="mb-6">
+                <PublishPromptPanel prompt={publishPrompt} />
+              </div>
+            ) : null}
+          </DocumentCanvas>
+        ) : (
+          <div className="flex-1" />
+        )}
+      </div>
+
+      {/* ------------------------ Le pied de l'écran ---------------------- */}
+      {/* Une seule colonne d'actions : la consigne de reprise s'y glisse
+          au-dessus de la décision, jamais à côté. */}
+      {preview ? null : (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2.5 bg-[linear-gradient(to_top,var(--color-snow)_72%,transparent)] px-4 pb-5 pt-14 lg:bg-none lg:px-6 lg:pb-6 lg:pt-0">
+          {/* Sur téléphone la consigne est toujours là — c'est le geste le plus
+              fréquent, et un bouton pour l'ouvrir aurait coûté un tap de plus à
+              chaque reprise. Sur grand écran, elle s'ouvre depuis la pilule. */}
+          <div className={`w-full max-w-[43rem] ${rewriteOpen ? "block" : "block lg:hidden"}`}>
+            <RewriteBar
+              value={instruction}
+              onChange={setInstruction}
+              onSubmit={() =>
+                write.execute({ id: article.id, instruction: instruction.trim() || undefined })
+              }
+              pending={write.isPending}
+              disabled={busy && !write.isPending}
+              remaining={remaining}
+              locked={locked}
+            />
+          </div>
+
+          <ArticleActionBar
+            articleId={article.id}
+            status={article.status}
+            scheduledFor={day ? preferredPassOnDay(day) : article.scheduledFor}
+            hasBody={Boolean(editor ? editor.getText().trim() : article.body.trim())}
+            canPublish={canPublish}
+            locked={locked}
+            domain={domain}
+            externalUrl={article.externalUrl}
+            onDrop={() => reject.execute({ id: article.id })}
+            dropPending={busy}
+            onRewrite={() => setRewriteOpen((open) => !open)}
+            rewriteOpen={rewriteOpen}
+            onPreparePublish={() =>
+              setPublishPrompt(
+                buildArticlePublishPrompt({
+                  title,
+                  keyword: article.keyword,
+                  excerpt: article.excerpt,
+                  body: editor?.getMarkdown() ?? article.body,
+                  scheduledFor: article.scheduledFor,
+                  domain,
+                  platform,
+                }),
+              )
+            }
+          />
+        </div>
+      )}
+
+      {/* --------------------- Le sommaire, en tiroir --------------------- */}
+      {planOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label={t("closeOutline")}
+            onClick={() => setPlanOpen(false)}
+            className="absolute inset-0 cursor-pointer bg-obsidian/30"
+          />
+          <div className="absolute inset-y-0 left-0 w-[86%] max-w-80 bg-surface shadow-[rgba(0,0,0,0.18)_0_10px_40px]">
+            {rail}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * L'enregistrement, en un mot.
+ *
+ * « Enregistré » tant qu'il n'y a rien à garder — un texte, pas un bouton, parce
+ * qu'il n'y a rien à cliquer. Dès la première frappe, le même endroit devient le
+ * bouton qui enregistre. Une pastille de couleur et une phrase « modifications
+ * non enregistrées » disaient la même chose trois fois.
+ */
+function SaveState({
+  saved,
+  pending,
+  disabled,
+  onSave,
+  className = "",
+}: {
+  saved: boolean;
+  pending: boolean;
+  disabled: boolean;
+  onSave: () => void;
+  className?: string;
+}) {
+  const t = useTranslations("dashboard.article");
+
+  if (saved) {
+    return (
+      <span className={`flex items-center gap-2 text-[13px] text-ash lg:gap-0 ${className}`}>
+        <span aria-hidden className="size-1.5 rounded-pill bg-success lg:hidden" />
+        {t("savedState")}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onSave}
+      className={`cursor-pointer rounded-pill bg-white px-3.5 py-1.5 text-[13px] font-medium text-obsidian transition-opacity duration-200 hover:opacity-90 disabled:cursor-default disabled:opacity-60 max-lg:bg-obsidian max-lg:text-white ${className}`}
+    >
+      {pending ? t("saving") : t("save")}
+    </button>
+  );
+}
+
+/**
+ * Le jour de départ, au centre de la barre.
+ *
+ * Il s'écrit comme on le dit — « mar. 8 sept. · 09:00 » — et se change dans un
+ * petit panneau, sous la pilule. Le sélecteur de date nu occupait la même place
+ * en affichant « 08/09/2026 » : c'est la même information, dans la langue de la
+ * machine, et l'heure de départ n'y figurait pas du tout.
+ */
+function DeparturePill({
+  day,
+  locked,
+  onDay,
+}: {
+  day: string;
+  locked: boolean;
+  onDay: (value: string) => void;
+}) {
+  const t = useTranslations("dashboard.article");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const departure = day ? new Date(preferredPassOnDay(day)) : null;
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        disabled={locked}
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="inline-flex cursor-pointer items-center gap-2.5 rounded-pill bg-white px-4 py-2 text-[13px] font-semibold text-obsidian transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <span className="font-medium text-steel">{t("departure")}</span>
+        {departure ? (
+          <span className="tabular-nums">
+            {formatPublishDateShort(departure)} · {formatPublishTime(departure)}
+          </span>
+        ) : (
+          <span className="text-steel">{t("noDate")}</span>
+        )}
+      </button>
+
+      {open ? (
+        <div className="absolute left-1/2 top-[calc(100%+10px)] z-10 w-72 -translate-x-1/2 rounded-3xl border border-border bg-snow p-4 shadow-[rgba(0,0,0,0.12)_0_10px_28px]">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-steel">
+              {t("departureDay")}
+            </span>
+            <input
+              type="date"
+              value={day}
+              autoFocus
+              onChange={(event) => onDay(event.target.value)}
+              className="h-11 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 text-sm text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+            />
+          </label>
+
+          {/* L'heure est annoncée, pas demandée : la file ne repasse qu'une fois
+              par jour, et un sélecteur d'heure promettrait une maîtrise que le
+              service n'a pas. */}
           {PUBLISH_HOUR_IS_CHOSEN ? null : (
-            <p className="text-[13px] text-muted">
-              {t("fixedHour", { time: formatPublishTime(new Date(preferredPassOnDay(day || todayInParis()))) })}
+            <p className="mt-2.5 text-xs leading-relaxed text-muted">
+              {t("fixedHour", {
+                time: formatPublishTime(new Date(preferredPassOnDay(day || todayInParis()))),
+              })}
             </p>
           )}
-
-          {locked ? (
-            <Link
-              href={ROUTES.pricing}
-              className="inline-flex cursor-pointer items-center rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
-            >
-              {t("unlockToPublish")}
-            </Link>
-          ) : (
-            /* Un seul bouton, dont l'état dit tout : « Enregistrer » tant qu'il
-               reste quelque chose à garder, « Enregistré » sinon. La pastille
-               de couleur et la phrase « modifications non enregistrées »
-               disaient la même chose une deuxième fois. */
-            <button
-              type="button"
-              disabled={busy || !editor || !dirty}
-              onClick={persist}
-              className="cursor-pointer rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover disabled:cursor-default disabled:bg-mist disabled:text-steel disabled:shadow-none"
-            >
-              {save.isPending ? t("saving") : dirty ? t("save") : t("savedState")}
-            </button>
-          )}
         </div>
-      </div>
-
-      {publishPrompt ? <PublishPromptPanel prompt={publishPrompt} /> : null}
-
-      {error ? (
-        <p className="rounded-card-compact border border-danger/30 bg-danger/5 px-5 py-3 text-sm text-danger">
-          {error}
-        </p>
       ) : null}
-
-      <div className="grid items-start gap-4 lg:grid-cols-[320px_1fr]">
-        {/* --------------------------- Rail de gauche --------------------- */}
-        <div className="order-2 space-y-4 lg:sticky lg:top-3 lg:order-1">
-          {editor ? (
-            <OutlineRail
-              editor={editor}
-              instructions={briefs}
-              onInstruction={(heading, value) => {
-                setBriefs((current) => ({ ...current, [heading]: value }));
-                setDirty(true);
-              }}
-              onJump={jump}
-              onAddSection={addSection}
-            />
-          ) : (
-            <div className="h-52 rounded-card-compact border border-border bg-surface" />
-          )}
-
-          <section className="rounded-card-compact border border-border bg-surface p-5">
-            <h2 className="text-base font-semibold">{t("rewrite")}</h2>
-            <p className="mt-0.5 mb-3 text-[13px] leading-relaxed text-muted">{t("rewriteHint")}</p>
-
-            <textarea
-              value={instruction}
-              rows={3}
-              onChange={(event) => setInstruction(event.target.value)}
-              placeholder={t("instructionPlaceholder")}
-              className="w-full resize-none rounded-[14px] border border-border bg-surface px-3 py-2.5 text-sm focus:ring-2 focus:ring-obsidian/20 focus:outline-none"
-            />
-
-            {article.keyword ? (
-              <p className="mt-3 text-[13px]">
-                <span className="text-[11px] font-semibold tracking-wider text-steel uppercase">
-                  {t("keyword")}
-                </span>
-                <span className="mt-0.5 block">{article.keyword}</span>
-              </p>
-            ) : null}
-
-            {/* Rédiger est le travail vendu : sur une offre qui ne l'ouvre
-                pas, le bouton mène aux tarifs plutôt qu'à un refus du
-                serveur. Le sujet, lui, reste entier au-dessus. */}
-            {locked ? (
-              <Link
-                href={ROUTES.pricing}
-                className="mt-3 block w-full cursor-pointer rounded-pill bg-cta px-5 py-2.5 text-center text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
-              >
-                {t("unlockToWrite")}
-              </Link>
-            ) : (
-              <button
-                type="button"
-                disabled={busy || remaining <= 0}
-                onClick={() =>
-                  write.execute({ id: article.id, instruction: instruction.trim() || undefined })
-                }
-                className="mt-3 w-full cursor-pointer rounded-pill bg-obsidian px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {write.isPending
-                  ? t("writing")
-                  : article.body.trim()
-                    ? t("rewriteCta")
-                    : t("writeCta")}
-              </button>
-            )}
-
-            {/* Le budget de la semaine, sous le bouton qui le consomme : c'est
-                là qu'il pèse dans la décision de relancer une reprise. */}
-            {locked ? (
-              <p className="mt-2 text-xs text-muted">{t("lockedQuota")}</p>
-            ) : (
-              <p className="mt-2 text-xs text-muted">
-                {remaining > 0
-                  ? `${remaining} rédaction${remaining > 1 ? "s" : ""} restante${
-                      remaining > 1 ? "s" : ""
-                    } cette semaine. Une reprise en consomme une.`
-                  : "Rédactions de la semaine épuisées. Votre brouillon reste modifiable à la main."}
-              </p>
-            )}
-
-            {write.isPending ? (
-              <SearchLoader kind="writing" compact title={t("writing")} className="mt-3" />
-            ) : null}
-          </section>
-
-          {article.externalUrl ? (
-            <a
-              href={article.externalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block cursor-pointer rounded-card-compact border border-border bg-surface px-5 py-3.5 text-sm font-medium underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:decoration-obsidian"
-            >
-              {t("seeOnline")}
-            </a>
-          ) : null}
-        </div>
-
-        {/* ------------------------------ La feuille ---------------------- */}
-        <div className="order-1 min-w-0 lg:order-2">
-          {editor ? (
-            <DocumentCanvas
-              editor={editor}
-              title={title}
-              onTitleChange={(value) => {
-                setTitle(value);
-                setDirty(true);
-              }}
-            />
-          ) : (
-            <div className="h-[60vh] rounded-card border border-border bg-surface" />
-          )}
-        </div>
-      </div>
-
-      {/* La barre d'action, au bas de l'écran : ce que devient cet article. Elle
-          prend la place de « résoudre avec les agents IA », qui parle du site
-          entier — sur un article ouvert, la question est celle de cet
-          article-là. */}
-      <ArticleActionBar
-        articleId={article.id}
-        status={article.status}
-        scheduledFor={day ? preferredPassOnDay(day) : article.scheduledFor}
-        hasBody={Boolean(editor ? editor.getText().trim() : article.body.trim())}
-        canPublish={canPublish}
-        locked={locked}
-        domain={domain}
-        onDrop={() => reject.execute({ id: article.id })}
-        dropPending={busy}
-        onPreparePublish={() =>
-          setPublishPrompt(
-            buildArticlePublishPrompt({
-              title,
-              keyword: article.keyword,
-              excerpt: article.excerpt,
-              body: editor?.getMarkdown() ?? article.body,
-              scheduledFor: article.scheduledFor,
-              domain,
-              platform,
-            }),
-          )
-        }
-      />
     </div>
+  );
+}
+
+/** La même date, en pastille, au-dessus du titre sur téléphone. */
+function MobileDeparture({
+  day,
+  locked,
+  onDay,
+}: {
+  day: string;
+  locked: boolean;
+  onDay: (value: string) => void;
+}) {
+  const t = useTranslations("dashboard.article");
+  const departure = day ? new Date(preferredPassOnDay(day)) : null;
+
+  return (
+    <label className="relative inline-flex items-center rounded-pill border border-border px-3 py-1.5 text-[11px] text-slate">
+      {departure
+        ? `${formatPublishDateShort(departure)} · ${formatPublishTime(departure)}`
+        : t("noDate")}
+      <input
+        type="date"
+        value={day}
+        disabled={locked}
+        aria-label={t("departureDay")}
+        onChange={(event) => onDay(event.target.value)}
+        className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
+      />
+    </label>
+  );
+}
+
+/** La longueur du texte : les mots, et le temps qu'il faut pour les lire. */
+function DocumentMeter({ editor, className = "" }: { editor: Editor; className?: string }) {
+  const t = useTranslations("dashboard.article");
+  const { words } = useDocumentStructure(editor);
+
+  return (
+    <span className={className}>
+      {t("meter", { words, minutes: Math.max(1, Math.round(words / 200)) })}
+    </span>
   );
 }
 
