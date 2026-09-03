@@ -1564,6 +1564,36 @@
     "pricingCaption": "Ce que votre site peut capter chaque mois sur les quatre moteurs, une fois les agents passés sur tout le plan d'action."
   },
   "dashboard": {
+    "refresh": {
+      "title": "Reprenez l'analyse de votre site",
+      "titleDone": "Analyse à jour",
+      "titleLocked": "La reprise quotidienne s'ouvre avec l'abonnement",
+      "body": "Une reprise par jour : on recrawle votre site, on renote les six catégories, on refait le constat et le plan d'action à partir de ce que la page montre aujourd'hui.",
+      "bodyDone": "Votre analyse a été reprise aujourd'hui. La prochaine s'ouvre demain — le temps que vos corrections soient en ligne et relues par les moteurs.",
+      "bodyLocked": "Votre analyse date de sa mise en route. Avec l'abonnement Tout-en-un, vous la reprenez une fois par jour et vous voyez la note bouger correction après correction.",
+      "keeps": "Vos articles rédigés ou planifiés et vos backlinks ne sont pas touchés.",
+      "cta": "Actualiser l'analyse",
+      "ctaDone": "Déjà actualisée aujourd'hui",
+      "ctaLocked": "Voir les offres",
+      "pending": "Analyse en cours…",
+      "pendingHint": "Crawl, audit et nouveau plan d'action : comptez deux à trois minutes. Vous pouvez laisser l'onglet ouvert.",
+      "seeProgress": "Voir ce qui a changé",
+      "last": "Dernière reprise le {date}.",
+      "never": "Jamais reprise depuis l'analyse de mise en route.",
+      "close": "Fermer"
+    },
+    "progress": {
+      "title": "Le chemin parcouru",
+      "since": "Depuis la mesure du {date}.",
+      "sinceStart": "{value} points depuis la première analyse, partie de {from}.",
+      "overall": "Note de visibilité",
+      "from": "contre {value} avant",
+      "points": "points",
+      "historyLabel": "{count} mesures",
+      "unchanged": "Rien n'a bougé depuis la mesure précédente : mêmes notes, mêmes correctifs. Appliquez un correctif du plan d'action, puis reprenez l'analyse demain.",
+      "resolved": "Corrigés depuis ({count})",
+      "appeared": "Nouveaux points relevés ({count})"
+    },
     "gate": {
       "offers": {
         "boost": "Coup de Boost",

@@ -23,7 +23,9 @@ import {
   getDashboardContext,
   isDashboardReady,
   readSiteCredentials,
+  startOfDay,
 } from "./queries";
+import { recordAnalysisSnapshot } from "./progress";
 import {
   releaseArticleGeneration,
   releaseOnPageRewrite,
@@ -286,6 +288,16 @@ export const prepareDashboardAction = authActionClient
           select: { id: true },
         });
 
+    // La trace de cette version, pour que la première reprise ait quelque chose
+    // à quoi se comparer. Écrite après l'analyse, jamais avant : un instantané
+    // d'un rapport qui n'a pas été enregistré ne compare rien.
+    await recordAnalysisSnapshot({
+      userId,
+      analysisId: record.id,
+      result,
+      reason: "initial",
+    });
+
     // Les résultats partent aussi par e-mail. Beaucoup de clients ferment
     // l'onglet pendant les trois minutes d'audit ; sans ce message, ils ne
     // reviennent pas voir ce qu'ils ont demandé. Il est expédié après la
@@ -310,6 +322,168 @@ export const prepareDashboardAction = authActionClient
 
     revalidateDashboard();
     return { id: record.id };
+  });
+
+/**
+ * La reprise quotidienne de l'analyse.
+ *
+ * Le client corrige son site — il colle un H1 réécrit, il pose un JSON-LD, il
+ * publie un article. Rien de tout cela ne se voyait : la note du tableau de
+ * bord était celle du jour de l'achat, et le plan d'action restait figé sur des
+ * correctifs déjà appliqués. Cette action remesure, une fois par jour.
+ *
+ * Ce qu'elle refait, c'est l'audit : la note, les six catégories, le constat,
+ * les correctifs, l'architecture et le contenu — tout ce qui dépend de ce que
+ * la page montre aujourd'hui. Le site est donc recrawlé et repassé au modèle.
+ *
+ * Ce qu'elle ne touche pas, et c'est aussi important :
+ *   — les articles déjà planifiés ou rédigés. Aucun n'est relu ici, aucun n'est
+ *     réécrit, aucun calendrier n'est resemé : la rédaction se pilote depuis
+ *     son propre onglet.
+ *   — les backlinks. Le relevé hors-site est explicitement coupé (`offsite:
+ *     false`) et l'ancien bloc est recopié tel quel : une estimation refaite
+ *     chaque jour ferait osciller un chiffre que le client construit sur des
+ *     mois, et effacerait le travail de prospection déjà mené.
+ *   — les classements moteurs. Ils ont leur propre reprise
+ *     (`refreshRankingsAction`), qui coûte quatre appels payants ; aucun moteur
+ *     n'est interrogé ici (`engines: []`) et les relevés en place sont
+ *     conservés.
+ *
+ * Une fois par journée civile, pas par tranche de vingt-quatre heures : une
+ * reprise lancée à 23 h ne doit pas fermer la porte jusqu'au lendemain soir.
+ *
+ * Avant d'écrire, l'état courant est archivé dans `AnalysisSnapshot` : c'est ce
+ * qui permet à l'écran de dire ce qui a monté, ce qui a baissé et quels
+ * correctifs ont disparu.
+ */
+export const refreshAnalysisAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => {
+    const userId = ctx.auth.user.id;
+
+    // La reprise est un appel au grand modèle par jour et par compte : c'est une
+    // dépense qui revient, elle appartient donc aux offres qui reviennent. Le
+    // Coup de Boost est une passe unique — il ouvre l'audit d'entrée, pas une
+    // mesure quotidienne. Seul l'abonnement Tout-en-un (et la démo qui en montre
+    // la surface) y donne droit ; ailleurs, l'écran propose l'offre.
+    const { tier } = await getAccess(userId);
+    if (!tierAtLeast(tier, "allin")) {
+      throw new AppError(
+        "La reprise quotidienne de l'analyse est incluse dans l'abonnement Tout-en-un.",
+        "UPGRADE_REQUIRED",
+        403,
+      );
+    }
+
+    const profile = await prisma.onboardingProfile.findUnique({
+      where: { userId },
+      select: {
+        siteUrl: true,
+        domain: true,
+        businessKind: true,
+        mapsUrl: true,
+        niche: true,
+        cities: true,
+        toneSummary: true,
+      },
+    });
+
+    if (!profile?.siteUrl) {
+      throw new AppError(
+        "Aucun site enregistré : reprenez l'étape « votre site » de l'accueil.",
+        "NO_SITE",
+        400,
+      );
+    }
+
+    const record = await prisma.analysis.findFirst({
+      where: { userId, ...(profile.domain ? { domain: profile.domain } : {}) },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, data: true, createdAt: true, refreshedAt: true },
+    });
+    if (!record) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
+
+    // Sans reprise antérieure, c'est la date de l'analyse elle-même qui compte :
+    // un audit fait ce matin n'a rien à remesurer ce soir.
+    const last = record.refreshedAt ?? record.createdAt;
+    if (last >= startOfDay()) {
+      throw new AppError(
+        "L'analyse a déjà été reprise aujourd'hui. La prochaine est disponible demain.",
+        "REFRESH_DONE",
+        429,
+      );
+    }
+
+    let stored: GeoAnalysisResult & { tier?: string; accessTier?: AccessTier };
+    try {
+      stored = JSON.parse(record.data) as GeoAnalysisResult & {
+        tier?: string;
+        accessTier?: AccessTier;
+      };
+    } catch {
+      throw new AppError("Analyse illisible.", "BAD_ANALYSIS", 500);
+    }
+
+    const mode = profile.businessKind === "online" ? "online" : "physical";
+    const signals = await collectSignals(profile.siteUrl);
+
+    const fresh = await analyzeSite(
+      signals,
+      {
+        mode,
+        // Aucun moteur interrogé, aucun relevé hors-site : la reprise mesure la
+        // page, pas le marché. Ce qui coûte cher a sa propre commande.
+        engines: [],
+        offsite: false,
+        mapsUrl: profile.mapsUrl ?? null,
+        declaredNiche: profile.niche,
+        declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
+        brandTone: profile.toneSummary,
+      },
+      "paid",
+    );
+
+    // Le rapport enregistré est celui d'aujourd'hui pour tout ce qui vient de la
+    // page, et celui d'hier pour tout ce que la reprise n'a pas mesuré. Les
+    // champs conservés sont écrits en dernier : sans eux, le `...fresh` les
+    // remplacerait par des blocs vides, faute d'appels.
+    const merged: GeoAnalysisResult = {
+      ...stored,
+      ...fresh,
+      engines: stored.engines,
+      liveQuery: stored.liveQuery ?? null,
+      localRankings: stored.localRankings,
+      webPresence: stored.webPresence,
+      backlinks: stored.backlinks ?? null,
+      mapsCoherence: stored.mapsCoherence ?? null,
+      mapsUrl: profile.mapsUrl ?? stored.mapsUrl ?? null,
+    };
+
+    await prisma.analysis.update({
+      where: { id: record.id },
+      data: {
+        url: merged.url,
+        domain: merged.domain,
+        businessName: merged.businessName,
+        businessType: merged.businessType,
+        overallScore: merged.overallScore,
+        refreshedAt: new Date(),
+        data: JSON.stringify({ ...stored, ...merged, tier: "paid", accessTier: tier }),
+      },
+    });
+
+    await recordAnalysisSnapshot({
+      userId,
+      analysisId: record.id,
+      result: merged,
+      reason: "refresh",
+    });
+
+    revalidateDashboard();
+    return {
+      score: merged.overallScore,
+      delta: merged.overallScore - stored.overallScore,
+    };
   });
 
 /**

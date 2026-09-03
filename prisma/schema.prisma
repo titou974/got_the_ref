@@ -34,6 +34,7 @@ model User {
   updatedAt        DateTime @updatedAt
 
   analyses           Analysis[]
+  analysisSnapshots  AnalysisSnapshot[]
   subscription       Subscription?
   sessions           Session[]
   accounts           Account[]
@@ -248,10 +249,57 @@ model Analysis {
   stripeSessionId String?   @unique
   guestEmail      String? // E-mail saisi au paiement Stripe, avant création du compte
 
+  /// Date de la dernière reprise quotidienne. Distincte de `createdAt`, qui
+  /// date la première mesure : c'est elle qui autorise — ou refuse — une
+  /// nouvelle reprise dans la journée.
+  refreshedAt DateTime?
+
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  snapshots AnalysisSnapshot[]
+
   @@index([userId])
+}
+
+/// L'état d'une analyse à un instant, gardé pour mesurer le chemin parcouru.
+///
+/// L'analyse elle-même est réécrite sur place à chaque reprise — le client
+/// garde un identifiant stable, et rien ne pointe vers un rapport orphelin.
+/// Sans trace, la reprise effacerait donc ce qu'elle est censée démontrer : la
+/// progression. Une ligne est écrite à chaque version de l'analyse, la
+/// première comprise.
+///
+/// On n'y recopie pas le rapport entier — il pèse plusieurs centaines de
+/// kilo-octets et personne ne relit un vieux `signals`. Seul ce qui se compare
+/// est retenu : la note, les notes par catégorie, les deux notes du diagnostic
+/// (architecture et contenu) et la liste des correctifs, réduite à ce qui
+/// permet de dire lesquels ont disparu.
+model AnalysisSnapshot {
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  domain       String
+  overallScore Int
+  /// `{ "citability": 62, … }` — les six catégories GEO.
+  categories   String
+  /// Les deux notes dérivées, dupliquées ici pour ne pas avoir à reconstruire
+  /// un diagnostic complet à partir de signaux qu'on ne garde pas.
+  architectureScore Int
+  contentScore      Int
+  /// `[{ "title": …, "category": …, "priority": …, "impact": … }]`.
+  recommendations   String
+  /// Ce qui a déclenché l'écriture : « initial » (mise en route ou achat) ou
+  /// « refresh » (reprise quotidienne).
+  reason            String   @default("refresh")
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([analysisId])
 }
 
 /// Adresse laissée par un visiteur avant son analyse gratuite : la liste de
