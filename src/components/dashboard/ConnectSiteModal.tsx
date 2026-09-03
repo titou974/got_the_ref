@@ -15,13 +15,16 @@ import {
 import type { DetectedStack } from "@/lib/geo/types";
 
 /**
- * Le parcours « agents » : brancher l'agent IA du client sur son compte, et
- * rattacher son site.
+ * Le parcours « agents » : rattacher le site du client, et brancher son agent
+ * IA sur son compte.
  *
  * L'écran montre d'abord, sur les vrais manques du rapport, ce que les agents
- * vont corriger ; puis il donne la prise à brancher. Le prompt à copier a
- * disparu d'ici — c'est `AgentLinkPanel` qui tient désormais l'exécution, et
- * l'agent va chercher lui-même les correctifs.
+ * vont corriger ; puis il propose le rattachement du site, en tête, et la prise
+ * MCP en dessous. Cet ordre est celui de l'effort demandé : rattacher son site
+ * est un identifiant à coller et les agents font le reste, tandis que brancher
+ * un agent suppose d'en avoir un, d'y coller une commande et de lui parler. Le
+ * prompt à copier a disparu d'ici — c'est `AgentLinkPanel` qui tient désormais
+ * l'exécution, et l'agent va chercher lui-même les correctifs.
  */
 
 const FIX_INTERVAL_MS = 900; // une correction affichée toutes les 0,9 s
@@ -186,7 +189,7 @@ function handoffText(domain: string, endpoint: string | null): string {
  * Ce que l'offre borne n'est d'ailleurs pas cet écran mais ce que le serveur
  * MCP sert à l'agent une fois branché : les chantiers fermés arrivent nommés et
  * vides. Un voile CSS se contourne avec l'inspecteur ; une réponse qui ne
- * contient rien, non.
+ * contient rien, non. La prise reste donc ouverte plus bas, à sa place.
  */
 function LockedActions() {
   const t = useTranslations("analysisReport.solve.modal");
@@ -382,80 +385,78 @@ export function ConnectSiteModal({
             </p>
           )}
 
-          {/* La prise de l'agent : la première chose à faire sur cet écran, et
-              celle que la console vient de démontrer. Elle passe avant le
-              rattachement du site — l'un branche l'agent du client sur son
-              dossier, l'autre nous donne la clé de sa maison, et le second ne
-              se demande qu'à celui qui a déjà vu le premier fonctionner.
-
-              Elle est là pour tout le monde, compte gratuit compris : c'est le
-              geste que le produit vend. Ce que l'offre borne, c'est ce que le
-              serveur MCP sert ensuite à l'agent. */}
-          {connecting && connect ? null : (
-            <div className="mt-5">
-              <AgentLinkPanel locked={locked} onEndpoint={setEndpoint} />
+          {connecting && connect ? (
+            <div className="mt-5 flex flex-col gap-2.5">
+              <SiteConnectForm
+                setup={connect}
+                dense
+                // Le lien accepté, on revient sur les actions : l'état du
+                // rattachement s'y lit désormais sous le bouton.
+                onConnected={() => setConnecting(false)}
+              />
+              <button
+                type="button"
+                onClick={() => setConnecting(false)}
+                className="cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+              >
+                {t("connectBack")}
+              </button>
             </div>
-          )}
+          ) : (
+            <>
+              {/* Rattacher le site : le premier geste de cet écran, et celui
+                  que le titre annonce. C'est la voie complète — les agents
+                  publient et corrigent eux-mêmes, sans que le client ait à
+                  installer quoi que ce soit. La prise de l'agent IA, qui
+                  demande un outil et un peu de manipulation, vient après.
 
-          {/* L'autre voie : rattacher son site, les agents publient alors
-              eux-mêmes. Elle passait auparavant par un bouton désactivé marqué
-              « bientôt » ; elle est ouverte, donc elle s'ouvre ici, au moment
-              où la console vient de montrer ce qu'il y a à corriger. */}
-          <div className="mt-5 flex flex-col gap-2.5">
-            {connecting && connect ? (
-              <>
-                <SiteConnectForm
-                  setup={connect}
-                  dense
-                  // Le lien accepté, on revient sur les actions : l'état du
-                  // rattachement s'y lit désormais sous le bouton.
-                  onConnected={() => setConnecting(false)}
-                />
+                  Il ne se propose pas à un compte gratuit : les agents ne
+                  publient qu'à partir du Coup de Boost, et lui demander le mot
+                  de passe d'application de son site pour ne rien y déposer
+                  ensuite est une demande sans contrepartie. L'appel vers les
+                  tarifs prend la place. */}
+              <div className="mt-5 flex flex-col gap-2.5">
+                {locked ? (
+                  <LockedActions />
+                ) : (
+                  <ConnectAction connect={connect} onOpen={() => setConnecting(true)} />
+                )}
+              </div>
+
+              {/* L'autre voie, en dessous : brancher son propre agent IA sur le
+                  serveur MCP. Elle est là pour tout le monde, compte gratuit
+                  compris — ce que l'offre borne, c'est ce que le serveur sert
+                  ensuite à l'agent, pas l'accès à la prise. */}
+              <div className="mt-7 border-t border-fog pt-6">
+                <h3 className="text-base font-bold text-text">{t("agentTitle")}</h3>
+                <p className="mt-1.5 text-pretty text-sm leading-relaxed text-muted">
+                  {t("agentBody")}
+                </p>
+
+                <div className="mt-4">
+                  <AgentLinkPanel locked={locked} onEndpoint={setEndpoint} />
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setConnecting(false)}
+                  onClick={shareWithDeveloper}
+                  className="cursor-pointer rounded-full border border-fog px-5 py-2.5 text-sm font-medium text-text transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
+                >
+                  {shared ? t("shareDevDone") : t("shareDev")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onClose}
                   className="cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
                 >
-                  {t("connectBack")}
+                  {t("later")}
                 </button>
-              </>
-            ) : (
-              <>
-            {/* Le rattachement du site ne se propose pas à un compte gratuit.
-                Il n'ouvre rien pour lui : les agents ne publient qu'à partir du
-                Coup de Boost, et lui demander le mot de passe d'application de
-                son site pour ne rien y déposer ensuite est une demande sans
-                contrepartie. La modale du gratuit ne porte donc qu'une chose :
-                la console qui montre ce qui sera corrigé, et l'offre qui
-                l'ouvre. Le rattachement l'attend dans les réglages le jour où
-                il achète. */}
-            {locked ? null : (
-              <ConnectAction connect={connect} onOpen={() => setConnecting(true)} />
-            )}
-
-            {/* L'appel vers les tarifs, pour le compte gratuit. La prise, elle,
-                reste au-dessus : ce n'est pas elle qui s'achète, c'est ce que
-                le serveur sert ensuite à l'agent. */}
-            {locked ? <LockedActions /> : null}
-
-            <button
-              type="button"
-              onClick={shareWithDeveloper}
-              className="cursor-pointer rounded-full border border-fog px-5 py-2.5 text-sm font-medium text-text transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-            >
-              {shared ? t("shareDevDone") : t("shareDev")}
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-            >
-              {t("later")}
-            </button>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </motion.div>
     </motion.div>

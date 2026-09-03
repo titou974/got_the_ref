@@ -206,8 +206,10 @@
       "copied": "Lien copié",
       "shareTitle": "Analyse GEO de {domain}",
       "modal": {
-        "title": "Connecter votre agent IA",
-        "body": "Installez la prise got_the_ref dans votre agent : il relève vos correctifs et les applique sur votre code, avec les textes exacts. Vous validez chaque changement avant publication.",
+        "title": "Connecter le site",
+        "body": "Rattachez votre site à got_the_ref : les agents y posent eux-mêmes les correctifs et y publient vos articles. Vous validez chaque changement avant sa mise en ligne.",
+        "agentTitle": "Ou branchez votre agent IA",
+        "agentBody": "Installez la prise got_the_ref dans votre agent : il relève vos correctifs et les applique sur votre code, avec les textes exacts. Vous validez chaque changement avant publication.",
         "detected": "Plateforme détectée : {name}",
         "cta": "Connecter le site",
         "connectManage": "Mettre le lien du site à jour",
@@ -1566,11 +1568,13 @@
   "dashboard": {
     "refresh": {
       "title": "Reprenez l'analyse de votre site",
+      "titleAuto": "Reprise du jour en cours",
+      "bodyAuto": "Votre analyse se refait toute seule à votre première visite du jour : nouveau crawl, nouvelles notes, nouveau plan d'action. Laissez l'onglet ouvert, l'écran se met à jour tout seul.",
       "titleDone": "Analyse à jour",
       "titleLocked": "La reprise quotidienne s'ouvre avec l'abonnement",
       "body": "Une reprise par jour : on recrawle votre site, on renote les six catégories, on refait le constat et le plan d'action à partir de ce que la page montre aujourd'hui.",
-      "bodyDone": "Votre analyse a été reprise aujourd'hui. La prochaine s'ouvre demain — le temps que vos corrections soient en ligne et relues par les moteurs.",
-      "bodyLocked": "Votre analyse date de sa mise en route. Avec l'abonnement Tout-en-un, vous la reprenez une fois par jour et vous voyez la note bouger correction après correction.",
+      "bodyDone": "Votre analyse a été reprise aujourd'hui, automatiquement à votre arrivée. La prochaine s'ouvre demain — le temps que vos corrections soient en ligne et relues par les moteurs.",
+      "bodyLocked": "Votre analyse date de sa mise en route. Avec l'abonnement Tout-en-un, elle se reprend toute seule une fois par jour et vous voyez la note bouger correction après correction.",
       "keeps": "Vos articles rédigés ou planifiés et vos backlinks ne sont pas touchés.",
       "cta": "Actualiser l'analyse",
       "ctaDone": "Déjà actualisée aujourd'hui",
