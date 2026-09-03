@@ -125,12 +125,12 @@
     "modeOnline": "Commerce en ligne",
     "modeAriaLabel": "Type de commerce à analyser",
     "emailTitle": "Où envoyer votre analyse ?",
-    "emailBody": "Laissez votre e-mail : on y envoie le résultat de l'analyse et les points à corriger en priorité.",
+    "emailBody": "Laissez votre e-mail : on ouvre votre espace gratuit, l'analyse s'y déroule sous vos yeux et le résultat vous est aussi envoyé par e-mail.",
     "emailLabel": "Votre adresse e-mail",
     "emailPlaceholder": "vous@votre-commerce.fr",
     "emailSubmit": "Lancer mon analyse gratuite",
     "emailInvalid": "Saisissez une adresse e-mail valide.",
-    "emailNote": "Votre analyse, puis quelques conseils pour être cité par les IA. Désinscription en un clic.",
+    "emailNote": "Compte gratuit, sans carte bancaire. Votre analyse, puis quelques conseils pour être cité par les IA. Désinscription en un clic.",
     "emailClose": "Fermer"
   },
   "analysisReport": {
@@ -210,6 +210,7 @@
         "body": "Installez la prise got_the_ref dans votre agent : il relève vos correctifs et les applique sur votre code, avec les textes exacts. Vous validez chaque changement avant publication.",
         "detected": "Plateforme détectée : {name}",
         "cta": "Connecter le site",
+        "lockedCta": "Connecter le site",
         "connectManage": "Mettre le lien du site à jour",
         "connectedNote": "{site} est rattaché : les agents y publient et y corrigent.",
         "connectBack": "Revenir en arrière",

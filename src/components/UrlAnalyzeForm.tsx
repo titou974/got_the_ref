@@ -127,8 +127,20 @@ export function UrlAnalyzeForm({
         return;
       }
 
-      const { id } = await res.json();
-      resultIdRef.current = String(id);
+      const data = await res.json();
+
+      // Le compte gratuit vient d'être ouvert : la suite se joue sur le tableau
+      // de bord, dont l'écran d'attente lance l'analyse et l'affiche sous voile.
+      // On y va tout de suite plutôt que d'attendre la fin de l'animation : ce
+      // serait deux écrans de chargement à la file, le second faisant le vrai
+      // travail.
+      if (typeof data.redirect === "string") {
+        navigatedRef.current = true;
+        router.push(data.redirect);
+        return;
+      }
+
+      resultIdRef.current = String(data.id);
       // L'animation continue ; la navigation se fera quand elle aura fini.
       maybeNavigate();
     } catch {

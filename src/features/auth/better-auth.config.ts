@@ -11,6 +11,8 @@ import {
   resetPasswordEmail,
   welcomeEmail,
 } from "./emails";
+import { freeAnalysisStartedEmail } from "@/features/leads/emails";
+import { recentAnalysisLead } from "@/features/leads/service";
 
 /**
  * Google n'est branché que si les deux identifiants OAuth sont présents.
@@ -105,12 +107,24 @@ export const auth = betterAuth({
    *
    * `after` plutôt qu'un `await` : la création du compte n'a pas à attendre
    * Resend, et un envoi qui échoue ne doit pas faire échouer l'inscription.
+   *
+   * Deux messages possibles, un seul expédié. Un compte né de l'analyse
+   * gratuite de la page d'accueil a laissé son adresse quelques secondes plus
+   * tôt : la bienvenue générique lui demanderait l'adresse de son site, qu'il
+   * vient précisément de donner, et son analyse tourne déjà. Il reçoit donc la
+   * confirmation de cette analyse — qui porte, elle, le lien de mot de passe
+   * dont ce compte ouvert sans mot de passe a besoin pour exister ailleurs que
+   * dans ce navigateur. Le repère est la ligne de diffusion, écrite avant
+   * l'inscription (cf. `features/analysis/demo.ts`).
    */
   databaseHooks: {
     user: {
       create: {
         after: async (user) => {
-          const { subject, html, text } = welcomeEmail({ userName: user.name });
+          const lead = await recentAnalysisLead(user.email);
+          const { subject, html, text } = lead
+            ? freeAnalysisStartedEmail({ domain: lead.domain, email: user.email })
+            : welcomeEmail({ userName: user.name });
           after(() =>
             sendEmail({
               to: user.email,

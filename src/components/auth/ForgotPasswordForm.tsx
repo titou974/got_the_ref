@@ -24,7 +24,7 @@ import { ROUTES } from "@/constants/routes";
  * le dit pas non plus. Elle est volontairement formulée au conditionnel :
  * « si un compte existe ».
  */
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ defaultEmail = "" }: { defaultEmail?: string }) {
   const t = useTranslations("auth");
   const [submittedEmail, setSubmittedEmail] = useState("");
   const { execute, result, isPending } = useAction(requestPasswordResetAction);
@@ -70,6 +70,7 @@ export function ForgotPasswordForm() {
           required
           autoFocus
           autoComplete="email"
+          defaultValue={defaultEmail}
           className="input"
           placeholder={t("emailPlaceholder")}
         />

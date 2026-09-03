@@ -13,6 +13,7 @@ import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
 import { totalGainFor } from "@/lib/geo/traffic-gain";
 import { getCurrentUser } from "@/lib/auth";
 import { getDashboardContext } from "@/features/dashboard/queries";
+import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { REDIRECT_REASONS, ROUTES } from "@/constants/routes";
 import { BOOST, SUBSCRIPTION_PRICE, TRIAL, YEARLY_MONTHLY_PRICE } from "@/constants/plans";
@@ -105,19 +106,26 @@ export default async function TarifsPage({ searchParams }: Props) {
   // encore tourné, il n'y a rien d'honnête à annoncer : un chiffre de site type
   // se lirait comme une promesse chiffrée faite à quelqu'un dont on n'a rien lu.
   const user = await getCurrentUser();
-  const [{ available: trial }, analysis] = user
+  const [{ available: trial }, analysis, hasDashboard] = user
     ? await Promise.all([
         getTrialState(user.id),
         getDashboardContext(user.id).then((context) => context.analysis),
+        isOnboardingComplete(user.id),
       ])
-    : [ANONYMOUS_TRIAL_STATE, null];
+    : [ANONYMOUS_TRIAL_STATE, null, false];
 
   return (
     <main className="flex min-h-[100dvh] flex-col">
       {offersJsonLd().map((data, i) => (
         <JsonLd key={i} data={data} />
       ))}
-      <Nav minimal backTo={ROUTES.dashboard} />
+      {/* La flèche de retour ne s'affiche que s'il y a un tableau de bord à
+          retrouver. Un compte qui vient de naître n'en a pas : la flèche le
+          renvoyait sur une page qui, faute de fiche d'accueil, le déposait dans
+          le tunnel de mise en route — c'est-à-dire exactement l'écran qu'on ne
+          lui ouvre plus avant qu'il ait pris quelque chose. Sans tableau de
+          bord derrière, pas de retour : il ne reste que la décision. */}
+      <Nav minimal backTo={hasDashboard ? ROUTES.dashboard : null} />
 
       <div className="flex flex-1 flex-col">
         <div className="mx-auto w-full max-w-6xl px-5 pt-12 sm:pt-16">
