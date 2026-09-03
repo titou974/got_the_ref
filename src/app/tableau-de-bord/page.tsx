@@ -104,12 +104,11 @@ export default async function DashboardHomePage() {
   //
   // Les articles, eux, sont relus pour tout le monde : le calendrier est ouvert
   // à tous les niveaux, et c'est une lecture en base, pas un appel de modèle.
-  // La reprise quotidienne et son résultat : l'état du bouton d'un côté, ce qui
-  // a bougé depuis la mesure précédente de l'autre. Deux lectures en base, sans
-  // aucun appel de modèle — elles partent donc pour tout le monde, comme les
-  // articles.
-  const [traffic, articles, refresh, progress] = await Promise.all([
-    sees("traffic") ? fetchAiTraffic(user.id, 30) : null,
+  //
+  // Le compte de démonstration ne le lance pas non plus : sa carte montre la
+  // courbe d'exemple quoi qu'il arrive, et le rapport partirait à la poubelle.
+  const [traffic, articles] = await Promise.all([
+    sees("traffic") && tier !== "demo" ? fetchAiTraffic(user.id, 30) : null,
     listArticles(user.id),
     getRefreshState(user.id, context.domain),
     getAnalysisProgress(user.id),
@@ -303,6 +302,7 @@ export default async function DashboardHomePage() {
         demo={buildDemoAiTraffic()}
         domain={context.domain ?? analysis.domain}
         veiled={!sees("traffic")}
+        showcase={tier === "demo"}
         overlay={
           sees("traffic") ? undefined : (
             <GatePanel offer={offerForBlock("traffic")} item="traffic" />

@@ -127,6 +127,7 @@ export function ArticleMonth({
   articles,
   today,
   locked = false,
+  action = null,
 }: {
   articles: MonthArticle[];
   /**
@@ -140,6 +141,12 @@ export function ArticleMonth({
    * la grille est ce qu'on vend — mais ils mènent aux tarifs, pas à l'atelier.
    */
   locked?: boolean;
+  /**
+   * Ce qu'on peut faire au planning depuis son en-tête — aujourd'hui, demander
+   * quatre sujets de plus. La carte est devenue le seul bloc de la page : ce
+   * qui la remplit se commande depuis elle, et non depuis une carte voisine.
+   */
+  action?: React.ReactNode;
 }) {
   const t = useTranslations("dashboard.calendar");
 
@@ -186,8 +193,11 @@ export function ArticleMonth({
         title={t("title")}
         hint={t("hint")}
         action={
-          <span className="rounded-xl bg-mist px-2.5 py-1 text-[11px] font-semibold text-steel">
-            {t("count", { count: placed })}
+          <span className="flex items-center gap-2">
+            <span className="rounded-xl bg-mist px-2.5 py-1 text-[11px] font-semibold text-steel">
+              {t("count", { count: placed })}
+            </span>
+            {action}
           </span>
         }
       />

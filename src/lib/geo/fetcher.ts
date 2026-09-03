@@ -401,6 +401,32 @@ async function safeFetchRetry(url: string, attempts = 2): Promise<Response | nul
 }
 
 /**
+ * Le corps d'une ressource publique, ou `null` si elle n'a pas répondu.
+ *
+ * Même garde-fou que le reste du fichier — schéma, hôte public, redirections
+ * revalidées à chaque saut — exposé pour les lectures qui ne rentrent pas dans
+ * `collectSignals` : la page d'accueil relue telle quelle et les feuilles de
+ * style qu'elle appelle, dont on tire la couleur de marque.
+ *
+ * Le corps est tronqué : une feuille de style compilée par un thème WordPress
+ * pèse volontiers plusieurs mégaoctets, et la couleur des boutons se lit dans
+ * les premières centaines de kilooctets ou nulle part.
+ */
+export async function fetchPublicText(
+  url: string,
+  maxChars = 400_000,
+): Promise<string | null> {
+  const res = await safeFetchRetry(url);
+  if (!res?.ok) return null;
+  try {
+    const body = await res.text();
+    return body.slice(0, maxChars);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Récupère une ressource racine (robots/sitemap/llms) en tolérant le cas où le
  * fichier n'est servi qu'en HTTP alors que le site est en HTTPS : on tente
  * d'abord l'origine telle quelle (avec retries), puis on retombe sur http.

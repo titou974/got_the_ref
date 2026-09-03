@@ -1746,7 +1746,12 @@
       "autoOffLabel": "Ce que je valide",
       "autoOffBody": "Seuls les articles que vous avez validés partent. Les autres attendent votre relecture.",
       "autoOnLabel": "Tout, dès que c'est écrit",
-      "autoOnBody": "Les articles rédigés partent aussi, sans relecture. Le planning se déroule sans vous."
+      "autoOnBody": "Les articles rédigés partent aussi, sans relecture. Le planning se déroule sans vous.",
+      "autoHint": "Ce que la file s'autorise à déposer sur votre site sans vous.",
+      "reviewTitle": "À valider",
+      "reviewBody": "{count, plural, one {article rédigé attend votre relecture avant de partir tout seul.} other {articles rédigés attendent votre relecture avant de partir tout seuls.}}",
+      "reviewEmpty": "Tout ce qui est écrit est validé. Rien ne vous attend.",
+      "reviewOpen": "Relire le premier"
     },
     "agenda": {
       "title": "Prochains articles",
@@ -1868,6 +1873,30 @@
       "noSchema": "Aucune",
       "stack": "Site servi par {name}, reconnu à {evidence}."
     },
+    "articleBar": {
+      "approve": "Valider l'autopublication",
+      "publishNow": "Publier maintenant",
+      "preparePublish": "Préparer la publication",
+      "drop": "Écarter",
+      "unlock": "Débloquer la publication",
+      "needsBody": "Rédigez l'article avant de le faire partir.",
+      "notValidated": "Pas encore validé : rien ne partira tout seul.",
+      "scheduledOn": "Part {date} à {time}",
+      "undated": "Aucune date de publication",
+      "cancel": "Annuler",
+      "publishEyebrow": "Publication immédiate",
+      "publishTitle": "Publier maintenant ?",
+      "publishBody": "L'article est déposé sur votre site dès la confirmation, sans attendre sa date. Il quitte alors le planning.",
+      "publishBodyDomain": "L'article est déposé sur {domain} dès la confirmation, sans attendre sa date. Il quitte alors le planning.",
+      "publishing": "Publication…",
+      "publishFailed": "La publication a échoué : votre site n'a pas accepté le dépôt. Vérifiez le rattachement dans les réglages.",
+      "approveEyebrow": "Publication automatique",
+      "approveTitle": "Valider l'autopublication ?",
+      "approveBody": "L'article partira tout seul {date} à {time}. Vous pouvez encore le modifier ou changer sa date jusque-là.",
+      "approveConfirm": "Valider",
+      "approving": "Validation…",
+      "departureDay": "Jour de publication"
+    },
     "articles": {
       "pageTitle": "Articles",
       "plan": "Ajouter {count} sujets",
@@ -1955,6 +1984,8 @@
       "words": "{count} mots",
       "unsaved": "Modifications non enregistrées",
       "savedState": "Enregistré",
+      "departureDay": "Jour de publication",
+      "fixedHour": "Départ à {time}, une fois par jour.",
       "publishPromptTitle": "Prompt de publication",
       "publishPromptHint": "À coller dans votre agent IA ou à envoyer à votre développeur : il contient l'article entier et où le poser.",
       "publishPromptCopy": "Copier le prompt",

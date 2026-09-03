@@ -6,6 +6,11 @@ import { aiLog } from "@/lib/ai/log";
 import { askGeminiGrounded } from "@/lib/ai/gemini";
 import { buildCorpus, getOrCrawlSite, saveSiteAnalysis } from "@/lib/crawl/store";
 import { crawlSite } from "@/lib/crawl/firecrawl";
+import {
+  collectBrandColors,
+  normalizeCssColor,
+  type ColorCandidate,
+} from "@/lib/geo/brand-color";
 import { hasPhysicalPresence } from "./steps";
 
 /**
@@ -316,19 +321,26 @@ export async function suggestCompetitors({
   return normalizeCompetitors(competitors, ownDomain);
 }
 
-// ── Étape 6 : la tonalité ────────────────────────────────────────────────────
+// ── L'identité de marque : sa manière d'écrire et sa couleur ─────────────────
 
-const toneSchema = z.object({
+const brandSchema = z.object({
   tone: z.string().nullable().catch(null),
+  color: z.string().nullable().catch(null),
 });
 
-/** La consigne de ton, et la page qui l'a fournie. */
-export type ToneReading = {
+/** La consigne de ton, la page qui l'a fournie, et la couleur de la marque. */
+export type BrandReading = {
   tone: string | null;
   /** URL réellement lue : l'article trouvé, la page d'accueil, ou le lien donné. */
   sourceUrl: string | null;
   /** Vrai si la page retenue est un article, faux si c'est la page d'accueil. */
   fromArticle: boolean;
+  /**
+   * La couleur principale du site, en hexadécimal — celle des boutons d'appel à
+   * l'action, ou celle que la charte déclare. `null` quand le site n'emploie
+   * que du noir et du gris, ce qui arrive et n'est pas un échec.
+   */
+  color: string | null;
 };
 
 /** Une page du crawl, réduite à ce qui sert à la choisir. */
@@ -400,14 +412,51 @@ function pickToneSource(pages: CandidatePage[], homeUrl: string): CandidatePage 
  */
 const TONE_SAMPLE_CHARS = 12_000;
 
-/** Interroge le grand modèle sur la manière d'écrire d'un texte donné. */
-async function readToneFrom(text: string, fromArticle: boolean): Promise<string | null> {
+/**
+ * La manière d'écrire du client et sa couleur, en un seul appel.
+ *
+ * Les deux questions voyagent ensemble parce qu'elles portent sur le même
+ * client et se répondent sur la même page : les séparer doublerait le coût et
+ * l'attente pour deux champs enregistrés côte à côte. Le texte est lu par le
+ * modèle ; la couleur, elle, est d'abord relevée dans le CSS du site
+ * (`collectBrandColors`) et le modèle ne fait que trancher entre les teintes
+ * réellement employées. Il ne peut donc pas en inventer une : la réponse est
+ * refusée si elle ne figure pas dans la liste soumise.
+ */
+async function readBrandFrom(
+  text: string,
+  fromArticle: boolean,
+  colors: ColorCandidate[],
+): Promise<{ tone: string | null; color: string | null }> {
   aiLog("Tonalité — texte soumis au modèle", {
     source: fromArticle ? "article du client" : "page d'accueil",
     caracteresDisponibles: text.length,
     caracteresEnvoyes: Math.min(text.length, TONE_SAMPLE_CHARS),
+    couleursRelevees: colors.map((candidate) => candidate.hex),
   });
-  const { tone } = await askJson(toneSchema, {
+
+  const colorBlock = colors.length
+    ? [
+        "",
+        "Voici les couleurs relevées dans le CSS de son site, de la plus employée à la moins,",
+        "avec l'endroit où chacune a été lue :",
+        ...colors.map(
+          (candidate) => `- ${candidate.hex} (${candidate.source}, poids ${candidate.weight})`,
+        ),
+      ]
+    : [];
+
+  const colorRule = colors.length
+    ? [
+        '"color" : la couleur de marque, RECOPIÉE À L\'IDENTIQUE depuis la liste ci-dessus —',
+        "celle qu'un visiteur retiendrait du site : celle des boutons d'appel à l'action, ou",
+        "celle que la charte déclare. Écarte les teintes qui ne servent qu'à un pictogramme, à",
+        "une alerte (rouge d'erreur, vert de validation) ou à un fond de page. Si aucune ne fait",
+        "office de couleur de marque, réponds null plutôt que d'en choisir une au hasard.",
+      ]
+    : ['"color" : null — aucune couleur n\'a pu être relevée sur le site.'];
+
+  const { tone, color } = await askJson(brandSchema, {
     system: SYSTEM,
     prompt: [
       fromArticle
@@ -415,8 +464,11 @@ async function readToneFrom(text: string, fromArticle: boolean): Promise<string 
         : "Voici la page d'accueil du client. Le site ne publie pas d'articles : c'est le seul texte qu'il ait écrit lui-même.",
       "",
       text.slice(0, TONE_SAMPLE_CHARS),
+      ...colorBlock,
       "",
-      'Réponds en JSON : { "tone": … } — quatre à six phrases décrivant la tonalité à REPRODUIRE, assez',
+      'Réponds en JSON : { "tone": …, "color": … }.',
+      "",
+      '"tone" : quatre à six phrases décrivant la tonalité à REPRODUIRE, assez',
       "précises pour qu'un rédacteur qui n'a jamais vu ce site écrive dans la même voix :",
       "- le niveau de langue et le vocabulaire de métier réellement employé ;",
       "- la personne (tu / vous / nous / impersonnel) et la façon de s'adresser au lecteur ;",
@@ -425,6 +477,8 @@ async function readToneFrom(text: string, fromArticle: boolean): Promise<string 
       "- la densité technique : chiffres, exemples concrets, jargon expliqué ou non ;",
       "- deux ou trois tournures caractéristiques, citées entre guillemets ;",
       "- ce qu'il faut éviter pour ne pas sonner faux dans cette voix.",
+      "",
+      ...colorRule,
       "",
       "Décris la MANIÈRE, jamais le sujet : aucune phrase de ta réponse ne doit parler de ce dont le texte parle.",
     ].join("\n"),
@@ -441,54 +495,83 @@ async function readToneFrom(text: string, fromArticle: boolean): Promise<string 
     maxTokens: 900,
   });
 
-  return tone?.trim() || null;
+  return { tone: tone?.trim() || null, color: pickAnswerColor(color, colors) };
 }
 
 /**
- * La manière d'écrire du client, relevée sur son propre site.
+ * La couleur retenue, une fois la réponse du modèle confrontée aux relevés.
  *
- * Le tunnel demandait un lien d'article, et la plupart des clients passaient
- * l'étape : ils n'ont pas ce lien sous la main, ou ne se relisent pas comme des
- * exemples de style. Sans ce repère, tous les articles produits sortaient dans
- * la même voix, celle de personne. On va donc le chercher : le site est déjà
- * crawlé à l'étape 2, il suffit d'y repérer un article et, à défaut, de lire la
- * page d'accueil.
- *
- * Un lien fourni à la main reste prioritaire : c'est le client qui sait le
- * mieux quel texte le représente.
+ * Un modèle rapide recopie parfois de travers — un chiffre de moins, une teinte
+ * voisine, un nom de couleur. Une réponse hors liste est donc écartée au profit
+ * du premier candidat, qui est déjà le plus employé du site : mieux vaut la
+ * couleur la plus posée sur les boutons qu'une couleur inventée. Et quand le
+ * modèle répond explicitement `null`, on le suit — il a lu la page, pas nous.
  */
-export async function detectBrandTone({
+function pickAnswerColor(answer: string | null, colors: ColorCandidate[]): string | null {
+  if (colors.length === 0) return null;
+  if (answer == null) return null;
+
+  const normalized = normalizeCssColor(answer);
+  if (!normalized) return colors[0].hex;
+
+  const match = colors.find((candidate) => candidate.hex.slice(1) === normalized);
+  return match?.hex ?? colors[0].hex;
+}
+
+/**
+ * La manière d'écrire du client et sa couleur, relevées sur son propre site.
+ *
+ * Le tunnel demandait un lien d'article et une couleur choisie à la pipette, et
+ * la plupart des clients passaient l'étape : ils n'ont pas ce lien sous la main,
+ * ne se relisent pas comme des exemples de style, et ne connaissent pas le code
+ * hexadécimal de leur propre charte. Sans ces repères, tous les articles
+ * produits sortaient dans la même voix, celle de personne, et l'atelier
+ * affichait un rond gris là où le client attend sa couleur. On va donc les
+ * chercher nous-mêmes : le site est déjà crawlé, il suffit d'y repérer un
+ * article et, à défaut, de lire la page d'accueil ; la couleur, elle, se relève
+ * dans le CSS de cette même page d'accueil.
+ *
+ * Un lien fourni à la main reste prioritaire pour le texte : c'est le client qui
+ * sait le mieux quel article le représente. La couleur, elle, se lit toujours
+ * sur la page d'accueil — c'est là que sont les boutons.
+ *
+ * Appel réservé à l'abonnement « Tout-en-un » : c'est le seul niveau où le ton
+ * relevé sert vraiment, puisque c'est lui qui fait écrire les articles dans la
+ * durée (cf. `prepareDashboardAction`).
+ */
+export async function detectBrandIdentity({
   siteUrl,
   sampleUrl,
 }: {
   siteUrl: string | null;
   sampleUrl?: string | null;
-}): Promise<ToneReading> {
-  const empty: ToneReading = { tone: null, sourceUrl: null, fromArticle: false };
+}): Promise<BrandReading> {
+  const empty: BrandReading = { tone: null, sourceUrl: null, fromArticle: false, color: null };
+
+  // Les couleurs se relèvent sur la page d'accueil, quel que soit le texte lu :
+  // un article intérieur reprend le thème du site sans en déclarer la charte.
+  const colors = siteUrl ? await collectBrandColors(siteUrl).catch(() => []) : [];
 
   // Le client a désigné un texte : on lit celui-là, sans rien chercher d'autre.
   if (sampleUrl) {
     const { pages } = await crawlSite(sampleUrl, { maxPages: 1, maxDepth: 0 });
     const article = pages[0]?.markdown?.trim();
-    if (!article) return empty;
-    return {
-      tone: await readToneFrom(article, true),
-      sourceUrl: sampleUrl,
-      fromArticle: true,
-    };
+    if (!article) return { ...empty, color: colors[0]?.hex ?? null };
+    const read = await readBrandFrom(article, true, colors);
+    return { ...read, sourceUrl: sampleUrl, fromArticle: true };
   }
 
   if (!siteUrl) return empty;
 
-  // Le crawl de l'étape 2 est en base : on le relit, on ne recrawle pas.
+  // Le crawl de l'accueil est en base : on le relit, on ne recrawle pas.
   const site = await getOrCrawlSite(siteUrl, { maxPages: 25, maxDepth: 2 });
   const page = pickToneSource(site.pages, site.url);
-  if (!page) return empty;
+
+  // Aucun texte exploitable : la couleur, elle, a pu être relevée. On rend ce
+  // qu'on a plutôt que de tout jeter parce que la moitié manque.
+  if (!page) return { ...empty, color: colors[0]?.hex ?? null };
 
   const fromArticle = page.url !== site.url && ARTICLE_PATH.test(page.url);
-  return {
-    tone: await readToneFrom(page.markdown, fromArticle),
-    sourceUrl: page.url,
-    fromArticle,
-  };
+  const read = await readBrandFrom(page.markdown, fromArticle, colors);
+  return { ...read, sourceUrl: page.url, fromArticle };
 }

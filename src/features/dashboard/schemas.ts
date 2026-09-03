@@ -48,6 +48,20 @@ export const scheduleArticleSchema = z.object({
   scheduledFor: z.string().datetime(),
 });
 
+/**
+ * Valider un article, en posant au besoin sa date de départ.
+ *
+ * Les deux gestes voyagent ensemble parce qu'ils se décident ensemble : la
+ * modale de validation montre la date à laquelle l'article partira, et le
+ * client la corrige là, dans la même fenêtre. Les séparer aurait demandé deux
+ * allers-retours pour une seule décision — et laissé la porte ouverte à un
+ * article validé sans date, que la file n'aurait jamais pris.
+ */
+export const approveArticleSchema = z.object({
+  id: z.string().min(1),
+  scheduledFor: z.string().datetime().optional(),
+});
+
 /** Le réglage du pilote automatique, porté par le rattachement du site. */
 export const autoPublishSchema = z.object({ autoPublish: z.boolean() });
 

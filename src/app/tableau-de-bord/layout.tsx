@@ -9,6 +9,7 @@ import { getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { CrispChat } from "@/components/CrispChat";
 import { DashboardShell } from "@/components/tableau-de-bord/DashboardShell";
+import { DockSlot } from "@/components/tableau-de-bord/DockSlot";
 import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
 import { WelcomeModal } from "@/components/tableau-de-bord/WelcomeModal";
 
@@ -68,12 +69,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
             fois arrivée. Ce que l'offre borne ensuite, c'est ce que le serveur
             sert à l'agent : les chantiers fermés arrivent nommés et vides. */}
         {analysis && (
-          <SolveAgentsDock
-            userId={user.id}
-            locked={!tierAtLeast(context.tier, "boost")}
-            result={analysis}
-            diagnostic={buildDiagnostic(analysis)}
-          />
+          /* Sauf dans un article ouvert : l'atelier y pose sa propre barre, qui
+             publie ou valide le texte affiché. */
+          <DockSlot>
+            <SolveAgentsDock
+              userId={user.id}
+              locked={!tierAtLeast(context.tier, "boost")}
+              result={analysis}
+              diagnostic={buildDiagnostic(analysis)}
+            />
+          </DockSlot>
         )}
       </DashboardShell>
     </>

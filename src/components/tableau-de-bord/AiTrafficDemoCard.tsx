@@ -28,6 +28,8 @@ import { TrafficFilterBar, type TrafficPeriod } from "./TrafficFilterBar";
  *
  * Le bandeau « données d'exemple » n'est pas décoratif : ces visites sont
  * inventées, et une courbe crédible sans mention se lirait comme une mesure.
+ * Le compte de démonstration fait exception (`showcase`) : il sert à montrer
+ * l'écran fini, bandeau et panneau de rattachement retirés.
  */
 
 /** Le logo et la couleur de courbe de chaque assistant, dans l'ordre du tableau. */
@@ -54,6 +56,7 @@ export function AiTrafficDemoCard({
   demo,
   domain,
   veiled = false,
+  showcase = false,
   overlay,
 }: {
   demo: DemoAiTraffic;
@@ -70,6 +73,15 @@ export function AiTrafficDemoCard({
    * lever.
    */
   veiled?: boolean;
+  /**
+   * Le compte de démonstration : la carte se montre finie.
+   *
+   * Ni bandeau « données d'exemple » ni panneau de rattachement — la courbe
+   * occupe la carte seule, comme sur un compte branché. C'est l'écran qu'on
+   * fait voir en démonstration, pas celui d'un client en attente de
+   * branchement.
+   */
+  showcase?: boolean;
   /** L'appel de l'offre, posé par-dessus la courbe floutée. */
   overlay?: React.ReactNode;
 }) {
@@ -92,9 +104,11 @@ export function AiTrafficDemoCard({
         title={t("title")}
         hint={t("hint")}
         action={
-          <span className="inline-flex items-center rounded-pill border border-border bg-mist px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-steel">
-            {t("demoBadge")}
-          </span>
+          showcase ? undefined : (
+            <span className="inline-flex items-center rounded-pill border border-border bg-mist px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-steel">
+              {t("demoBadge")}
+            </span>
+          )
         }
       />
 
@@ -168,7 +182,7 @@ export function AiTrafficDemoCard({
           </div>
         </Veiled>
 
-        {veiled ? null : <ConnectOverlay />}
+        {veiled || showcase ? null : <ConnectOverlay />}
       </div>
 
       <p className="mt-4 text-xs text-ash">{t("geminiNote")}</p>
