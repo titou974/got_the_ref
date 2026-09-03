@@ -48,6 +48,10 @@ model User {
   prospects          OutreachProspect[]
   googlePosts        GooglePost[]
   llmMentions        LlmMentionSnapshot?
+  mapsPlace          MapsPlace?
+  mapsOptimization   MapsOptimization?
+  mapsReviewReplies  MapsReviewReply[]
+  siteHours          SiteHours?
   mcpTokens          McpToken[]
   mcpDeviceCodes     McpDeviceCode[]
   mcpFixReports      McpFixReport[]
@@ -567,6 +571,12 @@ model GooglePost {
   ctaUrl  String?
   keyword String?
 
+  /// La photo de la fiche qui illustre le post, choisie parmi celles du
+  /// commerce. Un post Google sans image passe presque inaperçu dans le fil, et
+  /// une photo tirée d'une banque d'images ne montrerait pas l'établissement :
+  /// on ne propose donc que ce que le commerce a déjà publié.
+  imageUrl String?
+
   /// « planned » · « approved » · « published ».
   status       String    @default("planned")
   scheduledFor DateTime?
@@ -620,6 +630,135 @@ model LlmMentionSnapshot {
   historyPayload   String?
   historyFetchedAt DateTime?
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// La fiche Google Maps du commerce, relevée chez Google via Apify.
+///
+/// Une ligne par compte : le client n'a qu'un établissement à tenir, et la
+/// fiche est une photo à un instant donné, pas un flux. On garde le relevé
+/// entier en JSON — la fiche se réaffiche telle quelle, y compris hors ligne
+/// d'Apify — et on remonte en colonnes les trois chiffres qu'on interroge sans
+/// ouvrir le JSON : le nom, la note, le nombre d'avis.
+///
+/// `fetchedAt` sert aussi de garde-fou : chaque relevé est un run Apify facturé,
+/// et deux clics de suite sur « Actualiser » ne doivent pas le payer deux fois.
+model MapsPlace {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le lien relevé. Un changement de lien invalide le relevé précédent : ce
+  /// n'est plus le même établissement.
+  mapsUrl String
+
+  placeId      String?
+  title        String?
+  rating       Float?
+  reviewsCount Int?
+
+  /// La fiche normalisée, sérialisée en JSON (voir `lib/apify/place-types.ts`).
+  payload String
+
+  /// Le message d'erreur du dernier relevé raté, effacé au succès.
+  lastError String?
+
+  fetchedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Ce qu'il faut changer sur la fiche Google Maps : le titre, les deux
+/// descriptions, et les attributs à cocher.
+///
+/// Une ligne par compte, comme la fiche elle-même. Le contenu est un JSON
+/// (voir `lib/apify/place-types.ts`, type `MapsAdvice`) parce que la forme de
+/// l'avis suit celle de la fiche : trois textes et une liste de groupes
+/// d'attributs, tous relus ensemble ou pas du tout.
+///
+/// La proposition se rejoue telle quelle après un rechargement : le client la
+/// copie dans son back-office Google en plusieurs fois, souvent sur plusieurs
+/// jours, et retrouver un texte différent à chaque visite lui ferait recopier
+/// deux fois le même champ.
+model MapsOptimization {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// L'identifiant de la fiche sur laquelle porte l'avis. Une fiche relevée
+  /// ailleurs invalide la proposition : ce n'est plus le même établissement.
+  placeId String?
+
+  /// Les propositions sérialisées en JSON.
+  payload String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Une réponse rédigée pour un avis Google, en attente d'être collée.
+///
+/// Une ligne par avis, et l'identifiant Google de l'avis en clé : le client
+/// répond avis par avis, sur plusieurs jours, et une réponse déjà relue ne doit
+/// pas être réécrite parce qu'un autre avis vient d'arriver.
+///
+/// Rien n'est publié d'ici : l'API Business Profile réclame une validation du
+/// compte marchand que nous n'avons pas. Le texte est écrit, copié, collé.
+model MapsReviewReply {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// L'identifiant Google de l'avis auquel cette réponse répond.
+  reviewId String
+
+  /// Le nom de l'auteur et sa note, recopiés pour afficher le fil sans
+  /// dépendre du dernier relevé : un avis peut disparaître du relevé suivant.
+  reviewerName String
+  stars        Int
+  /// Le texte de l'avis au moment de la rédaction. Un avis modifié après coup
+  /// rend la réponse à revoir, et cette copie permet de s'en apercevoir.
+  reviewText String?
+
+  /// La réponse proposée.
+  reply String
+
+  /// « draft » · « approved ». Une réponse validée n'est plus réécrite.
+  status String @default("draft")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, reviewId])
+  @@index([userId, status])
+}
+
+/// Les horaires lus sur la page d'accueil du site.
+///
+/// Google croise la fiche et le site : deux horaires qui se contredisent
+/// affaiblissent les deux, et c'est l'erreur locale la plus fréquente — le site
+/// garde les horaires d'été trois ans de suite pendant que la fiche est à jour.
+///
+/// L'extraction relit le crawl déjà en base, elle ne recharge pas le site : les
+/// horaires y sont écrits en toutes lettres au milieu d'un pied de page, et
+/// c'est un modèle rapide qui les en sort.
+model SiteHours {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le domaine analysé. Un changement de site rouvre l'extraction.
+  domain String
+
+  /// Les horaires relevés et leur comparaison avec la fiche, en JSON.
+  payload String
+
+  /// Vrai quand la page d'accueil n'affiche aucun horaire : c'est un résultat,
+  /// pas un échec, et il ne faut pas le relire à chaque affichage.
+  absent Boolean @default(false)
+
+  fetchedAt DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

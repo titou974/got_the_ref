@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
 import { approveGooglePostAction, planGooglePostsAction } from "@/features/dashboard/actions";
+import { photoAt } from "./maps/place-format";
 import { Card, CardTitle } from "./Card";
 
 /**
@@ -24,6 +26,8 @@ export type PostRow = {
   keyword: string | null;
   status: string;
   scheduledFor: string | null;
+  /** La photo de la fiche qui illustre le post, quand une convenait. */
+  imageUrl: string | null;
 };
 
 export function GooglePostPlanner({ posts }: { posts: PostRow[] }) {
@@ -72,18 +76,38 @@ export function GooglePostPlanner({ posts }: { posts: PostRow[] }) {
           {posts.map((post) => (
             <li key={post.id} className="rounded-2xl border border-border p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{post.title}</p>
-                  <p className="mt-0.5 text-xs text-muted">
-                    {post.scheduledFor
-                      ? new Date(post.scheduledFor).toLocaleDateString("fr-FR", {
-                          day: "numeric",
-                          month: "long",
-                        })
-                      : t("undated")}
-                    {post.keyword ? ` · ${post.keyword}` : ""}
-                    {post.cta ? ` · ${t(`cta.${post.cta}`)}` : ""}
-                  </p>
+                <div className="flex min-w-0 gap-3">
+                  {/* La photo du post, celle qui partira avec lui sur la fiche.
+                      Un post Google sans image passe presque inaperçu dans le
+                      fil : la montrer ici, c'est montrer ce qui sera publié. */}
+                  {post.imageUrl ? (
+                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">
+                      <Image
+                        src={photoAt(post.imageUrl, 160, 160)}
+                        alt=""
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                        unoptimized
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  ) : null}
+
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{post.title}</p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {post.scheduledFor
+                        ? new Date(post.scheduledFor).toLocaleDateString("fr-FR", {
+                            weekday: "long",
+                            day: "numeric",
+                            month: "long",
+                          })
+                        : t("undated")}
+                      {post.keyword ? ` · ${post.keyword}` : ""}
+                      {post.cta ? ` · ${t(`cta.${post.cta}`)}` : ""}
+                    </p>
+                  </div>
                 </div>
                 <span
                   className={`shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold ${

@@ -137,3 +137,25 @@ export const planGooglePostsSchema = z.object({
 });
 
 export const googlePostIdSchema = z.object({ id: z.string().min(1) });
+
+/**
+ * Le relevé de la fiche Google Maps.
+ *
+ * `force` passe outre le délai de garde entre deux relevés : le client vient de
+ * corriger sa fiche chez Google et veut la revoir tout de suite, quitte à payer
+ * un second run Apify.
+ */
+export const refreshMapsPlaceSchema = z.object({
+  force: z.boolean().default(false),
+});
+
+/** Les identifiants d'avis pour lesquels on veut une réponse rédigée. */
+export const draftReviewRepliesSchema = z.object({
+  /** Vide = tous les avis sans réponse du propriétaire. */
+  reviewIds: z.array(z.string().min(1).max(200)).max(12).default([]),
+});
+
+export const reviewReplySchema = z.object({ id: z.string().min(1) });
+
+/** La relecture des horaires de la page d'accueil. */
+export const readSiteHoursSchema = z.object({});
