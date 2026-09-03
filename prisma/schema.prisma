@@ -47,6 +47,7 @@ model User {
   prospects          OutreachProspect[]
   googlePosts        GooglePost[]
   llmMentions        LlmMentionSnapshot?
+  mapsPlace          MapsPlace?
   mcpTokens          McpToken[]
   mcpDeviceCodes     McpDeviceCode[]
   mcpFixReports      McpFixReport[]
@@ -572,6 +573,41 @@ model LlmMentionSnapshot {
   historyPayload   String?
   historyFetchedAt DateTime?
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// La fiche Google Maps du commerce, relevée chez Google via Apify.
+///
+/// Une ligne par compte : le client n'a qu'un établissement à tenir, et la
+/// fiche est une photo à un instant donné, pas un flux. On garde le relevé
+/// entier en JSON — la fiche se réaffiche telle quelle, y compris hors ligne
+/// d'Apify — et on remonte en colonnes les trois chiffres qu'on interroge sans
+/// ouvrir le JSON : le nom, la note, le nombre d'avis.
+///
+/// `fetchedAt` sert aussi de garde-fou : chaque relevé est un run Apify facturé,
+/// et deux clics de suite sur « Actualiser » ne doivent pas le payer deux fois.
+model MapsPlace {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le lien relevé. Un changement de lien invalide le relevé précédent : ce
+  /// n'est plus le même établissement.
+  mapsUrl String
+
+  placeId      String?
+  title        String?
+  rating       Float?
+  reviewsCount Int?
+
+  /// La fiche normalisée, sérialisée en JSON (voir `lib/apify/place-types.ts`).
+  payload String
+
+  /// Le message d'erreur du dernier relevé raté, effacé au succès.
+  lastError String?
+
+  fetchedAt DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

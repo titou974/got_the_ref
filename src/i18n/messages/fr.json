@@ -2002,6 +2002,15 @@
     "maps": {
       "pageTitle": "Google Maps",
       "listing": "Votre fiche",
+      "coherenceTitle": "Cohérence fiche ↔ site",
+      "syncFailed": "Le dernier relevé a échoué : {error}",
+      "place": {
+        "noUrlTitle": "Aucun lien de fiche enregistré",
+        "noUrlBody": "Ajoutez l'adresse de votre fiche Google Maps dans vos réglages : c'est elle que nous relevons chez Google, avec vos photos, vos horaires et vos avis.",
+        "goToSettings": "Ouvrir mes réglages",
+        "notFetchedTitle": "Fiche jamais relevée",
+        "notFetchedBody": "Lancez le premier relevé depuis le bouton en haut de page. Google répond en une minute environ, et votre fiche s'affiche ici telle qu'il la montre."
+      },
       "noListing": "Fiche non analysée.",
       "noListingBody": "Ajoutez l'adresse de votre fiche Google Maps depuis votre compte pour la comparer à votre site.",
       "name": "Nom",

@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
+import type { GooglePlace } from "@/lib/apify/place-types";
 import { decryptJson } from "@/lib/crypto";
 import type { SiteCapability } from "@/constants/site-platforms";
 import {
@@ -365,6 +366,54 @@ export async function listGooglePosts(userId: string) {
     where: { userId },
     orderBy: [{ scheduledFor: "asc" }, { createdAt: "desc" }],
   });
+}
+
+/** Le dernier relevé de la fiche Google Maps, prêt à réafficher. */
+export type MapsPlaceSnapshot = {
+  place: GooglePlace;
+  /** Le lien relevé, celui qui rouvre la fiche chez Google. */
+  mapsUrl: string;
+  fetchedAt: Date;
+  /** Vrai passé le délai de fraîcheur : le bouton « Actualiser » redevient utile. */
+  stale: boolean;
+  /** L'échec du dernier essai, quand il y en a eu un après un relevé réussi. */
+  lastError: string | null;
+};
+
+/**
+ * Un relevé vieux d'une journée reste juste : les horaires bougent rarement, et
+ * les avis se comptent en semaines. Passé ce délai, on le signale sans jamais
+ * relever tout seul — chaque relevé est un run Apify facturé, et c'est au client
+ * de le déclencher.
+ */
+export const MAPS_PLACE_FRESH_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Le délai de garde entre deux relevés du même lien. Un run Apify se paie ;
+ * deux clics de suite sur « Actualiser » ne doivent pas le payer deux fois.
+ */
+export const MAPS_PLACE_COOLDOWN_MS = 60 * 60 * 1000;
+
+export async function getMapsPlace(userId: string): Promise<MapsPlaceSnapshot | null> {
+  const record = await prisma.mapsPlace.findUnique({ where: { userId } });
+  if (!record) return null;
+
+  let place: GooglePlace;
+  try {
+    place = JSON.parse(record.payload) as GooglePlace;
+  } catch {
+    // Relevé illisible (format changé, écriture tronquée) : on fait comme s'il
+    // n'existait pas, l'écran proposera de le refaire.
+    return null;
+  }
+
+  return {
+    place,
+    mapsUrl: record.mapsUrl,
+    fetchedAt: record.fetchedAt,
+    stale: Date.now() - record.fetchedAt.getTime() > MAPS_PLACE_FRESH_MS,
+    lastError: record.lastError,
+  };
 }
 
 /** Où en est le client de ses rédactions de la semaine. */

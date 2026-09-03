@@ -11,6 +11,9 @@ import { AppError } from "@/lib/errors";
 import { encryptJson, isCredentialsKeySet } from "@/lib/crypto";
 import { connectorFor } from "@/constants/site-platforms";
 import { preferredPassOnDay } from "@/constants/publishing";
+import { ApifyError, isApifyConfigured } from "@/lib/apify/client";
+import { fetchGooglePlace } from "@/lib/apify/google-place";
+import type { GooglePlace } from "@/lib/apify/place-types";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { regenerateOnPageElement } from "@/lib/geo/keywords";
@@ -19,6 +22,7 @@ import { publishArticle, verifyConnection, type Credentials } from "./connectors
 import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
 import {
+  MAPS_PLACE_COOLDOWN_MS,
   getArticleQuota,
   getDashboardContext,
   isDashboardReady,
@@ -63,6 +67,7 @@ import {
   planGooglePostsSchema,
   prospectIdSchema,
   prospectStatusSchema,
+  refreshMapsPlaceSchema,
   regenerateOnPageSchema,
   scheduleArticleSchema,
   settingsSchema,
@@ -1322,4 +1327,96 @@ export const approveGooglePostAction = authActionClient
 
     revalidatePath(ROUTES.dashboardMaps);
     return { ok: true };
+  });
+
+/**
+ * Relève la fiche Google Maps du commerce et la range en base.
+ *
+ * Le lien vient de la fiche d'accueil : c'est celui que le client a donné en
+ * s'inscrivant. On le passe à Apify, qui ouvre la fiche comme un navigateur et
+ * rend ce que Google montre — photos, horaires, attributs, avis. Le relevé
+ * remplace le précédent : la fiche affichée est toujours la dernière connue.
+ *
+ * Deux gardes, parce que chaque relevé est un run Apify facturé :
+ *   — le délai `MAPS_PLACE_COOLDOWN_MS` entre deux relevés du même lien, que
+ *     `force` lève quand le client vient de corriger sa fiche ;
+ *   — l'échec, enregistré dans `lastError` sans effacer le relevé précédent :
+ *     une panne du scraper ne doit pas vider l'écran.
+ */
+export const refreshMapsPlaceAction = authActionClient
+  .inputSchema(refreshMapsPlaceSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "maps");
+
+    if (!isApifyConfigured()) {
+      throw new AppError(
+        "Le relevé de fiche n'est pas configuré sur ce serveur.",
+        "APIFY_NOT_CONFIGURED",
+        503,
+      );
+    }
+
+    const profile = await prisma.onboardingProfile.findUnique({
+      where: { userId },
+      select: { mapsUrl: true },
+    });
+    const mapsUrl = profile?.mapsUrl?.trim();
+    if (!mapsUrl) {
+      throw new AppError(
+        "Aucun lien de fiche Google Maps enregistré. Ajoutez-le depuis vos réglages.",
+        "NO_MAPS_URL",
+        400,
+      );
+    }
+
+    const existing = await prisma.mapsPlace.findUnique({ where: { userId } });
+    const sameLink = existing?.mapsUrl === mapsUrl;
+    const age = existing ? Date.now() - existing.fetchedAt.getTime() : Infinity;
+    if (existing && sameLink && !parsedInput.force && age < MAPS_PLACE_COOLDOWN_MS) {
+      const minutes = Math.max(1, Math.ceil((MAPS_PLACE_COOLDOWN_MS - age) / 60_000));
+      throw new AppError(
+        `Fiche relevée il y a moins d'une heure. Nouveau relevé possible dans ${minutes} min.`,
+        "MAPS_PLACE_COOLDOWN",
+        429,
+      );
+    }
+
+    let place: GooglePlace | null;
+    try {
+      place = await fetchGooglePlace(mapsUrl);
+    } catch (err) {
+      const message =
+        err instanceof ApifyError
+          ? err.message
+          : "Le relevé de la fiche a échoué. Réessayez dans quelques minutes.";
+      // On note l'échec sans toucher au relevé précédent, s'il y en a un.
+      if (existing) {
+        await prisma.mapsPlace.update({ where: { userId }, data: { lastError: message } });
+      }
+      throw new AppError(message, "MAPS_PLACE_FAILED", 502);
+    }
+
+    if (!place) {
+      throw new AppError(
+        "Aucune fiche trouvée derrière ce lien. Vérifiez l'adresse de votre fiche Google Maps.",
+        "MAPS_PLACE_NOT_FOUND",
+        404,
+      );
+    }
+
+    const data = {
+      mapsUrl,
+      placeId: place.placeId,
+      title: place.title,
+      rating: place.rating,
+      reviewsCount: place.reviewsCount,
+      payload: JSON.stringify(place),
+      lastError: null,
+      fetchedAt: new Date(),
+    };
+    await prisma.mapsPlace.upsert({ where: { userId }, create: { userId, ...data }, update: data });
+
+    revalidatePath(ROUTES.dashboardMaps);
+    return { title: place.title, reviewsCount: place.reviewsCount };
   });
