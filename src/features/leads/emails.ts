@@ -11,25 +11,20 @@ import { button, escapeHtml, layout, type EmailContent } from "@/lib/email-layou
  * tourne encore sous les yeux du visiteur. Il ne raconte donc pas de résultats
  * — il n'y en a pas encore, et en inventer serait pire que se taire. Il dit
  * trois choses : nous avons bien votre adresse et votre site, votre espace
- * existe, et voici comment y revenir.
+ * existe, et voici par où y revenir.
  *
- * Le dernier point n'est pas un détail. Le compte a été ouvert sans mot de
- * passe : la session vit dans le navigateur qui a lancé l'analyse, et rien
- * d'autre. Sans ce message, un visiteur qui ferme son onglet perd l'accès à un
- * espace dont il ignore jusqu'à l'existence. Le lien « choisir un mot de
- * passe » est donc le seul contenu vraiment indispensable de l'e-mail.
+ * Rien sur le mot de passe : le visiteur vient de le choisir dans la modale, ou
+ * il est entré par Google. C'est la trace écrite de ce qu'il a lancé, pas une
+ * clé de secours — la version qui en portait une répondait à un compte ouvert
+ * sans mot de passe, parcours depuis remplacé par une vraie inscription.
  */
 export function freeAnalysisStartedEmail({
   domain,
-  email,
 }: {
   /** Le site que le visiteur vient de faire analyser, s'il est connu. */
   domain?: string | null;
-  /** L'adresse du compte, reportée dans le lien de mot de passe. */
-  email: string;
 }): EmailContent {
   const dashboardUrl = `${SITE.url}${ROUTES.dashboard}`;
-  const passwordUrl = `${SITE.url}${ROUTES.forgotPassword}?email=${encodeURIComponent(email)}`;
   const site = domain ? escapeHtml(domain) : "votre site";
   const sitePlain = domain ?? "votre site";
 
@@ -48,12 +43,6 @@ export function freeAnalysisStartedEmail({
       faire s'y affichent dès que l'analyse est finie.
     </p>
     ${button(dashboardUrl, "Ouvrir mon tableau de bord")}
-    <p style="margin:0 0 8px;font-size:13px;line-height:20px;color:#71717a;">
-      Pour revenir depuis un autre appareil, choisissez un mot de passe :
-    </p>
-    <p style="margin:0 0 24px;font-size:13px;line-height:20px;word-break:break-all;">
-      <a href="${passwordUrl}" style="color:#09090b;">${escapeHtml(passwordUrl)}</a>
-    </p>
     <p style="margin:0;font-size:13px;line-height:20px;color:#71717a;">
       Une question ? Répondez à cet e-mail, il arrive directement chez nous.
     </p>
@@ -67,8 +56,6 @@ export function freeAnalysisStartedEmail({
     "Votre espace est ouvert : la note, le classement et les corrections à faire s'y affichent dès que l'analyse est finie.",
     "",
     `Ouvrir votre tableau de bord : ${dashboardUrl}`,
-    "",
-    `Pour revenir depuis un autre appareil, choisissez un mot de passe : ${passwordUrl}`,
     "",
     "Une question ? Répondez à cet e-mail, il arrive directement chez nous.",
   ].join("\n");

@@ -6,9 +6,9 @@ import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { AnalyzingOverlay } from "./AnalyzingOverlay";
 import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
-import { ROUTES, pricingWithReason } from "@/constants/routes";
+import { ROUTES, pricingWithReason, signInWithNext } from "@/constants/routes";
 import { Portal } from "./Portal";
-import { lockScroll } from "@/lib/scroll-lock";
+import { SignUpGateDialog } from "./SignUpGateDialog";
 
 type Mode = "physical" | "online";
 
@@ -21,7 +21,7 @@ function extractDomain(input: string): string {
   }
 }
 
-/** Où l'on retient l'e-mail déjà laissé, pour ne pas le redemander à chaque analyse. */
+/** Où l'on retient l'e-mail déjà laissé, pour le reproposer sans le retaper. */
 const LEAD_EMAIL_KEY = "geo:lead-email";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -29,14 +29,24 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export function UrlAnalyzeForm({
   size = "lg",
   askEmail = false,
+  googleEnabled = false,
 }: {
   size?: "lg" | "md";
   /**
-   * Version gratuite (visiteur non connecté) : une petite modale réclame
-   * l'e-mail avant de lancer l'analyse. Un visiteur connecté a déjà son adresse
-   * en base — on ne la lui redemande pas.
+   * Version gratuite (visiteur non connecté) : une modale d'inscription
+   * s'ouvre avant l'analyse — Google, ou une adresse et un mot de passe. Le
+   * compte gratuit ainsi ouvert emmène le visiteur sur son tableau de bord,
+   * où l'analyse se joue sous ses yeux. Un visiteur connecté, lui, a déjà tout
+   * ce qu'il faut : l'analyse part directement.
    */
   askEmail?: boolean;
+  /**
+   * Les identifiants OAuth sont-ils configurés ? Le drapeau vit côté serveur
+   * (`isGoogleAuthEnabled`) et descend jusqu'ici : afficher un bouton Google
+   * sans fournisseur branché mène le visiteur sur une route de rappel qui
+   * échoue.
+   */
+  googleEnabled?: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("analyzeForm");
@@ -45,29 +55,21 @@ export function UrlAnalyzeForm({
   const [mapsUrl, setMapsUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [confirmNoMaps, setConfirmNoMaps] = useState(false);
-  const [askingEmail, setAskingEmail] = useState(false);
+  const [signingUp, setSigningUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mapsInputRef = useRef<HTMLInputElement>(null);
-  // E-mail du visiteur non connecté : mémorisé le temps de la session de
-  // navigation, transmis à l'API pour être attaché à l'analyse créée.
-  const leadEmailRef = useRef<string | null>(null);
+  // Adresse déjà laissée lors d'une visite précédente : elle pré-remplit le
+  // champ de la modale. Elle ne dispense pas de s'inscrire — il y a un mot de
+  // passe à choisir, et c'est un compte qu'on ouvre. Relue à l'ouverture de la
+  // modale, jamais au montage : le premier rendu doit être identique à celui du
+  // serveur, qui ne connaît pas le stockage du navigateur.
+  const [knownEmail, setKnownEmail] = useState("");
 
   // Coordination : on ne redirige que lorsque l'API a répondu ET que
   // l'animation a parcouru toutes ses étapes (faux temps).
   const resultIdRef = useRef<string | null>(null);
   const animDoneRef = useRef(false);
   const navigatedRef = useRef(false);
-
-  // E-mail déjà laissé lors d'une visite précédente : on ne le redemande pas.
-  useEffect(() => {
-    if (!askEmail) return;
-    try {
-      const saved = window.localStorage.getItem(LEAD_EMAIL_KEY);
-      if (saved && EMAIL_RE.test(saved)) leadEmailRef.current = saved;
-    } catch {
-      /* stockage indisponible (navigation privée) : on demandera l'e-mail */
-    }
-  }, [askEmail]);
 
   function maybeNavigate() {
     if (navigatedRef.current) return;
@@ -94,7 +96,6 @@ export function UrlAnalyzeForm({
           url: trimmed,
           mode,
           mapsUrl: mode === "physical" ? mapsUrl.trim() || null : null,
-          email: leadEmailRef.current,
         }),
       });
 
@@ -127,20 +128,8 @@ export function UrlAnalyzeForm({
         return;
       }
 
-      const data = await res.json();
-
-      // Le compte gratuit vient d'être ouvert : la suite se joue sur le tableau
-      // de bord, dont l'écran d'attente lance l'analyse et l'affiche sous voile.
-      // On y va tout de suite plutôt que d'attendre la fin de l'animation : ce
-      // serait deux écrans de chargement à la file, le second faisant le vrai
-      // travail.
-      if (typeof data.redirect === "string") {
-        navigatedRef.current = true;
-        router.push(data.redirect);
-        return;
-      }
-
-      resultIdRef.current = String(data.id);
+      const { id } = await res.json();
+      resultIdRef.current = String(id);
       // L'animation continue ; la navigation se fera quand elle aura fini.
       maybeNavigate();
     } catch {
@@ -149,11 +138,24 @@ export function UrlAnalyzeForm({
     }
   }
 
-  /** Étape suivante une fois l'e-mail réglé : confirmation Maps, puis analyse. */
-  function continueAfterEmail() {
-    // Commerce physique sans fiche Maps : on propose d'en ajouter une avant de lancer.
-    if (mode === "physical" && !mapsUrl.trim()) {
-      setConfirmNoMaps(true);
+  /**
+   * La question de la fiche Maps réglée, on passe à la suite : l'inscription
+   * pour un visiteur non identifié, l'analyse directement pour les autres.
+   *
+   * L'ordre a changé le jour où la modale est devenue une inscription. Demander
+   * un mot de passe puis revenir sur « avez-vous une fiche Google Maps ? »
+   * ferait reculer quelqu'un qui vient de s'engager ; la question de la fiche
+   * porte sur le site, elle se pose donc avec le site.
+   */
+  function continueAfterMaps() {
+    if (askEmail) {
+      try {
+        const saved = window.localStorage.getItem(LEAD_EMAIL_KEY);
+        setKnownEmail(saved && EMAIL_RE.test(saved) ? saved : "");
+      } catch {
+        /* stockage indisponible (navigation privée) : le champ reste vide */
+      }
+      setSigningUp(true);
       return;
     }
     runAnalysis();
@@ -166,24 +168,22 @@ export function UrlAnalyzeForm({
       setError(t("errorEmpty"));
       return;
     }
-    // Analyse gratuite d'un visiteur non connecté : l'e-mail d'abord.
-    if (askEmail && !leadEmailRef.current) {
-      setAskingEmail(true);
+    // Commerce physique sans fiche Maps : on propose d'en ajouter une avant de
+    // lancer quoi que ce soit.
+    if (mode === "physical" && !mapsUrl.trim()) {
+      setConfirmNoMaps(true);
       return;
     }
-    continueAfterEmail();
+    continueAfterMaps();
   }
 
-  /** E-mail validé dans la modale : on le retient, puis on enchaîne. */
-  function handleEmailSubmit(email: string) {
-    leadEmailRef.current = email;
+  /** L'adresse retenue pour la prochaine visite, une fois le compte ouvert. */
+  function rememberEmail(email: string) {
     try {
       window.localStorage.setItem(LEAD_EMAIL_KEY, email);
     } catch {
-      /* stockage indisponible : l'e-mail reste valable pour cette analyse */
+      /* stockage indisponible : sans effet sur le compte qui vient de naître */
     }
-    setAskingEmail(false);
-    continueAfterEmail();
   }
 
   const big = size === "lg";
@@ -344,23 +344,22 @@ export function UrlAnalyzeForm({
         )}
       </form>
 
-      {/* Modale : e-mail du visiteur avant l'analyse gratuite. */}
+      {/* Modale : l'inscription qui ouvre l'espace gratuit. Google en haut,
+          l'adresse et le mot de passe en dessous. */}
       <Portal>
         <AnimatePresence>
-          {askingEmail && (
-            <EmailGateDialog
-              labels={{
-                title: t("emailTitle"),
-                body: t("emailBody"),
-                label: t("emailLabel"),
-                placeholder: t("emailPlaceholder"),
-                submit: t("emailSubmit"),
-                invalid: t("emailInvalid"),
-                note: t("emailNote"),
-                close: t("emailClose"),
+          {signingUp && (
+            <SignUpGateDialog
+              site={{
+                url: url.trim(),
+                mode,
+                mapsUrl: mode === "physical" ? mapsUrl.trim() || null : null,
               }}
-              onSubmit={handleEmailSubmit}
-              onClose={() => setAskingEmail(false)}
+              defaultEmail={knownEmail}
+              googleEnabled={googleEnabled}
+              signInHref={signInWithNext(ROUTES.dashboard)}
+              onEmailKept={rememberEmail}
+              onClose={() => setSigningUp(false)}
             />
           )}
         </AnimatePresence>
@@ -384,7 +383,7 @@ export function UrlAnalyzeForm({
               }}
               onWithout={() => {
                 setConfirmNoMaps(false);
-                runAnalysis();
+                continueAfterMaps();
               }}
               onClose={() => setConfirmNoMaps(false)}
             />
@@ -408,176 +407,6 @@ export function UrlAnalyzeForm({
         </AnimatePresence>
       </Portal>
     </>
-  );
-}
-
-/* ------------------------- Modale « votre e-mail » ------------------------- */
-
-function EmailGateDialog({
-  labels,
-  onSubmit,
-  onClose,
-}: {
-  labels: {
-    title: string;
-    body: string;
-    label: string;
-    placeholder: string;
-    submit: string;
-    invalid: string;
-    note: string;
-    close: string;
-  };
-  onSubmit: (email: string) => void;
-  onClose: () => void;
-}) {
-  const [email, setEmail] = useState("");
-  const [invalid, setInvalid] = useState(false);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    const release = lockScroll();
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      release();
-    };
-  }, [onClose]);
-
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    const value = email.trim();
-    if (!EMAIL_RE.test(value)) {
-      setInvalid(true);
-      return;
-    }
-    onSubmit(value);
-  }
-
-  return (
-    <motion.div
-      className="fixed inset-0 z-[110] flex items-center justify-center px-5"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <div
-        className="absolute inset-0 bg-obsidian/40 backdrop-blur-[2px]"
-        onClick={onClose}
-        aria-hidden
-      />
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="email-gate-title"
-        className="relative w-full max-w-sm rounded-[28px] border border-fog bg-snow p-6 shadow-[var(--shadow-md)] sm:p-7"
-        initial={{ opacity: 0, y: 16, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 16, scale: 0.96 }}
-        transition={{ duration: 0.22, ease: "easeOut" }}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={labels.close}
-          className="absolute right-4 top-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-muted transition-colors duration-200 hover:bg-mist hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden
-          >
-            <path
-              d="m6 6 12 12M18 6 6 18"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-mist text-accent">
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden
-          >
-            <rect
-              x="3"
-              y="5"
-              width="18"
-              height="14"
-              rx="3"
-              stroke="currentColor"
-              strokeWidth="1.6"
-            />
-            <path
-              d="m4 8 7.1 4.7a2 2 0 0 0 2.2 0L20 8"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
-        </span>
-
-        <h2
-          id="email-gate-title"
-          className="mt-4 text-lg font-bold text-text sm:text-xl"
-        >
-          {labels.title}
-        </h2>
-        <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">
-          {labels.body}
-        </p>
-
-        <form onSubmit={submit} className="mt-5">
-          <label htmlFor="lead-email" className="sr-only">
-            {labels.label}
-          </label>
-          <div className="flex items-center gap-2 rounded-full border border-fog bg-white p-1.5 transition-[border-color] duration-200 focus-within:border-pebble">
-            <input
-              id="lead-email"
-              autoFocus
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (invalid) setInvalid(false);
-              }}
-              placeholder={labels.placeholder}
-              aria-invalid={invalid}
-              className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-text placeholder:text-muted/70 focus:outline-none"
-            />
-          </div>
-
-          {invalid && (
-            <p className="mt-2 pl-2 text-xs text-danger" role="alert">
-              {labels.invalid}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            className="mt-4 w-full cursor-pointer rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
-          >
-            {labels.submit}
-          </button>
-        </form>
-
-        <p className="mt-3 text-center text-[0.7rem] leading-relaxed text-muted/80">
-          {labels.note}
-        </p>
-      </motion.div>
-    </motion.div>
   );
 }
 

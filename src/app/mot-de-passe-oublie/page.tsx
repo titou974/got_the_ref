@@ -16,21 +16,11 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * Déjà connecté, on n'a rien à faire ici : le changement de mot de passe passe
  * alors par l'espace compte, sans détour par la boîte e-mail.
- *
- * L'adresse peut arriver dans l'URL : c'est le chemin que prend le compte
- * ouvert depuis l'analyse de la page d'accueil, qui n'a jamais eu de mot de
- * passe. Le lien de son e-mail de confirmation dépose donc l'adresse ici, et il
- * ne reste qu'à valider.
  */
-export default async function MotDePasseOubliePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ email?: string }>;
-}) {
+export default async function MotDePasseOubliePage() {
   if (await getSession()) redirect(ROUTES.account);
 
   const t = await getTranslations("auth");
-  const { email } = await searchParams;
 
   return (
     <AuthCard
@@ -38,7 +28,7 @@ export default async function MotDePasseOubliePage({
       subtitle={t("forgotSubtitle")}
       backLabel={t("backHome")}
     >
-      <ForgotPasswordForm defaultEmail={email ?? ""} />
+      <ForgotPasswordForm />
     </AuthCard>
   );
 }

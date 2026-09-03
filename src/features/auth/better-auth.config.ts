@@ -112,9 +112,8 @@ export const auth = betterAuth({
    * gratuite de la page d'accueil a laissé son adresse quelques secondes plus
    * tôt : la bienvenue générique lui demanderait l'adresse de son site, qu'il
    * vient précisément de donner, et son analyse tourne déjà. Il reçoit donc la
-   * confirmation de cette analyse — qui porte, elle, le lien de mot de passe
-   * dont ce compte ouvert sans mot de passe a besoin pour exister ailleurs que
-   * dans ce navigateur. Le repère est la ligne de diffusion, écrite avant
+   * confirmation de cette analyse, qui dit ce qui est en train de se passer et
+   * par où y revenir. Le repère est la ligne de diffusion, écrite avant
    * l'inscription (cf. `features/analysis/demo.ts`).
    */
   databaseHooks: {
@@ -123,7 +122,7 @@ export const auth = betterAuth({
         after: async (user) => {
           const lead = await recentAnalysisLead(user.email);
           const { subject, html, text } = lead
-            ? freeAnalysisStartedEmail({ domain: lead.domain, email: user.email })
+            ? freeAnalysisStartedEmail({ domain: lead.domain })
             : welcomeEmail({ userName: user.name });
           after(() =>
             sendEmail({
