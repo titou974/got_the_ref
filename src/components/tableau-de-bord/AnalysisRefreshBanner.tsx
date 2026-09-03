@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
@@ -23,9 +23,16 @@ import { tierAtLeast, type AccessTier } from "@/constants/access";
  * annonce « tout recalculer » sans savoir ce qu'il risque : la phrase est donc
  * dans le corps du bandeau, pas dans une note de bas de page.
  *
+ * La reprise ne se demande plus : elle part toute seule à la première ouverture
+ * du tableau de bord de la journée, sur téléphone comme sur ordinateur. Le
+ * bouton reste, à la même place, pour la relancer à la main — après un
+ * correctif posé dans la foulée, par exemple — les jours où elle n'a pas
+ * encore eu lieu.
+ *
  * Trois états, un seul bloc :
- *   — disponible : le bouton part, et la barre d'attente prend sa place le
- *     temps du crawl et de l'audit (deux à trois minutes, c'est écrit).
+ *   — disponible : la reprise part (d'elle-même ou au clic), et la barre
+ *     d'attente prend la place du bouton le temps du crawl et de l'audit (deux
+ *     à trois minutes, c'est écrit).
  *   — déjà repris aujourd'hui : le bouton est fermé et la date de la prochaine
  *     reprise remplace l'accroche. Le bandeau reste, il fait office de reçu.
  *   — hors abonnement : la reprise appartient à l'abonnement Tout-en-un, une
@@ -37,6 +44,18 @@ import { tierAtLeast, type AccessTier } from "@/constants/access";
  */
 
 const DISMISS_KEY = "gotref:banner:refresh";
+
+/**
+ * La journée dont la reprise automatique a déjà été lancée depuis ce
+ * navigateur.
+ *
+ * Elle est posée AVANT l'appel, pas après : l'audit dure deux à trois minutes,
+ * et pendant tout ce temps le serveur répond encore « disponible aujourd'hui ».
+ * Un client qui recharge sa page à ce moment-là relancerait un second audit
+ * sur le premier. La clé ferme la porte dès le départ ; le serveur, lui, refuse
+ * de toute façon la deuxième reprise du jour une fois la première écrite.
+ */
+const AUTO_KEY = "gotref:refresh:auto";
 
 /** La journée en cours, en clé de stockage : « 2026-09-02 ». */
 function today(): string {
@@ -98,12 +117,45 @@ export function AnalysisRefreshBanner({
   });
   const working = isPending || isRefreshing;
 
-  if (dismissed && !working) return null;
-
   // La reprise revient chaque jour : elle suit l'offre qui revient chaque mois.
   // Le Coup de Boost, passe unique, n'y donne pas droit.
   const paid = tierAtLeast(tier, "allin");
   const open = paid && availableToday;
+
+  /**
+   * La reprise du jour part toute seule, à la première ouverture du tableau de
+   * bord.
+   *
+   * Le bouton restait le seul chemin, et il demandait au client de penser
+   * chaque matin à remesurer un site dont il vient justement demander l'état.
+   * Ce qu'il ouvre en arrivant doit être vrai d'aujourd'hui : c'est donc la
+   * page qui lance la mesure, et le bouton ne sert plus qu'à celui qui veut la
+   * relancer à la main après avoir posé un correctif.
+   *
+   * Une seule fois par journée civile et par navigateur, aux comptes qui y ont
+   * droit. Le garde-fou est double : la clé du jour, écrite avant l'appel, et
+   * le refus serveur passé la première reprise.
+   */
+  const [auto, setAuto] = useState(false);
+  const started = useRef(false);
+  useEffect(() => {
+    if (!open || started.current) return;
+
+    // Comme la relecture du bandeau refermé : le départ est reporté d'un tour
+    // de boucle, pour ne pas relancer un rendu depuis le corps de l'effet.
+    const timer = setTimeout(() => {
+      if (read(AUTO_KEY) === today()) return;
+
+      started.current = true;
+      write(AUTO_KEY, today());
+      setAuto(true);
+      execute({});
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [open, execute]);
+
+  if (dismissed && !working) return null;
 
   const lastLabel = lastRefreshedAt
     ? t("last", {
@@ -142,12 +194,27 @@ export function AnalysisRefreshBanner({
         </div>
 
         <div className="mt-4 min-w-0 sm:mt-0">
+          {/* Pendant la reprise automatique, le bandeau dit ce qui se passe
+              sans qu'on ait rien demandé : un audit qui part seul et ne
+              s'annonce pas se lit comme un écran qui rame. */}
           <h2 className="text-base font-semibold text-text sm:text-lg">
-            {open ? t("title") : paid ? t("titleDone") : t("titleLocked")}
+            {auto && working
+              ? t("titleAuto")
+              : open
+                ? t("title")
+                : paid
+                  ? t("titleDone")
+                  : t("titleLocked")}
           </h2>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            {open ? t("body") : paid ? t("bodyDone") : t("bodyLocked")}
+            {auto && working
+              ? t("bodyAuto")
+              : open
+                ? t("body")
+                : paid
+                  ? t("bodyDone")
+                  : t("bodyLocked")}
           </p>
 
           {/* Ce que la reprise ne touche pas, écrit avant le clic. */}
