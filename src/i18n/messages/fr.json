@@ -726,6 +726,8 @@
     "perMonth": "/mois",
     "perYear": " par an",
     "redirecting": "Redirection…",
+    "freeDemoCta": "Continuer sans abonnement",
+    "freeDemoNote": "Votre analyse gratuite, sans carte bancaire ni période d'essai.",
     "secureNote": "Paiement sécurisé par Stripe · Coup de Boost débité une seule fois, abonnement résiliable à tout moment",
     "secureNoteTrial": "Paiement sécurisé par Stripe · Essai de {days} jours gratuit, résiliable avant la fin sans être débité de l'abonnement · Coup de Boost débité une seule fois",
     "plan": {
