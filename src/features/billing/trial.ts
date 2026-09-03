@@ -91,14 +91,22 @@ export const ANONYMOUS_TRIAL_STATE: TrialState = {
  * les trois jours ne se reprennent pas. Non non plus pour qui a déjà payé le
  * Coup de Boost ou reçu un accès de démonstration : leur proposer un essai
  * reviendrait à leur vendre moins que ce qu'ils ont.
+ *
+ * Et non, enfin, dès qu'une analyse a tourné sur ce compte. C'est la règle que
+ * l'analyse gratuite de la page d'accueil rend nécessaire : elle ouvre un
+ * compte et joue le produit en entier, voiles compris, sans rien débiter. La
+ * démonstration a donc eu lieu — trois jours de plus ne montreraient rien de
+ * neuf, et un compte pourrait la reprendre indéfiniment en relançant une
+ * analyse. Passé ce point, ce sont les tarifs pleins, pour tout le monde.
  */
 export async function getTrialState(userId: string): Promise<TrialState> {
-  const [user, subscription] = await Promise.all([
+  const [user, subscription, analyses] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { plan: true, boostGrantedAt: true },
     }),
     prisma.subscription.findUnique({ where: { userId }, select: { status: true } }),
+    prisma.analysis.count({ where: { userId } }),
   ]);
 
   const running = isTrialing(subscription);
@@ -109,7 +117,7 @@ export async function getTrialState(userId: string): Promise<TrialState> {
   });
 
   return {
-    available: subscription === null && tier === "free",
+    available: subscription === null && tier === "free" && analyses === 0,
     running,
     days: TRIAL.days,
   };

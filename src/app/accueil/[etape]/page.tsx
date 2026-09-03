@@ -6,6 +6,7 @@ import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
 import { BusinessKindForm } from "@/components/onboarding/steps/BusinessKindForm";
 import { SiteForm } from "@/components/onboarding/steps/SiteForm";
 import { ensureOnboardingProfile } from "@/features/onboarding/queries";
+import { canEnterOnboarding } from "@/features/onboarding/access";
 import {
   FIRST_STEP,
   hasPhysicalPresence,
@@ -42,6 +43,9 @@ export default async function OnboardingStepPage({ params }: Props) {
   const profile = await ensureOnboardingProfile(user.id);
 
   if (profile.completedAt) redirect(ROUTES.dashboard);
+  // Même garde que l'entrée du tunnel : une étape se rejoint aussi par son URL,
+  // et la porte doit tenir aux deux endroits.
+  if (!(await canEnterOnboarding(user.id))) redirect(ROUTES.pricing);
 
   const requested = (await params).etape;
   if (!isOnboardingStep(requested)) {

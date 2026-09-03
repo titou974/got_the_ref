@@ -19,9 +19,22 @@ import { authClient } from "@/features/auth/client";
 export function GoogleAuthButton({
   mode,
   callbackURL,
+  beforeRedirect,
+  label,
 }: {
   mode: "signin" | "signup";
   callbackURL: string;
+  /**
+   * Ce qu'il reste à faire côté serveur avant de quitter la page.
+   *
+   * L'analyse de la page d'accueil s'en sert pour mettre de côté le site que le
+   * visiteur vient de donner : passé le départ chez Google, il n'y a plus de
+   * page pour le porter. Renvoyer `false` annule le départ — l'appelant a
+   * quelque chose à dire, et l'envoyer chez Google effacerait son message.
+   */
+  beforeRedirect?: () => Promise<boolean>;
+  /** Libellé de remplacement, quand le contexte demande autre chose. */
+  label?: string;
 }) {
   const t = useTranslations("auth");
   const [pending, setPending] = useState(false);
@@ -30,6 +43,12 @@ export function GoogleAuthButton({
   async function handleClick() {
     setPending(true);
     setError(null);
+
+    if (beforeRedirect && !(await beforeRedirect())) {
+      setPending(false);
+      return;
+    }
+
     try {
       await authClient.signIn.social({
         provider: "google",
@@ -57,9 +76,8 @@ export function GoogleAuthButton({
         <GoogleMark size={22} />
         {pending
           ? t("submitting")
-          : mode === "signup"
-            ? t("googleSignup")
-            : t("googleSignin")}
+          : (label ??
+            (mode === "signup" ? t("googleSignup") : t("googleSignin")))}
       </button>
       {error && (
         <p className="mt-2 text-center text-sm text-danger" role="alert">

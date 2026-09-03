@@ -162,6 +162,17 @@ export const ANALYSIS_QUOTAS = {
 } as const;
 
 /**
+ * Combien de comptes la démonstration gratuite ouvre depuis une même adresse IP.
+ *
+ * L'analyse de la page d'accueil crée un compte à partir d'une simple adresse
+ * e-mail : sans ce plafond, une boucle en ouvrirait autant qu'elle veut, et
+ * chacun coûte un crawl et un audit. Trois par jour laisse passer le cas
+ * légitime — un commerçant qui se trompe d'adresse, une agence qui montre le
+ * produit à deux clients depuis le même bureau — et arrête le reste.
+ */
+export const FREE_DEMO_QUOTA = { limit: 3, windowMs: 24 * 60 * 60 * 1000 } as const;
+
+/**
  * Le rythme de rédaction : combien d'articles les agents écrivent par semaine.
  *
  * Une limite hebdomadaire, pas mensuelle. Publier dix articles le premier jour

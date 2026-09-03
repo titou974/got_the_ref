@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { WorksWith } from "@/components/WorksWith";
 import { getCurrentUser } from "@/lib/auth";
+import { isGoogleAuthEnabled } from "@/features/auth/better-auth.config";
 
 /**
  * L'analyse gratuite, désormais au milieu de la page plutôt qu'en haut : le
@@ -12,8 +13,10 @@ import { getCurrentUser } from "@/lib/auth";
  */
 export async function FreeAuditSection() {
   const t = await getTranslations("audit");
-  // Visiteur non connecté : l'analyse gratuite passe par une petite modale qui
-  // demande son e-mail. Un membre connecté a déjà laissé le sien.
+  // Visiteur non connecté : l'analyse gratuite passe par une modale
+  // d'inscription — Google, ou une adresse et un mot de passe —, et le compte
+  // gratuit ouvre le tableau de bord où l'analyse se joue. Un membre connecté
+  // n'a rien à donner de plus.
   const user = await getCurrentUser();
 
   return (
@@ -36,7 +39,7 @@ export async function FreeAuditSection() {
         </div>
 
         <div className="mx-auto mt-8 w-full max-w-lg">
-          <UrlAnalyzeForm size="lg" askEmail={!user} />
+          <UrlAnalyzeForm size="lg" askEmail={!user} googleEnabled={isGoogleAuthEnabled} />
         </div>
 
         <WorksWith className="mt-10" />
