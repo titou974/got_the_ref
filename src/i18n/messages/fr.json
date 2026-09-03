@@ -1567,10 +1567,10 @@
     "refresh": {
       "title": "Reprenez l'analyse de votre site",
       "titleDone": "Analyse à jour",
-      "titleLocked": "La reprise quotidienne s'ouvre avec le Coup de Boost",
+      "titleLocked": "La reprise quotidienne s'ouvre avec l'abonnement",
       "body": "Une reprise par jour : on recrawle votre site, on renote les six catégories, on refait le constat et le plan d'action à partir de ce que la page montre aujourd'hui.",
       "bodyDone": "Votre analyse a été reprise aujourd'hui. La prochaine s'ouvre demain — le temps que vos corrections soient en ligne et relues par les moteurs.",
-      "bodyLocked": "Votre analyse date de sa mise en route. À partir du Coup de Boost, vous la reprenez une fois par jour et vous voyez la note bouger correction après correction.",
+      "bodyLocked": "Votre analyse date de sa mise en route. Avec l'abonnement Tout-en-un, vous la reprenez une fois par jour et vous voyez la note bouger correction après correction.",
       "keeps": "Vos articles rédigés ou planifiés et vos backlinks ne sont pas touchés.",
       "cta": "Actualiser l'analyse",
       "ctaDone": "Déjà actualisée aujourd'hui",

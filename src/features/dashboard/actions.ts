@@ -295,13 +295,15 @@ export const refreshAnalysisAction = authActionClient
   .action(async ({ ctx }) => {
     const userId = ctx.auth.user.id;
 
-    // La reprise est un appel au grand modèle par jour et par compte : elle est
-    // réservée aux offres qui la paient. Un compte gratuit garde son audit
-    // d'entrée, et l'écran lui propose l'offre plutôt qu'un bouton.
+    // La reprise est un appel au grand modèle par jour et par compte : c'est une
+    // dépense qui revient, elle appartient donc aux offres qui reviennent. Le
+    // Coup de Boost est une passe unique — il ouvre l'audit d'entrée, pas une
+    // mesure quotidienne. Seul l'abonnement Tout-en-un (et la démo qui en montre
+    // la surface) y donne droit ; ailleurs, l'écran propose l'offre.
     const { tier } = await getAccess(userId);
-    if (!tierAtLeast(tier, "boost")) {
+    if (!tierAtLeast(tier, "allin")) {
       throw new AppError(
-        "La reprise quotidienne de l'analyse est incluse à partir du Coup de Boost.",
+        "La reprise quotidienne de l'analyse est incluse dans l'abonnement Tout-en-un.",
         "UPGRADE_REQUIRED",
         403,
       );

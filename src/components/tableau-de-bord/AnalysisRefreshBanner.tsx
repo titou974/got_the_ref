@@ -28,8 +28,9 @@ import { tierAtLeast, type AccessTier } from "@/constants/access";
  *     temps du crawl et de l'audit (deux à trois minutes, c'est écrit).
  *   — déjà repris aujourd'hui : le bouton est fermé et la date de la prochaine
  *     reprise remplace l'accroche. Le bandeau reste, il fait office de reçu.
- *   — compte gratuit : la reprise est incluse à partir du Coup de Boost, le
- *     bouton devient le lien vers les offres.
+ *   — hors abonnement : la reprise appartient à l'abonnement Tout-en-un, une
+ *     mesure par jour pour une offre qui court dans la durée. Le bouton devient
+ *     le lien vers les offres.
  *
  * Refermé, il ne revient que le lendemain : c'est un rappel quotidien, pas un
  * message qu'on range une fois pour toutes.
@@ -99,7 +100,9 @@ export function AnalysisRefreshBanner({
 
   if (dismissed && !working) return null;
 
-  const paid = tierAtLeast(tier, "boost");
+  // La reprise revient chaque jour : elle suit l'offre qui revient chaque mois.
+  // Le Coup de Boost, passe unique, n'y donne pas droit.
+  const paid = tierAtLeast(tier, "allin");
   const open = paid && availableToday;
 
   const lastLabel = lastRefreshedAt
