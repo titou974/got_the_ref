@@ -5,17 +5,23 @@ import { requireUser } from "@/lib/auth";
 import {
   businessHint,
   getDashboardContext,
+  getMapsAdvice,
   getMapsPlace,
   listGooglePosts,
+  listReviewReplies,
 } from "@/features/dashboard/queries";
+import { auditAttributes } from "@/features/dashboard/maps-service";
 import { Card, CardTitle, PageHeader, StatusDot } from "@/components/tableau-de-bord/Card";
 import { GooglePostPlanner } from "@/components/tableau-de-bord/GooglePostPlanner";
+import { AttributeRows } from "@/components/tableau-de-bord/maps/AttributeRows";
 import { GooglePlacePanel } from "@/components/tableau-de-bord/maps/GooglePlacePanel";
+import { ListingCompare } from "@/components/tableau-de-bord/maps/ListingCompare";
 import {
   PlaceCompleteness,
   PlacePopularTimes,
   PlaceReviewWords,
 } from "@/components/tableau-de-bord/maps/PlaceInsights";
+import { ReviewReplies } from "@/components/tableau-de-bord/maps/ReviewReplies";
 import { SyncPlaceButton } from "@/components/tableau-de-bord/maps/SyncPlaceButton";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { SectionGate } from "@/components/tableau-de-bord/SectionGate";
@@ -25,25 +31,28 @@ import { ROUTES } from "@/constants/routes";
 export const maxDuration = 300;
 
 /**
- * Google Maps : la fiche du commerce, d'abord.
+ * Google Maps : la fiche du commerce, et ce qu'il faut y changer.
  *
  * L'écran s'ouvre sur la fiche elle-même, relevée chez Google et remontée dans
- * sa propre grammaire — c'est ce que le commerçant reconnaît sans lire. Les
- * cartes de droite disent ensuite ce qu'il faudrait y changer, et le calendrier
- * de posts ferme la page.
+ * sa propre grammaire : c'est ce que le commerçant reconnaît sans lire. Tout ce
+ * qui suit est un « ceci devient cela » — le nom, les deux descriptions, les
+ * cases à cocher, les avis sans réponse, les posts à venir. La flèche de la page
+ * Contenu court d'un bloc à l'autre, y compris là où l'existant est un manque.
  *
  * Section réservée aux commerces qui ont une adresse : un site sans
  * établissement n'a pas de fiche à tenir.
  */
 export default async function GoogleMapsPage() {
   const user = await requireUser();
-  const [context, posts, snapshot] = await Promise.all([
-    getDashboardContext(user.id),
-    listGooglePosts(user.id),
-    getMapsPlace(user.id),
-  ]);
+  const context = await getDashboardContext(user.id);
 
   if (!context.isPhysical) notFound();
+
+  const [posts, snapshot, replies] = await Promise.all([
+    listGooglePosts(user.id),
+    getMapsPlace(user.id),
+    listReviewReplies(user.id),
+  ]);
 
   const t = await getTranslations("dashboard.maps");
   if (!context.analysis) return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
@@ -51,10 +60,22 @@ export default async function GoogleMapsPage() {
   const analysis = context.analysis;
   const coherence = analysis.mapsCoherence ?? null;
   const place = snapshot?.place ?? null;
+  const advice = place ? await getMapsAdvice(user.id, place.placeId) : null;
 
   // La fiche se tient semaine après semaine : réservée à l'abonnement.
   const locked = !canOpen(context.tier, "maps");
-  const keyword = analysis.trendingKeywords?.keywords[0]?.keyword ?? null;
+
+  // Tant qu'aucune proposition n'a été demandée, l'audit déterministe suffit à
+  // montrer les cases vides : il ne dit pas encore lesquelles cocher, mais il
+  // dit déjà combien il en manque.
+  const attributes = advice?.attributes ?? (place ? auditAttributes(place) : []);
+
+  // Les avis qui attendent : ni réponse du commerce sur la fiche, ni réponse
+  // déjà rédigée ici.
+  const drafted = new Set(replies.map((row) => row.reviewId));
+  const pendingReviews = (place?.reviews ?? []).filter(
+    (review) => review.ownerResponse === null && !drafted.has(review.id),
+  ).length;
 
   const fetchedLabel = snapshot
     ? new Intl.DateTimeFormat("fr-FR", {
@@ -93,7 +114,9 @@ export default async function GoogleMapsPage() {
           </div>
 
           <div className="grid gap-4">
+            {place ? <ListingCompare place={place} advice={advice} /> : null}
             {place ? <PlaceCompleteness place={place} /> : null}
+            <AttributeRows groups={attributes} />
 
             <Card>
               <CardTitle
@@ -127,31 +150,25 @@ export default async function GoogleMapsPage() {
               )}
             </Card>
 
-            <Card>
-              <CardTitle title={t("optimize")} hint={t("optimizeHint")} />
-              {keyword ? (
-                <>
-                  <p className="text-sm">{t("keywordLine", { keyword })}</p>
-                  <p className="mt-3 rounded-2xl bg-mist px-4 py-3 text-sm">
-                    {t("titleSuggestion", {
-                      business: place?.title ?? analysis.businessName,
-                      keyword,
-                      city: place?.city ?? analysis.profile.location ?? context.cities[0] ?? "",
-                    })}
-                  </p>
-                  <p className="mt-3 text-xs text-muted">{t("optimizeNote")}</p>
-                </>
-              ) : (
-                <p className="rounded-2xl bg-mist px-4 py-8 text-center text-sm text-muted">
-                  {t("noKeyword")}
-                </p>
-              )}
-            </Card>
-
             {place ? <PlaceReviewWords place={place} /> : null}
             {place ? <PlacePopularTimes place={place} /> : null}
           </div>
         </div>
+
+        {place ? (
+          <ReviewReplies
+            rows={replies.map((row) => ({
+              id: row.id,
+              reviewId: row.reviewId,
+              reviewerName: row.reviewerName,
+              stars: row.stars,
+              reviewText: row.reviewText,
+              reply: row.reply,
+              status: row.status,
+            }))}
+            pending={pendingReviews}
+          />
+        ) : null}
 
         <GooglePostPlanner
           posts={posts.map((post) => ({
@@ -162,6 +179,7 @@ export default async function GoogleMapsPage() {
             keyword: post.keyword,
             status: post.status,
             scheduledFor: post.scheduledFor?.toISOString() ?? null,
+            imageUrl: post.imageUrl,
           }))}
         />
       </SectionGate>

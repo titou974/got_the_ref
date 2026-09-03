@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { askJson } from "@/lib/ai/client";
+import type { GooglePlace } from "@/lib/apify/place-types";
 import type { DashboardContext } from "./queries";
 import { outlineForPrompt, type OutlineSection } from "./outline";
 
@@ -16,7 +17,10 @@ import { outlineForPrompt, type OutlineSection } from "./outline";
  */
 
 /** Le contexte, mis à plat pour le prompt. */
-function brief(context: DashboardContext, voice?: { instructions: string; banned: string[] } | null) {
+export function brief(
+  context: DashboardContext,
+  voice?: { instructions: string; banned: string[] } | null,
+) {
   const analysis = context.analysis;
   const lines = [
     `Commerce : ${context.businessName || context.domain || "inconnu"}`,
@@ -46,7 +50,7 @@ function brief(context: DashboardContext, voice?: { instructions: string; banned
  * qui cite un commerce préfère une page qui répond à la question ; un client qui
  * relit son article, lui, préfère ne pas y lire « dans un monde où ».
  */
-const WRITING_RULES = [
+export const WRITING_RULES = [
   "Français courant, phrases courtes, voix active.",
   "Aucun superlatif publicitaire (« incontournable », « niché au cœur de », « véritable »).",
   "Aucune formule d'ouverture creuse (« dans un monde où », « de nos jours », « que vous soyez… »).",
@@ -358,31 +362,114 @@ const googlePostsSchema = z.object({
         body: z.string().min(80).max(1400),
         keyword: z.string().max(80).nullable(),
         cta: z.enum(["CALL", "BOOK", "ORDER", "LEARN_MORE", "SIGN_UP", "NONE"]),
+        /**
+         * La photo qui illustre le post, désignée par son rang dans la liste
+         * fournie. Un numéro plutôt qu'une adresse : les URL Google font trois
+         * cents signes, et un modèle qui doit en recopier une la tronque.
+         */
+        photo: z.number().int().min(0).nullable(),
+        /**
+         * Le jour de publication conseillé, en clair — « samedi », « vendredi ».
+         * La date exacte se calcule ensuite : le modèle sait quel jour un post
+         * de brunch se publie, il ne sait pas quel jour on est.
+         */
+        weekday: z
+          .enum(["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"])
+          .nullable(),
       }),
     )
     .max(12),
 });
 
-export async function planGooglePosts(context: DashboardContext, count: number) {
+/** Un post prêt à coller, avec sa photo et son jour de publication. */
+export type PlannedGooglePost = {
+  title: string;
+  body: string;
+  keyword: string | null;
+  cta: "CALL" | "BOOK" | "ORDER" | "LEARN_MORE" | "SIGN_UP" | "NONE";
+  /** L'adresse de la photo choisie sur la fiche, ou `null` si aucune ne convient. */
+  imageUrl: string | null;
+  /** Le jour de la semaine conseillé, en clair. La date est calculée à l'appel. */
+  weekday: string | null;
+};
+
+/**
+ * Des posts pour la fiche Google, illustrés par les photos du commerce.
+ *
+ * Un post sans image passe presque inaperçu dans le fil de la fiche. Les photos
+ * proposées sont celles que le commerce a déjà publiées : une image de banque
+ * ne montrerait pas son établissement, et Google la reconnaîtrait pour ce
+ * qu'elle est. Le modèle désigne la photo par son rang dans la liste, pas par
+ * son adresse — les URL Google font trois cents signes, et un modèle qui doit
+ * en recopier une la tronque.
+ *
+ * Le jour de publication est demandé en clair — « samedi » — plutôt qu'en date :
+ * un modèle sait qu'un post de service du week-end se publie en fin de semaine,
+ * il ne sait pas quel jour on est. La date se calcule ensuite, à partir de là.
+ */
+export async function planGooglePosts(
+  context: DashboardContext,
+  count: number,
+  /** La fiche relevée : ses photos, sa catégorie, ce que ses avis retiennent. */
+  place?: GooglePlace | null,
+): Promise<PlannedGooglePost[]> {
   const keywords = context.analysis?.trendingKeywords?.keywords ?? [];
+  const photos = place?.images ?? [];
 
   const result = await askJson(googlePostsSchema, {
     system:
       "Tu rédiges des posts pour une fiche Google Business. " +
       "Un post tient en dix lignes, annonce une chose précise et donne une raison de venir. " +
+      "Tu écris dans le ton du commerce, pas dans celui d'une agence. " +
       WRITING_RULES,
     prompt: [
       brief(context, context.brandVoice),
       keywords.length ? `Mots-clés tendances : ${keywords.map((k) => k.keyword).join(", ")}` : "",
+      place ? `Catégorie de la fiche : ${place.category ?? "non renseignée"}` : "",
+      place?.reviewsTags.length
+        ? `Ce que les clients citent dans les avis : ${place.reviewsTags
+            .map((tag) => tag.title)
+            .join(", ")}`
+        : "",
+      place?.ownerDescription ? `Présentation du commerce : ${place.ownerDescription}` : "",
+      photos.length
+        ? [
+            "",
+            "── Photos disponibles sur la fiche, par numéro ──",
+            ...photos.map((_, index) => `${index} : photo ${index + 1} de la fiche`),
+            "Choisis pour chaque post le numéro de la photo qui va avec son sujet, ou null si aucune.",
+            "Deux posts n'utilisent pas la même photo.",
+          ].join("\n")
+        : "Aucune photo disponible : rends « photo » à null.",
       "",
       `Propose ${count} posts, un par semaine, en variant les angles (nouveauté, conseil, coulisses, saison).`,
       "Chaque post annonce une chose précise ; aucun ne doit pouvoir servir tel quel à un autre commerce.",
-      "Réponds en JSON : { \"posts\": [{ \"title\", \"body\", \"keyword\", \"cta\" }] }",
+      "Pour « weekday », donne le jour où ce post a le plus de sens pour ce commerce :",
+      "une annonce de service du week-end part en fin de semaine, un conseil part en début de semaine.",
+      'Réponds en JSON : { "posts": [{ "title", "body", "keyword", "cta", "photo", "weekday" }] }',
     ]
       .filter(Boolean)
       .join("\n"),
     role: "default",
+    maxTokens: 2600,
   });
 
-  return result.posts;
+  // Une photo par post : un modèle qui répète un numéro ferait deux posts
+  // jumeaux dans le fil de la fiche, que Google affiche côte à côte.
+  const used = new Set<number>();
+
+  return result.posts.map((post) => {
+    const index = post.photo;
+    const free = index !== null && index >= 0 && index < photos.length && !used.has(index);
+    if (free) used.add(index);
+
+    return {
+      title: post.title,
+      body: post.body,
+      keyword: post.keyword,
+      cta: post.cta,
+      imageUrl: free ? photos[index] : null,
+      weekday: post.weekday,
+    };
+  });
 }

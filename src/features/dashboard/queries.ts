@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
-import type { GooglePlace } from "@/lib/apify/place-types";
+import type { GooglePlace, MapsAdvice, SiteHoursCheck } from "@/lib/apify/place-types";
 import { decryptJson } from "@/lib/crypto";
 import type { SiteCapability } from "@/constants/site-platforms";
 import {
@@ -551,4 +551,80 @@ export async function getOnPageRewriteQuota(userId: string): Promise<OnPageRewri
       Math.max(0, ON_PAGE_REWRITE_QUOTA.daily - (used.get(element) ?? 0)),
     ]),
   ) as OnPageRewriteQuota;
+}
+
+/**
+ * Ce qui est proposé pour la fiche Google Maps : les trois textes et les
+ * attributs à cocher.
+ *
+ * La proposition est rattachée à une fiche par son `placeId`. Une fiche relevée
+ * ailleurs — le client a corrigé son lien, ou changé d'établissement — rend
+ * l'avis caduc : on renvoie `null` plutôt qu'un texte écrit pour un autre
+ * commerce.
+ */
+export async function getMapsAdvice(
+  userId: string,
+  placeId: string | null,
+): Promise<MapsAdvice | null> {
+  const record = await prisma.mapsOptimization.findUnique({ where: { userId } });
+  if (!record) return null;
+  if (placeId && record.placeId && record.placeId !== placeId) return null;
+
+  try {
+    return JSON.parse(record.payload) as MapsAdvice;
+  } catch {
+    return null;
+  }
+}
+
+/** Les réponses aux avis déjà rédigées, la plus récente d'abord. */
+export async function listReviewReplies(userId: string) {
+  return prisma.mapsReviewReply.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/** Les horaires lus sur la page d'accueil, et leur écart avec la fiche. */
+export async function getSiteHours(
+  userId: string,
+  domain: string | null,
+): Promise<{ check: SiteHoursCheck; fetchedAt: Date } | null> {
+  const record = await prisma.siteHours.findUnique({ where: { userId } });
+  if (!record) return null;
+  // Un changement de site rouvre l'extraction : des horaires lus ailleurs ne
+  // disent rien du site courant.
+  if (domain && record.domain !== domain) return null;
+
+  try {
+    return { check: JSON.parse(record.payload) as SiteHoursCheck, fetchedAt: record.fetchedAt };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Le texte de la page d'accueil, tel que le crawl l'a enregistré.
+ *
+ * On relit le crawl plutôt que de recharger le site : la page est déjà en base,
+ * en markdown, et un rechargement ferait attendre le client pour le même texte.
+ * `null` quand le domaine n'a jamais été exploré.
+ */
+export async function homepageText(domain: string): Promise<string | null> {
+  const site = await prisma.crawledSite.findUnique({
+    where: { domain },
+    select: { id: true },
+  });
+  if (!site) return null;
+
+  // La page d'accueil est celle de profondeur zéro ; à défaut, la première
+  // page explorée, qui est la même dans presque tous les cas.
+  const page = await prisma.crawledPage.findFirst({
+    where: { siteId: site.id },
+    orderBy: [{ depth: "asc" }, { crawledAt: "asc" }],
+    select: { markdown: true },
+  });
+
+  const text = page?.markdown?.trim();
+  return text ? text : null;
 }

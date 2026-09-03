@@ -1,11 +1,18 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { businessHint, getDashboardContext, getOnPageRewriteQuota } from "@/features/dashboard/queries";
+import {
+  businessHint,
+  getDashboardContext,
+  getMapsPlace,
+  getOnPageRewriteQuota,
+  getSiteHours,
+} from "@/features/dashboard/queries";
 import { contentGainFor } from "@/lib/geo/traffic-gain";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
 import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
+import { SiteHoursCard } from "@/components/tableau-de-bord/SiteHoursCard";
 import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
 
 export const maxDuration = 300;
@@ -26,9 +33,11 @@ export const maxDuration = 300;
  */
 export default async function ContenuPage() {
   const user = await requireUser();
-  const [context, quota, t, tg] = await Promise.all([
-    getDashboardContext(user.id),
+  const context = await getDashboardContext(user.id);
+  const [quota, hours, listing, t, tg] = await Promise.all([
     getOnPageRewriteQuota(user.id),
+    getSiteHours(user.id, context.domain),
+    getMapsPlace(user.id),
     getTranslations("dashboard.content"),
     getTranslations("trafficGain"),
   ]);
@@ -62,6 +71,12 @@ export default async function ContenuPage() {
         insight={analysis.trendingKeywords ?? null}
         quota={quota}
       />
+
+      {/* Les horaires ne concernent que les commerces qui ont une adresse : un
+          site sans établissement n'a pas d'heure d'ouverture à recouper. */}
+      {context.isPhysical ? (
+        <SiteHoursCard check={hours?.check ?? null} hasListing={listing !== null} />
+      ) : null}
 
       <KeywordTable insight={analysis.trendingKeywords ?? null} />
     </>

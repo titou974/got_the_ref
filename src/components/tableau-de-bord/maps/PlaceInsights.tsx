@@ -87,16 +87,27 @@ export function placeChecks(place: GooglePlace): Check[] {
   ];
 }
 
-/** La carte de complétude : ce qui est en place, ce qui manque, et le compte. */
+/**
+ * Les champs de la fiche, en une bande.
+ *
+ * Cette carte voisine celle des attributs, et deux listes à coches l'une sous
+ * l'autre se confondent : le client ne sait plus laquelle il vient de lire. Les
+ * champs passent donc en pastilles — le manque se lit à la couleur, le détail
+ * tient dans la pastille — et la liste verticale reste aux attributs, qui en ont
+ * besoin parce qu'ils portent une justification chacun.
+ *
+ * Les manques d'abord : c'est ce sur quoi il y a quelque chose à faire.
+ */
 export function PlaceCompleteness({ place }: { place: GooglePlace }) {
   const checks = placeChecks(place);
   const done = checks.filter((check) => check.ok).length;
+  const sorted = [...checks].sort((a, b) => Number(a.ok) - Number(b.ok));
 
   return (
     <Card>
       <CardTitle
-        title="Complétude de la fiche"
-        hint="Les champs que Google propose, et ceux que votre fiche remplit."
+        title="Les champs de votre fiche"
+        hint="Ce que Google vous laisse remplir, et ce que vous avez rempli."
         action={
           <span className="rounded-xl bg-mist px-3 py-1 text-sm font-semibold tabular-nums">
             {done}/{checks.length}
@@ -104,18 +115,23 @@ export function PlaceCompleteness({ place }: { place: GooglePlace }) {
         }
       />
 
-      <ul className="divide-y divide-border">
-        {checks.map((check) => (
-          <li key={check.label} className="flex items-center justify-between gap-3 py-2.5">
-            <span className="flex min-w-0 items-center gap-2.5">
-              {check.ok ? (
-                <RiCheckLine size={16} className="shrink-0 text-success" />
-              ) : (
-                <RiCloseLine size={16} className="shrink-0 text-danger" />
-              )}
-              <span className="truncate text-sm">{check.label}</span>
-            </span>
-            <span className="shrink-0 text-xs text-muted">{check.detail}</span>
+      <ul className="flex flex-wrap gap-2">
+        {sorted.map((check) => (
+          <li
+            key={check.label}
+            className={`inline-flex items-center gap-2 rounded-pill px-3 py-1.5 text-sm ${
+              check.ok
+                ? "bg-mist text-text"
+                : "border border-danger/25 bg-danger/5 text-text"
+            }`}
+          >
+            {check.ok ? (
+              <RiCheckLine size={14} className="shrink-0 text-success" />
+            ) : (
+              <RiCloseLine size={14} className="shrink-0 text-danger" />
+            )}
+            <span>{check.label}</span>
+            <span className="text-xs text-muted">{check.detail}</span>
           </li>
         ))}
       </ul>

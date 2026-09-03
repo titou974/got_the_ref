@@ -133,3 +133,57 @@ export type GooglePlace = {
   /** Horodatage ISO du relevé : la fiche affichée est une photo, pas un direct. */
   scrapedAt: string;
 };
+
+/**
+ * Ce qu'il faut changer sur la fiche : les trois textes et les attributs.
+ *
+ * Une seule pièce, relue d'un bloc. Les trois textes partagent le même mot-clé
+ * porteur — celui du titre du site, sur la page Contenu — parce qu'une fiche et
+ * un site qui visent deux expressions différentes se font concurrence dans les
+ * mêmes résultats.
+ */
+export type MapsAdvice = {
+  /** Le mot-clé sur lequel la fiche et le site s'alignent. */
+  keyword: string | null;
+  /** Le nom d'établissement proposé, mot-clé compris. */
+  title: string;
+  /** La description courte, celle que Google montre en tête de fiche. */
+  description: string;
+  /** La présentation longue de l'onglet « À propos ». */
+  about: string;
+  /** Ce que chaque réécriture change, dans l'ordre titre, description, à propos. */
+  reasons: string[];
+  /** Les attributs à cocher, groupe par groupe. */
+  attributes: MapsAttributeAdvice[];
+  generatedAt: string;
+};
+
+/** Un groupe d'attributs : ce qui est coché, ce qui manque, ce qu'on conseille. */
+export type MapsAttributeAdvice = {
+  group: string;
+  /** Déjà coché sur la fiche. */
+  present: string[];
+  /**
+   * Absent de la fiche et recommandé pour ce commerce. Le modèle ne coche que
+   * ce que les avis, la présentation ou le site rendent plausible : proposer
+   * « Livraison » à un restaurant qui n'en fait pas ferait mentir la fiche.
+   */
+  suggested: { label: string; why: string }[];
+  /** Absent, et sans rapport avec ce commerce : listé pour ne pas y revenir. */
+  skipped: string[];
+};
+
+/** Les horaires lus sur la page d'accueil du site, et leur écart avec la fiche. */
+export type SiteHoursCheck = {
+  /** Vrai quand la page d'accueil affiche des horaires. */
+  found: boolean;
+  /** Où ils ont été lus : « pied de page », « bloc contact »… */
+  location: string | null;
+  /** Les horaires du site, un par jour, dans les mots du site. */
+  days: { day: string; hours: string }[];
+  /** Les jours où le site et la fiche ne disent pas la même chose. */
+  conflicts: { day: string; site: string; listing: string }[];
+  /** Ce que Google en fait, en une phrase. */
+  summary: string;
+  checkedAt: string;
+};
