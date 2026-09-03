@@ -1895,7 +1895,12 @@
       "approveBody": "L'article partira tout seul {date} à {time}. Vous pouvez encore le modifier ou changer sa date jusque-là.",
       "approveConfirm": "Valider",
       "approving": "Validation…",
-      "departureDay": "Jour de publication"
+      "departureDay": "Jour de publication",
+      "rewrite": "Réécrire avec l'agent",
+      "more": "Autres actions",
+      "seeOnline": "Voir l'article en ligne",
+      "published": "Publié, en ligne sur votre site",
+      "rejected": "Écarté du planning"
     },
     "articles": {
       "pageTitle": "Articles",
@@ -1998,7 +2003,20 @@
       "untitledSection": "Section sans titre",
       "addBrief": "Ajouter une consigne",
       "editBrief": "Modifier la consigne",
-      "linkPrompt": "Adresse du lien"
+      "linkPrompt": "Adresse du lien",
+      "backShort": "Articles",
+      "preview": "Aperçu",
+      "edit": "Modifier",
+      "departure": "Départ",
+      "noDate": "Sans date",
+      "meter": "{words} mots · {minutes} min",
+      "closeOutline": "Fermer le plan",
+      "citableCard": "Citable par les IA",
+      "citableNone": "Le plan est vide : ajoutez une section pour commencer.",
+      "issueAll": "Chaque section ouvre sur une réponse citable telle quelle.",
+      "issueShort": "Une section ouvre trop court pour être citée telle quelle : « {section} ».",
+      "issueLong": "Une section ouvre trop long pour être citée telle quelle : « {section} ».",
+      "issueMissing": "Une section n'ouvre pas sur une réponse citable : « {section} »."
     },
     "presence": {
       "pageTitle": "Présence web",

@@ -3,31 +3,32 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/react";
-import { answerState, ANSWER_MAX, ANSWER_MIN } from "@/lib/article-doc";
+import { answerState, type DocHeading } from "@/lib/article-doc";
 import { AutoTextarea } from "../AutoTextarea";
 import { useDocumentStructure } from "./useDocumentStructure";
 
 /**
- * Le rail de citabilité : le plan de l'article, et ce qu'il vaut pour une IA.
+ * Le sommaire de l'atelier : le plan de l'article, et ce qu'il vaut pour une IA.
  *
- * Le plan n'est plus une liste tenue à côté du texte, qu'il fallait
- * resynchroniser à la main : il est lu dans le document, à chaque frappe. Ce
- * que le rail ajoute, un sommaire ordinaire ne le dit pas — la longueur de la
- * réponse qui ouvre chaque section. C'est le contrat donné à la rédaction
- * (« ouvre chaque section par une réponse directe de 40 à 60 mots, autonome,
- * citable telle quelle »), et c'est la première chose qu'une retouche casse :
- * on ajoute deux phrases d'introduction, et le passage cesse d'être extractible.
+ * Il tient toute la hauteur de la colonne de gauche. En haut le plan, lu dans le
+ * document à chaque frappe — ce n'est plus une liste tenue à côté du texte qu'il
+ * fallait resynchroniser à la main. En bas, calée au pied du rail, la mesure que
+ * ce produit est seul à donner : combien de sections ouvrent sur une réponse
+ * qu'une IA peut citer telle quelle.
+ *
+ * Une entrée ne porte de note que lorsqu'elle sort du contrat. Le compte de mots
+ * affiché sous chaque titre disait la même chose de toutes les sections, y
+ * compris des dix-neuf qui allaient bien : le rail se lisait comme un tableau de
+ * chiffres au lieu de signaler les deux endroits à reprendre.
  *
  * La consigne de section reste attachée au titre : c'est elle qui permet de
  * faire reprendre un passage sans faire réécrire l'article entier.
  */
 
-const DOT: Record<ReturnType<typeof answerState>, string> = {
-  ok: "bg-success",
-  short: "bg-ember",
-  long: "bg-ember",
-  missing: "bg-pebble",
-};
+/** La section à nommer dans la carte du bas : la première qui sort du contrat. */
+function firstIssue(headings: DocHeading[]): DocHeading | null {
+  return headings.find((heading) => answerState(heading) !== "ok") ?? null;
+}
 
 export function OutlineRail({
   editor,
@@ -35,39 +36,56 @@ export function OutlineRail({
   onInstruction,
   onJump,
   onAddSection,
+  keyword,
 }: {
   editor: Editor;
   instructions: Record<string, string>;
   onInstruction: (heading: string, value: string) => void;
   onJump: (pos: number) => void;
   onAddSection: () => void;
+  /** Le mot-clé visé, rappelé sous le titre du rail. */
+  keyword?: string | null;
 }) {
   const t = useTranslations("dashboard.article");
   const [open, setOpen] = useState<string | null>(null);
   const { headings, activeIndex } = useDocumentStructure(editor);
 
-  const offContract = headings.filter((h) => answerState(h) !== "ok").length;
+  const citable = headings.filter((heading) => answerState(heading) === "ok").length;
+  const issue = firstIssue(headings);
+  const ratio = headings.length ? citable / headings.length : 0;
+  const issueKey = issue
+    ? answerState(issue) === "missing"
+      ? "issueMissing"
+      : answerState(issue) === "long"
+        ? "issueLong"
+        : "issueShort"
+    : null;
 
   return (
-    <section className="rounded-card-compact border border-border bg-surface p-5">
-      <div className="mb-1 flex items-baseline justify-between gap-3">
-        <h2 className="text-base font-semibold">{t("outline")}</h2>
-        <span className="text-[11px] tabular-nums text-muted">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto px-5 py-6">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-steel">
+          {t("outline")}
+        </h2>
+        <span className="shrink-0 text-[11px] tabular-nums text-ash">
           {t("sections", { count: headings.length })}
         </span>
       </div>
-      <p className="mb-4 text-[13px] leading-relaxed text-muted">
-        {offContract
-          ? t("citableOff", { count: offContract, min: ANSWER_MIN, max: ANSWER_MAX })
-          : t("citableAll", { min: ANSWER_MIN, max: ANSWER_MAX })}
-      </p>
+
+      {/* Le mot-clé visé, une ligne sous le titre du rail : c'est la promesse
+          que l'article doit tenir, et elle se relit en écrivant. */}
+      {keyword ? (
+        <p className="-mt-2 truncate text-[13px] text-steel" title={keyword}>
+          {keyword}
+        </p>
+      ) : null}
 
       {headings.length === 0 ? (
-        <p className="rounded-2xl bg-mist px-4 py-6 text-center text-sm text-muted">
+        <p className="rounded-2xl bg-mist px-4 py-6 text-center text-[13px] leading-relaxed text-muted">
           {t("noOutline")}
         </p>
       ) : (
-        <ol className="space-y-0.5">
+        <ol className="flex flex-col gap-0.5">
           {headings.map((heading, index) => {
             const state = answerState(heading);
             const key = `${index}-${heading.text}`;
@@ -81,52 +99,49 @@ export function OutlineRail({
                     index === activeIndex ? "bg-mist" : "hover:bg-mist/60"
                   }`}
                 >
-                  {/* Le trait de section active : il suit le curseur dans le
-                      texte, pour retrouver où l'on écrit dans un long article. */}
+                  {/* Le trait de section active suit le curseur dans le texte :
+                      c'est ainsi qu'on retrouve où l'on écrit dans un long
+                      article, sans relire les titres un par un. */}
                   <span
                     aria-hidden
-                    className={`absolute top-2 bottom-2 left-0 w-0.5 rounded-pill bg-obsidian transition-opacity duration-200 ${
+                    className={`absolute bottom-2 left-0 top-2 w-0.5 rounded-pill bg-obsidian transition-opacity duration-200 ${
                       index === activeIndex ? "opacity-100" : "opacity-0"
                     }`}
                   />
+
                   <button
                     type="button"
                     onClick={() => onJump(heading.pos)}
-                    className="flex w-full cursor-pointer items-start gap-2 text-left"
+                    className="block w-full cursor-pointer text-left"
                   >
                     <span
-                      aria-hidden
-                      className={`mt-1.5 size-1.5 shrink-0 rounded-pill ${DOT[state]}`}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className={`block truncate text-[13px] leading-snug ${
-                          heading.level === 3 ? "pl-3 font-medium text-steel" : "font-semibold"
-                        }`}
-                      >
-                        {heading.text || t("untitledSection")}
-                      </span>
-                      {/* L'orange ne sort que pour une ouverture qui existe mais
-                          tombe hors du contrat : une section qui enchaîne sur une
-                          liste est un choix d'écriture, pas une erreur. */}
-                      <span
-                        className={`mt-0.5 block text-[11px] tabular-nums ${
-                          state === "short" || state === "long" ? "text-ember" : "text-muted"
-                        }`}
-                      >
+                      className={`block truncate text-[13px] leading-snug ${
+                        heading.level === 3 ? "pl-3 font-medium text-steel" : "font-medium text-text"
+                      }`}
+                    >
+                      {heading.text || t("untitledSection")}
+                    </span>
+
+                    {/* L'orange ne sort que pour une ouverture hors contrat :
+                        ailleurs, une ligne de plus dirait « tout va bien » vingt
+                        fois pour le cacher deux fois. */}
+                    {state === "ok" ? null : (
+                      <span className="mt-0.5 block text-[11px] leading-snug text-ember">
                         {state === "missing"
                           ? t("answerMissing")
                           : t("answerWords", { count: heading.answerWords })}
                       </span>
-                    </span>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setOpen(expanded ? null : key)}
                     aria-expanded={expanded}
-                    className={`mt-1 ml-3.5 cursor-pointer text-[11px] underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:text-text ${
-                      instruction ? "text-text" : "text-muted"
+                    className={`mt-1 cursor-pointer text-[11px] underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:text-text ${
+                      instruction || expanded
+                        ? "text-text"
+                        : "text-ash opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                     }`}
                   >
                     {instruction ? t("editBrief") : t("addBrief")}
@@ -141,7 +156,7 @@ export function OutlineRail({
                       className="mt-2 w-full resize-none rounded-xl border border-border bg-surface px-2.5 py-2 text-[13px] leading-relaxed text-muted focus:ring-2 focus:ring-obsidian/20 focus:outline-none"
                     />
                   ) : instruction ? (
-                    <p className="mt-1 ml-3.5 line-clamp-2 text-[11px] text-muted">{instruction}</p>
+                    <p className="mt-1 line-clamp-2 text-[11px] text-muted">{instruction}</p>
                   ) : null}
                 </div>
               </li>
@@ -153,10 +168,38 @@ export function OutlineRail({
       <button
         type="button"
         onClick={onAddSection}
-        className="mt-3 w-full cursor-pointer rounded-2xl border border-dashed border-pebble px-4 py-2.5 text-[13px] text-muted transition-colors duration-200 hover:border-graphite hover:text-text"
+        className="w-full shrink-0 cursor-pointer rounded-2xl border border-dashed border-pebble px-4 py-2.5 text-center text-[13px] text-muted transition-colors duration-200 hover:border-graphite hover:text-text"
       >
         {t("addSection")}
       </button>
-    </section>
+
+      <span aria-hidden className="flex-1" />
+
+      {/* La citabilité, au pied du rail. Elle n'a pas sa place en tête : on la
+          consulte après avoir écrit, pas avant. */}
+      <div className="shrink-0 rounded-3xl border border-border p-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[13px] font-semibold">{t("citableCard")}</span>
+          <span className="shrink-0 text-[13px] font-bold tabular-nums">
+            {citable}/{headings.length}
+          </span>
+        </div>
+
+        <span aria-hidden className="mt-2.5 block h-1.5 overflow-hidden rounded-pill bg-mist">
+          <span
+            className="block h-full rounded-pill bg-success transition-[width] duration-300"
+            style={{ width: `${Math.round(ratio * 100)}%` }}
+          />
+        </span>
+
+        <p className="mt-2.5 text-xs leading-relaxed text-steel">
+          {!headings.length
+            ? t("citableNone")
+            : issue && issueKey
+              ? t(issueKey, { section: issue.text || t("untitledSection") })
+              : t("issueAll")}
+        </p>
+      </div>
+    </div>
   );
 }

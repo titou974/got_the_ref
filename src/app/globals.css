@@ -449,11 +449,20 @@ html.scroll-locked body {
 
 .article-title {
   font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
-  font-size: 34px;
+  font-size: 27px;
   font-weight: 600;
-  line-height: 1.15;
+  line-height: 1.2;
   letter-spacing: -0.01em;
   color: var(--color-obsidian);
+}
+
+/* Sur grand écran, la feuille tient sa mesure de lecture entière : le titre y
+   reprend la taille de l'article publié. */
+@media (min-width: 1024px) {
+  .article-title {
+    font-size: 34px;
+    line-height: 1.15;
+  }
 }
 
 .article-title::placeholder {
@@ -468,10 +477,16 @@ html.scroll-locked body {
 
 .article-canvas .tiptap {
   font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.7;
   color: var(--color-ink);
   outline: none;
+}
+
+@media (min-width: 1024px) {
+  .article-canvas .tiptap {
+    font-size: 18px;
+  }
 }
 
 .article-canvas .tiptap > * + * {
@@ -486,10 +501,16 @@ html.scroll-locked body {
 }
 
 .article-canvas .tiptap h2 {
-  font-size: 25px;
+  font-size: 21px;
   font-weight: 600;
   line-height: 1.3;
   margin-top: 1.9em;
+}
+
+@media (min-width: 1024px) {
+  .article-canvas .tiptap h2 {
+    font-size: 25px;
+  }
 }
 
 .article-canvas .tiptap h3 {
