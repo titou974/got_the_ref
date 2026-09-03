@@ -11,6 +11,9 @@ import { AppError } from "@/lib/errors";
 import { encryptJson, isCredentialsKeySet } from "@/lib/crypto";
 import { connectorFor } from "@/constants/site-platforms";
 import { preferredPassOnDay } from "@/constants/publishing";
+import { ApifyError, isApifyConfigured } from "@/lib/apify/client";
+import { fetchGooglePlace } from "@/lib/apify/google-place";
+import type { GooglePlace, MapsAdvice } from "@/lib/apify/place-types";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { regenerateOnPageElement } from "@/lib/geo/keywords";
@@ -19,13 +22,23 @@ import { publishArticle, verifyConnection, type Credentials } from "./connectors
 import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
 import {
+  MAPS_PLACE_COOLDOWN_MS,
   getArticleQuota,
   getDashboardContext,
+  getMapsPlace,
+  homepageText,
   isDashboardReady,
   readSiteCredentials,
   startOfDay,
 } from "./queries";
 import { recordAnalysisSnapshot } from "./progress";
+import {
+  adviseAttributes,
+  auditAttributes,
+  draftReviewReplies,
+  readSiteHours,
+  writeListingAdvice,
+} from "./maps-service";
 import {
   releaseArticleGeneration,
   releaseOnPageRewrite,
@@ -60,12 +73,16 @@ import {
   brandVoiceSchema,
   connectSiteSchema,
   disconnectSiteSchema,
+  draftReviewRepliesSchema,
   googlePostIdSchema,
   planArticlesSchema,
   planGooglePostsSchema,
   prospectIdSchema,
   prospectStatusSchema,
+  readSiteHoursSchema,
+  refreshMapsPlaceSchema,
   regenerateOnPageSchema,
+  reviewReplySchema,
   scheduleArticleSchema,
   settingsSchema,
   updateArticleSchema,
@@ -1450,6 +1467,27 @@ export const setProspectStatusAction = authActionClient
 
 // ── Google Maps ──────────────────────────────────────────────────────────────
 
+const WEEKDAYS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+
+/**
+ * La date de publication d'un post : la cadence, puis le bon jour.
+ *
+ * La cadence donne le rythme — un post par semaine — et le modèle donne le jour
+ * qui a du sens pour ce post-là. On avance donc de la date théorique jusqu'au
+ * prochain jour demandé, six jours au plus : décaler d'une poignée de jours pour
+ * publier un post de week-end un samedi vaut mieux que le publier un mardi.
+ *
+ * Sans jour demandé, la date théorique tient telle quelle.
+ */
+function nextSlot(base: Date, weekday: string | null): Date {
+  if (!weekday) return base;
+  const target = WEEKDAYS.indexOf(weekday.toLowerCase());
+  if (target === -1) return base;
+
+  const shift = (target - base.getDay() + 7) % 7;
+  return shift === 0 ? base : new Date(base.getTime() + shift * 86_400_000);
+}
+
 export const planGooglePostsAction = authActionClient
   .inputSchema(planGooglePostsSchema)
   .action(async ({ parsedInput, ctx }) => {
@@ -1457,8 +1495,13 @@ export const planGooglePostsAction = authActionClient
     // Même raison que la présence web : la rédaction des posts coûte un appel
     // au modèle, et le calendrier produit se relit en base.
     await requireSection(userId, "maps");
-    const context = await getDashboardContext(userId);
-    const posts = await planGooglePosts(context, parsedInput.count);
+    const [context, snapshot] = await Promise.all([
+      getDashboardContext(userId),
+      getMapsPlace(userId),
+    ]);
+    // La fiche donne les photos et ce que les avis retiennent. Sans relevé, les
+    // posts s'écrivent quand même : ils sortent sans image, et le disent.
+    const posts = await planGooglePosts(context, parsedInput.count, snapshot?.place ?? null);
 
     const last = await prisma.googlePost.findFirst({
       where: { userId, scheduledFor: { not: null } },
@@ -1475,7 +1518,8 @@ export const planGooglePostsAction = authActionClient
         body: post.body,
         keyword: post.keyword,
         cta: post.cta === "NONE" ? null : post.cta,
-        scheduledFor: new Date(start.getTime() + step * (index + 1)),
+        imageUrl: post.imageUrl,
+        scheduledFor: nextSlot(new Date(start.getTime() + step * (index + 1)), post.weekday),
       })),
     });
 
@@ -1496,4 +1540,271 @@ export const approveGooglePostAction = authActionClient
 
     revalidatePath(ROUTES.dashboardMaps);
     return { ok: true };
+  });
+
+/**
+ * Relève la fiche Google Maps du commerce et la range en base.
+ *
+ * Le lien vient de la fiche d'accueil : c'est celui que le client a donné en
+ * s'inscrivant. On le passe à Apify, qui ouvre la fiche comme un navigateur et
+ * rend ce que Google montre — photos, horaires, attributs, avis. Le relevé
+ * remplace le précédent : la fiche affichée est toujours la dernière connue.
+ *
+ * Deux gardes, parce que chaque relevé est un run Apify facturé :
+ *   — le délai `MAPS_PLACE_COOLDOWN_MS` entre deux relevés du même lien, que
+ *     `force` lève quand le client vient de corriger sa fiche ;
+ *   — l'échec, enregistré dans `lastError` sans effacer le relevé précédent :
+ *     une panne du scraper ne doit pas vider l'écran.
+ */
+export const refreshMapsPlaceAction = authActionClient
+  .inputSchema(refreshMapsPlaceSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "maps");
+
+    if (!isApifyConfigured()) {
+      throw new AppError(
+        "Le relevé de fiche n'est pas configuré sur ce serveur.",
+        "APIFY_NOT_CONFIGURED",
+        503,
+      );
+    }
+
+    const profile = await prisma.onboardingProfile.findUnique({
+      where: { userId },
+      select: { mapsUrl: true },
+    });
+    const mapsUrl = profile?.mapsUrl?.trim();
+    if (!mapsUrl) {
+      throw new AppError(
+        "Aucun lien de fiche Google Maps enregistré. Ajoutez-le depuis vos réglages.",
+        "NO_MAPS_URL",
+        400,
+      );
+    }
+
+    const existing = await prisma.mapsPlace.findUnique({ where: { userId } });
+    const sameLink = existing?.mapsUrl === mapsUrl;
+    const age = existing ? Date.now() - existing.fetchedAt.getTime() : Infinity;
+    if (existing && sameLink && !parsedInput.force && age < MAPS_PLACE_COOLDOWN_MS) {
+      const minutes = Math.max(1, Math.ceil((MAPS_PLACE_COOLDOWN_MS - age) / 60_000));
+      throw new AppError(
+        `Fiche relevée il y a moins d'une heure. Nouveau relevé possible dans ${minutes} min.`,
+        "MAPS_PLACE_COOLDOWN",
+        429,
+      );
+    }
+
+    let place: GooglePlace | null;
+    try {
+      place = await fetchGooglePlace(mapsUrl);
+    } catch (err) {
+      const message =
+        err instanceof ApifyError
+          ? err.message
+          : "Le relevé de la fiche a échoué. Réessayez dans quelques minutes.";
+      // On note l'échec sans toucher au relevé précédent, s'il y en a un.
+      if (existing) {
+        await prisma.mapsPlace.update({ where: { userId }, data: { lastError: message } });
+      }
+      throw new AppError(message, "MAPS_PLACE_FAILED", 502);
+    }
+
+    if (!place) {
+      throw new AppError(
+        "Aucune fiche trouvée derrière ce lien. Vérifiez l'adresse de votre fiche Google Maps.",
+        "MAPS_PLACE_NOT_FOUND",
+        404,
+      );
+    }
+
+    const data = {
+      mapsUrl,
+      placeId: place.placeId,
+      title: place.title,
+      rating: place.rating,
+      reviewsCount: place.reviewsCount,
+      payload: JSON.stringify(place),
+      lastError: null,
+      fetchedAt: new Date(),
+    };
+    await prisma.mapsPlace.upsert({ where: { userId }, create: { userId, ...data }, update: data });
+
+    revalidatePath(ROUTES.dashboardMaps);
+    return { title: place.title, reviewsCount: place.reviewsCount };
+  });
+
+/**
+ * Écrit ce qu'il faut changer sur la fiche : le nom, les deux descriptions, et
+ * le tri des attributs manquants.
+ *
+ * Deux appels au modèle, dans cet ordre : le tri des attributs d'abord, parce
+ * que la réécriture des textes s'appuie sur ce que le commerce propose vraiment.
+ * Ils partagent une seule ligne en base, relue telle quelle après un
+ * rechargement — le client copie ces textes dans son back-office Google en
+ * plusieurs fois, souvent sur plusieurs jours.
+ */
+export const writeMapsAdviceAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "maps");
+
+    const [context, snapshot] = await Promise.all([
+      getDashboardContext(userId),
+      getMapsPlace(userId),
+    ]);
+    if (!snapshot) {
+      throw new AppError(
+        "Relevez d'abord votre fiche Google Maps : les propositions partent de son contenu.",
+        "NO_MAPS_PLACE",
+        400,
+      );
+    }
+
+    const place = snapshot.place;
+    const attributes = await adviseAttributes(context, place, auditAttributes(place));
+    const advice = await writeListingAdvice(context, place);
+    const payload: MapsAdvice = { ...advice, attributes };
+
+    const data = { placeId: place.placeId, payload: JSON.stringify(payload) };
+    await prisma.mapsOptimization.upsert({
+      where: { userId },
+      create: { userId, ...data },
+      update: data,
+    });
+
+    revalidatePath(ROUTES.dashboardMaps);
+    return { title: payload.title };
+  });
+
+/**
+ * Rédige une réponse pour chaque avis qui n'en a pas.
+ *
+ * Les avis auxquels le commerce a déjà répondu sont écartés : la réponse est en
+ * ligne, et en proposer une autre ferait croire qu'il faut la remplacer. Ceux
+ * dont la réponse est déjà validée ici le sont aussi — on ne réécrit pas un
+ * texte que le client a relu.
+ */
+export const draftReviewRepliesAction = authActionClient
+  .inputSchema(draftReviewRepliesSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "maps");
+
+    const [context, snapshot, existing] = await Promise.all([
+      getDashboardContext(userId),
+      getMapsPlace(userId),
+      prisma.mapsReviewReply.findMany({ where: { userId }, select: { reviewId: true, status: true } }),
+    ]);
+    if (!snapshot) {
+      throw new AppError(
+        "Relevez d'abord votre fiche Google Maps : les avis viennent de là.",
+        "NO_MAPS_PLACE",
+        400,
+      );
+    }
+
+    const approved = new Set(
+      existing.filter((row) => row.status === "approved").map((row) => row.reviewId),
+    );
+    const wanted = new Set(parsedInput.reviewIds);
+    const targets = snapshot.place.reviews.filter((review) => {
+      if (review.ownerResponse !== null) return false;
+      if (approved.has(review.id)) return false;
+      return wanted.size === 0 || wanted.has(review.id);
+    });
+
+    if (targets.length === 0) {
+      throw new AppError(
+        "Tous les avis relevés ont déjà une réponse.",
+        "NO_REVIEW_TO_ANSWER",
+        400,
+      );
+    }
+
+    const replies = await draftReviewReplies(context, snapshot.place, targets);
+    const byId = new Map(targets.map((review) => [review.id, review]));
+
+    for (const reply of replies) {
+      const review = byId.get(reply.reviewId);
+      if (!review) continue;
+      const data = {
+        reviewerName: review.name,
+        stars: Math.round(review.stars),
+        reviewText: review.text,
+        reply: reply.reply,
+        status: "draft",
+      };
+      await prisma.mapsReviewReply.upsert({
+        where: { userId_reviewId: { userId, reviewId: review.id } },
+        create: { userId, reviewId: review.id, ...data },
+        update: data,
+      });
+    }
+
+    revalidatePath(ROUTES.dashboardMaps);
+    return { drafted: replies.length };
+  });
+
+/** Marque une réponse comme relue : elle ne sera plus réécrite. */
+export const approveReviewReplyAction = authActionClient
+  .inputSchema(reviewReplySchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+    await requireSection(userId, "maps");
+
+    const { count } = await prisma.mapsReviewReply.updateMany({
+      where: { id: parsedInput.id, userId },
+      data: { status: "approved" },
+    });
+    if (!count) throw new AppError("Réponse introuvable.", "NOT_FOUND", 404);
+
+    revalidatePath(ROUTES.dashboardMaps);
+    return { ok: true };
+  });
+
+/**
+ * Relit les horaires affichés sur la page d'accueil et les confronte à la fiche.
+ *
+ * L'extraction porte sur le crawl déjà en base : la page d'accueil y est
+ * enregistrée en markdown, et la recharger ferait attendre le client pour le
+ * même texte. Sans crawl, on le dit plutôt que d'aller chercher le site à la
+ * volée — c'est l'analyse qui explore, pas cet écran.
+ */
+export const readSiteHoursAction = authActionClient
+  .inputSchema(readSiteHoursSchema)
+  .action(async ({ ctx }) => {
+    const userId = ctx.auth.user.id;
+    const context = await getDashboardContext(userId);
+    const domain = context.domain;
+    if (!domain) {
+      throw new AppError("Aucun site enregistré.", "NO_DOMAIN", 400);
+    }
+
+    const [text, snapshot] = await Promise.all([homepageText(domain), getMapsPlace(userId)]);
+    if (!text) {
+      throw new AppError(
+        "La page d'accueil n'a pas encore été explorée. Relancez une analyse.",
+        "NO_CRAWL",
+        400,
+      );
+    }
+
+    const check = await readSiteHours(text, snapshot?.place ?? null);
+    const data = {
+      domain,
+      payload: JSON.stringify(check),
+      absent: !check.found,
+      fetchedAt: new Date(),
+    };
+    await prisma.siteHours.upsert({
+      where: { userId },
+      create: { userId, ...data },
+      update: data,
+    });
+
+    revalidatePath(ROUTES.dashboardContent);
+    revalidatePath(ROUTES.dashboardMaps);
+    return { found: check.found, conflicts: check.conflicts.length };
   });

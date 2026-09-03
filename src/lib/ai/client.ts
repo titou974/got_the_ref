@@ -153,6 +153,9 @@ export type AiRole =
   | "tone"
   | "backlinks"
   | "solution"
+  | "mapsListing"
+  | "reviewReply"
+  | "extract"
   | "default";
 
 type Route = { provider: AiProvider; tier: AiTier };
@@ -164,6 +167,17 @@ const ROLE_ROUTING: Record<AiRole, Route> = {
   tone: { provider: "openai", tier: "fast" },
   backlinks: { provider: "deepseek", tier: "fast" },
   solution: { provider: "openai", tier: "strong" },
+  // Le nom, la description courte et la présentation de la fiche Google : trois
+  // textes que le client colle mot pour mot dans son back-office, et que des
+  // milliers de gens liront avant de pousser sa porte. Même exigence que pour un
+  // article, même modèle.
+  mapsListing: { provider: "openai", tier: "strong" },
+  // Une réponse à un avis est signée du commerce et reste publique sous l'avis.
+  // Un ton mal ajusté sur un avis à deux étoiles se voit longtemps.
+  reviewReply: { provider: "openai", tier: "strong" },
+  // Sortir des horaires d'un pied de page : de la lecture, pas du jugement.
+  // DeepSeek Flash le fait pour une fraction du prix.
+  extract: { provider: "deepseek", tier: "fast" },
   default: { provider: "deepseek", tier: "fast" },
 };
 
