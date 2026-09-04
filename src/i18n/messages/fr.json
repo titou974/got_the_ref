@@ -1920,6 +1920,21 @@
       "planning": "Recherche de sujets…",
       "planHint": "Les agents choisissent les sujets à partir des requêtes de votre niche."
     },
+    "articlesIntro": {
+      "eyebrow": "Vos articles, en trois étapes",
+      "sheetTitle": "Votre article",
+      "step1Title": "Rattachez votre site",
+      "step1Body": "Choisissez votre plateforme dans les réglages, puis collez la clé d'accès. Ce branchement sert deux fois : à lire vos pages, et à y déposer les articles.",
+      "step2Title": "Validez ce qui est écrit",
+      "step2Body": "Les agents lisent votre site pour retrouver votre ton, puis rédigent. Ouvrez l'article, corrigez ce qui ne vous ressemble pas, validez.",
+      "step3Title": "Laissez partir les articles",
+      "step3Body": "Un article validé se dépose seul sur votre site, à la date prévue. Vous n'avez plus rien à faire, sauf changer d'avis avant l'heure du départ.",
+      "next": "Suivant",
+      "done": "C'est parti",
+      "skip": "Passer",
+      "stepAria": "Étape {n} sur 3",
+      "dismissAria": "Fermer la marche à suivre"
+    },
     "voice": {
       "title": "Voix de la marque",
       "hint": "Ce que vous écrivez ici, les agents le relisent avant chaque rédaction.",
