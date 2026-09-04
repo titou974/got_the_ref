@@ -92,7 +92,7 @@ export async function ProofSection() {
           <p className="mt-4 text-pretty text-sm text-muted">{t("resultBody")}</p>
 
           <Link
-            href={`${ROUTES.home}#analyser`}
+            href={ROUTES.homeAudit}
             className="mt-6 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
           >
             {t("cta")}
