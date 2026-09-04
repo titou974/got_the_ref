@@ -354,28 +354,146 @@ export async function draftOutreachMessage(
 
 // ── Posts Google Business ────────────────────────────────────────────────────
 
+/** Les six boutons que Google accepte sous un post. Un « Réserver » n'en est pas un. */
+const GOOGLE_POST_CTAS = ["CALL", "BOOK", "ORDER", "LEARN_MORE", "SIGN_UP", "NONE"] as const;
+
+type GooglePostCta = (typeof GOOGLE_POST_CTAS)[number];
+
+const WEEKDAYS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"] as const;
+
+/**
+ * Ce qu'un modèle écrit quand il rend le libellé du bouton plutôt que son code.
+ * Le prompt lui donne la liste des six codes, mais il traduit encore : un mot
+ * traduit sur un post ne vaut pas de jeter les onze autres, qui sont bons.
+ */
+const CTA_ALIASES: Record<string, GooglePostCta> = {
+  appeler: "CALL",
+  "appelez nous": "CALL",
+  telephoner: "CALL",
+  telephone: "CALL",
+  call: "CALL",
+  "call now": "CALL",
+  reserver: "BOOK",
+  reservation: "BOOK",
+  "reserver une table": "BOOK",
+  "prendre rendez vous": "BOOK",
+  "rendez vous": "BOOK",
+  book: "BOOK",
+  "book now": "BOOK",
+  "book online": "BOOK",
+  commander: "ORDER",
+  "commander en ligne": "ORDER",
+  acheter: "ORDER",
+  order: "ORDER",
+  "order online": "ORDER",
+  buy: "ORDER",
+  shop: "ORDER",
+  "en savoir plus": "LEARN_MORE",
+  decouvrir: "LEARN_MORE",
+  "voir le site": "LEARN_MORE",
+  "visiter le site": "LEARN_MORE",
+  "learn more": "LEARN_MORE",
+  "read more": "LEARN_MORE",
+  "s inscrire": "SIGN_UP",
+  inscription: "SIGN_UP",
+  "s abonner": "SIGN_UP",
+  "sign up": "SIGN_UP",
+  signup: "SIGN_UP",
+  subscribe: "SIGN_UP",
+  aucun: "NONE",
+  aucune: "NONE",
+  none: "NONE",
+  null: "NONE",
+};
+
+/** Le texte réduit à ses lettres, sans accent ni ponctuation, pour la comparaison. */
+function plainKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]+/g, " ")
+    .trim();
+}
+
+/** Ramène ce que le modèle a écrit à l'un des six codes de Google. */
+function normalizeCta(value: unknown): GooglePostCta {
+  if (typeof value !== "string") return "NONE";
+  const code = value.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if ((GOOGLE_POST_CTAS as readonly string[]).includes(code)) return code as GooglePostCta;
+  return CTA_ALIASES[plainKey(value)] ?? "NONE";
+}
+
+/** « Samedi », « le samedi », « samedi matin » : tous des samedis. */
+function normalizeWeekday(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const key = plainKey(value);
+  return WEEKDAYS.find((day) => key.includes(day)) ?? null;
+}
+
+/**
+ * Coupe un texte trop long sans laisser un mot en deux.
+ *
+ * Google refuse un titre de plus de 58 signes, mais un modèle qui en écrit
+ * soixante a quand même écrit un bon post : le raccourcir vaut mieux que
+ * refuser toute la fournée pour deux signes de trop.
+ */
+function truncateAtBoundary(value: string, max: number, boundary: RegExp): string {
+  const text = value.trim();
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  // `boundary` décrit la queue à jeter : le mot ou la phrase laissés en plan.
+  const match = cut.match(boundary);
+  const kept =
+    match && match.index !== undefined && match.index > max * 0.6
+      ? cut.slice(0, match.index)
+      : cut;
+  return kept.trim().replace(/[\s,;:]+$/, "");
+}
+
 const googlePostsSchema = z.object({
   posts: z
     .array(
       z.object({
-        title: z.string().min(5).max(58),
-        body: z.string().min(80).max(1400),
-        keyword: z.string().max(80).nullable(),
-        cta: z.enum(["CALL", "BOOK", "ORDER", "LEARN_MORE", "SIGN_UP", "NONE"]),
+        // Les longueurs sont ramenées plutôt que refusées : un dépassement de
+        // quelques signes sur un post ne doit pas coûter les onze autres.
+        title: z
+          .string()
+          .min(5)
+          .transform((value) => truncateAtBoundary(value, 58, /\s\S*$/)),
+        body: z
+          .string()
+          .min(80)
+          .transform((value) => truncateAtBoundary(value, 1400, /(?<=[.!?])\s\S*$/)),
+        keyword: z
+          .string()
+          .nullish()
+          .transform((value) => (value ? truncateAtBoundary(value, 80, /\s\S*$/) : null)),
+        cta: z.preprocess(normalizeCta, z.enum(GOOGLE_POST_CTAS)),
         /**
          * La photo qui illustre le post, désignée par son rang dans la liste
          * fournie. Un numéro plutôt qu'une adresse : les URL Google font trois
          * cents signes, et un modèle qui doit en recopier une la tronque.
+         *
+         * Le rang arrive parfois en chaîne — « 2 » : on l'accepte, un post
+         * illustré valant mieux qu'un lot refusé. Tout le reste vaut « aucune
+         * photo », et le post part sans image plutôt que pas du tout.
          */
-        photo: z.number().int().min(0).nullable(),
+        photo: z.preprocess((value) => {
+          if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+          if (typeof value === "string" && /^\d+$/.test(value.trim())) return Number(value.trim());
+          return null;
+        }, z.number().int().min(0).nullable()),
         /**
          * Le jour de publication conseillé, en clair — « samedi », « vendredi ».
          * La date exacte se calcule ensuite : le modèle sait quel jour un post
          * de brunch se publie, il ne sait pas quel jour on est.
+         *
+         * « Samedi », « le samedi matin » : le jour est retrouvé dans la
+         * réponse plutôt qu'exigé au mot près.
          */
-        weekday: z
-          .enum(["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"])
-          .nullable(),
+        weekday: z.preprocess(normalizeWeekday, z.enum(WEEKDAYS).nullable()),
       }),
     )
     .max(12),
@@ -386,7 +504,7 @@ export type PlannedGooglePost = {
   title: string;
   body: string;
   keyword: string | null;
-  cta: "CALL" | "BOOK" | "ORDER" | "LEARN_MORE" | "SIGN_UP" | "NONE";
+  cta: GooglePostCta;
   /** L'adresse de la photo choisie sur la fiche, ou `null` si aucune ne convient. */
   imageUrl: string | null;
   /** Le jour de la semaine conseillé, en clair. La date est calculée à l'appel. */
@@ -444,7 +562,13 @@ export async function planGooglePosts(
       "",
       `Propose ${count} posts, un par semaine, en variant les angles (nouveauté, conseil, coulisses, saison).`,
       "Chaque post annonce une chose précise ; aucun ne doit pouvoir servir tel quel à un autre commerce.",
-      "Pour « weekday », donne le jour où ce post a le plus de sens pour ce commerce :",
+      "Le titre fait au plus 58 signes, espaces compris. Le corps fait entre 80 et 1400 signes.",
+      // Sans cette liste, le modèle rend le libellé du bouton — « Réserver »,
+      // « En savoir plus » — et Google ne connaît que les six codes.
+      `Pour « cta », recopie l'un de ces six codes, en majuscules et sans le traduire : ${GOOGLE_POST_CTAS.join(", ")}.`,
+      "CALL pour appeler, BOOK pour réserver, ORDER pour commander, LEARN_MORE pour renvoyer au site,",
+      "SIGN_UP pour s'inscrire, NONE quand le post n'appelle à aucune action.",
+      `Pour « weekday », donne le jour où ce post a le plus de sens pour ce commerce, en un mot (${WEEKDAYS.join(", ")}) :`,
       "une annonce de service du week-end part en fin de semaine, un conseil part en début de semaine.",
       'Réponds en JSON : { "posts": [{ "title", "body", "keyword", "cta", "photo", "weekday" }] }',
     ]
