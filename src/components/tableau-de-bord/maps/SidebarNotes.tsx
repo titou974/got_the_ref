@@ -1,25 +1,19 @@
 import type { GooglePlace, MapsAdvice } from "@/lib/apify/place-types";
 import { StatusDot } from "../Card";
-import { MAPS_ANCHORS } from "./maps-priorities";
 
 /**
  * Les deux relevés de la colonne de droite : ce qui se contredit, et où en sont
  * les textes.
  *
- * Ni l'un ni l'autre ne porte d'action — les gestes sont dans l'échelle, à
- * gauche. Ce sont des voyants : trois lignes qu'on lit d'un coup d'œil en
- * passant, et un lien vers la carte qui, plus bas, dit tout.
+ * Ni l'un ni l'autre ne porte d'action, et aucun ne mène nulle part : les
+ * corrections sont dans la liste de chantiers, à gauche, chacune dans son
+ * tiroir. Ce sont des voyants — trois lignes qu'on lit d'un coup d'œil en
+ * passant, pour savoir si l'écart s'est refermé depuis la dernière fois.
  */
 
 type CoherenceMatch = { label: string; consistent: boolean; detail: string };
 
-export function CoherenceNote({
-  matches,
-  summary,
-}: {
-  matches: CoherenceMatch[];
-  summary: string | null;
-}) {
+export function CoherenceNote({ matches }: { matches: CoherenceMatch[] }) {
   if (matches.length === 0) return null;
 
   const broken = matches.filter((match) => !match.consistent);
@@ -43,14 +37,6 @@ export function CoherenceNote({
         ))}
       </ul>
 
-      {summary ? (
-        <a
-          href={`#${MAPS_ANCHORS.coherence}`}
-          className="mt-3.5 inline-block text-[13px] font-semibold underline-offset-4 hover:underline"
-        >
-          Lire le détail
-        </a>
-      ) : null}
     </div>
   );
 }
@@ -87,12 +73,6 @@ export function TextsNote({ place, advice }: { place: GooglePlace; advice: MapsA
         ))}
       </ul>
 
-      <a
-        href={`#${MAPS_ANCHORS.texts}`}
-        className="mt-3.5 inline-block text-[13px] font-semibold underline-offset-4 hover:underline"
-      >
-        Ouvrir les trois textes
-      </a>
     </div>
   );
 }

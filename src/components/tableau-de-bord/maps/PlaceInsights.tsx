@@ -98,13 +98,19 @@ export function placeChecks(place: GooglePlace): Check[] {
  *
  * Les manques d'abord : c'est ce sur quoi il y a quelque chose à faire.
  */
-export function PlaceCompleteness({ place }: { place: GooglePlace }) {
+export function PlaceCompleteness({
+  place,
+  bare = false,
+}: {
+  place: GooglePlace;
+  bare?: boolean;
+}) {
   const checks = placeChecks(place);
   const done = checks.filter((check) => check.ok).length;
   const sorted = [...checks].sort((a, b) => Number(a.ok) - Number(b.ok));
 
   return (
-    <Card>
+    <Card bare={bare}>
       <CardTitle
         title="Les champs de votre fiche"
         hint="Ce que Google vous laisse remplir, et ce que vous avez rempli."

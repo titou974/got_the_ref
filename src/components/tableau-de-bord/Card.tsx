@@ -9,17 +9,27 @@
 export function Card({
   className = "",
   id,
+  bare = false,
   children,
 }: {
   className?: string;
   /** Ancre de la carte, quand un lien de la page doit y amener. */
   id?: string;
+  /**
+   * Sans surface : la carte est déjà dans une carte — dépliée sous un chantier
+   * de la liste — et deux cadres blancs emboîtés ne se distinguent plus.
+   */
+  bare?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <section
       id={id}
-      className={`rounded-[28px] border border-border bg-surface p-5 sm:p-6 ${className}`}
+      className={
+        bare
+          ? className
+          : `rounded-[28px] border border-border bg-surface p-5 sm:p-6 ${className}`
+      }
     >
       {children}
     </section>
