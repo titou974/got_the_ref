@@ -144,8 +144,12 @@ export default async function TarifsPage({ searchParams }: Props) {
           renvoyait sur une page qui, faute de fiche d'accueil, le déposait dans
           le tunnel de mise en route — c'est-à-dire exactement l'écran qu'on ne
           lui ouvre plus avant qu'il ait pris quelque chose. Sans tableau de
-          bord derrière, pas de retour : il ne reste que la décision. */}
-      <Nav minimal backTo={hasDashboard ? ROUTES.dashboard : null} />
+          bord derrière, pas de retour : il ne reste que la décision.
+
+          Et jamais « Tableau de bord » ni « Déconnexion » à droite : sur une
+          page de prix, la première mène à un espace que ce compte n'a pas
+          encore, la seconde ferme la session en plein choix. */}
+      <Nav minimal showSession={false} backTo={hasDashboard ? ROUTES.dashboard : null} />
 
       <div className="flex flex-1 flex-col">
         <div className="mx-auto w-full max-w-6xl px-5 pt-12 sm:pt-16">
