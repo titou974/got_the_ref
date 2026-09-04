@@ -47,12 +47,9 @@ export function GooglePostPlanner({
   posts,
   /** Le nom du commerce, celui qui signe le post sur la fiche. */
   businessName,
-  rank,
 }: {
   posts: PostRow[];
   businessName: string;
-  /** Le rang du geste dans l'échelle de la semaine, quand il y figure. */
-  rank?: number | null;
 }) {
   const t = useTranslations("dashboard.maps");
   const router = useRouter();
@@ -75,9 +72,9 @@ export function GooglePostPlanner({
   }
 
   return (
-    <Card id="posts">
+    <Card id="posts" className="scroll-mt-6">
       <CardTitle
-        title={rank ? `${rank} — ${t("postsTitle")}` : t("postsTitle")}
+        title={t("postsTitle")}
         hint="Un lundi sur l'autre, prêt à copier dans Google Business Profile."
         action={
           <button

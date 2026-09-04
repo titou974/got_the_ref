@@ -21,7 +21,13 @@ import { Card, CardTitle } from "../Card";
  * commerçant ne sait pas qu'il l'a laissée derrière lui, et c'est tout l'objet
  * de cet écran.
  */
-export function AttributeRows({ groups }: { groups: MapsAttributeAdvice[] }) {
+export function AttributeRows({
+  groups,
+  bare = false,
+}: {
+  groups: MapsAttributeAdvice[];
+  bare?: boolean;
+}) {
   const filled = groups.filter((group) => group.present.length + group.suggested.length > 0);
   if (filled.length === 0) return null;
 
@@ -32,7 +38,7 @@ export function AttributeRows({ groups }: { groups: MapsAttributeAdvice[] }) {
   const checked = filled.reduce((sum, group) => sum + group.present.length, 0);
 
   return (
-    <Card>
+    <Card bare={bare}>
       <CardTitle
         title="Les cases de votre fiche"
         hint={
@@ -133,7 +139,8 @@ function SkippedNote({ groups }: { groups: MapsAttributeAdvice[] }) {
   return (
     <details className="mt-4 border-t border-border pt-3">
       <summary className="cursor-pointer text-xs text-muted marker:text-ash">
-        {skipped.length} cases écartées, sans rapport avec votre activité
+        {skipped.length} case{skipped.length > 1 ? "s écartées" : " écartée"}, sans rapport avec
+        votre activité
       </summary>
       <p className="mt-2 text-xs text-ash">{skipped.join(" · ")}</p>
     </details>

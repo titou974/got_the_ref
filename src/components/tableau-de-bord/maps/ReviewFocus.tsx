@@ -59,16 +59,7 @@ type Entry = {
   reply: ReviewReplyRow | null;
 };
 
-export function ReviewFocus({
-  place,
-  rows,
-  /** Le rang du geste dans l'échelle de la semaine, quand il y figure. */
-  rank,
-}: {
-  place: GooglePlace;
-  rows: ReviewReplyRow[];
-  rank: number | null;
-}) {
+export function ReviewFocus({ place, rows }: { place: GooglePlace; rows: ReviewReplyRow[] }) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
@@ -102,9 +93,9 @@ export function ReviewFocus({
   const title = entries.length === 0 ? "Répondre aux avis" : `Répondre à ${entries.length} avis`;
 
   return (
-    <Card id="avis">
+    <Card id="avis" className="scroll-mt-6">
       <CardTitle
-        title={rank ? `${rank} — ${title}` : title}
+        title={title}
         hint={
           drafted.length > 0
             ? "Relisez, copiez, collez sous l'avis dans Google Business Profile."
