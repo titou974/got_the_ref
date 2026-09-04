@@ -39,7 +39,11 @@ export function OnboardingShell({
 
   return (
     <main className="flex min-h-dvh flex-col bg-bg">
-      <Nav minimal />
+      {/* Le tunnel ne se quitte pas par la barre. Le client vient de payer ou
+          d'ouvrir son essai : lui tendre « Commencer gratuitement » lui propose
+          ce qu'il a déjà, et « Déconnexion » l'expulse au milieu de deux
+          questions. Il reste la flèche « retour » de l'étape, et le logo. */}
+      <Nav minimal showSession={false} showSignUp={false} />
 
       {/* Même montage que l'écran d'inscription, dont le client sort à l'instant :
           la barre remonte sur le dernier quart du bandeau, qui ne porte que le

@@ -5,7 +5,10 @@ import { ROUTES } from "@/constants/routes";
 import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
 import { BusinessKindForm } from "@/components/onboarding/steps/BusinessKindForm";
 import { SiteForm } from "@/components/onboarding/steps/SiteForm";
-import { ensureOnboardingProfile } from "@/features/onboarding/queries";
+import {
+  ensureOnboardingProfile,
+  isOnboardingComplete,
+} from "@/features/onboarding/queries";
 import { canEnterOnboarding } from "@/features/onboarding/access";
 import {
   FIRST_STEP,
@@ -40,12 +43,14 @@ type Props = {
  */
 export default async function OnboardingStepPage({ params }: Props) {
   const user = await requireUser();
-  const profile = await ensureOnboardingProfile(user.id);
 
-  if (profile.completedAt) redirect(ROUTES.dashboard);
-  // Même garde que l'entrée du tunnel : une étape se rejoint aussi par son URL,
-  // et la porte doit tenir aux deux endroits.
+  if (await isOnboardingComplete(user.id)) redirect(ROUTES.dashboard);
+  // Même garde que l'entrée du tunnel, et dans le même ordre : une étape se
+  // rejoint aussi par son URL, la porte doit tenir aux deux endroits, et la
+  // fiche ne s'écrit qu'une fois la porte franchie.
   if (!(await canEnterOnboarding(user.id))) redirect(ROUTES.pricing);
+
+  const profile = await ensureOnboardingProfile(user.id);
 
   const requested = (await params).etape;
   if (!isOnboardingStep(requested)) {

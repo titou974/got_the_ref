@@ -269,3 +269,52 @@ export async function claimPendingDemo(userId: string, email: string): Promise<b
   await seedOnboarding(userId, site);
   return true;
 }
+
+/**
+ * Ouvre l'espace de travail d'un membre déjà identifié, à partir du formulaire
+ * de la page d'accueil.
+ *
+ * Le même geste que pour un visiteur anonyme, moins l'inscription : un compte
+ * gratuit ouvert la veille, revenu des tarifs sans avoir rien pris, tape son
+ * adresse dans le même champ. Sans ce chemin, le formulaire l'envoyait sur le
+ * rapport public `/analyse/<id>` et son tableau de bord restait fermé — alors
+ * que ce formulaire en est la seule porte (cf. `features/onboarding/access.ts`).
+ *
+ * Une fiche déjà terminée n'est jamais réécrite, pour la même raison qu'au
+ * retour de Google : ce compte a un espace qui tourne sur un site donné, et une
+ * adresse tapée en passant ne le déménage pas. On le renvoie chez lui, c'est
+ * tout.
+ */
+export async function openFreeDashboardForMember(params: {
+  userId: string;
+  email: string;
+  rawUrl: string;
+  rawMapsUrl?: string | null;
+  mode?: BusinessMode;
+}): Promise<{ ok: true } | DemoSiteFailure> {
+  const validated = await validateDemoSite({
+    rawUrl: params.rawUrl,
+    rawMapsUrl: params.rawMapsUrl,
+    mode: params.mode,
+  });
+  if (!validated.ok) return validated;
+
+  const profile = await prisma.onboardingProfile.findUnique({
+    where: { userId: params.userId },
+    select: { completedAt: true },
+  });
+  if (profile?.completedAt) return { ok: true };
+
+  try {
+    await captureLead({
+      email: params.email,
+      domain: validated.site.domain,
+      source: FREE_DEMO_SOURCE,
+    });
+  } catch (err) {
+    console.error("Enregistrement du lead échoué :", err);
+  }
+
+  await seedOnboarding(params.userId, validated.site);
+  return { ok: true };
+}

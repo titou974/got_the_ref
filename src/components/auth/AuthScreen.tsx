@@ -30,7 +30,11 @@ export function AuthScreen({
 }) {
   return (
     <main className="flex min-h-dvh flex-col bg-bg">
-      <Nav minimal />
+      {/* Pas d'appel d'inscription sur l'écran d'inscription : le formulaire est
+          juste dessous, et la pilule n'y menait que par un détour. Sur la
+          connexion elle garde son sens — c'est la seule invitation à ouvrir un
+          compte pour qui n'en a pas. */}
+      <Nav minimal showSignUp={mode !== "signup"} />
 
       {/* Le bandeau animé, à la place de la carte du monde piquetée. Il suit la
           largeur du panneau : étalé sur toute la page, il écraserait le titre.
