@@ -4,6 +4,7 @@ import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
 import { WorksWith } from "@/components/WorksWith";
 import { getCurrentUser } from "@/lib/auth";
 import { isGoogleAuthEnabled } from "@/features/auth/better-auth.config";
+import { isOnboardingComplete } from "@/features/onboarding/queries";
 
 /**
  * L'analyse gratuite, désormais au milieu de la page plutôt qu'en haut : le
@@ -17,7 +18,15 @@ export async function FreeAuditSection() {
   // d'inscription — Google, ou une adresse et un mot de passe —, et le compte
   // gratuit ouvre le tableau de bord où l'analyse se joue. Un membre connecté
   // n'a rien à donner de plus.
+  //
+  // Reste le cas du milieu, et c'est lui que ce formulaire doit servir : un
+  // compte ouvert mais sans espace de travail — souvent revenu des tarifs sans
+  // rien avoir pris. Pas de modale à lui montrer, mais pas de rapport public
+  // non plus : son site remplit sa fiche d'accueil et l'emmène sur son tableau
+  // de bord. Ce formulaire est la seule porte qui l'ouvre (cf.
+  // `features/onboarding/access.ts`), il doit donc l'ouvrir vraiment.
   const user = await getCurrentUser();
+  const openDashboard = user ? !(await isOnboardingComplete(user.id)) : false;
 
   return (
     <section id="analyser" className="mx-auto w-full max-w-6xl scroll-mt-6 px-5 py-16 sm:py-20">
@@ -39,7 +48,12 @@ export async function FreeAuditSection() {
         </div>
 
         <div className="mx-auto mt-8 w-full max-w-lg">
-          <UrlAnalyzeForm size="lg" askEmail={!user} googleEnabled={isGoogleAuthEnabled} />
+          <UrlAnalyzeForm
+            size="lg"
+            askEmail={!user}
+            openDashboard={openDashboard}
+            googleEnabled={isGoogleAuthEnabled}
+          />
         </div>
 
         <WorksWith className="mt-10" />

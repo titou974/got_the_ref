@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useAction } from "next-safe-action/hooks";
 import { AnimatePresence, motion } from "framer-motion";
+import { openFreeDashboardAction } from "@/features/analysis/actions";
 import { AnalyzingOverlay } from "./AnalyzingOverlay";
 import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import { ROUTES, pricingWithReason, signInWithNext } from "@/constants/routes";
@@ -29,6 +31,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export function UrlAnalyzeForm({
   size = "lg",
   askEmail = false,
+  openDashboard = false,
   googleEnabled = false,
 }: {
   size?: "lg" | "md";
@@ -40,6 +43,20 @@ export function UrlAnalyzeForm({
    * ce qu'il faut : l'analyse part directement.
    */
   askEmail?: boolean;
+  /**
+   * Le troisième cas : identifié, mais sans espace de travail derrière.
+   *
+   * C'est un compte gratuit ouvert il y a peu, qui n'a rien pris et rien fait
+   * mesurer. Il n'a pas de modale à remplir — sa session est posée — mais
+   * l'envoyer sur le rapport public `/analyse/<id>` laisserait son tableau de
+   * bord fermé, alors que ce formulaire en est la seule porte. On remplit donc
+   * sa fiche d'accueil avec le site qu'il vient de donner et on l'y dépose.
+   *
+   * Le drapeau se décide côté serveur (`isOnboardingComplete`) : le formulaire
+   * ne connaît pas l'état du compte, et un booléen faux par défaut laisse tous
+   * les autres montages — rapport, tableau de bord — sur l'analyse directe.
+   */
+  openDashboard?: boolean;
   /**
    * Les identifiants OAuth sont-ils configurés ? Le drapeau vit côté serveur
    * (`isGoogleAuthEnabled`) et descend jusqu'ici : afficher un bouton Google
@@ -64,6 +81,22 @@ export function UrlAnalyzeForm({
   // modale, jamais au montage : le premier rendu doit être identique à celui du
   // serveur, qui ne connaît pas le stockage du navigateur.
   const [knownEmail, setKnownEmail] = useState("");
+
+  // L'ouverture de l'espace pour un membre qui n'en a pas encore. Rien ne
+  // s'affiche pendant ce temps : la fiche s'écrit en une requête, et c'est le
+  // tableau de bord qui montre ensuite l'audit se lancer.
+  const openSpace = useAction(openFreeDashboardAction);
+  const openSpaceError =
+    openSpace.result.validationErrors?._errors?.[0] ??
+    openSpace.result.validationErrors?.url?._errors?.[0] ??
+    openSpace.result.validationErrors?.mapsUrl?._errors?.[0] ??
+    openSpace.result.serverError ??
+    null;
+  const openSpaceDestination = openSpace.result.data?.redirect;
+
+  useEffect(() => {
+    if (openSpaceDestination) router.push(openSpaceDestination);
+  }, [openSpaceDestination, router]);
 
   // Coordination : on ne redirige que lorsque l'API a répondu ET que
   // l'animation a parcouru toutes ses étapes (faux temps).
@@ -148,6 +181,18 @@ export function UrlAnalyzeForm({
    * porte sur le site, elle se pose donc avec le site.
    */
   function continueAfterMaps() {
+    // Identifié, mais sans espace : on lui ouvre le sien avec ce site plutôt
+    // que de lui servir un rapport public de plus.
+    if (!askEmail && openDashboard) {
+      setError(null);
+      openSpace.execute({
+        url: url.trim(),
+        mapsUrl: mode === "physical" ? mapsUrl.trim() || null : null,
+        mode,
+      });
+      return;
+    }
+
     if (askEmail) {
       try {
         const saved = window.localStorage.getItem(LEAD_EMAIL_KEY);
@@ -187,6 +232,11 @@ export function UrlAnalyzeForm({
   }
 
   const big = size === "lg";
+  // Le bouton reste tenu jusqu'à la navigation comprise : la fiche écrite, la
+  // page ne change pas dans la même image, et un libellé revenu à « Analyser »
+  // se lirait comme un échec.
+  const busy = analyzing || openSpace.isPending || Boolean(openSpaceDestination);
+  const shownError = error ?? openSpaceError;
 
   return (
     <>
@@ -274,12 +324,12 @@ export function UrlAnalyzeForm({
           />
           <button
             type="submit"
-            disabled={analyzing}
+            disabled={busy}
             className={`shrink-0 cursor-pointer rounded-full bg-cta text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-60 ${
               big ? "px-4 py-2 sm:px-5 sm:py-2.5" : "px-3.5 py-2"
             }`}
           >
-            {analyzing ? (
+            {busy ? (
               t("submitting")
             ) : (
               <>
@@ -337,9 +387,9 @@ export function UrlAnalyzeForm({
           </div>
         )}
 
-        {error && (
+        {shownError && (
           <p className="mt-3 text-center text-sm text-danger" role="alert">
-            {error}
+            {shownError}
           </p>
         )}
       </form>
