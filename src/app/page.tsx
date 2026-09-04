@@ -40,16 +40,25 @@ import { TRIAL } from "@/constants/plans";
  * L'analyse arrive une fois la démonstration faite, là où coller son adresse a
  * un sens — l'ancre `#analyser` reste valable pour tous les liens du site.
  *
- * Un client déjà identifié ne voit pas cette page : elle argumente pour une
+ * Un client déjà engagé ne voit pas cette page : elle argumente pour une
  * décision qu'il a déjà prise. On l'emmène là où il en est — le tunnel d'accueil
  * tant qu'il n'a pas donné l'adresse de son site, son tableau de bord ensuite.
  * C'est le même arbitrage qu'après une connexion, et il est écrit au même
  * endroit (`resolveAuthDestination`) : deux versions de cette règle finiraient
  * par diverger, et l'une des deux déposerait quelqu'un sur un écran vide.
+ *
+ * Une seule sortie de cet arbitrage n'est pas suivie ici : les tarifs. C'est là
+ * qu'il dépose un compte qui vient de naître — après une inscription, c'est
+ * juste, la décision est l'étape suivante. Depuis la home, non : ce compte-là
+ * en revient précisément, et l'y renvoyer l'enfermait sur la grille des prix,
+ * sans retour possible. Il reste donc ici, et il y trouve le formulaire
+ * d'analyse — la seule porte vers l'espace de travail, celle que ni la barre de
+ * navigation ni l'appel flottant ne doublent.
  */
 export default async function Home() {
   const user = await getCurrentUser();
-  if (user) redirect(await resolveAuthDestination(user.id, null));
+  const destination = user ? await resolveAuthDestination(user.id, null) : null;
+  if (destination && destination !== ROUTES.pricing) redirect(destination);
 
   const t = await getTranslations("homeHero");
 
@@ -96,13 +105,17 @@ export default async function Home() {
       <Footer />
 
       {/* Le CTA revient par le bas dès que le hero est dépassé, pour que
-          l'entrée reste à portée sur toute la longueur de la page. Il ne se
-          dédouble plus selon le visiteur : seul un anonyme lit encore cette
-          page, les autres ont été renvoyés chez eux plus haut. */}
+          l'entrée reste à portée sur toute la longueur de la page.
+
+          Deux visiteurs le lisent, et il ne les emmène pas au même endroit :
+          l'anonyme ouvre un compte, celui qui en a déjà un — sans rien avoir
+          pris ni analysé — va voir les offres. Ni l'un ni l'autre n'entre par
+          ici dans le tunnel d'accueil ou le tableau de bord : cette porte-là
+          est le formulaire d'analyse, plus haut dans la page. */}
       <StickyCtaBar
         label={t("trialBarCta", { days: TRIAL.days })}
         heroId={HERO_ID}
-        href={ROUTES.signUp}
+        href={user ? ROUTES.pricing : ROUTES.signUp}
       />
     </main>
   );

@@ -35,10 +35,17 @@ type Labels = {
 export function MobileMenu({
   links,
   isAuthenticated,
+  hasDashboard,
   labels,
 }: {
   links: NavLink[];
   isAuthenticated: boolean;
+  /**
+   * Le tunnel d'accueil est-il derrière ce compte ? Sinon il n'y a pas de
+   * tableau de bord à ouvrir, et le tiroir n'en tend pas le lien : cet espace
+   * ne se déverrouille que par le formulaire d'analyse de la page d'accueil.
+   */
+  hasDashboard: boolean;
   labels: Labels;
 }) {
   const [open, setOpen] = useState(false);
@@ -119,13 +126,15 @@ export function MobileMenu({
                   ))}
                   {isAuthenticated ? (
                     <>
-                      <Link
-                        href={ROUTES.dashboard}
-                        onClick={() => setOpen(false)}
-                        className="cursor-pointer rounded-xl px-3 py-3 text-base font-medium text-text transition-colors duration-200 hover:bg-mist"
-                      >
-                        {labels.account}
-                      </Link>
+                      {hasDashboard && (
+                        <Link
+                          href={ROUTES.dashboard}
+                          onClick={() => setOpen(false)}
+                          className="cursor-pointer rounded-xl px-3 py-3 text-base font-medium text-text transition-colors duration-200 hover:bg-mist"
+                        >
+                          {labels.account}
+                        </Link>
+                      )}
                       <SignOutButton className="rounded-xl px-3 py-3 text-left text-base hover:bg-mist" />
                     </>
                   ) : (

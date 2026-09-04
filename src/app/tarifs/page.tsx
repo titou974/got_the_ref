@@ -219,15 +219,19 @@ export default async function TarifsPage({ searchParams }: Props) {
           </div>
 
           {/* La sortie par le bas, discrète et volontairement sans surface : un
-              compte qui vient de s'ouvrir peut aller voir son espace gratuit
-              sans rien payer et sans ouvrir d'essai. Elle ne concurrence pas les
-              deux offres — c'est un lien, sous elles, pour qui n'était pas venu
-              acheter aujourd'hui. Passé sa première analyse, elle disparaît :
-              la démonstration a eu lieu, il reste les tarifs. */}
+              compte qui vient de s'ouvrir peut voir le produit tourner sur son
+              site sans rien payer et sans ouvrir d'essai. Elle ne concurrence
+              pas les deux offres — c'est un lien, sous elles, pour qui n'était
+              pas venu acheter aujourd'hui. Passé sa première analyse, elle
+              disparaît : la démonstration a eu lieu, il reste les tarifs.
+
+              Elle ramène au formulaire d'analyse de la page d'accueil, et non
+              au tunnel de mise en route : l'espace de travail ne s'ouvre que sur
+              une adresse de site donnée, jamais sur un simple lien. */}
           {showFreeDemo && (
             <div className="mt-8 text-center">
               <Link
-                href={ROUTES.onboarding}
+                href={`${ROUTES.home}#analyser`}
                 className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:text-text hover:decoration-obsidian"
               >
                 {t("freeDemoCta")}

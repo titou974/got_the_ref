@@ -6,6 +6,7 @@ import { SignOutButton } from "./SignOutButton";
 import { NavCta } from "./NavCta";
 import { MobileMenu } from "./MobileMenu";
 import { getCurrentUser } from "@/lib/auth";
+import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { ROUTES } from "@/constants/routes";
 
 export async function Nav({
@@ -28,6 +29,13 @@ export async function Nav({
   backTo?: string | null;
 } = {}) {
   const user = await getCurrentUser();
+  // Un tableau de bord n'existe qu'une fois l'accueil terminé. Avant ça, le
+  // lien de la barre menait au tunnel de mise en route — c'est-à-dire à un
+  // espace de travail ouvert par une barre de navigation, à quelqu'un qui n'a
+  // encore rien pris et à qui rien n'a été montré. La seule porte vers cet
+  // espace est le formulaire d'analyse de la page d'accueil : la barre ne la
+  // double pas.
+  const hasDashboard = user ? await isOnboardingComplete(user.id) : false;
   const t = await getTranslations("common");
 
   // Rapport d'analyse et tarifs : aucune sortie latérale. À ces deux endroits, le
@@ -40,9 +48,12 @@ export async function Nav({
         { href: ROUTES.pricing, label: t("pricing") },
       ];
 
-  // Identifié, on ramène au tableau de bord — l'ancienne page « mon compte » a
-  // disparu, et c'est là que le client retrouve son projet et sa facturation ;
-  // sinon on propose d'ouvrir un compte plutôt que la connexion. Un visiteur qui découvre le site n'a pas de compte à retrouver :
+  // Identifié avec un tableau de bord derrière, on l'y ramène — l'ancienne page
+  // « mon compte » a disparu, et c'est là que le client retrouve son projet et
+  // sa facturation. Identifié sans tableau de bord, la barre ne propose rien :
+  // il n'y a rien à retrouver, et il reste la déconnexion à côté.
+  //
+  // Sans compte, on propose d'en ouvrir un plutôt que la connexion. Un visiteur qui découvre le site n'a pas de compte à retrouver :
   // lui tendre « Connexion » lui demandait de se souvenir d'un mot de passe
   // qu'il n'a jamais créé. La connexion reste à un geste — depuis le tiroir
   // mobile, et depuis la page d'inscription qui l'annonce en tête.
@@ -50,21 +61,21 @@ export async function Nav({
   // Bouton secondaire, pas primaire : la barre suit le visiteur sur toute la
   // page, une pilule noire pleine y entrerait en concurrence avec le CTA du
   // haut de page et avec la barre basse.
-  const accountLink = user ? (
-    <Link
-      href={ROUTES.dashboard}
-      className="cursor-pointer truncate text-sm text-muted transition-colors duration-200 hover:text-text"
-    >
-      {t("account")}
-    </Link>
-  ) : (
+  const accountLink = !user ? (
     <Link
       href={ROUTES.signUp}
       className="inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-full border border-graphite bg-snow px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
     >
       {t("freeTrial")}
     </Link>
-  );
+  ) : hasDashboard ? (
+    <Link
+      href={ROUTES.dashboard}
+      className="cursor-pointer truncate text-sm text-muted transition-colors duration-200 hover:text-text"
+    >
+      {t("account")}
+    </Link>
+  ) : null;
 
   return (
     // Barre collante sur tout le site : le logo et le compte restent à portée
@@ -94,6 +105,7 @@ export async function Nav({
             <MobileMenu
               links={links}
               isAuthenticated={!!user}
+              hasDashboard={hasDashboard}
               labels={{
                 menu: t("menu"),
                 closeMenu: t("closeMenu"),
@@ -146,7 +158,7 @@ export async function Nav({
 
             Un client identifié garde en revanche l'accès à son tableau de bord :
             c'est un lien de texte, il tient à côté du logo. */}
-        {user && !backTo && (
+        {user && !backTo && accountLink && (
           <div className="flex min-w-0 items-center gap-4 sm:hidden">{accountLink}</div>
         )}
       </nav>
