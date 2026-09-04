@@ -19,7 +19,7 @@ import { Faq } from "@/components/home/Faq";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { resolveAuthDestination } from "@/features/auth/destination";
+import { resolveHomeDestination } from "@/features/auth/destination";
 import { ROUTES } from "@/constants/routes";
 import { TRIAL } from "@/constants/plans";
 
@@ -40,25 +40,24 @@ import { TRIAL } from "@/constants/plans";
  * L'analyse arrive une fois la démonstration faite, là où coller son adresse a
  * un sens — l'ancre `#analyser` reste valable pour tous les liens du site.
  *
- * Un client déjà engagé ne voit pas cette page : elle argumente pour une
- * décision qu'il a déjà prise. On l'emmène là où il en est — le tunnel d'accueil
- * tant qu'il n'a pas donné l'adresse de son site, son tableau de bord ensuite.
- * C'est le même arbitrage qu'après une connexion, et il est écrit au même
- * endroit (`resolveAuthDestination`) : deux versions de cette règle finiraient
- * par diverger, et l'une des deux déposerait quelqu'un sur un écran vide.
+ * Un client dont l'espace tourne ne voit pas cette page : elle argumente pour
+ * une décision qu'il a déjà prise. On l'emmène là où il en est — le tunnel
+ * d'accueil s'il a pris un essai ou un abonnement sans avoir encore lancé son
+ * analyse, son tableau de bord dès qu'elle existe.
  *
- * Une seule sortie de cet arbitrage n'est pas suivie ici : les tarifs. C'est là
- * qu'il dépose un compte qui vient de naître — après une inscription, c'est
- * juste, la décision est l'étape suivante. Depuis la home, non : ce compte-là
- * en revient précisément, et l'y renvoyer l'enfermait sur la grille des prix,
- * sans retour possible. Il reste donc ici, et il y trouve le formulaire
- * d'analyse — la seule porte vers l'espace de travail, celle que ni la barre de
- * navigation ni l'appel flottant ne doublent.
+ * Mais un compte gratuit tout juste ouvert, lui, reste ici. Il vient souvent de
+ * la flèche de retour des tarifs, et l'expédier dans le tunnel d'accueil le
+ * piégeait : chaque retour arrière le ramenait à la home, qui le renvoyait au
+ * tunnel. La règle est écrite une fois pour toutes dans
+ * `resolveHomeDestination` — voir aussi `resolveAuthDestination`, qui répond à
+ * la question voisine mais différente du lendemain d'une identification.
  */
 export default async function Home() {
   const user = await getCurrentUser();
-  const destination = user ? await resolveAuthDestination(user.id, null) : null;
-  if (destination && destination !== ROUTES.pricing) redirect(destination);
+  if (user) {
+    const destination = await resolveHomeDestination(user.id);
+    if (destination) redirect(destination);
+  }
 
   const t = await getTranslations("homeHero");
 

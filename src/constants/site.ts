@@ -10,7 +10,7 @@ export const SITE = {
     "Le premier logiciel de GEO pour les commerces français, physiques et en ligne",
   /** URL publique de l'app, surchargée par l'environnement. */
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  contactEmail: "bobodigitalcorp@gmail.com",
+  contactEmail: "contact@gotheref.com",
   /**
    * Créneau de démonstration (Cal), surchargeable par l'environnement.
    *

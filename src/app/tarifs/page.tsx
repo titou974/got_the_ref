@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -123,17 +122,6 @@ export default async function TarifsPage({ searchParams }: Props) {
       ])
     : [ANONYMOUS_TRIAL_STATE, null, false];
 
-  // La sortie par le bas : un compte qui vient de naître, qui n'a rien pris et
-  // rien fait mesurer peut ouvrir son espace gratuit sans rien payer.
-  //
-  // Trois conditions, et pas une de moins. Un compte, sinon il n'y a rien à
-  // ouvrir. `trial` encore disponible, ce qui dit à la fois qu'aucun abonnement
-  // n'a été ouvert et qu'aucune analyse n'a tourné — proposer « continuer sans
-  // abonnement » à quelqu'un qui vient d'en prendre un serait un contresens.
-  // Et pas de fiche d'accueil terminée : celui-là a déjà son tableau de bord,
-  // la flèche de la barre l'y ramène.
-  const showFreeDemo = Boolean(user) && trial && !hasDashboard;
-
   return (
     <main className="flex min-h-[100dvh] flex-col">
       {offersJsonLd().map((data, i) => (
@@ -144,8 +132,12 @@ export default async function TarifsPage({ searchParams }: Props) {
           renvoyait sur une page qui, faute de fiche d'accueil, le déposait dans
           le tunnel de mise en route — c'est-à-dire exactement l'écran qu'on ne
           lui ouvre plus avant qu'il ait pris quelque chose. Sans tableau de
-          bord derrière, pas de retour : il ne reste que la décision. */}
-      <Nav minimal backTo={hasDashboard ? ROUTES.dashboard : null} />
+          bord derrière, pas de retour : il ne reste que la décision.
+
+          Et jamais « Tableau de bord » ni « Déconnexion » à droite : sur une
+          page de prix, la première mène à un espace que ce compte n'a pas
+          encore, la seconde ferme la session en plein choix. */}
+      <Nav minimal showSession={false} backTo={hasDashboard ? ROUTES.dashboard : null} />
 
       <div className="flex flex-1 flex-col">
         <div className="mx-auto w-full max-w-6xl px-5 pt-12 sm:pt-16">
@@ -217,42 +209,6 @@ export default async function TarifsPage({ searchParams }: Props) {
               }
             />
           </div>
-
-          {/* La sortie par le bas, discrète et volontairement sans surface : un
-              compte qui vient de s'ouvrir peut voir le produit tourner sur son
-              site sans rien payer et sans ouvrir d'essai. Elle ne concurrence
-              pas les deux offres — c'est un lien, sous elles, pour qui n'était
-              pas venu acheter aujourd'hui. Passé sa première analyse, elle
-              disparaît : la démonstration a eu lieu, il reste les tarifs.
-
-              Elle ramène au formulaire d'analyse de la page d'accueil, et non
-              au tunnel de mise en route : l'espace de travail ne s'ouvre que sur
-              une adresse de site donnée, jamais sur un simple lien. */}
-          {showFreeDemo && (
-            <div className="mt-8 text-center">
-              <Link
-                href={`${ROUTES.home}#analyser`}
-                className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:text-text hover:decoration-obsidian"
-              >
-                {t("freeDemoCta")}
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden
-                >
-                  <path
-                    d="M5 12h14M13 6l6 6-6 6"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Link>
-            </div>
-          )}
         </div>
       </div>
       <PricingFaq className="pb-16" />

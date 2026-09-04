@@ -24,7 +24,7 @@ export default function MentionsLegalesPage() {
           Numéro de TVA intracommunautaire : le cas échéant ; à défaut, TVA non applicable
           (article 293 B du CGI)
         </li>
-        <li>Adresse e-mail : bobodigitalcorp@gmail.com</li>
+        <li>Adresse e-mail : contact@gotheref.com</li>
         <li>Directeur de la publication : Titouan Hirsch</li>
       </ul>
 

@@ -32,5 +32,5 @@ Currency: EUR. VAT not included where applicable ("TVA en sus"). Prices are per 
 - Traditional SEO agency benchmark: €20,000–24,000/year minimum, 6–12 month commitment, 4–6 weeks before first deliverable
 - got_the_ref: no commitment, first fix applied immediately, continuous remeasurement
 
-Contact: titouanhirsch@gmail.com
+Contact: contact@gotheref.com
 Full pricing page: /tarifs

@@ -37,7 +37,7 @@ export default function CgvCguPage() {
         En accédant au Service ou en l'utilisant, vous (« Utilisateur », « Client », « vous »)
         acceptez d'être lié par les présentes Conditions. Si vous ne les acceptez pas, vous ne
         pouvez pas accéder au Service ni l'utiliser. Contact :{" "}
-        <strong>bobodigitalcorp@gmail.com</strong>.
+        <strong>contact@gotheref.com</strong>.
       </p>
 
       <h2>Partie I — Conditions Générales d'Utilisation</h2>
@@ -273,7 +273,7 @@ export default function CgvCguPage() {
         <li>SIRET : 92430624400014</li>
         <li>Directeur de la publication : Titouan Hirsch</li>
         <li>Responsable de la protection des données : Titouan Hirsch</li>
-        <li>E-mail de contact et de support : bobodigitalcorp@gmail.com</li>
+        <li>E-mail de contact et de support : contact@gotheref.com</li>
       </ul>
       <p>Les présentes conditions régissent la vente :</p>
       <ul>
@@ -440,7 +440,7 @@ export default function CgvCguPage() {
       <p>
         À défaut de l'une de ces conditions, le consommateur conserve le droit de se rétracter dans
         les quatorze (14) jours calendaires suivant l'achat, sans motif ni frais, en écrivant à
-        bobodigitalcorp@gmail.com. En cas de rétractation valide, le remboursement intervient dans
+        contact@gotheref.com. En cas de rétractation valide, le remboursement intervient dans
         les quatorze (14) jours, par le même moyen de paiement que celui de la transaction
         initiale, sauf accord exprès du consommateur pour un autre moyen.
       </p>
@@ -463,7 +463,7 @@ export default function CgvCguPage() {
         </li>
       </ul>
       <p>
-        La demande s'effectue par e-mail à bobodigitalcorp@gmail.com dans les trente (30) jours
+        La demande s'effectue par e-mail à contact@gotheref.com dans les trente (30) jours
         suivant l'échéance des {GUARANTEE_DAYS} jours. La progression s'apprécie au regard des
         mesures enregistrées par la plateforme entre la première et la dernière analyse de la
         période. Cette garantie ne fait pas obstacle aux garanties légales de conformité et des
@@ -508,7 +508,7 @@ export default function CgvCguPage() {
       <p>
         La plateforme vise une haute disponibilité, mais peut faire l'objet d'opérations de
         maintenance planifiées ou imprévues. Le support est assuré à l'adresse
-        bobodigitalcorp@gmail.com et depuis la page contact, avec un objectif de réponse sous 24
+        contact@gotheref.com et depuis la page contact, avec un objectif de réponse sous 24
         heures ouvrées. Aucun engagement de taux de disponibilité n'est consenti en dehors d'un
         accord distinct.
       </p>
@@ -559,7 +559,7 @@ export default function CgvCguPage() {
       <h3>17. Contact</h3>
       <p>
         Pour toute question relative aux présentes Conditions ou à la facturation :{" "}
-        <strong>bobodigitalcorp@gmail.com</strong> — Studio Tropiques, 98 rue Montmartre,
+        <strong>contact@gotheref.com</strong> — Studio Tropiques, 98 rue Montmartre,
         75002 Paris.
       </p>
     </LegalLayout>

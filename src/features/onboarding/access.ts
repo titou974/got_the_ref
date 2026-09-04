@@ -14,23 +14,30 @@ import { getAccess } from "@/features/billing/access";
  * site avant même d'avoir vu ce qu'il achetait. Il repartait de là sur un
  * tableau de bord qu'il n'avait pas choisi.
  *
- * La porte s'ouvre donc sur une seule condition : que quelque chose ait été
- * pris — les trois jours d'essai, le Coup de Boost, l'abonnement, ou un accès de
- * démonstration. Une ligne d'abonnement compte, même résiliée, parce que le
- * tunnel a commencé et qu'on ne le referme pas au milieu.
+ * La porte s'ouvre donc sur une décision prise — les trois jours d'essai, le
+ * Coup de Boost, l'abonnement, ou un accès de démonstration. Une ligne
+ * d'abonnement compte, même résiliée, parce que le tunnel a commencé et qu'on ne
+ * le referme pas au milieu.
+ *
+ * Elle s'ouvre aussi sur une analyse déjà passée, et pour une raison mécanique :
+ * la home renvoie au tableau de bord dès qu'une analyse existe
+ * (`resolveHomeDestination`), et le tableau de bord renvoie ici tant que la
+ * fiche n'est pas terminée. Refuser ce compte-là le ferait rebondir vers les
+ * tarifs à chaque fois. Ce n'est pas une porte d'entrée : il faut une analyse
+ * pour la franchir, et l'analyse ne se lance que depuis le formulaire.
  *
  * Il n'y a pas de seconde porte. La démonstration gratuite ne s'ouvre plus
  * d'ici : elle part du formulaire d'analyse de la page d'accueil, qui ouvre le
  * compte, remplit la fiche et la marque terminée d'un coup (cf.
- * `features/analysis/demo.ts`). Ce compte-là ne passe donc jamais par ce
- * tunnel, et aucun bouton — barre de navigation, appel flottant, sortie des
- * tarifs — ne doit y déposer quelqu'un à la place du formulaire.
+ * `features/analysis/demo.ts`). Aucun bouton — barre de navigation, appel
+ * flottant, sortie des tarifs — ne doit y déposer quelqu'un à sa place.
  */
 export async function canEnterOnboarding(userId: string): Promise<boolean> {
-  const [access, subscription] = await Promise.all([
+  const [access, subscription, analyses] = await Promise.all([
     getAccess(userId),
     prisma.subscription.findUnique({ where: { userId }, select: { id: true } }),
+    prisma.analysis.count({ where: { userId } }),
   ]);
 
-  return access.tier !== "free" || subscription !== null;
+  return access.tier !== "free" || subscription !== null || analyses > 0;
 }
