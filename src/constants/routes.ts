@@ -5,6 +5,17 @@
 
 export const ROUTES = {
   home: "/",
+  /**
+   * Le champ d'analyse gratuite vit au milieu de la home, sous l'ancre
+   * `#analyser` (cf. `components/home/FreeAuditSection`). Tous les liens qui
+   * mènent au formulaire passent par ici.
+   */
+  homeAudit: "/#analyser",
+  /**
+   * L'adresse courte à partager (publicité, e-mail, QR code) : elle redirige
+   * vers `homeAudit`. La règle vit dans `next.config.ts` — pas de page derrière.
+   */
+  freeAudit: "/analyse-gratuite",
   demo: "/demo",
   contact: "/contact",
   pricing: "/tarifs",

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
+import { AuditAnchorLanding } from "@/components/home/AuditAnchorLanding";
 import { WorksWith } from "@/components/WorksWith";
 import { getCurrentUser } from "@/lib/auth";
 import { isGoogleAuthEnabled } from "@/features/auth/better-auth.config";
@@ -12,6 +13,13 @@ import { isOnboardingComplete } from "@/features/onboarding/queries";
  * raison de coller son adresse. L'ancre `#analyser` est conservée, tous les
  * liens du site (navigation, boutons de rapport) continuent d'y tomber juste.
  */
+/**
+ * L'ancre du formulaire. `ROUTES.homeAudit` (`/#analyser`) et son alias court
+ * `ROUTES.freeAudit` (`/analyse-gratuite`, redirigé dans `next.config.ts`) y
+ * mènent tous les deux.
+ */
+const AUDIT_ANCHOR = "analyser";
+
 export async function FreeAuditSection() {
   const t = await getTranslations("audit");
   // Visiteur non connecté : l'analyse gratuite passe par une modale
@@ -29,7 +37,8 @@ export async function FreeAuditSection() {
   const openDashboard = user ? !(await isOnboardingComplete(user.id)) : false;
 
   return (
-    <section id="analyser" className="mx-auto w-full max-w-6xl scroll-mt-6 px-5 py-16 sm:py-20">
+    <section id={AUDIT_ANCHOR} className="mx-auto w-full max-w-6xl scroll-mt-6 px-5 py-16 sm:py-20">
+      <AuditAnchorLanding targetId={AUDIT_ANCHOR} />
       <div className="card-cal overflow-hidden px-6 py-10 sm:px-10 sm:py-12">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-wider text-steel">{t("eyebrow")}</p>
