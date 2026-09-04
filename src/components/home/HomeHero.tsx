@@ -52,12 +52,11 @@ export async function HomeHero() {
   const t = await getTranslations("homeHero");
   const th = await getTranslations("home");
 
-  // Le bouton mène là où le visiteur en est : au tableau de bord pour un
-  // abonné, aux tarifs pour un compte ouvert qui n'a encore rien pris — c'est
-  // là que les trois jours se prennent —, à l'inscription pour un anonyme.
-  //
-  // Il n'ouvre jamais le tunnel d'accueil ni le tableau de bord d'un compte qui
-  // n'a rien pris : cette porte est le formulaire d'analyse, plus bas.
+  // Le bouton doit rester juste dans les trois cas. Un abonnement en cours :
+  // le tableau de bord. Une session sans rien pris — le compte gratuit qui
+  // reste désormais sur la page d'accueil : les offres, car c'est là que se
+  // prend l'essai, et le formulaire d'inscription n'aurait fait que le
+  // rerouter. Personne d'identifié : l'inscription.
   const user = await getCurrentUser();
   const home = hasActiveSubscription(user?.subscription);
   const ctaHref = home ? ROUTES.dashboard : user ? ROUTES.pricing : ROUTES.signUp;

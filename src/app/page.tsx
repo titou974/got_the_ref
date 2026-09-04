@@ -106,11 +106,9 @@ export default async function Home() {
       {/* Le CTA revient par le bas dès que le hero est dépassé, pour que
           l'entrée reste à portée sur toute la longueur de la page.
 
-          Deux visiteurs le lisent, et il ne les emmène pas au même endroit :
-          l'anonyme ouvre un compte, celui qui en a déjà un — sans rien avoir
-          pris ni analysé — va voir les offres. Ni l'un ni l'autre n'entre par
-          ici dans le tunnel d'accueil ou le tableau de bord : cette porte-là
-          est le formulaire d'analyse, plus haut dans la page. */}
+          Un compte gratuit lit maintenant cette page lui aussi : pour lui,
+          l'appel mène aux offres — l'essai s'y prend — et non au formulaire
+          d'inscription, qu'il a déjà rempli. */}
       <StickyCtaBar
         label={t("trialBarCta", { days: TRIAL.days })}
         heroId={HERO_ID}
