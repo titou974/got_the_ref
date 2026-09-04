@@ -535,9 +535,9 @@ function pickAnswerColor(answer: string | null, colors: ColorCandidate[]): strin
  * sait le mieux quel article le représente. La couleur, elle, se lit toujours
  * sur la page d'accueil — c'est là que sont les boutons.
  *
- * Appel réservé à l'abonnement « Tout-en-un » : c'est le seul niveau où le ton
- * relevé sert vraiment, puisque c'est lui qui fait écrire les articles dans la
- * durée (cf. `prepareDashboardAction`).
+ * Appel réservé aux offres payantes — Coup de Boost compris : ce sont les
+ * niveaux où le ton relevé sert vraiment, puisque ce sont eux qui font écrire
+ * les articles (cf. `ensureBrandIdentity` et `contextForWriting`).
  */
 export async function detectBrandIdentity({
   siteUrl,

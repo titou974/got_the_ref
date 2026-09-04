@@ -33,10 +33,10 @@ export function brief(
     analysis?.signals.firstParagraph ? `Introduction actuelle : ${analysis.signals.firstParagraph}` : null,
   ].filter(Boolean);
 
-  // Le ton relevé pendant l'accueil vient d'abord : c'est la manière d'écrire du
-  // client, constatée sur son propre texte. La voix de marque passe après, parce
+  // Le ton lu sur le site du client vient d'abord : c'est sa manière d'écrire,
+  // constatée sur son propre texte. La voix de marque passe après, parce
   // qu'elle corrige ce constat plutôt qu'elle ne le remplace.
-  if (context.tone?.summary) lines.push(`Ton de la marque (relevé à l'accueil) : ${context.tone.summary}`);
+  if (context.tone?.summary) lines.push(`Ton de la marque (relevé sur son site) : ${context.tone.summary}`);
   if (voice?.instructions) lines.push(`Consigne de ton du client : ${voice.instructions}`);
   if (voice?.banned.length) lines.push(`Termes interdits : ${voice.banned.join(", ")}`);
 
