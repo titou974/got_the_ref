@@ -52,11 +52,14 @@ export async function HomeHero() {
   const t = await getTranslations("homeHero");
   const th = await getTranslations("home");
 
-  // Un compte déjà identifié n'arrive plus jusqu'ici — la home le renvoie chez
-  // lui — mais le hero sert aussi ailleurs, et le bouton doit rester juste : il
-  // mène au tableau de bord pour qui en a déjà un, à l'inscription sinon.
+  // Le bouton doit rester juste dans les trois cas. Un abonnement en cours :
+  // le tableau de bord. Une session sans rien pris — le compte gratuit qui
+  // reste désormais sur la page d'accueil : les offres, car c'est là que se
+  // prend l'essai, et le formulaire d'inscription n'aurait fait que le
+  // rerouter. Personne d'identifié : l'inscription.
   const user = await getCurrentUser();
   const home = hasActiveSubscription(user?.subscription);
+  const ctaHref = home ? ROUTES.dashboard : user ? ROUTES.pricing : ROUTES.signUp;
 
   return (
     // `id` lu par `StickyCtaBar` : c'est le passage sous ce bloc qui déclenche
@@ -103,7 +106,7 @@ export async function HomeHero() {
             sur les tarifs que les trois jours se prennent, carte enregistrée
             chez Stripe, rien débité avant la fin. */}
         <Link
-          href={home ? ROUTES.dashboard : ROUTES.signUp}
+          href={ctaHref}
           className="mt-8 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-7 py-4 text-base font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
           {home ? t("ctaDashboard") : t("cta", { days: TRIAL.days })}
