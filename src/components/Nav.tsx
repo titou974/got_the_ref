@@ -6,6 +6,7 @@ import { SignOutButton } from "./SignOutButton";
 import { NavCta } from "./NavCta";
 import { MobileMenu } from "./MobileMenu";
 import { getCurrentUser } from "@/lib/auth";
+import { hasReadyWorkspace } from "@/features/auth/destination";
 import { ROUTES } from "@/constants/routes";
 
 export async function Nav({
@@ -45,6 +46,13 @@ export async function Nav({
   const user = await getCurrentUser();
   const t = await getTranslations("common");
 
+  // Identifié ne veut pas dire installé. Un compte gratuit ouvert il y a deux
+  // minutes n'a ni fiche d'accueil ni analyse : son tableau de bord n'existe que
+  // de nom, et le lui tendre dans la barre le déposait sur un écran vide. Tant
+  // que rien ne tourne, la barre lui propose ce qui lui manque — les offres —
+  // plutôt qu'une porte sur du vide.
+  const workspace = user ? await hasReadyWorkspace(user.id) : false;
+
   // Rapport d'analyse et tarifs : aucune sortie latérale. À ces deux endroits, le
   // visiteur est dans un parcours de décision — seul le compte reste accessible.
   const links = minimal
@@ -65,7 +73,8 @@ export async function Nav({
   // Bouton secondaire, pas primaire : la barre suit le visiteur sur toute la
   // page, une pilule noire pleine y entrerait en concurrence avec le CTA du
   // haut de page et avec la barre basse.
-  const accountLink = user ? (
+  const accountLink =
+    user && workspace ? (
     <Link
       href={ROUTES.dashboard}
       className="cursor-pointer truncate text-sm text-muted transition-colors duration-200 hover:text-text"
@@ -74,7 +83,7 @@ export async function Nav({
     </Link>
   ) : (
     <Link
-      href={ROUTES.signUp}
+      href={user ? ROUTES.pricing : ROUTES.signUp}
       className="inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-full border border-graphite bg-snow px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
     >
       {t("freeTrial")}
@@ -109,11 +118,13 @@ export async function Nav({
             <MobileMenu
               links={links}
               isAuthenticated={!!user}
+              hasWorkspace={workspace}
               labels={{
                 menu: t("menu"),
                 closeMenu: t("closeMenu"),
                 account: t("account"),
                 signIn: t("signIn"),
+                freeTrial: t("freeTrial"),
               }}
             />
           )}
@@ -161,8 +172,10 @@ export async function Nav({
             cartes tarifaires, bandeau de fin de rapport — qui y mènent.
 
             Un client identifié garde en revanche l'accès à son tableau de bord :
-            c'est un lien de texte, il tient à côté du logo. */}
-        {user && !backTo && showSession && (
+            c'est un lien de texte, il tient à côté du logo. Un compte sans
+            espace, lui, n'a que la pilule d'offres à montrer — 194 px, la
+            largeur qui ne rentre pas : le tiroir la porte déjà. */}
+        {user && workspace && !backTo && showSession && (
           <div className="flex min-w-0 items-center gap-4 sm:hidden">{accountLink}</div>
         )}
       </nav>

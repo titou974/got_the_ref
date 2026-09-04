@@ -104,13 +104,15 @@ export default async function Home() {
       <Footer />
 
       {/* Le CTA revient par le bas dès que le hero est dépassé, pour que
-          l'entrée reste à portée sur toute la longueur de la page. Il ne se
-          dédouble plus selon le visiteur : seul un anonyme lit encore cette
-          page, les autres ont été renvoyés chez eux plus haut. */}
+          l'entrée reste à portée sur toute la longueur de la page.
+
+          Un compte gratuit lit maintenant cette page lui aussi : pour lui,
+          l'appel mène aux offres — l'essai s'y prend — et non au formulaire
+          d'inscription, qu'il a déjà rempli. */}
       <StickyCtaBar
         label={t("trialBarCta", { days: TRIAL.days })}
         heroId={HERO_ID}
-        href={ROUTES.signUp}
+        href={user ? ROUTES.pricing : ROUTES.signUp}
       />
     </main>
   );

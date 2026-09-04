@@ -16,6 +16,7 @@ type Labels = {
   closeMenu: string;
   account: string;
   signIn: string;
+  freeTrial: string;
 };
 
 /**
@@ -35,10 +36,17 @@ type Labels = {
 export function MobileMenu({
   links,
   isAuthenticated,
+  hasWorkspace = false,
   labels,
 }: {
   links: NavLink[];
   isAuthenticated: boolean;
+  /**
+   * Ce compte a-t-il un espace qui tourne — accueil signé ou analyse faite ?
+   * Sinon le tiroir ne lui promet pas de tableau de bord : il l'emmène aux
+   * offres, qui sont ce qui lui manque (même règle que la barre desktop).
+   */
+  hasWorkspace?: boolean;
   labels: Labels;
 }) {
   const [open, setOpen] = useState(false);
@@ -120,11 +128,11 @@ export function MobileMenu({
                   {isAuthenticated ? (
                     <>
                       <Link
-                        href={ROUTES.dashboard}
+                        href={hasWorkspace ? ROUTES.dashboard : ROUTES.pricing}
                         onClick={() => setOpen(false)}
                         className="cursor-pointer rounded-xl px-3 py-3 text-base font-medium text-text transition-colors duration-200 hover:bg-mist"
                       >
-                        {labels.account}
+                        {hasWorkspace ? labels.account : labels.freeTrial}
                       </Link>
                       <SignOutButton className="rounded-xl px-3 py-3 text-left text-base hover:bg-mist" />
                     </>
