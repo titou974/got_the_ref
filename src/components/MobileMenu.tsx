@@ -37,6 +37,7 @@ export function MobileMenu({
   links,
   isAuthenticated,
   hasWorkspace = false,
+  pendingHref = ROUTES.pricing,
   labels,
 }: {
   links: NavLink[];
@@ -47,6 +48,12 @@ export function MobileMenu({
    * offres, qui sont ce qui lui manque (même règle que la barre desktop).
    */
   hasWorkspace?: boolean;
+  /**
+   * Où l'emmener tant que son espace ne tourne pas. La barre le calcule — la
+   * branche du test de parcours décide entre la grille tarifaire et le tunnel
+   * d'accueil — et le tiroir suit, pour que les deux disent la même chose.
+   */
+  pendingHref?: string;
   labels: Labels;
 }) {
   const [open, setOpen] = useState(false);
@@ -128,7 +135,7 @@ export function MobileMenu({
                   {isAuthenticated ? (
                     <>
                       <Link
-                        href={hasWorkspace ? ROUTES.dashboard : ROUTES.pricing}
+                        href={hasWorkspace ? ROUTES.dashboard : pendingHref}
                         onClick={() => setOpen(false)}
                         className="cursor-pointer rounded-xl px-3 py-3 text-base font-medium text-text transition-colors duration-200 hover:bg-mist"
                       >

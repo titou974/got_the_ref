@@ -6,6 +6,7 @@ import { GoogleMark } from "./GoogleMark";
 import { AiSearchSimulation } from "@/components/AiSearchSimulation";
 import { ROUTES } from "@/constants/routes";
 import { TRIAL, hasActiveSubscription } from "@/constants/plans";
+import { isDemoFirst } from "@/features/experiments/path";
 import { getCurrentUser } from "@/lib/auth";
 
 /**
@@ -57,9 +58,22 @@ export async function HomeHero() {
   // reste désormais sur la page d'accueil : les offres, car c'est là que se
   // prend l'essai, et le formulaire d'inscription n'aurait fait que le
   // rerouter. Personne d'identifié : l'inscription.
+  //
+  // La branche testée du parcours déplace cette marche du milieu : elle envoie
+  // ce compte dans le tunnel d'accueil, où se lance l'analyse gratuite. La
+  // promesse écrite sur le bouton suit — annoncer trois jours gratuits là où
+  // l'essai n'est plus proposé serait vendre ce qu'on n'a plus.
   const user = await getCurrentUser();
   const home = hasActiveSubscription(user?.subscription);
-  const ctaHref = home ? ROUTES.dashboard : user ? ROUTES.pricing : ROUTES.signUp;
+  const demoFirst = await isDemoFirst();
+
+  const ctaHref = home
+    ? ROUTES.dashboard
+    : user
+      ? demoFirst
+        ? ROUTES.onboarding
+        : ROUTES.pricing
+      : ROUTES.signUp;
 
   return (
     // `id` lu par `StickyCtaBar` : c'est le passage sous ce bloc qui déclenche
@@ -109,7 +123,11 @@ export async function HomeHero() {
           href={ctaHref}
           className="mt-8 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cta px-7 py-4 text-base font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
-          {home ? t("ctaDashboard") : t("cta", { days: TRIAL.days })}
+          {home
+            ? t("ctaDashboard")
+            : demoFirst
+              ? t("ctaDemo")
+              : t("cta", { days: TRIAL.days })}
           <svg
             width="18"
             height="18"

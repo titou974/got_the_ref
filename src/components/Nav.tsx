@@ -7,6 +7,7 @@ import { NavCta } from "./NavCta";
 import { MobileMenu } from "./MobileMenu";
 import { getCurrentUser } from "@/lib/auth";
 import { hasReadyWorkspace } from "@/features/auth/destination";
+import { isDemoFirst } from "@/features/experiments/path";
 import { ROUTES } from "@/constants/routes";
 
 export async function Nav({
@@ -69,9 +70,14 @@ export async function Nav({
   // Identifié ne veut pas dire installé. Un compte gratuit ouvert il y a deux
   // minutes n'a ni fiche d'accueil ni analyse : son tableau de bord n'existe que
   // de nom, et le lui tendre dans la barre le déposait sur un écran vide. Tant
-  // que rien ne tourne, la barre lui propose ce qui lui manque — les offres —
-  // plutôt qu'une porte sur du vide.
-  const workspace = user ? await hasReadyWorkspace(user.id) : false;
+  // que rien ne tourne, la barre lui propose ce qui lui manque — les offres, ou
+  // la mise en route dans la branche testée du parcours — plutôt qu'une porte
+  // sur du vide.
+  const [workspace, demoFirst] = await Promise.all([
+    user ? hasReadyWorkspace(user.id) : Promise.resolve(false),
+    isDemoFirst(),
+  ]);
+  const pending = demoFirst ? ROUTES.onboarding : ROUTES.pricing;
 
   // Rapport d'analyse et tarifs : aucune sortie latérale. À ces deux endroits, le
   // visiteur est dans un parcours de décision — seul le compte reste accessible.
@@ -103,10 +109,10 @@ export async function Nav({
     </Link>
   ) : (
     <Link
-      href={user ? ROUTES.pricing : ROUTES.signUp}
+      href={user ? pending : ROUTES.signUp}
       className="inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-full border border-graphite bg-snow px-5 py-2.5 text-sm font-medium text-graphite transition-colors duration-200 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
     >
-      {t("freeTrial")}
+      {user && demoFirst ? t("finishSetup") : t("freeTrial")}
     </Link>
   );
 
@@ -139,6 +145,7 @@ export async function Nav({
               links={links}
               isAuthenticated={!!user}
               hasWorkspace={workspace}
+              pendingHref={pending}
               labels={{
                 menu: t("menu"),
                 closeMenu: t("closeMenu"),

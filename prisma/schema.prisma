@@ -30,6 +30,16 @@ model User {
   /// les corrections de structure, elles, restent acquises.
   boostGrantedAt   DateTime?
   stripeCustomerId String?
+  /// La branche du test A/B sur le parcours d'entrée : `pricing-first` (la
+  /// grille tarifaire après l'inscription, essai de trois jours compris) ou
+  /// `demo-first` (le questionnaire d'accueil, puis l'analyse gratuite, les
+  /// tarifs venant des voiles du tableau de bord).
+  ///
+  /// Recopiée depuis le cookie à la première visite identifiée, puis figée : la
+  /// branche doit suivre la personne d'un appareil à l'autre, sinon la mesure
+  /// compte deux visiteurs là où il n'y en a qu'un. Nulle sur les comptes
+  /// ouverts avant le test — ils lisent le parcours d'aujourd'hui.
+  pathVariant      String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
