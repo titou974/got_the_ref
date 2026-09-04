@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { saveSettingsAction } from "@/features/dashboard/actions";
 import { ROUTES } from "@/constants/routes";
 import { BillingPortalButton } from "@/components/BillingPortalButton";
+import { SignOutButton } from "@/components/SignOutButton";
 import { AreaField, Divider, SelectField, TextField } from "./Field";
 
 /**
@@ -120,6 +121,15 @@ export function SettingsForm({
               className="cursor-pointer text-sm font-medium text-graphite underline underline-offset-4 transition-colors duration-200 hover:text-obsidian disabled:opacity-60"
             />
           </div>
+        </div>
+
+        {/* La déconnexion se cherche ici. La colonne de gauche ne la porte
+            plus, et le tableau de bord n'a pas le pied de page du site public :
+            sans cette ligne, il n'y avait aucun moyen de quitter la session.
+            Elle ferme la section du compte, sous le nom et l'adresse qu'elle
+            concerne, en retrait du bouton qui enregistre. */}
+        <div className="col-span-full border-t border-border pt-4">
+          <SignOutButton className="font-medium underline underline-offset-4 hover:text-obsidian" />
         </div>
       </Section>
 

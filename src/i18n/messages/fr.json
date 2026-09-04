@@ -2302,7 +2302,8 @@
     },
     "siteSelect": {
       "label": "Site suivi",
-      "add": "Ajouter un site"
+      "add": "Ajouter un site",
+      "addSoon": "Disponible dans une semaine, avec une nouvelle offre."
     }
   }
 }
