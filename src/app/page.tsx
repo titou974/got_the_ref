@@ -63,7 +63,11 @@ export default async function Home() {
 
   return (
     <main className="flex min-h-dvh flex-col">
-      <Nav />
+      {/* Pas de « Déconnexion » ici : c'est la page de vente, et un compte qui
+          la lit est justement celui qu'on n'a pas encore convaincu. La sortie
+          de session reste dans le tiroir mobile et dans les réglages du tableau
+          de bord. */}
+      <Nav showSignOut={false} />
 
       <HomeHero />
       <SectorsMarquee />

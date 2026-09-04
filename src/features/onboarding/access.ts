@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { getAccess } from "@/features/billing/access";
+import { hasCommittedAccess } from "@/features/auth/destination";
 
 /**
  * Qui a le droit d'entrer dans le tunnel d'accueil.
@@ -33,11 +33,14 @@ import { getAccess } from "@/features/billing/access";
  * flottant, sortie des tarifs — ne doit y déposer quelqu'un à sa place.
  */
 export async function canEnterOnboarding(userId: string): Promise<boolean> {
-  const [access, subscription, analyses] = await Promise.all([
-    getAccess(userId),
-    prisma.subscription.findUnique({ where: { userId }, select: { id: true } }),
+  const [committed, analyses] = await Promise.all([
+    // La même question que celle posée par la barre et la page d'accueil, et
+    // donc la même réponse : deux définitions de « ce compte a pris quelque
+    // chose » finiraient par diverger, et l'une des deux ouvrirait le tunnel à
+    // qui l'autre le ferme.
+    hasCommittedAccess(userId),
     prisma.analysis.count({ where: { userId } }),
   ]);
 
-  return access.tier !== "free" || subscription !== null || analyses > 0;
+  return committed || analyses > 0;
 }

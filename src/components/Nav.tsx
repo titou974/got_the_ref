@@ -13,6 +13,8 @@ export async function Nav({
   minimal = false,
   backTo = null,
   showSession = true,
+  showSignUp = true,
+  showSignOut = true,
 }: {
   minimal?: boolean;
   /**
@@ -42,6 +44,24 @@ export async function Nav({
    * est l'appel de la page.
    */
   showSession?: boolean;
+  /**
+   * L'appel d'inscription pour un visiteur sans compte.
+   *
+   * Faux sur la page d'inscription elle-même : une pilule qui mène au
+   * formulaire déjà ouvert sous les yeux du visiteur n'est pas un appel, c'est
+   * un doublon. La bascule vers la connexion, elle, vit dans le panneau.
+   */
+  showSignUp?: boolean;
+  /**
+   * La déconnexion, à droite de la barre.
+   *
+   * Absente de la page d'accueil : c'est une page de vente, lue par des
+   * visiteurs qui n'ont pas de compte et par des comptes qui n'ont pas encore
+   * d'espace. Y poser « Déconnexion » à côté de l'appel principal met une
+   * sortie de session là où l'on demande une décision. Elle reste à un geste —
+   * le tiroir mobile la porte, et les réglages du tableau de bord aussi.
+   */
+  showSignOut?: boolean;
 } = {}) {
   const user = await getCurrentUser();
   const t = await getTranslations("common");
@@ -150,11 +170,11 @@ export async function Nav({
             backTo || !showSession ? null : (
               <>
                 {accountLink}
-                <SignOutButton />
+                {showSignOut && <SignOutButton />}
               </>
             )
           ) : (
-            accountLink
+            showSignUp && accountLink
           )}
           {!minimal && <NavCta label={t("analyzeMyBusiness")} />}
         </div>
