@@ -13,6 +13,7 @@ import { connectorFor } from "@/constants/site-platforms";
 import { preferredPassOnDay } from "@/constants/publishing";
 import { ApifyError, isApifyConfigured } from "@/lib/apify/client";
 import { fetchGooglePlace } from "@/lib/apify/google-place";
+import { InvalidMapsUrlError, normalizeMapsUrl } from "@/lib/geo/maps";
 import type { GooglePlace, MapsAdvice } from "@/lib/apify/place-types";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
@@ -83,6 +84,7 @@ import {
   refreshMapsPlaceSchema,
   regenerateOnPageSchema,
   reviewReplySchema,
+  saveMapsUrlSchema,
   scheduleArticleSchema,
   settingsSchema,
   updateArticleSchema,
@@ -1556,6 +1558,52 @@ export const approveGooglePostAction = authActionClient
  *   — l'échec, enregistré dans `lastError` sans effacer le relevé précédent :
  *     une panne du scraper ne doit pas vider l'écran.
  */
+/**
+ * Enregistre le lien de la fiche, saisi depuis la page Google Maps elle-même.
+ *
+ * Un commerce qui reçoit du public arrive parfois ici sans avoir donné sa fiche
+ * pendant l'accueil : le champ y était facultatif. Le renvoyer aux réglages
+ * pour trois secondes de saisie, c'est lui faire quitter la page qu'il est venu
+ * voir, et souvent ne pas l'y ramener. Il la donne donc ici, et le relevé part
+ * dans la foulée.
+ *
+ * Le lien est normalisé avant d'être écrit : c'est cette forme que le scraper
+ * reçoit, et une adresse raccourcie collée depuis un téléphone doit valoir la
+ * même chose qu'une adresse longue copiée depuis un navigateur.
+ */
+export const saveMapsUrlAction = authActionClient
+  .inputSchema(saveMapsUrlSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+
+    let mapsUrl: string | null;
+    try {
+      mapsUrl = normalizeMapsUrl(parsedInput.mapsUrl);
+    } catch (err) {
+      if (err instanceof InvalidMapsUrlError) {
+        throw new AppError(
+          "Ce lien ne mène pas à une fiche Google Maps. Ouvrez votre fiche, touchez « Partager », puis collez le lien copié.",
+          "INVALID_MAPS_URL",
+          400,
+        );
+      }
+      throw err;
+    }
+
+    if (!mapsUrl) {
+      throw new AppError("Collez le lien de votre fiche.", "INVALID_MAPS_URL", 400);
+    }
+
+    await prisma.onboardingProfile.upsert({
+      where: { userId },
+      create: { userId, mapsUrl },
+      update: { mapsUrl },
+    });
+
+    revalidatePath(ROUTES.dashboardMaps);
+    return { mapsUrl };
+  });
+
 export const refreshMapsPlaceAction = authActionClient
   .inputSchema(refreshMapsPlaceSchema)
   .action(async ({ parsedInput, ctx }) => {

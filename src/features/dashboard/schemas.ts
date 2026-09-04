@@ -149,6 +149,19 @@ export const refreshMapsPlaceSchema = z.object({
   force: z.boolean().default(false),
 });
 
+/**
+ * Le lien de fiche saisi depuis la page Google Maps, quand le compte n'en porte
+ * pas encore.
+ *
+ * Volontairement large ici : la forme du lien est jugée par `normalizeMapsUrl`,
+ * qui connaît les écritures que Google distribue — `maps.app.goo.gl`,
+ * `google.com/maps/place`, `goo.gl/maps`. Une seconde règle dans le schéma
+ * ferait un second juge, et les deux finiraient par diverger.
+ */
+export const saveMapsUrlSchema = z.object({
+  mapsUrl: z.string().trim().min(1, "Collez le lien de votre fiche.").max(2048),
+});
+
 /** Les identifiants d'avis pour lesquels on veut une réponse rédigée. */
 export const draftReviewRepliesSchema = z.object({
   /** Vide = tous les avis sans réponse du propriétaire. */
