@@ -11,6 +11,7 @@ import { ROUTES } from "@/constants/routes";
 export async function Nav({
   minimal = false,
   backTo = null,
+  showSession = true,
 }: {
   minimal?: boolean;
   /**
@@ -26,6 +27,20 @@ export async function Nav({
    * de tableau de bord d'où revenir.
    */
   backTo?: string | null;
+  /**
+   * Montre-t-on, à un client identifié, son tableau de bord et sa déconnexion ?
+   *
+   * Sur la grille tarifaire, non. Un compte qui vient de naître n'a pas encore
+   * de tableau de bord — le lui tendre le déposait sur un espace vide, quand ce
+   * n'était pas dans le tunnel de mise en route qu'il n'a pas demandé — et la
+   * déconnexion, posée à côté, ferme la session au moment exact où il choisit
+   * une offre. La page ne garde donc qu'une issue : la décision, ou la flèche de
+   * retour quand il y a bien un espace derrière.
+   *
+   * Sans session, ce réglage ne change rien : le bouton d'inscription reste, il
+   * est l'appel de la page.
+   */
+  showSession?: boolean;
 } = {}) {
   const user = await getCurrentUser();
   const t = await getTranslations("common");
@@ -119,8 +134,9 @@ export async function Nav({
           {user ? (
             // La flèche de retour porte déjà la sortie : répéter le lien du
             // tableau de bord à droite, et poser la déconnexion à côté, ferait
-            // trois issues pour un écran qui n'en demande qu'une.
-            backTo ? null : (
+            // trois issues pour un écran qui n'en demande qu'une. Même silence
+            // là où la page refuse la sortie latérale (`showSession`).
+            backTo || !showSession ? null : (
               <>
                 {accountLink}
                 <SignOutButton />
@@ -146,7 +162,7 @@ export async function Nav({
 
             Un client identifié garde en revanche l'accès à son tableau de bord :
             c'est un lien de texte, il tient à côté du logo. */}
-        {user && !backTo && (
+        {user && !backTo && showSession && (
           <div className="flex min-w-0 items-center gap-4 sm:hidden">{accountLink}</div>
         )}
       </nav>
