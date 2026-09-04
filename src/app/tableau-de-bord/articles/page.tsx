@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 import { PublishDock } from "@/components/tableau-de-bord/PublishDock";
 import { PlanArticlesButton } from "@/components/tableau-de-bord/PlanArticlesButton";
+import { ArticlesIntroModal } from "@/components/tableau-de-bord/ArticlesIntroModal";
 import { canOpen } from "@/constants/access";
 
 export const maxDuration = 300;
@@ -66,6 +67,11 @@ export default async function ArticlesPage() {
   return (
     <>
       <PageHeader title={t("pageTitle")} />
+
+      {/* La marche à suivre, une seule fois, pour les offres qui ouvrent la
+          rédaction. Un compte gratuit n'a ni site à rattacher ni article à
+          valider : la chaîne ne lui servirait qu'à vendre. */}
+      {locked ? null : <ArticlesIntroModal />}
 
       {/* Le quai de départ. Il ne s'affiche pas sur une offre qui n'ouvre pas la
           publication — il n'y aurait rien à y annoncer. */}
