@@ -22,6 +22,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { resolveHomeDestination } from "@/features/auth/destination";
 import { ROUTES } from "@/constants/routes";
 import { TRIAL } from "@/constants/plans";
+import { isDemoFirst } from "@/features/experiments/path";
 
 /**
  * La home suit une progression volontaire : promesse → secteurs → méthode →
@@ -60,6 +61,10 @@ export default async function Home() {
   }
 
   const t = await getTranslations("homeHero");
+
+  // La barre basse reprend l'appel du haut de page, branche comprise : ce que le
+  // bouton promet doit être ce que la page suivante propose (cf. `HomeHero`).
+  const demoFirst = await isDemoFirst();
 
   return (
     <main className="flex min-h-dvh flex-col">
@@ -114,9 +119,15 @@ export default async function Home() {
           l'appel mène aux offres — l'essai s'y prend — et non au formulaire
           d'inscription, qu'il a déjà rempli. */}
       <StickyCtaBar
-        label={t("trialBarCta", { days: TRIAL.days })}
+        label={demoFirst ? t("demoBarCta") : t("trialBarCta", { days: TRIAL.days })}
         heroId={HERO_ID}
-        href={user ? ROUTES.pricing : ROUTES.signUp}
+        href={
+          user
+            ? demoFirst
+              ? ROUTES.onboarding
+              : ROUTES.pricing
+            : ROUTES.signUp
+        }
       />
     </main>
   );

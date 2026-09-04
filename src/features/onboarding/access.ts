@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { hasCommittedAccess } from "@/features/auth/destination";
+import { isDemoFirst } from "@/features/experiments/path";
 
 /**
  * Qui a le droit d'entrer dans le tunnel d'accueil.
@@ -31,8 +32,15 @@ import { hasCommittedAccess } from "@/features/auth/destination";
  * compte, remplit la fiche et la marque terminée d'un coup (cf.
  * `features/analysis/demo.ts`). Aucun bouton — barre de navigation, appel
  * flottant, sortie des tarifs — ne doit y déposer quelqu'un à sa place.
+ *
+ * Tout ce qui précède décrit la branche témoin du test de parcours. Dans la
+ * branche testée (`demo-first`), la porte n'existe pas : avoir un compte suffit.
+ * Le tunnel y est l'étape qui suit l'inscription, et c'est tout l'objet du test
+ * — mettre la démonstration devant la grille tarifaire plutôt qu'après.
  */
 export async function canEnterOnboarding(userId: string): Promise<boolean> {
+  if (await isDemoFirst()) return true;
+
   const [committed, analyses] = await Promise.all([
     // La même question que celle posée par la barre et la page d'accueil, et
     // donc la même réponse : deux définitions de « ce compte a pris quelque

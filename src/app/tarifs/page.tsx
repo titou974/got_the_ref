@@ -24,6 +24,7 @@ import {
 } from "@/constants/plans";
 import { SITE } from "@/constants/site";
 import { ANONYMOUS_TRIAL_STATE, getTrialState } from "@/features/billing/trial";
+import { isDemoFirst } from "@/features/experiments/path";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("pricing");
@@ -114,13 +115,22 @@ export default async function TarifsPage({ searchParams }: Props) {
   // encore tourné, il n'y a rien d'honnête à annoncer : un chiffre de site type
   // se lirait comme une promesse chiffrée faite à quelqu'un dont on n'a rien lu.
   const user = await getCurrentUser();
-  const [{ available: trial }, analysis, hasDashboard] = user
-    ? await Promise.all([
-        getTrialState(user.id),
-        getDashboardContext(user.id).then((context) => context.analysis),
-        isOnboardingComplete(user.id),
-      ])
-    : [ANONYMOUS_TRIAL_STATE, null, false];
+  const [{ available: trialAvailable }, analysis, hasDashboard, demoFirst] = await Promise.all([
+    user ? getTrialState(user.id) : Promise.resolve(ANONYMOUS_TRIAL_STATE),
+    user ? getDashboardContext(user.id).then((context) => context.analysis) : Promise.resolve(null),
+    user ? isOnboardingComplete(user.id) : Promise.resolve(false),
+    isDemoFirst(),
+  ]);
+
+  // Dans la branche testée, cette page ne propose plus les trois jours.
+  //
+  // L'essai vivait ici parce que rien d'autre ne montrait le produit avant de
+  // payer. Ce n'est plus vrai de ce côté du test : l'analyse gratuite s'ouvre
+  // dès l'inscription, et elle démontre mieux — sans carte bancaire, sans compte
+  // à rebours, sur le site du visiteur. Il ne reste donc à vendre que ce qui se
+  // paie, l'abonnement ou le Coup de Boost, et c'est précisément ce que le test
+  // mesure : la démonstration gratuite convertit-elle mieux que l'essai ?
+  const trial = trialAvailable && !demoFirst;
 
   return (
     <main className="flex min-h-[100dvh] flex-col">

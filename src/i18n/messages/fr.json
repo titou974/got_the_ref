@@ -22,7 +22,8 @@
     "demo": "Démo",
     "contact": "Contact",
     "bookCall": "Prendre rendez-vous",
-    "bookDemo": "Réserver une démo"
+    "bookDemo": "Réserver une démo",
+    "finishSetup": "Terminer ma mise en route"
   },
   "nav": {
     "myAccount": "Mon compte"
@@ -949,7 +950,9 @@
     "guarantee": "L'analyse est gratuite : vous voyez votre score, puis vous décidez.",
     "trustLabel": "Position mesurée sur les moteurs qui répondent à vos clients",
     "scrollHint": "Analyser mon site",
-    "guaranteeMain": "Si votre visibilité ne progresse pas sous 90 jours, vous êtes remboursé."
+    "guaranteeMain": "Si votre visibilité ne progresse pas sous 90 jours, vous êtes remboursé.",
+    "ctaDemo": "Analyser mon site gratuitement",
+    "demoBarCta": "Lancer mon analyse gratuite"
   },
   "sectors": {
     "eyebrow": "En croissance",

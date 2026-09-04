@@ -4,6 +4,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { ROUTES, safeNextPath } from "@/constants/routes";
 import { getAccess } from "@/features/billing/access";
+import { isDemoFirst } from "@/features/experiments/path";
 
 
 /**
@@ -75,6 +76,12 @@ export const hasCommittedAccess = cache(async function hasCommittedAccess(
  * gratuit qui y a mis un pied puis fait demi-tour doit revoir les offres, pas
  * retomber dans le questionnaire qu'il vient de quitter.
  *
+ * Tout cela vaut pour la branche témoin du test de parcours. Dans la branche
+ * testée (`demo-first`, cf. `constants/experiments.ts`), la grille tarifaire
+ * sort du chemin : l'inscription mène droit au tunnel d'accueil, où l'analyse
+ * gratuite se lance, et c'est elle qui doit vendre l'abonnement — pas une liste
+ * de prix lue avant d'avoir rien vu.
+ *
  * Le `suite` (la page visée avant l'identification) n'est honoré qu'une fois
  * l'accueil terminé : y renvoyer un compte qui n'a pas encore donné son site
  * ouvrirait des écrans vides. Et il ne l'est **pas** pour un compte neuf, même
@@ -89,6 +96,7 @@ export async function resolveAuthDestination(
   requested: unknown,
 ): Promise<string> {
   if (await hasReadyWorkspace(userId)) return safeNextPath(requested, ROUTES.dashboard);
+  if (await isDemoFirst()) return ROUTES.onboarding;
   if (await hasCommittedAccess(userId)) return ROUTES.onboarding;
 
   return ROUTES.pricing;
