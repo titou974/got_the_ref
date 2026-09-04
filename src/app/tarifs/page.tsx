@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -123,17 +122,6 @@ export default async function TarifsPage({ searchParams }: Props) {
       ])
     : [ANONYMOUS_TRIAL_STATE, null, false];
 
-  // La sortie par le bas : un compte qui vient de naître, qui n'a rien pris et
-  // rien fait mesurer peut ouvrir son espace gratuit sans rien payer.
-  //
-  // Trois conditions, et pas une de moins. Un compte, sinon il n'y a rien à
-  // ouvrir. `trial` encore disponible, ce qui dit à la fois qu'aucun abonnement
-  // n'a été ouvert et qu'aucune analyse n'a tourné — proposer « continuer sans
-  // abonnement » à quelqu'un qui vient d'en prendre un serait un contresens.
-  // Et pas de fiche d'accueil terminée : celui-là a déjà son tableau de bord,
-  // la flèche de la barre l'y ramène.
-  const showFreeDemo = Boolean(user) && trial && !hasDashboard;
-
   return (
     <main className="flex min-h-[100dvh] flex-col">
       {offersJsonLd().map((data, i) => (
@@ -217,38 +205,6 @@ export default async function TarifsPage({ searchParams }: Props) {
               }
             />
           </div>
-
-          {/* La sortie par le bas, discrète et volontairement sans surface : un
-              compte qui vient de s'ouvrir peut aller voir son espace gratuit
-              sans rien payer et sans ouvrir d'essai. Elle ne concurrence pas les
-              deux offres — c'est un lien, sous elles, pour qui n'était pas venu
-              acheter aujourd'hui. Passé sa première analyse, elle disparaît :
-              la démonstration a eu lieu, il reste les tarifs. */}
-          {showFreeDemo && (
-            <div className="mt-8 text-center">
-              <Link
-                href={ROUTES.onboarding}
-                className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:text-text hover:decoration-obsidian"
-              >
-                {t("freeDemoCta")}
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden
-                >
-                  <path
-                    d="M5 12h14M13 6l6 6-6 6"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Link>
-            </div>
-          )}
         </div>
       </div>
       <PricingFaq className="pb-16" />
