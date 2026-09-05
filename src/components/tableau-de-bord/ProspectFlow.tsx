@@ -315,9 +315,20 @@ function ContactCard({ prospect }: { prospect: ProspectRow }) {
       : null;
 
   if (!target) {
+    // Le résolveur a échoué sur ce site : plutôt que de laisser le client
+    // devant une impasse, on lui tend la recherche qu'il aurait tapée
+    // lui-même. C'est le geste manquant, pas un aveu.
     return (
-      <div className="rounded-3xl bg-mist p-6">
+      <div className="flex flex-col items-start gap-3 rounded-3xl bg-mist p-6">
         <p className="text-[13px] leading-relaxed text-graphite">{t("noContact")}</p>
+        <a
+          href={`https://www.google.com/search?q=${encodeURIComponent(`${prospect.name} contact`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="cursor-pointer text-[13px] font-medium underline decoration-pebble underline-offset-[3px] hover:decoration-obsidian"
+        >
+          {t("searchContact")}
+        </a>
       </div>
     );
   }

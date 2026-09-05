@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { askJson } from "@/lib/ai/client";
+import { askGeminiGrounded } from "@/lib/ai/gemini";
 import type { GooglePlace } from "@/lib/apify/place-types";
 import type { DashboardContext } from "./queries";
 import { outlineForPrompt, type OutlineSection } from "./outline";
@@ -281,38 +282,73 @@ const prospectsSchema = z.object({
         name: z.string().min(2).max(120),
         domain: z.string().min(4).max(120),
         reason: z.string().min(10).max(400),
-        contactEmail: z.string().max(160).nullable(),
-        contactUrl: z.string().max(300).nullable(),
-        authority: z.number().min(0).max(100),
+        // Tolérants : le contact et l'autorité sont des à-côtés de la liste, et
+        // une réponse qui oublie un champ ne doit pas coûter les douze sites.
+        // Le contact rendu ici est de toute façon revérifié sur le site.
+        contactEmail: z.string().max(160).nullable().catch(null),
+        contactUrl: z.string().max(300).nullable().catch(null),
+        authority: z.number().min(0).max(100).catch(0),
       }),
     )
     .max(20),
 });
 
+/** Les consignes de sélection, identiques que la liste vienne de Gemini ou du repli. */
+function prospectRules(): string[] {
+  return [
+    "Liste jusqu'à 12 sites de la niche (annuaires spécialisés, blogs, médias locaux, associations professionnelles)",
+    "qui publient des articles et pourraient citer ce commerce.",
+    "Pour chacun : le nom, le domaine, pourquoi lui, l'e-mail de contact si tu le connais, l'URL de la page contact,",
+    "et une autorité estimée de 0 à 100.",
+    "Écarte les sites qui n'acceptent aucune contribution extérieure, et ceux dont tu n'es pas sûr qu'ils existent encore.",
+    'Réponds en JSON : { "sites": [{ "name", "domain", "reason", "contactEmail", "contactUrl", "authority" }] }',
+  ];
+}
+
 /**
  * Les sites de la niche qui publient des articles et acceptent des contributions.
  *
- * Le modèle ne fabrique pas d'adresse : quand il n'a pas trouvé le contact, il
- * rend `null` et la fiche s'affiche avec le lien de la page contact à ouvrir à
- * la main. Une adresse inventée coûterait un envoi rebondi et une réputation
- * d'expéditeur.
+ * Gemini avec la recherche Google mène la liste, pour la même raison que les
+ * concurrents à l'accueil : un modèle qui répond de mémoire propose des
+ * annuaires plausibles, parfois fermés depuis deux ans, et des pages contact
+ * reconstruites qui répondent 404. Le modèle de service reste branché derrière,
+ * pour ne pas rendre une liste vide quand la clé Gemini manque.
+ *
+ * Le contact rendu ici n'est qu'un point de départ : `findContactPoints` le
+ * vérifie ensuite sur le site lui-même. Le modèle ne fabrique pas d'adresse —
+ * quand il n'a rien, il rend `null`, et une adresse inventée coûterait un envoi
+ * rebondi et une réputation d'expéditeur.
  */
 export async function findProspects(context: DashboardContext) {
+  const rules = prospectRules();
+
+  const grounded = await askGeminiGrounded(prospectsSchema, {
+    label: "Prospects",
+    // Douze fiches à rendre, et une réflexion qui se sert dans le même budget :
+    // trop court, la réponse revient vide (voir `askGeminiGrounded`).
+    maxOutputTokens: 8000,
+    thinkingLevel: "low",
+    prompt: [
+      "Avec la recherche Google, trouve des sites éditoriaux qui pourraient accueillir un article ou un lien vers le commerce décrit ci-dessous.",
+      "",
+      brief(context),
+      "",
+      ...rules,
+      "",
+      "Vérifie chaque site sur le web avant de le citer : il doit être en ligne aujourd'hui et publier encore.",
+      "Pour l'URL de la page contact, ouvre la page : ce doit être l'adresse exacte d'une page qui existe,",
+      "jamais une URL reconstruite à partir du domaine.",
+    ].join("\n"),
+  });
+
+  if (grounded && grounded.data.sites.length > 0) return grounded.data.sites;
+
   const result = await askJson(prospectsSchema, {
     system:
       "Tu identifies des sites éditoriaux qui pourraient accueillir un article ou un lien vers un commerce. " +
       "Tu ne proposes que des sites dont tu connais réellement l'existence. " +
       "Si tu n'as pas l'adresse de contact, mets null : n'invente jamais une adresse e-mail.",
-    prompt: [
-      brief(context),
-      "",
-      "Liste jusqu'à 12 sites de la niche (annuaires spécialisés, blogs, médias locaux, associations professionnelles)",
-      "qui publient des articles et pourraient citer ce commerce.",
-      "Pour chacun : le nom, le domaine, pourquoi lui, l'e-mail de contact si tu le connais, l'URL de la page contact,",
-      "et une autorité estimée de 0 à 100.",
-      "Écarte les sites qui n'acceptent aucune contribution extérieure, et ceux dont tu n'es pas sûr qu'ils existent encore.",
-      "Réponds en JSON : { \"sites\": [{ \"name\", \"domain\", \"reason\", \"contactEmail\", \"contactUrl\", \"authority\" }] }",
-    ].join("\n"),
+    prompt: [brief(context), "", ...rules].join("\n"),
     role: "default",
   });
 
