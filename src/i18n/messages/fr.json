@@ -1872,32 +1872,7 @@
       }
     },
     "architecture": {
-      "pageTitle": "Architecture",
-      "crawlers": "Robots d'IA",
-      "crawlersHint": "Qui a le droit de lire votre site.",
-      "allowed": "Autorisé",
-      "blocked": "Bloqué",
-      "crawl": "Ce que le passage a trouvé",
-      "crawlHint": "Relevé sur l'ensemble des pages parcourues.",
-      "pages": "Pages lues",
-      "pagesHint": "page d'accueil incluse",
-      "words": "Mots",
-      "wordsHint": "cumulés sur le passage",
-      "internalLinks": "Liens internes",
-      "internalLinksHint": "détectés sur l'accueil",
-      "schemas": "Données structurées",
-      "schemasHint": "types JSON-LD relevés",
-      "noSchema": "Aucune",
-      "scoreHint": "La note pèse les fichiers de racine, les données structurées et ce que la page d'accueil déclare d'elle-même.",
-      "openFixes": "{count} correctif(s) à poser",
-      "noFixes": "Rien à poser : le squelette est complet",
-      "crawledPages": "{count} page(s) lue(s) au dernier passage",
-      "axes": "Axes du diagnostic",
-      "axesHint": "Les trois axes du modèle GEO qui composent la note.",
-      "checks": "Contrôles techniques",
-      "checksHint": "Ce que le dernier passage a vérifié, contrôle par contrôle.",
-      "checksSummary": "{passing} conforme(s) · {pending} à traiter",
-      "stack": "Site servi par {name}, reconnu à {evidence}."
+      "pageTitle": "Architecture"
     },
     "structureIntro": {
       "eyebrow": "Ce que fait la page Architecture",
