@@ -1850,6 +1850,7 @@
     },
     "content": {
       "pageTitle": "Contenu",
+      "checksSummary": "{passing} conforme(s) · {pending} à traiter",
       "serpTitle": "Titre et description",
       "h1Title": "Titre principal de la page",
       "introTitle": "Paragraphe d'introduction",
