@@ -92,18 +92,32 @@ export function CheckRow({
   );
 }
 
+/** Les contrôles à traiter d'abord : manquants, puis à améliorer, puis le reste. */
+const ISSUE_WEIGHT: Record<DiagnosticStatus, number> = { ko: 0, warn: 1, unknown: 2, ok: 3 };
+
 export function DiagnosticGrid({
   section,
   labelNs,
   veiled = false,
+  issuesFirst = false,
 }: {
   section: DiagnosticSection;
   labelNs: "architecture" | "content";
   veiled?: boolean;
+  /**
+   * Remonte les contrôles en défaut en tête de grille. Le rapport garde l'ordre
+   * d'origine — il se lit comme un compte rendu ; le tableau de bord, lui, est
+   * une liste de choses à faire, et ce qui manque doit se lire en premier.
+   */
+  issuesFirst?: boolean;
 }) {
+  const checks = issuesFirst
+    ? [...section.checks].sort((a, b) => ISSUE_WEIGHT[a.status] - ISSUE_WEIGHT[b.status])
+    : section.checks;
+
   return (
     <ul className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-      {section.checks.map((c) => (
+      {checks.map((c) => (
         <CheckRow key={c.key} check={c} labelNs={labelNs} veiled={veiled} />
       ))}
     </ul>
