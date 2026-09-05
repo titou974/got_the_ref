@@ -146,10 +146,16 @@ function ProspectRowView({
         <div className="mt-3 space-y-3 rounded-2xl bg-mist p-4">
           {prospect.reason ? <p className="text-sm text-muted">{prospect.reason}</p> : null}
 
-          <p className="text-sm">
+          {/* L'adresse et la page contact ne s'excluent pas : le message part par
+              e-mail quand il y en a un, mais certains sites ne répondent que par
+              leur formulaire. Les deux s'affichent donc côte à côte, et à défaut
+              la recherche que l'humain aurait tapée reste à un clic. */}
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             {prospect.contactEmail ? (
               <span className="font-medium">{prospect.contactEmail}</span>
-            ) : prospect.contactUrl ? (
+            ) : null}
+
+            {prospect.contactUrl ? (
               <a
                 href={prospect.contactUrl}
                 target="_blank"
@@ -158,9 +164,23 @@ function ProspectRowView({
               >
                 {t("contactPage")}
               </a>
-            ) : (
-              <span className="text-muted">{t("noContact")}</span>
-            )}
+            ) : null}
+
+            {!prospect.contactEmail && !prospect.contactUrl ? (
+              <>
+                <span className="text-muted">{t("noContact")}</span>
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(
+                    `${prospect.name} contact`,
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="cursor-pointer underline decoration-pebble underline-offset-4 hover:decoration-obsidian"
+                >
+                  {t("searchContact")}
+                </a>
+              </>
+            ) : null}
           </p>
 
           {prospect.message ? (

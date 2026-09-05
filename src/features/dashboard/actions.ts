@@ -17,6 +17,7 @@ import type { GooglePlace, MapsAdvice } from "@/lib/apify/place-types";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { regenerateOnPageElement } from "@/lib/geo/keywords";
+import { findContactPoints, normalizeDomain } from "@/lib/geo/contact-finder";
 import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
 import { applyOnPage, applyStructure } from "./site-sync";
@@ -1404,7 +1405,7 @@ export const findProspectsAction = authActionClient
     await prisma.outreachProspect.createMany({
       data: sites.map((site) => ({
         userId,
-        domain: site.domain.replace(/^https?:\/\//, "").replace(/\/.*$/, ""),
+        domain: normalizeDomain(site.domain),
         name: site.name,
         reason: site.reason,
         contactEmail: site.contactEmail,
@@ -1414,9 +1415,55 @@ export const findProspectsAction = authActionClient
       skipDuplicates: true,
     });
 
+    const resolved = await resolveMissingContacts(userId);
+
     revalidatePath(ROUTES.dashboardPresence);
-    return { found: sites.length };
+    return { found: sites.length, contacts: resolved };
   });
+
+/**
+ * Retrouve la page contact des sites qui n'en ont pas encore une.
+ *
+ * La liste vient d'un modèle : il connaît le site, rarement l'adresse exacte de
+ * son formulaire. On va donc la chercher sur le site puis sur Google (voir
+ * `lib/geo/contact-finder`), et on complète la fiche. La passe reprend aussi les
+ * sites déjà en base — un compte ouvert avant cette recherche avait des lignes
+ * sans contact, et c'est justement là qu'un client bloque.
+ *
+ * Quinze sites au plus par passe : chacun coûte quelques requêtes HTTP, et une
+ * action serveur qui dépasse son budget ne rend rien du tout. Les suivants
+ * seront servis à la prochaine recherche.
+ */
+async function resolveMissingContacts(userId: string): Promise<number> {
+  const pending = await prisma.outreachProspect.findMany({
+    where: { userId, contactUrl: null },
+    select: { id: true, name: true, domain: true, contactEmail: true },
+    orderBy: [{ authority: "desc" }, { createdAt: "desc" }],
+    take: 15,
+  });
+  if (pending.length === 0) return 0;
+
+  const points = await findContactPoints(
+    pending.map((prospect) => ({ name: prospect.name, domain: prospect.domain })),
+  );
+
+  let updated = 0;
+  for (const prospect of pending) {
+    const point = points.get(normalizeDomain(prospect.domain));
+    if (!point?.url && !point?.email) continue;
+    // L'adresse déjà en base reste prioritaire : elle a pu être corrigée à la
+    // main, et ce qu'on vient de lire ne vaut pas mieux qu'une saisie du client.
+    const email = prospect.contactEmail ?? point.email;
+    if (!point.url && email === prospect.contactEmail) continue;
+
+    await prisma.outreachProspect.update({
+      where: { id: prospect.id },
+      data: { contactUrl: point.url, contactEmail: email },
+    });
+    updated += 1;
+  }
+  return updated;
+}
 
 export const draftProspectMessageAction = authActionClient
   .inputSchema(prospectIdSchema)

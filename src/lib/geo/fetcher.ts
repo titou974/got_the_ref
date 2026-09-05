@@ -100,7 +100,7 @@ export function normalizeUrl(raw: string): string {
  * Fetch protégé contre le SSRF : valide schéma + hôte public à chaque saut,
  * suit les redirections manuellement (revalidation à chaque hop).
  */
-async function safeFetch(url: string): Promise<Response> {
+async function safeFetch(url: string, timeoutMs = TIMEOUT_MS): Promise<Response> {
   let current = url;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const u = new URL(current);
@@ -110,7 +110,7 @@ async function safeFetch(url: string): Promise<Response> {
     await assertPublicHost(u.hostname);
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     let res: Response;
     try {
       res = await fetch(current, {
@@ -389,10 +389,14 @@ function pickInternalLinks($: cheerio.CheerioAPI, origin: string, homeUrl: strin
  * transitoire ne doit pas faire passer une ressource pour absente (faux négatif
  * sur robots.txt / sitemap / llms.txt). Renvoie null après échec définitif.
  */
-async function safeFetchRetry(url: string, attempts = 2): Promise<Response | null> {
+async function safeFetchRetry(
+  url: string,
+  attempts = 2,
+  timeoutMs = TIMEOUT_MS,
+): Promise<Response | null> {
   for (let i = 0; i < attempts; i++) {
     try {
-      return await safeFetch(url);
+      return await safeFetch(url, timeoutMs);
     } catch {
       /* nouvelle tentative, ou null si c'était la dernière */
     }
@@ -411,18 +415,48 @@ async function safeFetchRetry(url: string, attempts = 2): Promise<Response | nul
  * Le corps est tronqué : une feuille de style compilée par un thème WordPress
  * pèse volontiers plusieurs mégaoctets, et la couleur des boutons se lit dans
  * les premières centaines de kilooctets ou nulle part.
+ *
+ * `attempts` et `timeoutMs` servent aux lectures en série, où une douzaine
+ * d'adresses sont sondées d'affilée : deux essais de quinze secondes chacun y
+ * coûteraient plus cher que l'information cherchée.
  */
 export async function fetchPublicText(
   url: string,
   maxChars = 400_000,
+  options: { attempts?: number; timeoutMs?: number } = {},
 ): Promise<string | null> {
-  const res = await safeFetchRetry(url);
+  const res = await safeFetchRetry(url, options.attempts, options.timeoutMs);
   if (!res?.ok) return null;
   try {
     const body = await res.text();
     return body.slice(0, maxChars);
   } catch {
     return null;
+  }
+}
+
+/** Une réponse publique, statut compris. */
+export type PublicPage = { status: number; body: string };
+
+/**
+ * Comme `fetchPublicText`, mais le statut est rendu avec le corps.
+ *
+ * La différence compte quand on cherche à savoir si une adresse existe : un 404
+ * dit que la page n'est pas là, un 403 ou un 202 disent qu'un pare-feu
+ * anti-robot nous a arrêtés devant une page qui, elle, existe. Confondre les
+ * deux, c'est soit jeter une bonne adresse, soit en proposer une morte.
+ */
+export async function fetchPublicPage(
+  url: string,
+  maxChars = 200_000,
+  options: { attempts?: number; timeoutMs?: number } = {},
+): Promise<PublicPage | null> {
+  const res = await safeFetchRetry(url, options.attempts, options.timeoutMs);
+  if (!res) return null;
+  try {
+    return { status: res.status, body: (await res.text()).slice(0, maxChars) };
+  } catch {
+    return { status: res.status, body: "" };
   }
 }
 

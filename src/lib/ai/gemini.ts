@@ -68,7 +68,19 @@ function extractJson(text: string): unknown {
  */
 export async function askGeminiGrounded<T>(
   schema: ZodType<T>,
-  options: { prompt: string; label?: string; maxOutputTokens?: number },
+  options: {
+    prompt: string;
+    label?: string;
+    maxOutputTokens?: number;
+    /**
+     * L'effort de réflexion avant la réponse. Il s'impute sur `maxOutputTokens`,
+     * et une consigne un peu détaillée suffit à ce que le modèle y passe tout
+     * son budget : la requête revient alors sans le moindre candidat, réflexion
+     * facturée et réponse vide. « low » laisse la place au JSON demandé quand ce
+     * qu'on attend est une liste de faits relevés sur le web, pas un jugement.
+     */
+    thinkingLevel?: "low" | "high";
+  },
 ): Promise<GroundedAnswer<T> | null> {
   const key = process.env.GEMINI_API_KEY;
   const label = options.label ?? "Gemini";
@@ -92,6 +104,9 @@ export async function askGeminiGrounded<T>(
           generationConfig: {
             temperature: 0.2,
             maxOutputTokens: options.maxOutputTokens ?? 2000,
+            ...(options.thinkingLevel
+              ? { thinkingConfig: { thinkingLevel: options.thinkingLevel } }
+              : {}),
           },
         }),
       },
@@ -105,6 +120,18 @@ export async function askGeminiGrounded<T>(
       .map((part) => part.text)
       .filter(Boolean)
       .join("\n");
+
+    if (!text.trim()) {
+      // Aucun texte : la réflexion a consommé `maxOutputTokens` avant d'écrire
+      // la réponse. Le message le dit, sinon on cherche un bug de schéma là où
+      // il n'y a qu'un budget trop court.
+      const usage = data.usageMetadata as Record<string, unknown> | undefined;
+      geoLog(`${label} — réponse vide (budget épuisé avant la rédaction)`, {
+        budget: options.maxOutputTokens ?? 2000,
+        tokensDeRéflexion: usage?.thoughtsTokenCount ?? "?",
+      });
+      return null;
+    }
 
     const parsed = schema.safeParse(extractJson(text));
     if (!parsed.success) {
