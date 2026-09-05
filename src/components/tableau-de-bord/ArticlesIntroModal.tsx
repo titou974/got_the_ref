@@ -19,9 +19,9 @@ import { ArticleFlowScene } from "./article/ArticleFlowScene";
  * chaîne avant qu'il puisse l'utiliser reviendrait à vendre pendant qu'il
  * cherche autre chose.
  *
- * Une seule fois, retenue dans le navigateur, comme le mot de bienvenue du
- * tableau de bord. Le pas courant se lit dans la règle de progression en tête du
- * texte, qui sert aussi de navigation : les trois segments se cliquent.
+ * Une seule fois, retenue dans le navigateur dès l'ouverture. Le pas courant se
+ * lit dans la règle de progression en tête du texte, qui sert aussi de
+ * navigation : les trois segments se cliquent.
  *
  * L'animation du haut n'est pas décorative. C'est l'atelier d'article en
  * miniature — rail de sommaire, feuille, pilule de décision — et il reste en
@@ -32,6 +32,19 @@ const SEEN_KEY = "gotref:articles-intro:v1";
 
 /** Le temps que la page se pose avant que le calque ne monte. */
 const APPEAR_MS = 520;
+
+/**
+ * La marque se pose à l'ouverture, pas à la fermeture. Un client qui repart par
+ * la barre latérale sans rien cliquer a bien vu la fenêtre : la lui remontrer à
+ * chaque passage sur l'onglet en ferait une porte à pousser.
+ */
+function markSeen() {
+  try {
+    window.localStorage.setItem(SEEN_KEY, "1");
+  } catch {
+    /* stockage refusé : la marche à suivre reviendra à la prochaine visite */
+  }
+}
 
 const STEPS = ["step1", "step2", "step3"] as const;
 
@@ -53,7 +66,10 @@ export function ArticlesIntroModal() {
     }
     if (seen) return;
 
-    const timer = setTimeout(() => setOpen(true), APPEAR_MS);
+    const timer = setTimeout(() => {
+      setOpen(true);
+      markSeen();
+    }, APPEAR_MS);
     return () => clearTimeout(timer);
   }, []);
 
@@ -75,11 +91,7 @@ export function ArticlesIntroModal() {
 
   function dismiss() {
     setOpen(false);
-    try {
-      window.localStorage.setItem(SEEN_KEY, "1");
-    } catch {
-      /* stockage refusé : la marche à suivre reviendra à la prochaine visite */
-    }
+    markSeen();
   }
 
   const last = step === STEPS.length - 1;
