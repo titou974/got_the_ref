@@ -121,30 +121,72 @@ export function StackCard({
   );
 }
 
-/** Robots d'IA, un par pastille : vert s'ils passent, rouge s'ils sont bloqués. */
+/**
+ * Robots d'IA, un par pastille : vert s'ils passent, rouge s'ils sont bloqués.
+ *
+ * Chaque pastille porte aussi la maison qui l'opère. Un client lit « GPTBot »
+ * sans savoir qui c'est ; il lit « OpenAI » et comprend d'un coup ce qu'un
+ * blocage lui coûte. Le compte de robots fermés est repris en tête de carte :
+ * c'est le seul chiffre de la carte qui appelle un geste.
+ */
 export function CrawlerGrid({
   crawlers,
   className = "lg:col-span-3",
   delay = 0.15,
+  hint,
+  compact = false,
 }: {
   crawlers: CrawlerAccess[];
   className?: string;
   delay?: number;
+  /** Sous-titre facultatif, quand la carte est seule sur sa colonne. */
+  hint?: string;
+  /**
+   * La carte ne tient qu'une demi-largeur : deux pastilles par ligne plutôt
+   * que quatre. « OAI-SearchBot » et sa maison ne rentrent pas dans un quart
+   * de demi-carte.
+   */
+  compact?: boolean;
 }) {
   const t = useTranslations("analysisReport");
+  const blocked = crawlers.filter((c) => !c.allowed).length;
 
   return (
     <AnimatedCard delay={delay} className={className}>
-      <h4 className="mb-3 font-semibold">{t("architecture.checks.aiCrawlers")}</h4>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="font-semibold">{t("architecture.checks.aiCrawlers")}</h4>
+          {hint ? <p className="mt-0.5 text-sm text-muted">{hint}</p> : null}
+        </div>
+        <span
+          className="shrink-0 rounded-pill px-3 py-1 text-[11px] font-semibold"
+          style={
+            blocked
+              ? { background: "rgba(220,38,38,0.1)", color: "#dc2626" }
+              : { background: "rgba(17,180,140,0.12)", color: "#0a8f6e" }
+          }
+        >
+          {blocked ? `${blocked} bloqué${blocked > 1 ? "s" : ""}` : "Tous autorisés"}
+        </span>
+      </div>
+      <div
+        className={`grid gap-2 ${
+          compact ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+        }`}
+      >
         {crawlers.map((c) => (
           <div
             key={c.name}
-            className="flex items-center justify-between rounded-lg border border-fog bg-mist px-3 py-2 text-sm"
+            className={`flex items-center justify-between gap-2 rounded-2xl border px-3 py-2.5 ${
+              c.allowed ? "border-fog bg-mist" : "border-danger/35 bg-danger/[0.05]"
+            }`}
           >
-            <span className="truncate text-muted">{c.name}</span>
+            <span className="min-w-0">
+              <span className="block truncate text-[13px] font-medium text-text">{c.name}</span>
+              <span className="block truncate text-[11px] text-ash">{c.operator}</span>
+            </span>
             <span
-              className="ml-2 h-2 w-2 shrink-0 rounded-full"
+              className="size-2 shrink-0 rounded-full"
               style={{ background: c.allowed ? "#11b48c" : "#e5484d" }}
               aria-label={c.allowed ? "Autorisé" : "Bloqué"}
             />
