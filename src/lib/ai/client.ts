@@ -91,7 +91,10 @@ const PROVIDERS: Record<AiProvider, ProviderConfig> = {
     apiKey: process.env.DEEPSEEK_API_KEY,
     model: process.env.DEEPSEEK_MODEL,
     strongModel: process.env.DEEPSEEK_MODEL,
-    reasoningTiers: [],
+    // Flash réfléchit lui aussi, et sa réflexion s'impute sur le budget de
+    // sortie : sans marge, elle mange les 2 600 tokens d'un plan de posts et le
+    // modèle rend une réponse vide, coupée sur `finishReason: "length"`.
+    reasoningTiers: ["fast", "strong"],
     forcedTier: "fast",
     keyName: "DEEPSEEK_API_KEY",
   },

@@ -26,9 +26,17 @@ import { formatCount, formatRating, photoAt } from "./place-format";
 export function ListingCompare({
   place,
   advice,
+  only,
+  bare = false,
 }: {
   place: GooglePlace;
   advice: MapsAdvice | null;
+  /**
+   * Un seul des trois textes. Ils se corrigent à trois endroits différents du
+   * back-office Google : chacun est un chantier, et s'ouvre seul.
+   */
+  only?: "title" | "description" | "about";
+  bare?: boolean;
 }) {
   const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
@@ -37,10 +45,33 @@ export function ListingCompare({
   });
 
   const working = isPending || isRefreshing;
+  const shows = (field: "title" | "description" | "about") => only === undefined || only === field;
+
+  // Le même bouton écrit les trois textes d'un coup. Il suit donc le champ
+  // qu'on regarde : ouvert seul sur la description, le client doit pouvoir la
+  // faire écrire sans aller la demander ailleurs.
+  const writeButton = (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={() => execute({})}
+        disabled={working}
+        className="cursor-pointer rounded-pill border border-border bg-surface px-3 py-1.5 text-sm font-medium transition-colors duration-200 hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {working ? "Rédaction…" : advice ? "Proposer autre chose" : "Proposer des textes"}
+      </button>
+      {result.serverError ? (
+        <span className="max-w-[240px] text-right text-[11px] text-danger">
+          {result.serverError}
+        </span>
+      ) : null}
+    </div>
+  );
 
   return (
-    <div className="space-y-4">
-      <Card>
+    <div className={only ? "" : "space-y-4"}>
+      {shows("title") ? (
+      <Card bare={bare}>
         <CardTitle
           title="Le nom de votre fiche"
           hint={
@@ -48,23 +79,7 @@ export function ListingCompare({
               ? `Aligné sur « ${advice.keyword} », le mot-clé du titre de votre site.`
               : "Le nom que Google affiche en tête, et sur lequel il vous classe."
           }
-          action={
-            <div className="flex flex-col items-end gap-1">
-              <button
-                type="button"
-                onClick={() => execute({})}
-                disabled={working}
-                className="cursor-pointer rounded-pill border border-border bg-surface px-3 py-1.5 text-sm font-medium transition-colors duration-200 hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {working ? "Rédaction…" : advice ? "Proposer autre chose" : "Proposer des textes"}
-              </button>
-              {result.serverError ? (
-                <span className="max-w-[240px] text-right text-[11px] text-danger">
-                  {result.serverError}
-                </span>
-              ) : null}
-            </div>
-          }
+          action={writeButton}
         />
 
         <Compare
@@ -78,11 +93,14 @@ export function ListingCompare({
 
         {advice?.reasons[0] ? <Why text={advice.reasons[0]} /> : null}
       </Card>
+      ) : null}
 
-      <Card>
+      {shows("description") ? (
+      <Card bare={bare}>
         <CardTitle
           title="La description courte"
           hint="Les deux lignes sous le nom, dans les résultats et en tête de fiche."
+          action={writeButton}
         />
         <Compare
           before={<Prose text={place.description} missing="Aucune description sur la fiche." />}
@@ -92,11 +110,14 @@ export function ListingCompare({
         />
         {advice?.reasons[1] ? <Why text={advice.reasons[1]} /> : null}
       </Card>
+      ) : null}
 
-      <Card>
+      {shows("about") ? (
+      <Card bare={bare}>
         <CardTitle
           title="La présentation de l'onglet « À propos »"
           hint="Le texte que vous écrivez vous-même dans Google Business Profile."
+          action={writeButton}
         />
         <Compare
           before={
@@ -111,6 +132,7 @@ export function ListingCompare({
         />
         {advice?.reasons[2] ? <Why text={advice.reasons[2]} /> : null}
       </Card>
+      ) : null}
     </div>
   );
 }

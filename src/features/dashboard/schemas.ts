@@ -126,6 +126,16 @@ export const settingsSchema = z.object({
 
 export const prospectIdSchema = z.object({ id: z.string().min(1) });
 
+/**
+ * La commande de rédaction, avec l'angle demandé quand le client rejette le
+ * premier jet. Sans angle, c'est une première écriture.
+ */
+export const prospectDraftSchema = z.object({
+  id: z.string().min(1),
+  /** « rewrite » : autre formulation · « otherTopic » : autre sujet · « shorter » : plus court. */
+  angle: z.enum(["rewrite", "otherTopic", "shorter"]).optional(),
+});
+
 export const prospectStatusSchema = z.object({
   id: z.string().min(1),
   status: z.enum(["found", "drafted", "contacted", "replied", "published", "declined"]),
@@ -147,6 +157,19 @@ export const googlePostIdSchema = z.object({ id: z.string().min(1) });
  */
 export const refreshMapsPlaceSchema = z.object({
   force: z.boolean().default(false),
+});
+
+/**
+ * Le lien de fiche saisi depuis la page Google Maps, quand le compte n'en porte
+ * pas encore.
+ *
+ * Volontairement large ici : la forme du lien est jugée par `normalizeMapsUrl`,
+ * qui connaît les écritures que Google distribue — `maps.app.goo.gl`,
+ * `google.com/maps/place`, `goo.gl/maps`. Une seconde règle dans le schéma
+ * ferait un second juge, et les deux finiraient par diverger.
+ */
+export const saveMapsUrlSchema = z.object({
+  mapsUrl: z.string().trim().min(1, "Collez le lien de votre fiche.").max(2048),
 });
 
 /** Les identifiants d'avis pour lesquels on veut une réponse rédigée. */

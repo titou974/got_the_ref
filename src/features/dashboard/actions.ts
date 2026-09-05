@@ -13,6 +13,7 @@ import { connectorFor } from "@/constants/site-platforms";
 import { preferredPassOnDay } from "@/constants/publishing";
 import { ApifyError, isApifyConfigured } from "@/lib/apify/client";
 import { fetchGooglePlace } from "@/lib/apify/google-place";
+import { InvalidMapsUrlError, normalizeMapsUrl } from "@/lib/geo/maps";
 import type { GooglePlace, MapsAdvice } from "@/lib/apify/place-types";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
@@ -24,6 +25,7 @@ import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
 import {
   MAPS_PLACE_COOLDOWN_MS,
+  type DashboardContext,
   getArticleQuota,
   getDashboardContext,
   getMapsPlace,
@@ -78,12 +80,13 @@ import {
   googlePostIdSchema,
   planArticlesSchema,
   planGooglePostsSchema,
-  prospectIdSchema,
+  prospectDraftSchema,
   prospectStatusSchema,
   readSiteHoursSchema,
   refreshMapsPlaceSchema,
   regenerateOnPageSchema,
   reviewReplySchema,
+  saveMapsUrlSchema,
   scheduleArticleSchema,
   settingsSchema,
   updateArticleSchema,
@@ -142,21 +145,28 @@ const revalidateDashboard = () => {
  * Ensuite elle est de nouveau à jour, et plus rien ne repart.
  */
 /**
- * Le ton de la marque et sa couleur, relevés une fois, sous abonnement.
+ * Le ton de la marque et sa couleur, relevés une fois, dès le premier achat.
  *
  * Cette lecture-là ne se vend pas à l'unité : elle ne sert que là où des textes
- * sortent en continu au nom du client — les articles, les réécritures on-page,
- * les posts. Un compte gratuit n'en publie aucun, et un Coup de Boost a déjà
- * ses dix articles écrits quand la question se poserait. La question n'est donc
- * posée qu'au niveau « Tout-en-un » : ailleurs, on ne paie pas un appel dont
- * personne ne lira le résultat.
+ * sortent au nom du client — les articles, les réécritures on-page, les posts.
+ * Un compte gratuit n'en publie aucun, et la question ne lui est donc pas
+ * posée. Dès le Coup de Boost en revanche, elle l'est : cette offre ouvre
+ * l'onglet Articles et fait rédiger la première semaine dans la foulée de
+ * l'achat (cf. `seedEditorialMonthAction`). Ces articles-là sont les premiers
+ * textes que le client lit sous son propre nom ; les écrire sans avoir relevé
+ * sa manière d'écrire revenait à les lui rendre dans la voix de personne, et
+ * c'est exactement ce qui les faisait finir non publiés.
  *
  * D'où le fait qu'elle vive ici, dans l'analyse du tableau de bord, et pas dans
- * le tunnel d'accueil. Un client qui ouvre un compte gratuit puis s'abonne trois
+ * le tunnel d'accueil. Un client qui ouvre un compte gratuit puis achète trois
  * semaines plus tard ne repasse pas par l'accueil ; il repasse en revanche par
  * cette analyse, refaite une fois au niveau qu'il vient d'acheter. Le ton se
  * relève donc au moment exact où il devient utile, sans lui redemander quoi que
  * ce soit.
+ *
+ * Le texte lu est celui du crawl Firecrawl déjà en base (`getOrCrawlSite`), et
+ * la lecture part sur le nano d'OpenAI (rôle `tone`) : c'est une extraction,
+ * pas un jugement.
  *
  * Best-effort de bout en bout : un site injoignable ou un modèle muet rend le
  * ton déjà en base (souvent `null`), et l'audit continue. Rien de ce qui est
@@ -172,7 +182,7 @@ async function ensureBrandIdentity(
     brandColor: string | null;
   },
 ): Promise<string | null> {
-  if (!tierAtLeast(tier, "allin")) return profile.toneSummary;
+  if (!tierAtLeast(tier, "boost")) return profile.toneSummary;
 
   // Déjà relevés : la voix d'une marque ne change pas d'une analyse à l'autre,
   // et la relire à chaque remesure serait un appel de modèle pour rien.
@@ -200,6 +210,38 @@ async function ensureBrandIdentity(
     console.error("Relevé du ton de marque échoué :", err);
     return profile.toneSummary;
   }
+}
+
+/**
+ * Le contexte du tableau de bord, avec le ton de la marque relevé si besoin.
+ *
+ * `ensureBrandIdentity` ne passe que dans l'analyse, et l'analyse ne se refait
+ * qu'au changement de niveau (cf. `analysisNeedsUpgrade`). Deux comptes lui
+ * échappent donc, et ce sont précisément ceux qui écrivent : celui dont
+ * l'analyse portait déjà le niveau acheté — les Coups de Boost pris avant
+ * l'ouverture de ce relevé —, et celui dont la lecture avait échoué ce jour-là
+ * sans jamais être retentée. Les deux feraient écrire leurs articles dans la
+ * voix de personne.
+ *
+ * On repose donc la question ici, au moment d'écrire, et seulement si le ton
+ * manque encore. Un compte qui l'a déjà ne déclenche rien ; un compte gratuit
+ * non plus, il ne publie pas. Best-effort comme partout ailleurs : une lecture
+ * qui échoue rend le contexte tel quel et la rédaction continue sans le ton.
+ */
+async function contextForWriting(userId: string): Promise<DashboardContext> {
+  const context = await getDashboardContext(userId);
+  if (context.tone.summary || !context.siteUrl) return context;
+  if (!tierAtLeast(context.tier, "boost")) return context;
+
+  const tone = await ensureBrandIdentity(userId, context.tier, {
+    siteUrl: context.siteUrl,
+    toneSummary: context.tone.summary,
+    toneSampleUrl: context.tone.sampleUrl,
+    brandColor: context.tone.color,
+  });
+  if (!tone) return context;
+
+  return { ...context, tone: { ...context.tone, summary: tone } };
 }
 
 export const prepareDashboardAction = authActionClient
@@ -263,9 +305,9 @@ export const prepareDashboardAction = authActionClient
         mapsUrl: profile.mapsUrl ?? null,
         declaredNiche: profile.niche,
         declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
-        // Relevé juste au-dessus sous abonnement : les correctifs on-page de
-        // l'audit sont alors écrits dans la voix du client, pas dans celle d'un
-        // modèle. En gratuit il n'y en a pas, et ils restent neutres.
+        // Relevé juste au-dessus dès le premier achat : les correctifs on-page
+        // de l'audit sont alors écrits dans la voix du client, pas dans celle
+        // d'un modèle. En gratuit il n'y en a pas, et ils restent neutres.
         brandTone,
       },
       "paid",
@@ -690,7 +732,7 @@ export const seedEditorialMonthAction = authActionClient
     const existing = await prisma.article.count({ where: { userId } });
     if (existing >= target) return { planned: 0, written: 0 };
 
-    const context = await getDashboardContext(userId);
+    const context = await contextForWriting(userId);
     const missing = target - existing;
     const topics = await planArticleTopics(context, missing);
     // Le planning complet est calculé d'un bloc, puis on n'en prend que les
@@ -1054,7 +1096,7 @@ export const planArticlesAction = authActionClient
     // Le voile posé sur l'onglet est une affaire d'écran ; c'est ce refus-ci qui
     // ferme réellement la rédaction à qui ne l'a pas payée.
     await requireSection(userId, "articles");
-    const context = await getDashboardContext(userId);
+    const context = await contextForWriting(userId);
     const topics = await planArticleTopics(context, parsedInput.count);
 
     // Le planning reprend là où il s'arrête : le premier sujet tombe une période
@@ -1121,7 +1163,7 @@ export const writeArticleAction = authActionClient
 
     let draft;
     try {
-      const context = await getDashboardContext(userId);
+      const context = await contextForWriting(userId);
       const outline = parseOutline(article.outline);
       draft = await writeArticle(
         context,
@@ -1466,7 +1508,7 @@ async function resolveMissingContacts(userId: string): Promise<number> {
 }
 
 export const draftProspectMessageAction = authActionClient
-  .inputSchema(prospectIdSchema)
+  .inputSchema(prospectDraftSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
     await requireSection(userId, "presence");
@@ -1480,6 +1522,10 @@ export const draftProspectMessageAction = authActionClient
       name: prospect.name,
       domain: prospect.domain,
       reason: prospect.reason,
+      // Le jet précédent part avec la commande : sans lui, « réécrire » rendrait
+      // le même message, et « autre sujet » reproposerait le même article.
+      angle: parsedInput.angle,
+      previous: parsedInput.angle ? prospect.message : null,
     });
 
     await prisma.outreachProspect.update({
@@ -1603,6 +1649,52 @@ export const approveGooglePostAction = authActionClient
  *   — l'échec, enregistré dans `lastError` sans effacer le relevé précédent :
  *     une panne du scraper ne doit pas vider l'écran.
  */
+/**
+ * Enregistre le lien de la fiche, saisi depuis la page Google Maps elle-même.
+ *
+ * Un commerce qui reçoit du public arrive parfois ici sans avoir donné sa fiche
+ * pendant l'accueil : le champ y était facultatif. Le renvoyer aux réglages
+ * pour trois secondes de saisie, c'est lui faire quitter la page qu'il est venu
+ * voir, et souvent ne pas l'y ramener. Il la donne donc ici, et le relevé part
+ * dans la foulée.
+ *
+ * Le lien est normalisé avant d'être écrit : c'est cette forme que le scraper
+ * reçoit, et une adresse raccourcie collée depuis un téléphone doit valoir la
+ * même chose qu'une adresse longue copiée depuis un navigateur.
+ */
+export const saveMapsUrlAction = authActionClient
+  .inputSchema(saveMapsUrlSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const userId = ctx.auth.user.id;
+
+    let mapsUrl: string | null;
+    try {
+      mapsUrl = normalizeMapsUrl(parsedInput.mapsUrl);
+    } catch (err) {
+      if (err instanceof InvalidMapsUrlError) {
+        throw new AppError(
+          "Ce lien ne mène pas à une fiche Google Maps. Ouvrez votre fiche, touchez « Partager », puis collez le lien copié.",
+          "INVALID_MAPS_URL",
+          400,
+        );
+      }
+      throw err;
+    }
+
+    if (!mapsUrl) {
+      throw new AppError("Collez le lien de votre fiche.", "INVALID_MAPS_URL", 400);
+    }
+
+    await prisma.onboardingProfile.upsert({
+      where: { userId },
+      create: { userId, mapsUrl },
+      update: { mapsUrl },
+    });
+
+    revalidatePath(ROUTES.dashboardMaps);
+    return { mapsUrl };
+  });
+
 export const refreshMapsPlaceAction = authActionClient
   .inputSchema(refreshMapsPlaceSchema)
   .action(async ({ parsedInput, ctx }) => {

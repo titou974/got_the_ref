@@ -98,8 +98,10 @@ export type DashboardContext = {
   site: SiteLink | null;
   brandVoice: { instructions: string; banned: string[] } | null;
   /**
-   * Le ton relevé pendant l'accueil, à partir de l'article donné en exemple.
-   * Il précède la voix de marque : celle-ci le corrige, elle ne le remplace pas.
+   * Le ton du site, lu sur le crawl du client — un article publié quand il y en
+   * a un, sa page d'accueil sinon — et relevé au premier achat (cf.
+   * `ensureBrandIdentity`). Il précède la voix de marque : celle-ci le corrige,
+   * elle ne le remplace pas.
    */
   tone: { summary: string | null; color: string | null; sampleUrl: string | null };
 };
