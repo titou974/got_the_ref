@@ -13,6 +13,7 @@ import { CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
 import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
+import { ContentIntroModal } from "@/components/tableau-de-bord/ContentIntroModal";
 import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { SiteHoursCard } from "@/components/tableau-de-bord/SiteHoursCard";
@@ -62,6 +63,11 @@ export default async function ContenuPage() {
 
   return (
     <>
+      {/* L'explication de l'écran, une seule fois. Elle vient après le garde
+          d'analyse : tant que le rapport se prépare, il n'y a pas de textes à
+          commenter. */}
+      <ContentIntroModal domain={analysis.domain} />
+
       <PageHeader title={t("pageTitle")} />
 
       {/* Le gain n'est compté que sur la part contenu du plan d'action : cette
