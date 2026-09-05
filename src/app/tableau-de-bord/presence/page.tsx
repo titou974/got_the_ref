@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { businessHint, getDashboardContext, listProspects } from "@/features/dashboard/queries";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
-import { ProspectTable } from "@/components/tableau-de-bord/ProspectTable";
+import { ProspectFlow } from "@/components/tableau-de-bord/ProspectFlow";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { SectionGate } from "@/components/tableau-de-bord/SectionGate";
 import { canOpen } from "@/constants/access";
@@ -13,10 +13,11 @@ export const maxDuration = 300;
  * Présence web : ce que le web dit déjà du commerce, et à qui écrire pour qu'il
  * en dise davantage.
  *
- * Le calendrier éditorial vit dans la section Articles, et nulle part ailleurs
- * dans le tableau de bord : deux écrans qui montrent le même planning font
- * douter le client de ce qu'il regarde. Le rapport d'analyse, lui, le garde
- * dans sa présence et notoriété — c'est là qu'il sert d'argument, pas d'outil.
+ * La prospection ouvre la page, parce que c'est le seul endroit du tableau de
+ * bord où le client a quelque chose à faire de ses mains ; ce que le web dit
+ * déjà de lui vient après, comme un état des lieux. Le calendrier éditorial
+ * vit dans la section Articles, et nulle part ailleurs : deux écrans qui
+ * montrent le même planning font douter le client de ce qu'il regarde.
  */
 export default async function PresencePage() {
   const user = await requireUser();
@@ -36,11 +37,35 @@ export default async function PresencePage() {
   // réservée à l'abonnement, et voilée pour tous les autres.
   const locked = !canOpen(context.tier, "presence");
 
+  // Sous voile, la page garde son titre : le parcours, lui, ne se monte pas —
+  // c'est lui qui porte le sien.
+  if (locked) {
+    return (
+      <>
+        <PageHeader title={t("pageTitle")} />
+        <SectionGate section="presence" locked>
+          <></>
+        </SectionGate>
+      </>
+    );
+  }
+
   return (
     <>
-      <PageHeader title={t("pageTitle")} />
+      <ProspectFlow
+        prospects={prospects.map((prospect) => ({
+          id: prospect.id,
+          name: prospect.name,
+          domain: prospect.domain,
+          reason: prospect.reason,
+          contactEmail: prospect.contactEmail,
+          contactUrl: prospect.contactUrl,
+          authority: prospect.authority,
+          status: prospect.status,
+          message: prospect.message,
+        }))}
+      />
 
-      <SectionGate section="presence" locked={locked}>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardTitle title={t("reputation")} hint={presence.summary} />
@@ -96,21 +121,6 @@ export default async function PresencePage() {
           )}
         </Card>
       </div>
-
-      <ProspectTable
-        prospects={prospects.map((prospect) => ({
-          id: prospect.id,
-          name: prospect.name,
-          domain: prospect.domain,
-          reason: prospect.reason,
-          contactEmail: prospect.contactEmail,
-          contactUrl: prospect.contactUrl,
-          authority: prospect.authority,
-          status: prospect.status,
-          message: prospect.message,
-        }))}
-      />
-      </SectionGate>
     </>
   );
 }

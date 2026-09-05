@@ -324,10 +324,29 @@ const messageSchema = z.object({
   body: z.string().min(200).max(2000),
 });
 
+/**
+ * L'angle d'une reprise, quand le premier jet ne convient pas : la même
+ * proposition écrite autrement, un autre sujet d'article, ou un message plus
+ * court. Rien de plus — trois boutons, pas un champ de consignes libres.
+ */
+const ANGLE_INSTRUCTIONS: Record<string, string> = {
+  rewrite: "Reprends la même proposition dans une formulation entièrement neuve.",
+  otherTopic: "Propose un autre sujet d'article, différent de celui du message précédent.",
+  shorter: "Quatre à six lignes, ton plus direct, une seule phrase de contexte.",
+};
+
 /** Le message de prise de contact, prêt à relire puis à envoyer. */
 export async function draftOutreachMessage(
   context: DashboardContext,
-  prospect: { name: string; domain: string; reason: string | null },
+  prospect: {
+    name: string;
+    domain: string;
+    reason: string | null;
+    /** L'angle de reprise demandé par le client, quand il rejette le premier jet. */
+    angle?: "rewrite" | "otherTopic" | "shorter";
+    /** Le message déjà écrit, pour que la reprise s'en écarte au lieu de le répéter. */
+    previous?: string | null;
+  },
 ): Promise<z.infer<typeof messageSchema>> {
   return askJson(messageSchema, {
     system:
@@ -344,6 +363,8 @@ export async function draftOutreachMessage(
       "Écris l'objet et le corps du message, à la première personne, signé par le commerce.",
       "Six à dix lignes, une proposition concrète, une question finale simple.",
       "L'objet annonce la proposition, jamais une accroche marketing.",
+      prospect.previous ? `\nMessage précédent, à ne pas répéter :\n${prospect.previous}` : "",
+      prospect.angle ? ANGLE_INSTRUCTIONS[prospect.angle] : "",
       "Réponds en JSON : { \"subject\", \"body\" }",
     ]
       .filter(Boolean)
