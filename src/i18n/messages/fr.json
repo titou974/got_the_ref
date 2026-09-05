@@ -1899,6 +1899,20 @@
       "checksSummary": "{passing} conforme(s) · {pending} à traiter",
       "stack": "Site servi par {name}, reconnu à {evidence}."
     },
+    "structureIntro": {
+      "eyebrow": "Ce que fait la page Architecture",
+      "step1Title": "Les fichiers que les IA cherchent en arrivant",
+      "step1Body": "Un moteur de réponse demande d'abord trois adresses à la racine de votre site : llms.txt, robots.txt, sitemap.xml. Il lit ensuite ce que votre page d'accueil déclare, dans son title, son H1 et ses données structurées. L'analyse a refait ce parcours.",
+      "step2Title": "Le squelette montre les trous à leur place",
+      "step2Body": "Chaque ligne rouge est un fichier que votre site ne sert pas. Sans llms.txt, une IA parcourt vos pages au hasard. Sans données structurées, elle devine votre métier, votre ville et vos horaires au lieu de les lire.",
+      "step3Title": "Les fichiers manquants sont déjà écrits",
+      "step3Body": "Leur contenu est prêt, rempli avec ce que l'analyse a relevé sur votre site. Le bouton « Déposer les fichiers manquants » les pose pour vous. Si votre plateforme ferme sa racine, ouvrez « Voir les contenus proposés » et copiez-les tels quels.",
+      "next": "Suivant",
+      "done": "C'est parti",
+      "skip": "Passer",
+      "stepAria": "Étape {n} sur 3",
+      "dismissAria": "Fermer l'explication"
+    },
     "articleBar": {
       "approve": "Valider l'autopublication",
       "publishNow": "Publier maintenant",

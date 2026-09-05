@@ -13,6 +13,7 @@ import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
 import { CrawlerGrid } from "@/components/geo/SiteProfile";
 import { SiteSkeleton } from "@/components/geo/SiteSkeleton";
 import { SectionGate } from "@/components/tableau-de-bord/SectionGate";
+import { StructureIntroModal } from "@/components/tableau-de-bord/StructureIntroModal";
 import { canOpen } from "@/constants/access";
 
 export const maxDuration = 300;
@@ -79,6 +80,11 @@ export default async function ArchitecturePage() {
   return (
     <>
       <PageHeader title={t("pageTitle")} subtitle={ta("architecture.subtitle")} />
+
+      {/* Ce que l'écran fait, une seule fois, pour les offres qui l'ouvrent. Sous
+          voile, l'arborescence n'a aucune valeur à montrer : l'expliquer ne
+          servirait qu'à vendre. */}
+      {locked ? null : <StructureIntroModal domain={analysis.signals.domain} />}
 
       <SectionGate section="architecture" locked={locked}>
         <div className="flex flex-col gap-4">
