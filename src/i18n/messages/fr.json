@@ -1928,6 +1928,20 @@
       "published": "Publié, en ligne sur votre site",
       "rejected": "Écarté du planning"
     },
+    "contentIntro": {
+      "eyebrow": "Ce que fait la page Contenu",
+      "step1Title": "Les quatre textes de votre page d'accueil",
+      "step1Body": "La balise title, la méta description, le titre H1 et le paragraphe d'introduction. L'existant et la réécriture sont posés côte à côte, et vous relancez la proposition tant qu'elle ne vous convient pas.",
+      "step2Title": "C'est ce que les IA lisent en premier",
+      "step2Body": "ChatGPT, Gemini et Perplexity se font une idée de votre commerce sur ces quelques lignes avant d'ouvrir le reste du site. Si elles ne disent pas clairement ce que vous faites et où, vous êtes cité moins souvent.",
+      "step3Title": "Faites poser les corrections",
+      "step3Body": "En bas de l'écran, « Résoudre avec les agents IA » donne la prise got_the_ref à brancher sur Claude Code, Codex ou Cursor : votre agent y récupère les textes validés et les écrit dans votre code. Sans agent, la même commande s'envoie à votre développeur.",
+      "next": "Suivant",
+      "done": "C'est parti",
+      "skip": "Passer",
+      "stepAria": "Étape {n} sur 3",
+      "dismissAria": "Fermer l'explication"
+    },
     "articles": {
       "pageTitle": "Articles",
       "plan": "Ajouter {count} sujets",
