@@ -15,18 +15,32 @@ import { ContentHeadScene } from "./content/ContentHeadScene";
  * client une fois qu'il les a lues. La fenêtre répond aux deux, puis rend la
  * main : lire l'existant, comprendre qui le lit, faire poser la correction.
  *
- * Elle s'affiche pour tout le monde, offre gratuite comprise. Le contenu est le
- * seul chantier qu'un compte gratuit peut faire corriger, et c'est justement
- * celui-là qu'il faut lui expliquer.
+ * Elle ne s'ouvre que pour les offres payées, comme celles de l'architecture et
+ * des articles. La page reste ouverte à un compte gratuit, mais le troisième
+ * temps ne parle que de faire poser les corrections par les agents : la lui
+ * montrer reviendrait à lui vendre l'écran au lieu de le lui expliquer.
  *
- * Une seule fois, retenue dans le navigateur, comme la marche à suivre des
- * articles. Le temps courant se lit dans la règle de progression, qui sert
- * aussi de navigation : les trois segments se cliquent.
+ * Une seule fois, retenue dans le navigateur dès l'ouverture, comme la marche à
+ * suivre des articles. Le temps courant se lit dans la règle de progression,
+ * qui sert aussi de navigation : les trois segments se cliquent.
  */
 const SEEN_KEY = "gotref:content-intro:v1";
 
 /** Le temps que la page se pose avant que le calque ne monte. */
 const APPEAR_MS = 520;
+
+/**
+ * La marque se pose à l'ouverture, pas à la fermeture. Un client qui repart par
+ * la barre latérale sans rien cliquer a bien vu la fenêtre : la lui remontrer à
+ * chaque passage sur l'onglet en ferait une porte à pousser.
+ */
+function markSeen() {
+  try {
+    window.localStorage.setItem(SEEN_KEY, "1");
+  } catch {
+    /* stockage refusé : l'explication reviendra à la prochaine visite */
+  }
+}
 
 const STEPS = ["step1", "step2", "step3"] as const;
 
@@ -48,7 +62,10 @@ export function ContentIntroModal({ domain }: { domain: string }) {
     }
     if (seen) return;
 
-    const timer = setTimeout(() => setOpen(true), APPEAR_MS);
+    const timer = setTimeout(() => {
+      setOpen(true);
+      markSeen();
+    }, APPEAR_MS);
     return () => clearTimeout(timer);
   }, []);
 
@@ -70,11 +87,7 @@ export function ContentIntroModal({ domain }: { domain: string }) {
 
   function dismiss() {
     setOpen(false);
-    try {
-      window.localStorage.setItem(SEEN_KEY, "1");
-    } catch {
-      /* stockage refusé : l'explication reviendra à la prochaine visite */
-    }
+    markSeen();
   }
 
   const last = step === STEPS.length - 1;

@@ -4,31 +4,27 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { lockScroll } from "@/lib/scroll-lock";
-import { ArticleFlowScene } from "./article/ArticleFlowScene";
+import { StructureScene } from "./architecture/StructureScene";
 
 /**
- * La marche à suivre, à la première arrivée sur les articles.
+ * Ce que fait la page Architecture, à la première arrivée dessus.
  *
- * Un compte qui vient de payer ouvre cet onglet et voit un calendrier de sujets.
- * Rien n'y dit ce qu'on attend de lui, ni dans quel ordre : le site se rattache
- * d'abord, les articles se relisent ensuite, et le départ se fait tout seul à la
- * fin. Trois gestes, un seul ordre possible, et c'est ce que la fenêtre montre.
+ * L'écran ouvre sur une arborescence de fichiers, des pastilles monospace et un
+ * bouton de dépôt. Le client y lit « llms.txt : absent » sans savoir ce qu'est
+ * un llms.txt, qui le demande, ni ce qu'il perd tant qu'il n'en a pas. La
+ * fenêtre répond aux trois, puis rend la main : ce qu'un moteur de réponse
+ * cherche à la racine, ce que l'analyse n'y a pas trouvé, et qui dépose les
+ * fichiers manquants.
  *
- * Elle ne s'ouvre que pour les offres qui ouvrent la rédaction. Un compte
- * gratuit n'a pas de site à rattacher ni d'article à valider : lui expliquer la
- * chaîne avant qu'il puisse l'utiliser reviendrait à vendre pendant qu'il
- * cherche autre chose.
+ * Elle ne s'ouvre que pour les offres qui ouvrent l'architecture. Sous une offre
+ * qui la ferme, la page entière passe sous voile : expliquer un écran que le
+ * client ne peut pas lire reviendrait à vendre.
  *
- * Une seule fois, retenue dans le navigateur dès l'ouverture. Le pas courant se
- * lit dans la règle de progression en tête du texte, qui sert aussi de
- * navigation : les trois segments se cliquent.
- *
- * L'animation du haut n'est pas décorative. C'est l'atelier d'article en
- * miniature — rail de sommaire, feuille, pilule de décision — et il reste en
- * place d'une étape à l'autre pendant que son état change. Le client reconnaît
- * l'écran avant de l'ouvrir.
+ * Une seule fois, retenue dans le navigateur dès l'ouverture, comme les deux
+ * autres. Le temps courant se lit dans la règle de progression, qui sert aussi
+ * de navigation : les trois segments se cliquent.
  */
-const SEEN_KEY = "gotref:articles-intro:v1";
+const SEEN_KEY = "gotref:structure-intro:v1";
 
 /** Le temps que la page se pose avant que le calque ne monte. */
 const APPEAR_MS = 520;
@@ -42,22 +38,22 @@ function markSeen() {
   try {
     window.localStorage.setItem(SEEN_KEY, "1");
   } catch {
-    /* stockage refusé : la marche à suivre reviendra à la prochaine visite */
+    /* stockage refusé : l'explication reviendra à la prochaine visite */
   }
 }
 
 const STEPS = ["step1", "step2", "step3"] as const;
 
-export function ArticlesIntroModal() {
-  const t = useTranslations("dashboard.articlesIntro");
+export function StructureIntroModal({ domain }: { domain: string }) {
+  const t = useTranslations("dashboard.structureIntro");
   const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const nextRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Un navigateur qui refuse le stockage ne doit pas priver le client de la
-    // marche à suivre : on affiche, sans mémoire.
+    // Un navigateur qui refuse le stockage ne doit pas priver le client de
+    // l'explication : on affiche, sans mémoire.
     let seen = false;
     try {
       seen = window.localStorage.getItem(SEEN_KEY) === "1";
@@ -122,13 +118,11 @@ export function ArticlesIntroModal() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.985 }}
             transition={
-              reduced
-                ? { duration: 0 }
-                : { type: "spring", stiffness: 230, damping: 26, mass: 0.9 }
+              reduced ? { duration: 0 } : { type: "spring", stiffness: 230, damping: 26, mass: 0.9 }
             }
             className="relative max-h-[88dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-card border border-fog bg-snow p-3 shadow-[var(--shadow-md)] sm:p-4"
           >
-            <ArticleFlowScene step={step} sheetTitle={t("sheetTitle")} />
+            <StructureScene step={step} domain={domain} />
 
             <div className="px-2 pb-1 pt-5 sm:px-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-steel">
@@ -136,7 +130,7 @@ export function ArticlesIntroModal() {
               </p>
 
               {/* La règle de progression. Trois segments, et la navigation avec :
-                  revenir sur une étape lue ne mérite pas un bouton de plus. */}
+                  revenir sur un temps lu ne mérite pas un bouton de plus. */}
               <div className="mt-3 flex gap-1.5">
                 {STEPS.map((id, index) => (
                   <button
@@ -157,7 +151,7 @@ export function ArticlesIntroModal() {
                 ))}
               </div>
 
-              <div className="min-h-[112px] sm:min-h-[104px]">
+              <div className="min-h-[148px] sm:min-h-[140px]">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={key}

@@ -18,6 +18,7 @@ import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { SiteHoursCard } from "@/components/tableau-de-bord/SiteHoursCard";
 import { TrafficGainCards } from "@/components/geo/TrafficGainCards";
+import { tierAtLeast } from "@/constants/access";
 
 export const maxDuration = 300;
 
@@ -61,12 +62,22 @@ export default async function ContenuPage() {
   const passing = content.checks.filter((c) => c.status === "ok").length;
   const pending = content.checks.length - passing;
 
+  // Les fenêtres d'explication ne s'ouvrent que sur une offre payée, comme
+  // celles de l'architecture et des articles : le Coup de Boost, l'abonnement,
+  // et le compte de démonstration qui les suit.
+  const explained = tierAtLeast(context.tier, "boost");
+
   return (
     <>
-      {/* L'explication de l'écran, une seule fois. Elle vient après le garde
-          d'analyse : tant que le rapport se prépare, il n'y a pas de textes à
-          commenter. */}
-      <ContentIntroModal domain={analysis.domain} />
+      {/* L'explication de l'écran, une seule fois, pour les offres payées. Elle
+          vient après le garde d'analyse : tant que le rapport se prépare, il n'y
+          a pas de textes à commenter.
+
+          Un compte gratuit ne la voit pas. La page lui est pourtant ouverte,
+          mais son troisième temps ne parle que de faire poser les corrections
+          par les agents, et c'est justement ce qu'il n'a pas payé : la fenêtre
+          lui vendrait l'écran au lieu de l'expliquer. */}
+      {explained ? <ContentIntroModal domain={analysis.domain} /> : null}
 
       <PageHeader title={t("pageTitle")} />
 
