@@ -77,7 +77,7 @@ import {
   googlePostIdSchema,
   planArticlesSchema,
   planGooglePostsSchema,
-  prospectIdSchema,
+  prospectDraftSchema,
   prospectStatusSchema,
   readSiteHoursSchema,
   refreshMapsPlaceSchema,
@@ -1419,7 +1419,7 @@ export const findProspectsAction = authActionClient
   });
 
 export const draftProspectMessageAction = authActionClient
-  .inputSchema(prospectIdSchema)
+  .inputSchema(prospectDraftSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
     await requireSection(userId, "presence");
@@ -1433,6 +1433,10 @@ export const draftProspectMessageAction = authActionClient
       name: prospect.name,
       domain: prospect.domain,
       reason: prospect.reason,
+      // Le jet précédent part avec la commande : sans lui, « réécrire » rendrait
+      // le même message, et « autre sujet » reproposerait le même article.
+      angle: parsedInput.angle,
+      previous: parsedInput.angle ? prospect.message : null,
     });
 
     await prisma.outreachProspect.update({

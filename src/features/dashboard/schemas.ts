@@ -126,6 +126,16 @@ export const settingsSchema = z.object({
 
 export const prospectIdSchema = z.object({ id: z.string().min(1) });
 
+/**
+ * La commande de rédaction, avec l'angle demandé quand le client rejette le
+ * premier jet. Sans angle, c'est une première écriture.
+ */
+export const prospectDraftSchema = z.object({
+  id: z.string().min(1),
+  /** « rewrite » : autre formulation · « otherTopic » : autre sujet · « shorter » : plus court. */
+  angle: z.enum(["rewrite", "otherTopic", "shorter"]).optional(),
+});
+
 export const prospectStatusSchema = z.object({
   id: z.string().min(1),
   status: z.enum(["found", "drafted", "contacted", "replied", "published", "declined"]),
