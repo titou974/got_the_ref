@@ -35,6 +35,12 @@ export const maxDuration = 300;
  *
  * Le rapport, lui, ne bouge pas : il garde son radar et l'ordre de ses
  * contrôles.
+ *
+ * La grille du contenu éditorial n'est plus ici. Elle s'affichait sous les
+ * contrôles techniques alors que sa note se calcule ailleurs — l'anneau de cet
+ * écran ne pèse que le technique et les données structurées — et le client la
+ * lisait comme une part de l'architecture. Elle est passée à l'écran Contenu,
+ * au-dessus du tableau des mots-clés, où elle compte dans la note contenu.
  */
 export default async function ArchitecturePage() {
   const user = await requireUser();
@@ -129,11 +135,6 @@ export default async function ArchitecturePage() {
               }
             />
             <DiagnosticGrid section={diagnostic.architecture} labelNs="architecture" issuesFirst />
-          </AnimatedCard>
-
-          <AnimatedCard delay={0.12}>
-            <h3 className="mb-3 font-semibold">{ta("content.title")}</h3>
-            <DiagnosticGrid section={diagnostic.content} labelNs="content" issuesFirst />
           </AnimatedCard>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

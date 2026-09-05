@@ -7,8 +7,11 @@ import {
   getOnPageRewriteQuota,
   getSiteHours,
 } from "@/features/dashboard/queries";
+import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { contentGainFor } from "@/lib/geo/traffic-gain";
-import { PageHeader } from "@/components/tableau-de-bord/Card";
+import { CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
+import { AnimatedCard } from "@/components/dashboard/AnimatedCard";
+import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
 import { ContentCompare } from "@/components/tableau-de-bord/ContentCompare";
 import { KeywordTable } from "@/components/tableau-de-bord/KeywordTable";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
@@ -30,21 +33,32 @@ export const maxDuration = 300;
  * réparties sur les quatre surfaces qui les envoient. Puis les trois endroits
  * où les mots s'écrivent — la balise title et la meta description, le H1, le
  * paragraphe d'introduction — l'existant et la réécriture côte à côte.
+ *
+ * La grille du contenu éditorial — FAQ, avis, notation éditoriale, citabilité,
+ * volume, cohérence Maps — vient de l'écran Architecture, où elle était rendue
+ * sous les contrôles techniques. Sa note n'a jamais pesé dans l'anneau
+ * d'architecture, qui ne compte que le technique et les données structurées :
+ * elle appartient à la note contenu, donc à cet écran. Elle se pose juste
+ * au-dessus du tableau des mots-clés, dernier arrêt avant la documentation.
  */
 export default async function ContenuPage() {
   const user = await requireUser();
   const context = await getDashboardContext(user.id);
-  const [quota, hours, listing, t, tg] = await Promise.all([
+  const [quota, hours, listing, t, tg, ta] = await Promise.all([
     getOnPageRewriteQuota(user.id),
     getSiteHours(user.id, context.domain),
     getMapsPlace(user.id),
     getTranslations("dashboard.content"),
     getTranslations("trafficGain"),
+    getTranslations("analysisReport"),
   ]);
 
   if (!context.analysis) return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
 
   const analysis = context.analysis;
+  const content = buildDiagnostic(analysis).content;
+  const passing = content.checks.filter((c) => c.status === "ok").length;
+  const pending = content.checks.length - passing;
 
   return (
     <>
@@ -77,6 +91,19 @@ export default async function ContenuPage() {
       {context.isPhysical ? (
         <SiteHoursCard check={hours?.check ?? null} hasListing={listing !== null} />
       ) : null}
+
+      <AnimatedCard className="mt-4">
+        <CardTitle
+          title={ta("content.title")}
+          hint={ta("content.subtitle")}
+          action={
+            <span className="rounded-pill bg-mist px-3 py-1 text-[11px] font-semibold text-slate">
+              {t("checksSummary", { passing, pending })}
+            </span>
+          }
+        />
+        <DiagnosticGrid section={content} labelNs="content" issuesFirst />
+      </AnimatedCard>
 
       <KeywordTable insight={analysis.trendingKeywords ?? null} />
     </>
