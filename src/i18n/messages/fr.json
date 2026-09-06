@@ -1640,6 +1640,26 @@
           "body": "Cohérence avec le site, avis, posts programmés : la fiche se travaille semaine après semaine. Elle est réservée à l'abonnement Tout-en-un.",
           "cta": "Voir ma fiche Google"
         },
+        "architectureFiles": {
+          "title": "{count, plural, =0 {Le squelette de votre site, ligne par ligne} one {Le fichier qui manque à la racine de votre site} other {Les # fichiers qui manquent à la racine de votre site}}",
+          "body": "Les lignes floutées sont celles que les moteurs de réponse cherchent et ne trouvent pas. Le Coup de Boost les nomme, écrit leur contenu avec les faits relevés sur votre site, et les agents les déposent.",
+          "cta": "Voir ce qui manque"
+        },
+        "mapsFix": {
+          "title": "La correction, écrite pour votre fiche",
+          "body": "Le texte prêt à coller dans Google Business Profile, écrit d'après vos avis et le mot-clé de votre site. L'abonnement Tout-en-un l'ouvre, et tient la fiche semaine après semaine.",
+          "cta": "Voir la correction"
+        },
+        "mapsReviews": {
+          "title": "Vos réponses aux avis, écrites dans votre ton",
+          "body": "Une réponse par avis, dans le ton relevé sur votre site, prête à coller sous l'avis. Google mesure votre délai de réponse : l'abonnement Tout-en-un les écrit à chaque nouvel avis.",
+          "cta": "Écrire mes réponses"
+        },
+        "mapsPosts": {
+          "title": "Vos posts Google, écrits et datés",
+          "body": "Quatre posts par mois, tirés de vos photos et de ce que vos clients citent le plus, posés aux dates qui leur vont. L'abonnement Tout-en-un les écrit et tient le rythme.",
+          "cta": "Voir mes posts"
+        },
         "diagnostic": {
           "title": "Le diagnostic complet de votre site",
           "body": "Contrôle par contrôle, ce que les IA lisent de votre site et ce qui leur manque. Le Coup de Boost l'ouvre et corrige dans la foulée.",

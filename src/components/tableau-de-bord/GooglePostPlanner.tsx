@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
 import { RiImageLine, RiMore2Fill, RiShieldCheckFill } from "@remixicon/react";
 import { approveGooglePostAction, planGooglePostsAction } from "@/features/dashboard/actions";
+import { ROUTES } from "@/constants/routes";
 import { photoAt } from "./maps/place-format";
 import { Card, CardTitle } from "./Card";
+import { GatePanel } from "./TierGate";
 
 /**
  * Le rythme de posts de la fiche, montré comme Google le montrera.
@@ -22,6 +25,10 @@ import { Card, CardTitle } from "./Card";
  * validation du compte marchand que nous n'avons pas. Le post est écrit ici,
  * copié, puis collé dans la fiche. Le calendrier tient le rythme, il ne promet
  * pas une publication qui n'aurait pas lieu.
+ *
+ * Sous voile — un compte gratuit —, la carte montre le cadre du post à sa
+ * taille réelle, vide et flouté, avec l'appel posé dessus. Aucun post n'est
+ * écrit : le bouton mène aux tarifs, et pas au modèle.
  */
 
 const GM = {
@@ -47,9 +54,12 @@ export function GooglePostPlanner({
   posts,
   /** Le nom du commerce, celui qui signe le post sur la fiche. */
   businessName,
+  /** L'offre n'ouvre pas la rédaction : le cadre se montre, jamais le texte. */
+  locked = false,
 }: {
   posts: PostRow[];
   businessName: string;
+  locked?: boolean;
 }) {
   const t = useTranslations("dashboard.maps");
   const router = useRouter();
@@ -77,14 +87,23 @@ export function GooglePostPlanner({
         title={t("postsTitle")}
         hint="Un lundi sur l'autre, prêt à copier dans Google Business Profile."
         action={
-          <button
-            type="button"
-            onClick={() => plan.execute({ count: 4, everyDays: 7 })}
-            disabled={plan.isPending}
-            className="cursor-pointer rounded-pill border border-border bg-surface px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-200 hover:bg-mist disabled:opacity-60"
-          >
-            {plan.isPending ? t("planning") : posts.length ? t("planMore") : t("plan")}
-          </button>
+          locked ? (
+            <Link
+              href={ROUTES.pricing}
+              className="rounded-pill bg-cta px-4 py-2 text-[13px] font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
+            >
+              {t("plan")}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => plan.execute({ count: 4, everyDays: 7 })}
+              disabled={plan.isPending}
+              className="cursor-pointer rounded-pill border border-border bg-surface px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-200 hover:bg-mist disabled:opacity-60"
+            >
+              {plan.isPending ? t("planning") : posts.length ? t("planMore") : t("plan")}
+            </button>
+          )
         }
       />
 
@@ -92,7 +111,9 @@ export function GooglePostPlanner({
         <p className="mb-3 text-sm text-danger">{plan.result.serverError}</p>
       ) : null}
 
-      {posts.length === 0 ? (
+      {locked ? (
+        <VeiledPost businessName={businessName} />
+      ) : posts.length === 0 ? (
         <p className="rounded-2xl bg-mist px-4 py-8 text-center text-sm text-muted">{t("empty")}</p>
       ) : (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -167,6 +188,54 @@ export function GooglePostPlanner({
         </div>
       )}
     </Card>
+  );
+}
+
+/**
+ * Le cadre du post, sans le post.
+ *
+ * La vignette garde ses proportions et l'en-tête au nom du commerce — c'est ce
+ * qui la rend reconnaissable —, l'image et le texte restent des aplats. Rien
+ * n'a été rédigé : le voile ne cache pas un post, il montre sa place.
+ */
+function VeiledPost({ businessName }: { businessName: string }) {
+  return (
+    <div className="relative isolate grid overflow-hidden rounded-2xl">
+      <div
+        aria-hidden
+        inert
+        className="pointer-events-none select-none blur-[6px] [grid-area:1/1]"
+      >
+        <div className="flex gap-4 overflow-hidden">
+          {[0, 1, 2].map((index) => (
+            <div
+              key={index}
+              className="w-[300px] shrink-0 overflow-hidden rounded-2xl border border-[#e8eaed] bg-white"
+            >
+              <div className="flex items-center gap-2.5 px-4 py-3">
+                <span className="size-8 shrink-0 rounded-full bg-mist" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium text-[#202124]">
+                    {businessName}
+                  </span>
+                  <span className="mt-1 block h-2 w-20 rounded-full bg-mist" />
+                </span>
+              </div>
+              <div className="h-[150px] w-full bg-mist" />
+              <div className="space-y-2 px-4 py-3.5">
+                <span className="block h-3 w-4/5 rounded-full bg-mist" />
+                <span className="block h-3 w-full rounded-full bg-mist" />
+                <span className="block h-3 w-3/5 rounded-full bg-mist" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="[grid-area:1/1]">
+        <GatePanel offer="allin" item="mapsPosts" />
+      </div>
+    </div>
   );
 }
 

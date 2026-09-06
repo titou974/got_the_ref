@@ -223,3 +223,113 @@ export function boxCount(attributes: MapsAttributeAdvice[]): { checked: number; 
   const missing = attributes.reduce((sum, group) => sum + group.suggested.length, 0);
   return { checked, total: checked + missing };
 }
+
+/**
+ * La même liste, pour un compte gratuit : un chantier par élément de la fiche.
+ *
+ * La liste payante ne montre que ce qui cloche — c'est ce qu'on attend d'un
+ * plan de travail. Un compte gratuit, lui, vient d'apprendre que sa fiche
+ * existe chez nous : lui rendre trois lignes parce que sa description est déjà
+ * écrite ne lui apprend pas ce que le produit fait de sa fiche. Il reçoit donc
+ * les huit chantiers, dans le même ordre, avec les comptes réels là où ils
+ * existent — sept avis sans réponse, quatre cases vides — et l'annonce du geste
+ * là où il n'y a rien à compter.
+ *
+ * Rien n'est rédigé pour autant : aucun de ces chantiers n'appelle un modèle.
+ * Ils disent ce qui va être écrit, et leur tiroir montre la place de la
+ * correction sous voile (cf. `MapsVeil`). C'est la promesse tenue à l'envers de
+ * l'habitude : on montre l'emplacement exact du travail, pas le travail.
+ */
+export function buildMapsPreviewTasks(input: {
+  place: GooglePlace;
+  attributes: MapsAttributeAdvice[];
+  /** Avis relevés sans réponse du commerce. */
+  pendingReviews: number;
+  coherenceMismatches: number;
+}): MapsTask[] {
+  const { place, attributes, pendingReviews } = input;
+
+  const missingBoxes = attributes.reduce((sum, group) => sum + group.suggested.length, 0);
+  const missingFields = placeChecks(place).filter((check) => !check.ok);
+  const mismatches = input.coherenceMismatches;
+
+  return [
+    {
+      id: "reviews",
+      title: pendingReviews > 0 ? `Répondre à ${pendingReviews} avis` : "Répondre à vos avis",
+      detail:
+        pendingReviews > 0
+          ? "Google mesure votre délai de réponse, et un client qui lit une réponse revient."
+          : "Chaque nouvel avis reçoit sa réponse, écrite dans le ton relevé sur votre site.",
+      target: { kind: "anchor", anchor: MAPS_ANCHORS.reviews },
+      cta: "Ouvrir",
+    },
+    {
+      id: "name",
+      title: "Renforcer le nom de la fiche",
+      detail: "Le nom que Google affiche en tête, et sur lequel il vous classe.",
+      target: drawer,
+      cta: "Voir la correction",
+    },
+    {
+      id: "description",
+      title: place.description ? "Réécrire la description courte" : "Écrire la description courte",
+      detail: place.description
+        ? "Les deux lignes sous le nom, alignées sur le mot-clé de votre site."
+        : "Le champ est vide sur votre fiche : ce sont les deux lignes sous votre nom.",
+      target: drawer,
+      cta: "Voir la correction",
+    },
+    {
+      id: "about",
+      title: place.ownerDescription
+        ? "Réécrire la présentation « À propos »"
+        : "Écrire la présentation « À propos »",
+      detail: place.ownerDescription
+        ? "Le texte que les assistants citent quand on demande ce que vous faites."
+        : "Le champ est vide : c'est le seul texte de la fiche que vous écrivez vous-même.",
+      target: drawer,
+      cta: "Voir la correction",
+    },
+    {
+      id: "attributes",
+      title: missingBoxes > 0 ? `Cocher ${missingBoxes} case${missingBoxes > 1 ? "s" : ""}` : "Revoir vos cases",
+      detail:
+        missingBoxes > 0
+          ? "Les cases que Google propose à votre catégorie, et que votre fiche n'a pas cochées."
+          : "Ce que Google propose de cocher pour votre catégorie, trié pour votre commerce.",
+      target: drawer,
+      cta: "Voir la correction",
+    },
+    {
+      id: "fields",
+      title:
+        missingFields.length > 0
+          ? `Remplir ${missingFields.length} champ${missingFields.length > 1 ? "s" : ""} de la fiche`
+          : "Relire les champs de la fiche",
+      detail:
+        missingFields.length > 0
+          ? "Ce que Google vous laisse remplir et que vous n'avez pas rempli."
+          : "Photos, horaires, téléphone, site : ce que Google attend d'une fiche tenue.",
+      target: drawer,
+      cta: "Voir la correction",
+    },
+    {
+      id: "coherence",
+      title:
+        mismatches > 0
+          ? `Aligner ${mismatches} ligne${mismatches > 1 ? "s" : ""} entre la fiche et le site`
+          : "Comparer la fiche et le site",
+      detail: "Google recoupe les deux : ce qui se contredit lui fait douter des deux.",
+      target: drawer,
+      cta: "Voir la correction",
+    },
+    {
+      id: "posts",
+      title: "Préparer les posts du mois",
+      detail: "Quatre posts suffisent à tenir un mois. Ils s'écrivent d'après vos avis et vos photos.",
+      target: { kind: "anchor", anchor: MAPS_ANCHORS.posts },
+      cta: "Ouvrir le calendrier",
+    },
+  ];
+}

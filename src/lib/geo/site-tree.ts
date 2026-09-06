@@ -37,6 +37,11 @@ export type SiteNode = {
   note: string;
   /** Le contenu que la plateforme déposerait, quand elle sait l'écrire. */
   fix?: { kind: StructureFileKind; content: string };
+  /**
+   * La ligne est sous voile : son nom et son relevé ont été retirés avant le
+   * rendu, et l'écran la floute (cf. `veilSiteTree`).
+   */
+  veiled?: boolean;
 };
 
 export type SiteTree = {
@@ -171,5 +176,43 @@ export function buildSiteTree(result: GeoAnalysisResult): SiteTree {
     warnCount: count("warn"),
     okCount: count("ok"),
     hasFixes: fixes.size > 0,
+  };
+}
+
+/**
+ * Le même squelette, mais sans dire lesquelles des lignes manquent.
+ *
+ * C'est la forme rendue à un compte gratuit. L'arbre reste entier — la racine,
+ * les sept adresses, l'indentation, les compteurs en tête —, et seules les
+ * lignes qui portent un correctif perdent leur nom, leur relevé et le contenu
+ * du fichier. Le client voit donc qu'il manque trois choses à sa racine, et à
+ * quelle profondeur elles se posent, sans apprendre lesquelles.
+ *
+ * Le masquage est fait ici, au serveur, et pas au CSS. Un flou se retire en
+ * deux clics dans un inspecteur ; un nom de fichier jamais rendu ne se retire
+ * pas. Ce qui part vers le navigateur d'un compte gratuit ne contient ni le nom
+ * du fichier absent, ni une ligne de son contenu.
+ *
+ * Les lignes en place restent nettes : elles ne se vendent pas, elles se
+ * constatent, et ce sont elles qui rendent l'arbre lisible.
+ */
+export function veilSiteTree(tree: SiteTree): SiteTree {
+  return {
+    ...tree,
+    nodes: tree.nodes.map((node) => {
+      if (node.status !== "missing" && node.status !== "warn") return node;
+      return {
+        key: node.key,
+        depth: node.depth,
+        // Une longueur plausible, jamais la vraie : « llms.txt » et
+        // « meta description » ne font pas la même largeur, et la largeur seule
+        // suffirait à deviner la ligne.
+        name: "••••••••••",
+        glyph: "•••",
+        status: node.status,
+        note: "",
+        veiled: true,
+      };
+    }),
   };
 }

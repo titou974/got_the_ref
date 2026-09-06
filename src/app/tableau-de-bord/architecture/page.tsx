@@ -1,12 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { businessHint, getDashboardContext } from "@/features/dashboard/queries";
-import { buildSiteTree } from "@/lib/geo/site-tree";
+import { buildSiteTree, veilSiteTree } from "@/lib/geo/site-tree";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
 import { SiteSkeleton } from "@/components/geo/SiteSkeleton";
-import { SectionGate } from "@/components/tableau-de-bord/SectionGate";
 import { StructureIntroModal } from "@/components/tableau-de-bord/StructureIntroModal";
+import { TierGate } from "@/components/tableau-de-bord/TierGate";
 import { canOpen } from "@/constants/access";
 
 export const maxDuration = 300;
@@ -34,6 +34,12 @@ export const maxDuration = 300;
  *
  * La grille du contenu éditorial est passée, elle, à l'écran Contenu, où sa
  * note se calcule.
+ *
+ * L'écran ne se ferme plus en bloc pour un compte gratuit : la carte reste
+ * lisible, l'arbre entier, les lignes en place en vert. Seules celles qui
+ * manquent sont masquées — au serveur, pas à la feuille de style — et l'appel
+ * passe en pied de carte. C'est la forme du site qu'on montre ; c'est le nom du
+ * fichier absent et son contenu qu'on vend.
  */
 export default async function ArchitecturePage() {
   const user = await requireUser();
@@ -46,9 +52,17 @@ export default async function ArchitecturePage() {
   const analysis = context.analysis;
   const tree = buildSiteTree(analysis);
 
-  // La page entière passe sous voile quand l'offre ne l'ouvre pas : le client
-  // voit la forme du squelette sans qu'aucune de ses valeurs ne soit rendue, et
-  // l'appel le mène aux tarifs (cf. `SectionGate`).
+  // Le squelette reste au-dessus du voile quand l'offre ne l'ouvre pas, et
+  // c'est le seul écran du produit à s'ouvrir ainsi. Il ne coûte aucun appel —
+  // l'arbre se déduit de l'analyse déjà en base — et c'est la pièce qui se
+  // comprend sans explication : sept adresses, celles qui répondent en vert,
+  // celles qui manquent masquées à leur place exacte. Le client voit la forme
+  // de son site et l'endroit du trou ; ce qu'il achète, c'est le nom du fichier
+  // absent et le contenu prêt à déposer.
+  //
+  // Le masquage est fait au serveur (cf. `veilSiteTree`) : les noms, les notes
+  // et le contenu des correctifs ne partent tout simplement pas dans la page.
+  // Un flou de feuille de style se retire dans un inspecteur.
   const locked = !canOpen(context.tier, "architecture");
 
   // Le dépôt demande un rattachement vivant ET un connecteur qui sait écrire :
@@ -62,18 +76,28 @@ export default async function ArchitecturePage() {
       <PageHeader title={t("pageTitle")} subtitle={ta("architecture.subtitle")} />
 
       {/* Ce que l'écran fait, une seule fois, pour les offres qui l'ouvrent. Sous
-          voile, l'arborescence n'a aucune valeur à montrer : l'expliquer ne
-          servirait qu'à vendre. */}
+          voile, les lignes qui manquent n'ont pas de nom : expliquer comment les
+          déposer ne servirait qu'à vendre. */}
       {locked ? null : <StructureIntroModal domain={analysis.signals.domain} />}
 
-      <SectionGate section="architecture" locked={locked}>
+      {locked ? (
+        <TierGate offer="boost" item="architectureFiles" reveal values={{ count: tree.missingCount }}>
+          <SiteSkeleton
+            tree={veilSiteTree(tree)}
+            stack={analysis.signals.stack ?? null}
+            pagesCrawled={analysis.signals.crawl.pagesCrawled}
+            canApply={false}
+            locked
+          />
+        </TierGate>
+      ) : (
         <SiteSkeleton
           tree={tree}
           stack={analysis.signals.stack ?? null}
           pagesCrawled={analysis.signals.crawl.pagesCrawled}
           canApply={canApply}
         />
-      </SectionGate>
+      )}
     </>
   );
 }

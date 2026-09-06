@@ -155,8 +155,26 @@ export function offerForTier(required: AccessTier): UpsellOffer {
   return required === "allin" ? "allin" : "boost";
 }
 
+/**
+ * L'offre mise en avant sur un onglet fermé, badge de la barre latérale compris.
+ *
+ * Elle suit le niveau exigé par la section, à une exception écrite ici : les
+ * articles. `SECTION_TIER.articles` reste au Coup de Boost — la passe donne
+ * bien dix articles sur une semaine (cf. `plans.ts`, `BOOST_ARTICLE_WINDOW_DAYS`)
+ * et un client qui l'a payée garde son onglet ouvert. Mais à qui n'a encore
+ * rien pris, c'est l'abonnement qu'on montre : la rédaction n'a de valeur que
+ * répétée, et vendre une semaine à quelqu'un qui découvre le calendrier du mois
+ * lui promet moins que ce qu'il a sous les yeux.
+ *
+ * L'écart ne touche donc que la vitrine — le badge et le texte du voile. La
+ * porte, elle, reste ouverte par `canOpen`, sur `SECTION_TIER`.
+ */
+const SECTION_UPSELL: Partial<Record<DashboardSection, UpsellOffer>> = {
+  articles: "allin",
+};
+
 export function offerFor(section: DashboardSection): UpsellOffer {
-  return offerForTier(SECTION_TIER[section]);
+  return SECTION_UPSELL[section] ?? offerForTier(SECTION_TIER[section]);
 }
 
 export function offerForBlock(block: HomeBlock): UpsellOffer {
@@ -237,6 +255,37 @@ export const PENDING_FIXES_RANGE: readonly [number, number] = [10, 20];
 export function seesRecommendation(tier: AccessTier, category: string): boolean {
   if (tierAtLeast(tier, "boost")) return true;
   return (FREE_RECOMMENDATION_CATEGORIES as readonly string[]).includes(category);
+}
+
+/**
+ * Le relevé de la fiche Google Maps, ouvert au compte gratuit — une fois.
+ *
+ * La fiche est le seul objet du produit que le client reconnaît immédiatement :
+ * sa photo, sa note, ses avis, tels que Google les montre. La lui cacher
+ * derrière un voile revenait à vendre un travail sur une fiche qu'on ne lui
+ * avait jamais prouvé savoir lire. Le relevé part donc dès qu'il colle son
+ * lien, et l'écran se remplit de sa propre fiche.
+ *
+ * Une fois, et pas deux : chaque relevé est un run Apify facturé. Le compte
+ * gratuit obtient son premier passage, jamais l'actualisation — c'est elle qui
+ * se paie, puisque c'est elle qui se répète semaine après semaine.
+ *
+ * Ce qui reste fermé, c'est tout ce qui s'écrit : les textes de la fiche, les
+ * réponses aux avis, les posts. Aucun appel au modèle ne part pour un compte
+ * gratuit sur cette page — les corrections y sont annoncées et voilées, pas
+ * rédigées (cf. `MapsVeil`).
+ */
+export const FREE_MAPS_FETCHES = 1;
+
+/**
+ * Le relevé de la fiche peut-il partir ?
+ *
+ * `alreadyFetched` est la seule mémoire nécessaire : une ligne `MapsPlace`
+ * existe, donc le passage gratuit a eu lieu.
+ */
+export function canFetchPlace(tier: AccessTier, alreadyFetched: boolean): boolean {
+  if (tierAtLeast(tier, SECTION_TIER.maps)) return true;
+  return !alreadyFetched;
 }
 
 /**
