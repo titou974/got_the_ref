@@ -10,7 +10,10 @@ import { buildDemoAiTraffic } from "@/features/dashboard/demoTraffic";
 import { buildDiagnostic, type AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import { scoreLabel } from "@/lib/score";
 import type { Recommendation } from "@/lib/geo/types";
-import { getAnalysisProgress, getRefreshState } from "@/features/dashboard/progress";
+import {
+  getAnalysisProgress,
+  getRefreshState,
+} from "@/features/dashboard/progress";
 import { PageHeader } from "@/components/tableau-de-bord/Card";
 import { AnalysisProgressCard } from "@/components/tableau-de-bord/AnalysisProgressCard";
 import { AnalysisRefreshBanner } from "@/components/tableau-de-bord/AnalysisRefreshBanner";
@@ -83,8 +86,13 @@ export default async function DashboardHomePage() {
   // appels-là doivent partir maintenant. On repasse donc par le même écran
   // d'attente que la mise en route — même barre, même animation : le client
   // reconnaît ce qu'il regarde, et il n'a rien à cliquer.
-  if (!context.analysis || analysisNeedsUpgrade(context.analysis.accessTier, context.tier)) {
-    return <PreparingAnalysis tier={context.tier} business={businessHint(context)} />;
+  if (
+    !context.analysis ||
+    analysisNeedsUpgrade(context.analysis.accessTier, context.tier)
+  ) {
+    return (
+      <PreparingAnalysis tier={context.tier} business={businessHint(context)} />
+    );
   }
 
   const analysis = context.analysis;
@@ -134,7 +142,10 @@ export default async function DashboardHomePage() {
     .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
     .slice(0, VEILED_RECOMMENDATION_PREVIEW);
 
-  const pendingFixes = countPendingFixes(diagnostic, lockedRecommendations.length);
+  const pendingFixes = countPendingFixes(
+    diagnostic,
+    lockedRecommendations.length,
+  );
 
   const date = new Date(analysis.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -219,7 +230,7 @@ export default async function DashboardHomePage() {
              qu'à partir de la deuxième mesure — avant, il n'y a rien à
              comparer. Elle est ouverte à tous les niveaux : c'est une lecture
              en base, et la progression est ce qui donne envie de continuer. */}
-      {progress ? <AnalysisProgressCard progress={progress} /> : null}
+      {/* {progress ? <AnalysisProgressCard progress={progress} /> : null} */}
 
       {/* 3. Sur quoi et où nous l'avons interrogé. Les classements qui suivent
              ne veulent rien dire sans ces deux mots-là : c'est la requête
@@ -283,12 +294,13 @@ export default async function DashboardHomePage() {
               />
             </TierGate>
           )}
-          {openRecommendations.length === 0 && lockedRecommendations.length === 0 && (
-            <Recommendations
-              recommendations={[]}
-              emptyLabel={ta("results.noRecommendations")}
-            />
-          )}
+          {openRecommendations.length === 0 &&
+            lockedRecommendations.length === 0 && (
+              <Recommendations
+                recommendations={[]}
+                emptyLabel={ta("results.noRecommendations")}
+              />
+            )}
         </div>
       </section>
 
@@ -357,10 +369,14 @@ const PRIORITY_RANK: Record<Recommendation["priority"], number> = {
  * site déjà propre n'a pas de quoi remplir une passe, et un site en ruine en
  * afficherait quarante, ce qui décourage au lieu de vendre.
  */
-function countPendingFixes(diagnostic: AnalysisDiagnostic, lockedCount: number): number {
-  const failed = [...diagnostic.architecture.checks, ...diagnostic.content.checks].filter(
-    (check) => check.status === "ko" || check.status === "warn",
-  ).length;
+function countPendingFixes(
+  diagnostic: AnalysisDiagnostic,
+  lockedCount: number,
+): number {
+  const failed = [
+    ...diagnostic.architecture.checks,
+    ...diagnostic.content.checks,
+  ].filter((check) => check.status === "ko" || check.status === "warn").length;
 
   const [min, max] = PENDING_FIXES_RANGE;
   return Math.min(max, Math.max(min, failed + lockedCount));
