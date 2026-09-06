@@ -81,7 +81,12 @@ export function RankingsSection({
           </button>
           {result.serverError ? (
             <span className="max-w-xs text-right text-xs text-danger">{result.serverError}</span>
-          ) : null}
+          ) : (
+            // La cadence est annoncée avant le clic, pas découverte par un
+            // refus rouge : quatre API payantes ne se rejouent qu'une fois par
+            // semaine, et le client doit pouvoir le lire sans essayer.
+            <span className="text-xs text-ash">{tr("cadence")}</span>
+          )}
         </span>
       </div>
 

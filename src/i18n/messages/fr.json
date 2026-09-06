@@ -1607,12 +1607,15 @@
       "since": "Depuis la mesure du {date}.",
       "sinceStart": "{value} points depuis la première analyse, partie de {from}.",
       "overall": "Note de visibilité",
-      "from": "contre {value} avant",
       "points": "points",
-      "historyLabel": "{count} mesures",
-      "unchanged": "Rien n'a bougé depuis la mesure précédente : mêmes notes, mêmes correctifs. Appliquez un correctif du plan d'action, puis reprenez l'analyse demain.",
-      "resolved": "Corrigés depuis ({count})",
-      "appeared": "Nouveaux points relevés ({count})"
+      "before": "{value} le {date}",
+      "now": "{value} aujourd'hui",
+      "unchanged": "Rien n'a bougé depuis la mesure précédente : la page lue est la même, les notes ne bougent donc pas. Appliquez un correctif du plan d'action, puis reprenez l'analyse demain.",
+      "enginesTitle": "Moteur par moteur",
+      "enginesPending": "Les classements se relèvent une fois par semaine. La comparaison moteur par moteur s'affiche au relevé suivant.",
+      "engineUp": "points gagnés",
+      "engineDown": "points perdus",
+      "engineFlat": "sans changement"
     },
     "gate": {
       "offers": {
@@ -1756,7 +1759,8 @@
     },
     "rankings": {
       "refresh": "Reprendre le relevé",
-      "refreshing": "Interrogation des trois moteurs…"
+      "refreshing": "Interrogation des trois moteurs…",
+      "cadence": "Un relevé par semaine."
     },
     "dock": {
       "eyebrow": "Prochaine publication",

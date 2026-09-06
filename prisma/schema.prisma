@@ -268,6 +268,14 @@ model Analysis {
   /// nouvelle reprise dans la journée.
   refreshedAt DateTime?
 
+  /// Empreinte des signaux du site au moment de la dernière notation. Deux
+  /// reprises qui lisent exactement la même page portent la même empreinte :
+  /// la seconde réutilise alors les notes de la première au lieu de redemander
+  /// un jugement au modèle, qui rendrait des chiffres légèrement différents sur
+  /// une page identique. C'est ce qui garantit qu'une note ne bouge que si le
+  /// site a bougé.
+  signalsHash String?
+
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -306,6 +314,12 @@ model AnalysisSnapshot {
   contentScore      Int
   /// `[{ "title": …, "category": …, "priority": …, "impact": … }]`.
   recommendations   String
+  /// `{ "ChatGPT": { "score": 62, "position": 9 }, … }` — la note et le rang
+  /// direct relevés pour chaque moteur au moment de la mesure. Sans cette
+  /// colonne, la carte de progression ne saurait pas dire si un moteur
+  /// particulier a monté : la note globale seule mélange les quatre.
+  /// Nullable : les instantanés écrits avant son ajout n'en ont pas.
+  engines           String?
   /// Ce qui a déclenché l'écriture : « initial » (mise en route ou achat) ou
   /// « refresh » (reprise quotidienne).
   reason            String   @default("refresh")

@@ -1,28 +1,29 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { RiArrowRightUpLine, RiCheckLine, RiFlagLine } from "@remixicon/react";
-import type { AnalysisProgress, ScoreDelta } from "@/features/dashboard/progress";
+import { RiArrowDownLine, RiArrowUpLine } from "@remixicon/react";
+import type { AnalysisProgress, EngineProgress } from "@/features/dashboard/progress";
+import { ENGINE_LOGOS } from "@/constants/engine-logos";
 import { Card } from "./Card";
-import { Sparkline } from "./Charts";
 
 /**
- * Le chemin parcouru : ce que la reprise du jour a fait bouger.
+ * Le chemin parcouru : est-ce que ça monte, et sur quels moteurs.
  *
- * La carte n'existe qu'à partir de la deuxième mesure — avant, il n'y a pas de
- * progression à raconter, et une carte pleine de « +0 » ferait passer un début
+ * La carte répond à deux questions, pas une de plus. Une barre porte la note de
+ * visibilité — d'où elle part, où elle en est — et quatre cartes disent, moteur
+ * par moteur, si la place gagnée l'a été chez ChatGPT, Gemini, Perplexity ou
+ * Claude. Le détail des correctifs, lui, vit dans le plan d'action : une carte
+ * de progression qui listait aussi les points relevés donnait à lire deux
+ * écrans à la fois, et laissait croire à un travail fait là où la mesure avait
+ * seulement bougé.
+ *
+ * Elle n'existe qu'à partir de la deuxième mesure — avant, il n'y a pas de
+ * progression à raconter, et une carte pleine de « 0 » ferait passer un début
  * pour un échec.
  *
- * Elle se lit en trois temps, du plus général au plus précis :
- *
- *   1. La règle. Une seule barre horizontale porte la note d'avant et celle
- *      d'aujourd'hui : le segment gagné est plein, ce qui restait avant est
- *      creux. C'est la figure de la carte — un client doit pouvoir dire s'il
- *      monte en un coup d'œil, sans lire un chiffre.
- *   2. Les notes qui composent la note. Architecture et contenu d'abord, ce
- *      sont les deux onglets qu'il ouvre pour corriger ; les six catégories GEO
- *      ensuite, dans l'ordre de leur poids.
- *   3. Les correctifs disparus. C'est la preuve du travail : la mesure ne les
- *      relève plus. Et ceux qui sont apparus, dits aussi franchement — un
- *      rapport qui ne montre que les bonnes nouvelles ne se croit plus.
+ * Un zéro, ici, est une information et non un défaut : les notes ne sont
+ * reprises que lorsque la page lue a changé (voir `signalsFingerprint`), donc
+ * une journée sans correction se lit « 0 » partout. C'est la condition pour
+ * qu'un « +4 » veuille dire quelque chose.
  */
 export async function AnalysisProgressCard({
   progress,
@@ -33,103 +34,71 @@ export async function AnalysisProgressCard({
 }) {
   const t = await getTranslations("dashboard.progress");
 
-  const { overall, sinceStart, sections, categories, resolved, appeared } = progress;
-  const since = new Date(progress.previous.createdAt).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "long",
-  });
+  const { overall, sinceStart, engines } = progress;
+  const day = (value: Date) =>
+    new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
 
-  // Rien n'a bougé : ni la note, ni les deux volets, ni un seul correctif. On
-  // le dit en une ligne plutôt qu'en douze lignes de zéros.
-  const still =
-    overall.delta === 0 &&
-    sections.every((section) => section.delta === 0) &&
-    categories.every((category) => category.delta === 0) &&
-    resolved.length === 0 &&
-    appeared.length === 0;
+  const still = overall.delta === 0 && engines.every((engine) => engine.delta === 0);
 
   return (
     <Card className="scroll-mt-24" id={id}>
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
         <div className="min-w-0">
           <h2 className="text-base font-semibold">{t("title")}</h2>
-          <p className="mt-0.5 text-sm text-muted">{t("since", { date: since })}</p>
+          <p className="mt-0.5 text-sm text-muted">
+            {t("since", { date: day(progress.previous.createdAt) })}
+          </p>
         </div>
         <p className="text-sm text-ash">
-          {t("sinceStart", {
-            value: signed(sinceStart.delta),
-            from: sinceStart.before,
-          })}
+          {t("sinceStart", { value: signed(sinceStart.delta), from: sinceStart.before })}
         </p>
       </div>
 
-      {still ? (
-        <p className="mt-5 text-sm text-muted">{t("unchanged")}</p>
-      ) : (
-        <>
-          {/* 1. La règle : la note d'hier, la note d'aujourd'hui, l'écart. */}
-          <div className="mt-5 flex flex-wrap items-end gap-x-8 gap-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-ash">
-                {t("overall")}
-              </p>
-              <p className="mt-1 flex items-baseline gap-2">
-                <span className="text-[40px] font-semibold leading-none tabular-nums">
-                  {overall.after}
-                </span>
-                <span className="text-sm text-muted tabular-nums">
-                  {t("from", { value: overall.before })}
-                </span>
-              </p>
-            </div>
-            <DeltaPill value={overall.delta} suffix={t("points")} />
-            {/* La courbe des relevés, quand il y en a assez pour qu'elle dise
-                quelque chose. Deux points font un trait, pas une tendance. */}
-            {progress.history.length >= 3 ? (
-              <div className="ml-auto text-right">
-                <Sparkline
-                  data={progress.history.map((point) => ({
-                    date: point.date,
-                    value: point.score,
-                  }))}
-                />
-                <p className="text-xs text-ash">
-                  {t("historyLabel", { count: progress.history.length })}
-                </p>
-              </div>
-            ) : null}
-          </div>
+      {/* La note, son écart, et la barre qui les tient ensemble. */}
+      <div className="mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <span className="text-[40px] font-semibold leading-none tabular-nums">
+          {overall.after}
+        </span>
+        <span className="text-sm text-muted">{t("overall")}</span>
+        <span className="ml-auto">
+          <DeltaPill value={overall.delta} suffix={t("points")} />
+        </span>
+      </div>
 
-          <ProgressRule before={overall.before} after={overall.after} />
+      <ProgressRule before={overall.before} after={overall.after} />
 
-          {/* 2. Les notes qui composent la note. */}
-          <div className="mt-6 grid gap-x-8 gap-y-1 sm:grid-cols-2">
-            {[...sections, ...categories].map((row) => (
-              <DeltaRow key={row.key} row={row} />
+      <div className="mt-2 flex justify-between text-xs text-ash tabular-nums">
+        <span>{t("before", { value: overall.before, date: day(progress.previous.createdAt) })}</span>
+        <span>{t("now", { value: overall.after })}</span>
+      </div>
+
+      {still ? <p className="mt-5 text-sm text-muted">{t("unchanged")}</p> : null}
+
+      {/* Un moteur par carte. Le nom, le logo, l'écart : rien d'autre. */}
+      <div className="mt-6 border-t border-border pt-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ash">
+          {t("enginesTitle")}
+        </p>
+        {engines.length > 0 ? (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {engines.map((engine) => (
+              <EngineDeltaCard
+                key={engine.engine}
+                engine={engine}
+                caption={
+                  engine.delta > 0
+                    ? t("engineUp")
+                    : engine.delta < 0
+                      ? t("engineDown")
+                      : t("engineFlat")
+                }
+              />
             ))}
           </div>
-
-          {/* 3. Ce qui a disparu du plan d'action, et ce qui s'y est ajouté. */}
-          {(resolved.length > 0 || appeared.length > 0) && (
-            <div className="mt-6 grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-              {resolved.length > 0 && (
-                <FixList
-                  tone="resolved"
-                  title={t("resolved", { count: resolved.length })}
-                  items={resolved.map((item) => item.title)}
-                />
-              )}
-              {appeared.length > 0 && (
-                <FixList
-                  tone="appeared"
-                  title={t("appeared", { count: appeared.length })}
-                  items={appeared.map((item) => item.title)}
-                />
-              )}
-            </div>
-          )}
-        </>
-      )}
+        ) : (
+          <p className="mt-2 text-sm text-muted">{t("enginesPending")}</p>
+        )}
+      </div>
     </Card>
   );
 }
@@ -154,18 +123,19 @@ function DeltaPill({ value, suffix }: { value: number; suffix: string }) {
     <span
       className={`inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-sm font-semibold tabular-nums ${tone}`}
     >
-      {value > 0 ? <RiArrowRightUpLine className="size-4" aria-hidden /> : null}
+      {value > 0 ? <RiArrowUpLine className="size-4" aria-hidden /> : null}
+      {value < 0 ? <RiArrowDownLine className="size-4" aria-hidden /> : null}
       {signed(value)} {suffix}
     </span>
   );
 }
 
 /**
- * La règle : une barre où le gain se voit comme un segment.
+ * La barre : l'acquis, puis le segment que la reprise ajoute ou retire.
  *
- * L'acquis d'hier est plein en gris, ce que la reprise ajoute est plein en
- * vert, et ce qui reste à prendre est creux. Une baisse se lit à l'envers : le
- * segment perdu est rouge, posé après la note d'aujourd'hui.
+ * Ce qui était déjà tenu est plein en gris ; ce que la mesure ajoute est vert,
+ * ce qu'elle retire est rouge, et la rupture de couleur marque à elle seule la
+ * note d'avant — un repère de plus posé au même endroit ne dirait rien de neuf.
  */
 function ProgressRule({ before, after }: { before: number; after: number }) {
   const low = Math.max(0, Math.min(100, Math.min(before, after)));
@@ -174,9 +144,9 @@ function ProgressRule({ before, after }: { before: number; after: number }) {
 
   return (
     <div
-      className="mt-4 flex h-2 w-full overflow-hidden rounded-pill bg-fog"
+      className="mt-4 flex h-2.5 w-full overflow-hidden rounded-pill bg-fog"
       role="img"
-      aria-label={`${before} → ${after}`}
+      aria-label={`${before} sur 100 avant, ${after} sur 100 aujourd'hui`}
     >
       <span className="h-full bg-graphite" style={{ width: `${low}%` }} />
       <span
@@ -187,62 +157,36 @@ function ProgressRule({ before, after }: { before: number; after: number }) {
   );
 }
 
-/** Une ligne de note : l'intitulé, le passage d'un chiffre à l'autre, l'écart. */
-function DeltaRow({ row }: { row: ScoreDelta }) {
-  const moved = row.delta !== 0;
-
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-border/70 py-2 last:border-0">
-      <span className="min-w-0 truncate text-sm text-text">{row.label}</span>
-      <span className="flex shrink-0 items-center gap-2 tabular-nums">
-        <span className="text-sm text-ash">{row.before}</span>
-        <span aria-hidden className="text-ash">
-          →
-        </span>
-        <span className="text-sm font-semibold">{row.after}</span>
-        <span
-          className={`w-10 text-right text-xs font-semibold ${
-            !moved ? "text-ash" : row.delta > 0 ? "text-success" : "text-danger"
-          }`}
-        >
-          {signed(row.delta)}
-        </span>
-      </span>
-    </div>
-  );
-}
-
-/** Les correctifs partis, ou arrivés. Cinq au plus : la carte n'est pas le plan. */
-function FixList({
-  tone,
-  title,
-  items,
+/** Un moteur, son écart. Le rang exact se lit dans la section « Classements IA ». */
+function EngineDeltaCard({
+  engine,
+  caption,
 }: {
-  tone: "resolved" | "appeared";
-  title: string;
-  items: string[];
+  engine: EngineProgress;
+  caption: string;
 }) {
-  const shown = items.slice(0, 5);
-  const rest = items.length - shown.length;
-  const Icon = tone === "resolved" ? RiCheckLine : RiFlagLine;
+  const logo = ENGINE_LOGOS[engine.engine];
+  const tone =
+    engine.delta > 0 ? "text-success" : engine.delta < 0 ? "text-danger" : "text-steel";
 
   return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-ash">{title}</p>
-      <ul className="mt-2 space-y-1.5">
-        {shown.map((item) => (
-          <li key={item} className="flex gap-2 text-sm leading-6 text-text">
-            <Icon
-              className={`mt-1 size-4 shrink-0 ${
-                tone === "resolved" ? "text-success" : "text-warning"
-              }`}
-              aria-hidden
-            />
-            <span className="min-w-0">{item}</span>
-          </li>
-        ))}
-      </ul>
-      {rest > 0 ? <p className="mt-1.5 text-xs text-ash">+ {rest}</p> : null}
+    <div className="rounded-[20px] bg-mist p-4">
+      <div className="flex items-center gap-2">
+        {logo ? (
+          <Image
+            src={logo}
+            alt=""
+            width={24}
+            height={24}
+            className="h-5 w-5 shrink-0 rounded"
+          />
+        ) : null}
+        <span className="truncate text-[15px] font-semibold">{engine.engine}</span>
+      </div>
+      <p className={`mt-3 text-[28px] font-semibold leading-none tabular-nums ${tone}`}>
+        {signed(engine.delta)}
+      </p>
+      <p className="mt-1 text-[13px] text-muted">{caption}</p>
     </div>
   );
 }
