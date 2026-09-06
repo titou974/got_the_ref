@@ -1,75 +1,134 @@
 import { Nav } from "@/components/Nav";
-import { UrlAnalyzeForm } from "@/components/UrlAnalyzeForm";
-import { AiSearchSimulation } from "@/components/AiSearchSimulation";
+import { Footer } from "@/components/Footer";
 import { ProofSection } from "@/components/ProofSection";
 import { ResultsCarousel } from "@/components/ResultsCarousel";
-import { WorksWith } from "@/components/WorksWith";
-import { ScrollTopCta } from "@/components/ScrollTopCta";
-import Image from "next/image";
+import { HomeHero, HERO_ID } from "@/components/home/HomeHero";
+import { StickyCtaBar } from "@/components/home/StickyCtaBar";
+import { SectorsMarquee } from "@/components/home/SectorsMarquee";
+import { HowItWorks } from "@/components/home/HowItWorks";
+import { FeatureCards } from "@/components/home/FeatureCards";
+import { Audiences } from "@/components/home/Audiences";
+import { QueryChips } from "@/components/home/QueryChips";
+import { FreeAuditSection } from "@/components/home/FreeAuditSection";
+import { ExamplesSection } from "@/components/home/ExamplesSection";
+import { CitationNetwork } from "@/components/home/CitationNetwork";
+import { RankAndMentions } from "@/components/home/RankAndMentions";
+import { PricingComparison } from "@/components/pricing/PricingComparison";
+import { DemoCtaSection } from "@/components/home/DemoCtaSection";
+import { Faq } from "@/components/home/Faq";
 import { getTranslations } from "next-intl/server";
-import { AI_ENGINE_LOGOS } from "@/constants/site";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { resolveHomeDestination } from "@/features/auth/destination";
+import { ROUTES } from "@/constants/routes";
+import { TRIAL } from "@/constants/plans";
+import { isDemoFirst } from "@/features/experiments/path";
 
-const LOGO_ALT_KEYS = {
-  openai: "logoOpenaiAlt",
-  gemini: "logoGeminiAlt",
-} as const;
-
+/**
+ * La home suit une progression volontaire : promesse → secteurs → méthode →
+ * résultats → produit → analyse gratuite → exemples → preuves → réseau →
+ * Google et assistants → comparatif agence → démo → questions.
+ *
+ * Le prix n'arrive qu'à la fin, une fois la démonstration faite ; la démo prend
+ * le relais juste après, pour qui préfère en parler plutôt que souscrire.
+ *
+ * Rien ne s'intercale avant : le visiteur voit le tarif sans avoir à ouvrir de
+ * compte. L'inscription reste accessible par la barre, mais elle ne barre plus
+ * la route au prix — ce verrou vit sur la branche `worktree-auth-gate`.
+ *
+ * Le champ d'analyse ne vit plus dans le hero : en haut, un seul geste est
+ * proposé (démarrer l'essai) à côté de la conversation IA qui se joue seule.
+ * L'analyse arrive une fois la démonstration faite, là où coller son adresse a
+ * un sens — l'ancre `#analyser` reste valable pour tous les liens du site.
+ *
+ * Un client dont l'espace tourne ne voit pas cette page : elle argumente pour
+ * une décision qu'il a déjà prise. On l'emmène là où il en est — le tunnel
+ * d'accueil s'il a pris un essai ou un abonnement sans avoir encore lancé son
+ * analyse, son tableau de bord dès qu'elle existe.
+ *
+ * Mais un compte gratuit tout juste ouvert, lui, reste ici. Il vient souvent de
+ * la flèche de retour des tarifs, et l'expédier dans le tunnel d'accueil le
+ * piégeait : chaque retour arrière le ramenait à la home, qui le renvoyait au
+ * tunnel. La règle est écrite une fois pour toutes dans
+ * `resolveHomeDestination` — voir aussi `resolveAuthDestination`, qui répond à
+ * la question voisine mais différente du lendemain d'une identification.
+ */
 export default async function Home() {
-  const t = await getTranslations("home");
+  const user = await getCurrentUser();
+  if (user) {
+    const destination = await resolveHomeDestination(user.id);
+    if (destination) redirect(destination);
+  }
+
+  const t = await getTranslations("homeHero");
+
+  // La barre basse reprend l'appel du haut de page, branche comprise : ce que le
+  // bouton promet doit être ce que la page suivante propose (cf. `HomeHero`).
+  const demoFirst = await isDemoFirst();
 
   return (
     <main className="flex min-h-dvh flex-col">
-      <Nav />
-      <section
-        id="analyser"
-        className="mx-auto grid w-full max-w-6xl flex-1 scroll-mt-4 grid-cols-1 items-center gap-10 px-5 py-2 lg:grid-cols-2 lg:gap-14 lg:py-6"
-      >
-        {/* Colonne gauche : message + input central */}
-        <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-          <div className="flex gap-3">
-            {AI_ENGINE_LOGOS.map((logo) => (
-              <div key={logo.key} className="flex h-10 w-10 items-center justify-center rounded-xl border border-fog bg-snow p-2 sm:h-11 sm:w-11 sm:rounded-2xl">
-                <Image
-                  src={logo.src}
-                  alt={t(LOGO_ALT_KEYS[logo.key])}
-                  width={100}
-                  height={100}
-                />
-              </div>
-            ))}
-          </div>
+      {/* Pas de « Déconnexion » ici : c'est la page de vente, et un compte qui
+          la lit est justement celui qu'on n'a pas encore convaincu. La sortie
+          de session reste dans le tiroir mobile et dans les réglages du tableau
+          de bord. */}
+      <Nav showSignOut={false} />
 
-          <h1 className="mt-5 text-balance text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
-            {t("headingBefore")}
-            <span className="text-gradient">{t("headingHighlight")}</span>
-            {t("headingAfter")}
-          </h1>
+      <HomeHero />
+      <SectorsMarquee />
+      <HowItWorks />
 
-          <p className="mt-4 max-w-md text-pretty text-base text-muted sm:text-lg">
-            {t("subtitle")}
-          </p>
+      {/* Ce que ça change, chiffres et paroles de clients à l'appui */}
+      <ResultsCarousel className="py-10 sm:py-14" />
 
-          <div className="mt-7 w-full max-w-lg">
-            <UrlAnalyzeForm size="lg" />
+      {/* Le produit, carte par carte */}
+      <FeatureCards />
 
-            {/* Lève l'objection « ça marche avec mon site ? » là où elle se pose. */}
-            <WorksWith className="mt-7" />
-          </div>
-        </div>
+      {/* Les deux publics : en ligne et de quartier */}
+      <Audiences />
 
-        {/* Colonne droite : simulation IA animée */}
-        <div className="w-full">
-          <AiSearchSimulation />
-          <p className="mt-3 text-center text-xs text-muted">
-            {t("simulationCaption")}
-          </p>
-        </div>
-      </section>
+      {/* Les requêtes suivies : ce que got_the_ref écoute vraiment */}
+      <QueryChips />
+
+      {/* L'analyse gratuite, une fois la démonstration faite */}
+      <FreeAuditSection />
+
+      {/* L'article produit pour un site donné, onglet par onglet */}
+      <ExamplesSection />
+
       {/* Preuve : un commerce réel cité par les IA, et le client qui en est venu */}
       <ProofSection />
 
-      <ResultsCarousel className="py-14" />
-      <ScrollTopCta label={t("scrollTopCta")} />
+      <CitationNetwork />
+      <RankAndMentions />
+
+      {/* Ce que l'abonnement évite, sans annoncer de montant : le prix se
+          découvre sur /tarifs, une fois le visiteur identifié. */}
+      <div className="mx-auto w-full max-w-5xl px-5 pb-4">
+        <PricingComparison />
+      </div>
+      <DemoCtaSection />
+
+      <Faq />
+      <Footer />
+
+      {/* Le CTA revient par le bas dès que le hero est dépassé, pour que
+          l'entrée reste à portée sur toute la longueur de la page.
+
+          Un compte gratuit lit maintenant cette page lui aussi : pour lui,
+          l'appel mène aux offres — l'essai s'y prend — et non au formulaire
+          d'inscription, qu'il a déjà rempli. */}
+      <StickyCtaBar
+        label={demoFirst ? t("demoBarCta") : t("trialBarCta", { days: TRIAL.days })}
+        heroId={HERO_ID}
+        href={
+          user
+            ? demoFirst
+              ? ROUTES.onboarding
+              : ROUTES.pricing
+            : ROUTES.signUp
+        }
+      />
     </main>
   );
 }

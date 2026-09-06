@@ -58,6 +58,18 @@ export type CrawlSummary = {
   internalLinks: number; // liens internes détectés sur l'accueil
 };
 
+/**
+ * Plateforme qui sert le site, reconnue depuis les empreintes publiques de la
+ * page d'accueil (voir `lib/geo/stack.ts`). `null` quand le site n'en laisse
+ * aucune.
+ */
+export type DetectedStack = {
+  id: string; // clé du registre `constants/platforms` (« shopify », « nextjs »…)
+  name: string; // nom affiché (« Shopify »)
+  confidence: "sure" | "probable";
+  evidence: string; // marqueur qui a permis la reconnaissance, en clair
+};
+
 /** Signaux techniques collectés de manière déterministe (sans IA). */
 export type SiteSignals = {
   url: string;
@@ -80,6 +92,7 @@ export type SiteSignals = {
   firstParagraph: string | null; // 1ʳᵉ phrase du 1ᵉʳ paragraphe substantiel de la page d'accueil
   openingHoursHint: string | null; // horaires lus dans le JSON-LD (indice pour l'extraction)
   ratingHint: string | null; // note moyenne déclarée en JSON-LD (AggregateRating), ex. « 4.7/5 · 2500 avis »
+  stack: DetectedStack | null; // plateforme détectée (WordPress, Shopify, Next.js…)
   jsonLdTypes: string[];
   jsonLdCount: number;
   hasOpenGraph: boolean;
@@ -97,7 +110,7 @@ export type MapsListing = {
   scraped: boolean; // true si au moins une donnée a été récupérée
 };
 
-/** Backlinks / sources référentes estimées via recherche web (Claude). */
+/** Backlinks / sources référentes estimées par le modèle d'audit. */
 export type ReferringSource = { domain: string; note: string };
 export type Backlinks = {
   estimatedCount: number | null; // estimation (null si inconnu)
@@ -106,7 +119,22 @@ export type Backlinks = {
   measured: boolean; // true si issu d'une recherche web réelle
 };
 
-export type AiEngine = "ChatGPT" | "Gemini";
+/**
+ * Les assistants dont on relève réellement le classement.
+ *
+ * Une seule règle les fait entrer ici : aller lire le web avant de répondre.
+ * ChatGPT le fait par son outil de recherche, Gemini par le grounding Google
+ * Search, Perplexity par construction — c'est un moteur de réponse —, et Claude
+ * par son outil `web_search`. Un moteur qui répondrait de mémoire ne produirait
+ * pas un classement mais une liste plausible, indiscernable d'un vrai top 10 une
+ * fois affichée à côté des autres. Le classement est ce que le client vient
+ * vérifier chaque semaine : il ne peut pas être inventé.
+ *
+ * Claude a déjà figuré ici, puis en est sorti : il était alors servi par
+ * DeepSeek, faute de clé Anthropic, et DeepSeek ne cherche pas sur le web. Il
+ * revient interrogé par sa propre API, recherche web activée.
+ */
+export type AiEngine = "ChatGPT" | "Gemini" | "Perplexity" | "Claude";
 
 /**
  * Classement d'un commerce pour UN moteur sur UNE requête.
@@ -119,6 +147,13 @@ export type EngineRanking = {
   measured: boolean; // true = classement réel (API moteur), false = estimation
   targetRank: number | null; // rang du commerce (null = hors classement)
   competitors: Competitor[]; // établissements classés (top ~10)
+  /**
+   * Date du relevé, en ISO. Un moteur qui ne répond pas garde son dernier
+   * classement réel plutôt que d'en recevoir un estimé : l'interface a besoin
+   * de cette date pour dire que le top 10 affiché date d'avant aujourd'hui.
+   * Absente sur les analyses antérieures à ce champ.
+   */
+  measuredAt?: string | null;
 };
 
 /** Score GEO et classements (direct + indirect) pour un moteur IA donné. */
@@ -134,7 +169,7 @@ export type EngineScore = {
 /**
  * Profil détecté du commerce : pivot de toute l'analyse localisée.
  * `mode` est fourni par l'utilisateur (onglet physique/en ligne) ;
- * la niche, la catégorie et la localisation sont déduites par Claude.
+ * la niche, la catégorie et la localisation sont déduites par le modèle d'audit.
  */
 export type BusinessProfile = {
   mode: BusinessMode; // déclaré par l'utilisateur
@@ -143,6 +178,21 @@ export type BusinessProfile = {
   generalCategory: string; // catégorie large (ex. « Restaurant »)
   location: string | null; // ville / zone si commerce physique, sinon null
 };
+
+/**
+ * Les moteurs dont le tableau de bord relève et affiche le classement, dans
+ * leur ordre d'affichage.
+ *
+ * Les mêmes que partout ailleurs : il n'y a plus de moteur évalué dans l'audit
+ * mais caché du tableau de bord. L'ordre compte, les cartes tombant deux par
+ * rangée : d'abord les deux moteurs qu'un commerçant nomme de lui-même, puis
+ * les deux qu'on lui apprend à surveiller.
+ *
+ * La liste sert aussi de liste blanche à la relecture d'une analyse enregistrée.
+ * Un moteur retiré du produit reste écrit dans les analyses déjà en base : on
+ * l'écarte plutôt que d'afficher une carte sans logo ni relevé.
+ */
+export const DASHBOARD_ENGINES: AiEngine[] = ["ChatGPT", "Gemini", "Perplexity", "Claude"];
 
 export type BusinessMode = "physical" | "online";
 
@@ -190,6 +240,15 @@ export type OnPageCheck = {
   status: "ok" | "warn" | "ko";
   signals: OnPageSignal[]; // critères attendus et leur présence
   note: string; // diagnostic court + conseil
+  /**
+   * Le correctif : l'élément réécrit, prêt à coller sur la page.
+   *
+   * Un diagnostic sans réécriture laisse le client devant la même page et le
+   * même problème. `note` dit ce qui manque, `suggestion` donne le texte à
+   * mettre à la place. `null` quand l'élément est déjà bon, ou quand le modèle
+   * n'a rien produit d'exploitable.
+   */
+  suggestion: string | null;
 };
 
 /** Audit des éléments on-page clés + horaires d'ouverture extraits du site. */
@@ -199,6 +258,49 @@ export type OnPageContent = {
   h1: OnPageCheck; // attendus : mots-clés de la niche
   firstSentence: OnPageCheck; // attendu : résume l'activité + l'adresse
   openingHours: string | null; // horaires d'ouverture lisibles, extraits du site
+};
+
+/**
+ * Un mot-clé tendance de la niche, et les emplacements on-page où il compte.
+ * `placements` dit où l'écrire : balise title, meta description, H1.
+ */
+export type KeywordPlacement = "title" | "metaDescription" | "h1";
+
+export type TrendingKeyword = {
+  keyword: string;
+  /** Intention derrière la requête (ex. « recherche locale », « comparaison »). */
+  intent: string;
+  /** Dynamique observée sur la période. */
+  trend: "montant" | "stable" | "émergent";
+  placements: KeywordPlacement[];
+};
+
+/**
+ * Mots-clés tendances de la niche + réécritures on-page prêtes à coller.
+ * Alimenté par Gemini (grounding Google Search) sur la version payante ; en
+ * gratuit, un repli déterministe fournit la même structure, affichée floutée.
+ */
+export type TrendingKeywordsInsight = {
+  /** true = généré par Gemini avec recherche Google ; false = repli déterministe. */
+  measured: boolean;
+  source: "gemini" | "heuristic";
+  /** Fenêtre de tendance annoncée, ex. « août 2026 ». */
+  period: string;
+  keywords: TrendingKeyword[];
+  /**
+   * Les quatre éléments on-page réécrits avec les mots-clés retenus.
+   *
+   * `firstParagraph` complète le trio historique : c'est le passage qu'une IA
+   * cite en premier quand elle résume une page d'accueil, et le laisser de côté
+   * revenait à corriger la vitrine sans toucher à la phrase qui est reprise.
+   */
+  suggested: {
+    title: string;
+    metaDescription: string;
+    h1: string;
+    firstParagraph: string;
+  };
+  notes: string[];
 };
 
 /** Analyse SEO Google classique (positionnement organique). */
@@ -248,12 +350,13 @@ export type GeoAnalysisResult = {
   mapsCoherence?: MapsCoherence | null; // analyse de cohérence locale (Phase 5)
   liveQuery?: string | null; // requête réellement testée sur les moteurs (Phase 6)
   backlinks?: Backlinks | null; // sources référentes estimées (Phase 6b, recherche web)
+  trendingKeywords?: TrendingKeywordsInsight | null; // mots-clés tendances de la niche (Gemini)
 };
 
 /** Simulation de recherche IA affichée sur le dashboard. */
 export type AiSimulation = {
   query: string;
-  engine: "ChatGPT" | "Gemini";
+  engine: AiEngine;
   appearsInResults: boolean;
   position: number | null;
   competitorsAhead: string[];

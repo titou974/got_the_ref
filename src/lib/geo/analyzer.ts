@@ -1,6 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
+import { askJson, isAiConfigured } from "@/lib/ai/client";
+import { askGeminiGrounded, isGeminiConfigured } from "@/lib/ai/gemini";
 import {
   CATEGORY_META,
+  DASHBOARD_ENGINES,
   type CategoryKey,
   type CategoryScore,
   type GeoAnalysisResult,
@@ -30,6 +33,7 @@ import {
   type MeasuredEngine,
   type LiveEngineResult,
 } from "./providers";
+import { fetchTrendingKeywords, fallbackTrendingKeywords } from "./keywords";
 import { scrapeMapsListing } from "./maps";
 import { FREE_SCORE_CAP } from "@/constants/plans";
 import { GEO_AUDIT_METHODOLOGY, DASHBOARD_MAPPING } from "./methodology";
@@ -39,17 +43,92 @@ import { geoLog } from "./log";
 export type AnalysisContext = {
   mode: BusinessMode;
   mapsUrl: string | null;
+  /**
+   * Niche et ville saisies pendant le tunnel d'accueil. Le client sait mieux que
+   * la détection automatique dans quel créneau il travaille : quand elles sont
+   * là, elles priment sur ce que le modèle déduit du site, car ce sont elles qui
+   * formulent la requête « top 10 » envoyée aux moteurs.
+   */
+  declaredNiche?: string | null;
+  declaredLocation?: string | null;
+  /**
+   * La manière d'écrire du client, relevée sur ses propres textes.
+   *
+   * Elle n'existe que sous abonnement « Tout-en-un » : c'est là qu'elle est
+   * lue, juste avant l'audit (cf. `ensureBrandIdentity`). Ailleurs elle vaut
+   * `null` et les correctifs restent dans une voix neutre.
+   *
+   * Elle n'entre pas dans la notation — un site ne se note pas sur son style —
+   * mais elle entre dans les CORRECTIFS : le H1 et le premier paragraphe
+   * proposés ici sont collés tels quels dans le CMS du client, et un texte qui
+   * ne lui ressemble pas ne sera pas publié.
+   */
+  brandTone?: string | null;
+  /**
+   * Les moteurs réellement interrogés. Absent, ils le sont tous.
+   *
+   * C'est ce qui distingue l'analyse d'un compte gratuit : seul Gemini y est
+   * mesuré — son relevé passe par le grounding Google Search — tandis que
+   * ChatGPT, Perplexity et Claude, qui se paient à chaque appel, ne sont pas
+   * interrogés. Leurs notes restent alors des estimations du modèle, et le
+   * tableau de bord les garde sous voile plutôt que de les faire passer pour des
+   * relevés.
+   */
+  engines?: AiEngine[];
+  /**
+   * Les relevés hors-site : estimation des backlinks et scraping de la fiche
+   * Google. Absent, ils sont faits.
+   *
+   * Ils alimentent deux onglets réservés à l'abonnement « Tout-en-un ». Sur un
+   * compte gratuit, ces écrans restent sous voile, et on ne dépense pas un
+   * appel de plus pour remplir une donnée que personne ne lira : le voile
+   * s'appuie alors sur les cartes d'exemple.
+   */
+  offsite?: boolean;
 };
 
-// Audit complet (notes & conclusions de tout le dashboard).
-const MODEL = "claude-opus-4-8";
-// Détection de niche EN PREMIER (pivot des recherches concurrents) — rapide/économe.
-const NICHE_MODEL = "claude-sonnet-4-6";
+/**
+ * Tout le raisonnement de l'audit (notes, constats, recommandations, on-page,
+ * notoriété, cohérence Maps) passe par le client `lib/ai` au palier `strong` —
+ * DeepSeek V4 Pro en tête, Kimi en secours. Le Flash suffit pour extraire une
+ * niche d'une page ou reformuler un titre ; il ne suffit pas ici. L'audit est ce
+ * que le client paie, il se lit ligne à ligne, et un constat expédié se
+ * reconnaît immédiatement — le surcoût par audit reste sans commune mesure avec
+ * un rapport qui ne tient pas.
+ *
+ * Les moteurs suivis (ChatGPT, Gemini, Perplexity, Claude) ne sont appelés que
+ * pour une seule chose : le CLASSEMENT réel, qu'aucun autre modèle ne peut
+ * produire à leur place puisqu'il s'agit de leur propre réponse, formée en
+ * lisant le web.
+ */
+const AUDIT_MAX_TOKENS = 16000;
 
 /** Cœur d'analyse, avant enrichissement (overallScore, aiVisibility, signals, date). */
 type EngineCore = Omit<GeoAnalysisResult, "signals" | "createdAt" | "overallScore">;
 
 const MAX_RANK_ITEMS = 10;
+
+/**
+ * Les moteurs dont on relève le classement, dans l'ordre d'affichage.
+ * Chacun est interrogé par SA propre API et va lire le web avant de répondre :
+ * la réponse de ChatGPT ne peut pas être devinée par Gemini, et aucun modèle
+ * répondant de mémoire ne peut tenir lieu de l'un des quatre.
+ */
+const ALL_ENGINES: AiEngine[] = [...DASHBOARD_ENGINES];
+
+/**
+ * Un casier de mesure vide par moteur suivi.
+ *
+ * Écrit à la main, ce casier oubliait un moteur le jour où la liste s'allongeait
+ * — et un moteur absent du casier n'est pas une carte vide, c'est un relevé
+ * silencieusement jeté. Il se déduit donc de la liste elle-même.
+ */
+function emptyPerEngine<T>(initial: () => T): Record<AiEngine, T> {
+  return Object.fromEntries(ALL_ENGINES.map((engine) => [engine, initial()])) as Record<
+    AiEngine,
+    T
+  >;
+}
 
 const CATEGORY_KEYS: CategoryKey[] = [
   "citability",
@@ -88,11 +167,12 @@ const ON_PAGE_CHECK_SCHEMA = {
       },
     },
     note: { type: "string" },
+    suggestion: { type: ["string", "null"] },
   },
-  required: ["text", "status", "signals", "note"],
+  required: ["text", "status", "signals", "note", "suggestion"],
 } as const;
 
-// Schéma de sortie structurée imposé à Claude.
+// Schéma de sortie structurée imposé au modèle d'audit.
 const OUTPUT_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -138,7 +218,7 @@ const OUTPUT_SCHEMA = {
         type: "object",
         additionalProperties: false,
         properties: {
-          engine: { type: "string", enum: ["ChatGPT", "Gemini"] },
+          engine: { type: "string", enum: ALL_ENGINES },
           score: { type: "integer" },
           estimatedPosition: { type: ["integer", "null"] },
           visibility: {
@@ -279,7 +359,7 @@ const OUTPUT_SCHEMA = {
       additionalProperties: false,
       properties: {
         query: { type: "string" },
-        engine: { type: "string", enum: ["ChatGPT", "Gemini"] },
+        engine: { type: "string", enum: ALL_ENGINES },
         appearsInResults: { type: "boolean" },
         position: { type: ["integer", "null"] },
         competitorsAhead: { type: "array", items: { type: "string" } },
@@ -311,7 +391,6 @@ const OUTPUT_SCHEMA = {
   ],
 } as const;
 
-const ALL_ENGINES: AiEngine[] = ["ChatGPT", "Gemini"];
 
 function buildPrompt(
   signals: SiteSignals,
@@ -326,7 +405,7 @@ function buildPrompt(
   const modeLabel =
     ctx.mode === "physical" ? "Commerce physique (établissement local)" : "Commerce en ligne";
 
-  // Classements RÉELS déjà mesurés (API moteurs) vs moteurs à estimer par Claude.
+  // Classements RÉELS déjà mesurés (API moteurs) vs moteurs restant à estimer.
   const realLines = ALL_ENGINES.filter((e) => measured[e]).map((e) => {
     const m = measured[e]!;
     const pos = m.position != null ? `position ${m.position}` : m.cited ? "cité sans rang de tête" : "non cité";
@@ -388,7 +467,7 @@ ${mapsScraped}
 
 ${enginesBlock}
 
-PROFIL DÉJÀ DÉTERMINÉ EN AMONT (par Claude Sonnet — fais-en AUTORITÉ, ne le contredis pas) :
+PROFIL DÉJÀ DÉTERMINÉ EN AMONT (étape 1 — fais-en AUTORITÉ, ne le contredis pas) :
 Niche précise: ${profile.niche}
 Catégorie générale: ${profile.generalCategory}
 Localisation: ${profile.location ?? "(non physique / inconnue)"}
@@ -410,7 +489,7 @@ CONSIGNES :
 2. Note chaque catégorie de 0 à 100 selon la GRILLE D'AUDIT GEO ci-dessus, en t'appuyant sur les données réelles. Sois rigoureux et honnête : un site sans données structurées ne peut pas avoir un bon score "structuredData".
 3. Pour chaque catégorie, donne un résumé (1-2 phrases) et 2 à 4 constats précis (findings).
 4. Propose 5 à 8 recommandations actionnables, priorisées (critique/haute/moyenne/basse) avec un impact estimé (1-10) et la catégorie concernée. NE RECOMMANDE JAMAIS d'ajouter un schéma déjà présent dans « Types JSON-LD détectés » (ex. si AggregateRating/Review/LocalBusiness/Restaurant/FAQPage y figurent, ils existent déjà : ne propose pas de les ajouter, suggère au plus de les enrichir).
-5. ${enginesInstruction} (Différencie les moteurs : ChatGPT Search valorise l'autorité et la structure, Gemini s'appuie sur l'écosystème Google et les données structurées. NE PRODUIS JAMAIS de classement pour un moteur déjà mesuré : on n'utilise QUE des classements véridiques.)
+5. ${enginesInstruction} (Différencie les moteurs : ChatGPT Search valorise l'autorité et la structure, Gemini s'appuie sur l'écosystème Google et les données structurées, Perplexity cite page par page et privilégie les passages citables et les sources fraîches, Claude pèse l'expertise et la notoriété avant de reprendre une source. NE PRODUIS JAMAIS de classement pour un moteur déjà mesuré : on n'utilise QUE des classements véridiques.)
 6. googleSeo : réalise une mini-analyse SEO Google classique. Donne un score (0-100), un positionnement organique estimé (positioning, ex. "Page 1 (top 5)", "Page 2-3", "Non positionné"), un résumé, 2 à 4 constats (findings) et une liste de mots-clés (topKeywords) sur lesquels le site pourrait/devrait ressortir.
 7. aiSimulation : imagine une requête de recherche naturelle qu'un utilisateur taperait dans une IA et pour laquelle cette entreprise devrait apparaître (ex. "meilleur restaurant italien à Lyon"). Indique si le site apparaîtrait probablement dans les résultats cités (appearsInResults), à quelle position approximative (position, ou null), quels types de concurrents passeraient devant, et pourquoi.
 8. verdict : une phrase de synthèse percutante sur la visibilité IA actuelle du site.
@@ -421,13 +500,19 @@ CONSIGNES :
    Pour chaque classement : label explicite, competitors = 10 entrées classées (rank 1 à 10), avec le commerce analysé inséré à sa position réaliste (isTarget=true ; mets isTarget=false partout ailleurs). note = un signal court (« Guide Michelin », « 4,7★ · 900 avis », « ouvert depuis 1998 ») ou null. targetRank = le rang du commerce analysé (null s'il sort du top 10). Si commerce en ligne ou localisation inconnue : renvoie un tableau vide [].
 11. webPresence : évalue la notoriété éditoriale hors-site. score (0-100). qualifications = labels/guides/distinctions réels et plausibles pour ce commerce (Guide Michelin, Gault&Millau, Petit Futé, label Qualité Tourisme, certification, prix…) — chaque entrée : label, source, detail ; liste VIDE si rien de crédible. articles = apparitions presse/blogs plausibles (titre + source) ; liste vide si aucune. findings = 2 à 4 constats sur la notoriété. Reste honnête : n'invente pas de distinction si elle est invraisemblable.
 12. mapsCoherence : SI une fiche Google Maps a été fournie (« ${ctx.mapsUrl ?? "(non fournie)"} »), évalue la cohérence entre la fiche et le site (nom, catégorie, localisation, NAP, positionnement). score (0-100), summary, listingName (ou null), reviewCount et rating à null si tu ne peux pas les connaître de façon fiable, matches = points vérifiés (label, consistent, detail), findings. SI aucune fiche n'a été fournie : renvoie null.
-13. onPageContent : audite les ÉLÉMENTS ON-PAGE RÉELS ci-dessus. Pour chaque élément, "text" = le contenu RÉEL repris tel quel (ou null s'il est absent), "status" (ok/warn/ko), "signals" = critères attendus avec present (true/false), "note" = un diagnostic court avec un conseil concret.
+13. onPageContent : audite les ÉLÉMENTS ON-PAGE RÉELS ci-dessus. Pour chaque élément, "text" = le contenu RÉEL repris tel quel (ou null s'il est absent), "status" (ok/warn/ko), "signals" = critères attendus avec present (true/false), "note" = un diagnostic court avec un conseil concret, "suggestion" = LE CORRECTIF, c'est-à-dire l'élément RÉÉCRIT prêt à coller sur la page (null uniquement si le status est "ok" et qu'il n'y a rien à améliorer).
+   Règles du correctif, valables pour les quatre éléments : il est rédigé en français, dans la langue du site, sans superlatif publicitaire (« incontournable », « véritable », « niché au cœur de »), sans formule d'ouverture creuse (« dans un monde où », « de nos jours »), sans tiret cadratin, et sans le moindre chiffre, prix, date, distinction ou nom propre qui ne figure pas déjà dans les éléments fournis ci-dessus. Il reprend les mots que les clients emploient pour chercher ce commerce, pas le vocabulaire interne de l'entreprise.
+${ctx.brandTone ? `   Tonalité relevée sur les textes du client, à reproduire dans les quatre correctifs : ${ctx.brandTone}\n` : ""}   Le correctif doit se lire comme une phrase écrite par le commerçant, jamais comme un texte de modèle : verbes simples (« est », « propose », « ouvre », « répare ») plutôt que « se positionne comme » ou « constitue » ; aucune promesse creuse (« votre partenaire de confiance », « l'excellence au service de », « depuis toujours ») ; aucune triade décorative (« qualité, proximité et savoir-faire ») ; aucun participe présent d'analyse en fin de phrase (« soulignant… », « garantissant… ») ; aucun emoji, aucun gras, aucune majuscule à chaque mot. Le premier paragraphe ne reprend pas le H1 : il ajoute le fait que le H1 n'a pas la place de porter.
+   - suggestion du title : au plus 60 caractères, marque + niche + ville.
+   - suggestion de la metaDescription : 140 à 155 caractères, avec la niche, la ville et une raison de cliquer.
+   - suggestion du h1 : au plus 70 caractères, une seule idée, les mots-clés de la niche (« ${profile.niche} ») en tête, jamais un slogan.
+   - suggestion de la firstSentence : le PREMIER PARAGRAPHE réécrit, 40 à 60 mots, en 2 ou 3 phrases. La première phrase répond seule à « qui est ce commerce, que fait-il, où » et doit pouvoir être citée telle quelle par un assistant IA, hors de son contexte. Les suivantes ajoutent un fait vérifiable tiré des éléments fournis (spécialité, zone desservie, horaires, ancienneté).
    - title : signals = []. status ok si clair et descriptif (marque + activité), warn si générique, ko si absent.
    - metaDescription : signals = EXACTEMENT [{ "label": "Adresse", "present": … }, { "label": "Niche", "present": … }, { "label": "Note", "present": … }] — l'adresse/ville, la niche du commerce et la note/avis (ex. « 4,8★ ») y figurent-elles ? status ok si les 3 présents, warn si 1-2, ko si absente ou aucun. Pour un commerce EN LIGNE, "Adresse" et "Note" peuvent légitimement être absents : explique-le dans note.
    - h1 : signals = EXACTEMENT [{ "label": "Mots-clés niche", "present": … }] — le H1 contient-il les mots-clés de la niche (« ${profile.niche} ») ? status en conséquence.
    - firstSentence : signals = EXACTEMENT [{ "label": "Résume l'activité", "present": … }, { "label": "Adresse / zone", "present": … }] — la 1ʳᵉ phrase résume-t-elle l'activité ET situe-t-elle le commerce (adresse/zone) ? status en conséquence.
-   - openingHours : extrais les horaires d'ouverture du site (à partir de l'indice JSON-LD ET de l'extrait de contenu). Format court et lisible, ex. « Lun–Ven 9h–19h · Sam 9h–12h ». null si réellement introuvable.
-14. Réponds en français.
+   - openingHours : extrais les horaires d'ouverture du site (à partir de l'indice JSON-LD ET de l'extrait de contenu). Format court et lisible, ex. « Lun-Ven 9h-19h · Sam 9h-12h ». null si réellement introuvable.
+14. Réponds en français, et n'emploie jamais de tiret cadratin (—) ni de tiret demi-cadratin (–) pour séparer deux idées : une virgule, un deux-points ou un point. Ce tiret est la marque la plus reconnaissable d'un texte écrit par une IA, et ces phrases sont lues par les clients.
 
 FORMAT DE RÉPONSE — IMPÉRATIF :
 Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte avant ou après, sans bloc de code markdown. L'objet doit respecter exactement ce schéma JSON :
@@ -508,6 +593,28 @@ function normalizeWebPresence(w: WebPresence | undefined): WebPresence {
   };
 }
 
+/**
+ * Le correctif tel qu'il sera affiché, ou `null`.
+ *
+ * On écarte le vide, l'aveu d'impuissance (« néant », « rien à changer ») et le
+ * correctif qui reprend mot pour mot l'existant : dans ces trois cas, la carte
+ * doit rester sans proposition plutôt qu'en afficher une qui ne corrige rien.
+ */
+function cleanSuggestion(raw: string | null | undefined, current: string | null): string | null {
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (!value) return null;
+  if (/^(null|n\/a|aucune?|néant|rien(?: à changer)?)\.?$/i.test(value)) return null;
+  const flatten = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  if (current && flatten(value) === flatten(current)) return null;
+  return value;
+}
+
+/** Le même élément, doté d'un correctif de repli s'il n'en portait pas. */
+function fillSuggestion(check: OnPageCheck, fallback: string | null): OnPageCheck {
+  if (check.suggestion) return check;
+  return { ...check, suggestion: cleanSuggestion(fallback, check.text) };
+}
+
 /** Normalise un élément on-page : statut borné, signaux filtrés, texte de repli. */
 function normalizeCheck(c: OnPageCheck | undefined, fallbackText: string | null): OnPageCheck {
   const status: OnPageCheck["status"] =
@@ -522,18 +629,38 @@ function normalizeCheck(c: OnPageCheck | undefined, fallbackText: string | null)
           .map((s) => ({ label: s.label.trim(), present: !!s.present }))
       : [],
     note: c?.note?.trim() || "",
+    // Un correctif identique à l'existant n'est pas un correctif : l'afficher
+    // ferait douter le client de tout le reste de la page.
+    suggestion: cleanSuggestion(c?.suggestion, text),
   };
 }
 
+/**
+ * Pourquoi l'audit se rabat sur les seuls signaux on-page.
+ *
+ * La distinction compte pour le client : une clé absente se règle en une
+ * minute dans la configuration, un modèle qui n'a pas répondu se règle en
+ * relançant l'analyse. Écrire « clé API non configurée » dans les deux cas
+ * envoyait chercher une panne qui n'existait pas.
+ */
+type FallbackReason = "no-key" | "model-failed";
+
+const fallbackNote = (reason: FallbackReason): string =>
+  reason === "no-key"
+    ? "clé API IA non configurée"
+    : "le modèle d'analyse n'a pas répondu à temps";
+
 /** Audit on-page déterministe (sans IA) : présence brute des éléments clés. */
-function heuristicOnPage(signals: SiteSignals): OnPageContent {
+function heuristicOnPage(signals: SiteSignals, reason: FallbackReason): OnPageContent {
   const present = (text: string | null): OnPageCheck => ({
     text: text || null,
     status: text ? "warn" : "ko",
     signals: [],
     note: text
-      ? "Analyse approfondie indisponible (clé API IA non configurée)."
+      ? `Analyse approfondie indisponible (${fallbackNote(reason)}).`
       : "Élément absent de la page d'accueil.",
+    // Sans modèle, aucun correctif à proposer : la carte reste au diagnostic.
+    suggestion: null,
   });
   return {
     title: present(signals.title),
@@ -544,7 +671,7 @@ function heuristicOnPage(signals: SiteSignals): OnPageContent {
   };
 }
 
-/** Normalise l'audit on-page : retombe sur les signaux réels si Claude omet le texte. */
+/** Normalise l'audit on-page : retombe sur les signaux réels si le modèle omet le texte. */
 function normalizeOnPage(o: OnPageContent | undefined, signals: SiteSignals): OnPageContent {
   const hours = typeof o?.openingHours === "string" ? o.openingHours.trim() : "";
   return {
@@ -561,7 +688,7 @@ function normalizeCoherence(
   listing?: MapsListing | null,
 ): MapsCoherence | null {
   if (!c) return null;
-  // Les données scrapées réelles priment sur l'estimation de Claude.
+  // Les données scrapées réelles priment sur l'estimation du modèle.
   const realRating = listing?.rating ?? null;
   const realReviews = listing?.reviewCount ?? null;
   const realName = listing?.listingName ?? null;
@@ -584,34 +711,93 @@ function normalizeCoherence(
   };
 }
 
-function extractJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error("Réponse IA non parsable.");
-  }
-}
+/* ------------------------- Schémas des réponses IA ------------------------- */
 
 /**
- * ÉTAPE 1 — Détection de la niche EN TOUT PREMIER (Claude Sonnet 4.6).
- * C'est le pivot des recherches de concurrents : la niche/localisation détectée
- * ici alimente la requête « top 10 » envoyée à OpenAI/Gemini. Appel rapide et
- * économe, volontairement distinct de l'audit complet (Opus).
+ * Ce que l'on exige du modèle, et rien de plus.
+ *
+ * Les normaliseurs ci-dessus réparent déjà tout ce qui manque : ce schéma ne
+ * sert donc qu'à repérer une réponse franchement hors-sujet, celle qui ferait
+ * basculer `askJson` sur le fournisseur de secours plutôt que de remplir le
+ * tableau de bord de vide. On exige le verdict, les notes et le plan d'action —
+ * sans eux, il n'y a pas d'audit.
+ */
+const AUDIT_RESPONSE_SCHEMA = z.object({
+  businessName: z.string().optional(),
+  businessType: z.string().optional(),
+  verdict: z.string().min(1),
+  categories: z
+    .array(z.object({ key: z.string() }).loose())
+    .min(1),
+  recommendations: z
+    .array(z.object({ title: z.string() }).loose())
+    .min(1),
+  engines: z.array(z.unknown()).optional(),
+  profile: z.unknown().optional(),
+  localRankings: z.array(z.unknown()).optional(),
+  webPresence: z.unknown().optional(),
+  mapsCoherence: z.unknown().nullish(),
+  onPageContent: z.unknown().optional(),
+  googleSeo: z.unknown().optional(),
+  aiSimulation: z.unknown().optional(),
+});
+
+/** Forme attendue de l'audit, une fois le garde-fou passé. */
+type AuditResponse = {
+  businessName: string;
+  businessType: string;
+  verdict: string;
+  categories: CategoryScore[];
+  engines: {
+    engine: AiEngine;
+    score?: number;
+    estimatedPosition?: number | null;
+    visibility?: EngineScore["visibility"];
+    summary?: string;
+    competitorsAhead?: string[];
+  }[];
+  profile: Omit<BusinessProfile, "mode">;
+  localRankings: LocalRanking[];
+  webPresence: WebPresence;
+  onPageContent: OnPageContent;
+  mapsCoherence: MapsCoherence | null;
+  googleSeo: GoogleSeo;
+  recommendations: Recommendation[];
+  aiSimulation: AiSimulation;
+};
+
+const PROFILE_RESPONSE_SCHEMA = z.object({
+  businessName: z.string().optional(),
+  niche: z.string().min(1),
+  generalCategory: z.string().optional(),
+  location: z.string().nullish(),
+});
+
+const BACKLINKS_RESPONSE_SCHEMA = z.object({
+  estimatedCount: z.number().nullish(),
+  notableSources: z
+    .array(z.object({ domain: z.string().optional(), note: z.string().optional() }))
+    .optional(),
+  summary: z.string().optional(),
+});
+
+/**
+ * ÉTAPE 1 — Détection de la niche EN TOUT PREMIER.
+ * C'est le pivot des recherches de concurrents : la niche et la localisation
+ * relevées ici alimentent la requête « top 10 » envoyée aux trois moteurs. Appel
+ * court et économe, volontairement distinct de l'audit complet.
  */
 async function detectProfile(
   signals: SiteSignals,
   ctx: AnalysisContext,
 ): Promise<{ profile: BusinessProfile; businessName: string }> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const modeLabel =
     ctx.mode === "physical" ? "Commerce physique (établissement local)" : "Commerce en ligne";
 
   const prompt = `Tu détectes le profil commercial d'un site, à partir de ses signaux. C'est l'étape qui sert ENSUITE à chercher les concurrents : sois précis sur la niche.
 
 Type déclaré par l'utilisateur : ${modeLabel}
-URL : ${signals.url}
+${ctx.declaredNiche?.trim() ? `Niche déclarée par le commerçant : ${ctx.declaredNiche.trim()}\n` : ""}${ctx.declaredLocation?.trim() ? `Ville déclarée par le commerçant : ${ctx.declaredLocation.trim()}\n` : ""}URL : ${signals.url}
 Domaine : ${signals.domain}
 Titre : ${signals.title ?? "(absent)"}
 Meta description : ${signals.metaDescription ?? "(absente)"}
@@ -631,26 +817,19 @@ Renvoie UNIQUEMENT un objet JSON, sans texte ni markdown autour :
   "location": "ville/zone précise SI commerce physique et identifiable, sinon null"
 }`;
 
-  const response = await client.messages.create({
-    model: NICHE_MODEL,
-    max_tokens: 600,
-    messages: [{ role: "user", content: prompt }],
+  const parsed = await askJson(PROFILE_RESPONSE_SCHEMA, {
+    system:
+      "Tu qualifies le créneau commercial d'un site à partir de ses signaux. " +
+      "Tu réponds uniquement par un objet JSON valide.",
+    prompt,
+    role: "default",
+    maxTokens: 600,
   });
-  const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Détection de niche : aucune réponse textuelle.");
-  }
-  const parsed = extractJson(textBlock.text) as {
-    businessName?: string;
-    niche?: string;
-    generalCategory?: string;
-    location?: string | null;
-  };
   const profile = normalizeProfile(
     {
-      niche: parsed.niche ?? "",
+      niche: ctx.declaredNiche?.trim() || parsed.niche || "",
       generalCategory: parsed.generalCategory ?? "",
-      location: parsed.location ?? null,
+      location: ctx.declaredLocation?.trim() || parsed.location || null,
       isPhysical: ctx.mode === "physical",
     },
     ctx,
@@ -659,36 +838,77 @@ Renvoie UNIQUEMENT un objet JSON, sans texte ni markdown autour :
   return { profile, businessName: parsed.businessName?.trim() || "" };
 }
 
-/** Profil de repli (sans clé Claude ou si la détection échoue). */
+/** Profil de repli (sans clé de modèle, ou si la détection échoue). */
 function fallbackProfile(signals: SiteSignals, ctx: AnalysisContext): BusinessProfile {
+  // Sans niche déclarée, le nom du site sert de repli — il ne veut rien dire pour
+  // un moteur (« les 10 meilleurs Reliance »), d'où la déclaration en priorité.
   const name = signals.title?.split(/[|\-–—]/)[0].trim() || signals.domain;
+  const niche = cleanNicheLabel(ctx.declaredNiche ?? undefined) || name;
   return {
     mode: ctx.mode,
     isPhysical: ctx.mode === "physical",
-    niche: name,
-    generalCategory: "Commerce",
-    location: null,
+    niche,
+    generalCategory: cleanNicheLabel(ctx.declaredNiche ?? undefined) || "Commerce",
+    location: ctx.mode === "physical" ? ctx.declaredLocation?.trim() || null : null,
+  };
+}
+
+/** Met en forme la réponse « backlinks » d'un modèle, d'où qu'elle vienne. */
+function toBacklinks(
+  parsed: z.infer<typeof BACKLINKS_RESPONSE_SCHEMA>,
+  grounding: { domain: string; title: string | null }[],
+): Backlinks {
+  const notableSources: ReferringSource[] = Array.isArray(parsed.notableSources)
+    ? parsed.notableSources
+        .filter((s) => s?.domain?.trim())
+        .map((s) => ({ domain: s.domain!.trim(), note: s.note?.trim() || "" }))
+    : [];
+
+  // Les pages réellement consultées par le grounding complètent la liste : un
+  // domaine que le modèle a ouvert pour répondre est une source vérifiée, pas
+  // un souvenir. Il vient après celles qu'il a jugées notables.
+  const seen = new Set(notableSources.map((s) => s.domain.toLowerCase()));
+  for (const source of grounding) {
+    const domain = source.domain.trim();
+    if (!domain || seen.has(domain.toLowerCase())) continue;
+    seen.add(domain.toLowerCase());
+    notableSources.push({ domain, note: source.title?.trim() || "page consultée" });
+  }
+
+  return {
+    estimatedCount:
+      typeof parsed.estimatedCount === "number" && parsed.estimatedCount >= 0
+        ? Math.round(parsed.estimatedCount)
+        : null,
+    notableSources: notableSources.slice(0, 8),
+    summary: parsed.summary?.trim() || "Estimation des sources référentes de la niche.",
+    // Le décompte reste un ordre de grandeur, même appuyé sur des pages
+    // consultées : l'interface doit continuer à dire « estimation ».
+    measured: false,
   };
 }
 
 /**
- * Estimation des backlinks / sources référentes via Claude + RECHERCHE WEB réelle
- * (outil web_search). Pas un index de backlinks exhaustif : un ordre de grandeur
- * + les sources notables qui citent le commerce. Best-effort, honnête (null si rien).
+ * Estimation des backlinks et des sources référentes.
+ *
+ * Gemini Flash mène cet appel, et lui seul dans le produit : c'est le modèle
+ * branché sur la recherche Google, donc le seul à pouvoir aller voir qui cite
+ * vraiment ce domaine aujourd'hui. Les autres répondent de mémoire et rendent
+ * des annuaires plausibles — parfois fermés depuis deux ans.
+ *
+ * Le repli sur le modèle de service ne sert que si la clé Gemini manque ou si
+ * la réponse est inexploitable : mieux vaut une estimation de mémoire qu'une
+ * carte vide. Dans les deux cas `measured` reste à false — c'est un ordre de
+ * grandeur, jamais un relevé.
  */
 async function estimateBacklinks(
   signals: SiteSignals,
   profile: BusinessProfile,
 ): Promise<Backlinks> {
-  const empty: Backlinks = {
-    estimatedCount: null,
-    notableSources: [],
-    summary: "Sources référentes non évaluées.",
-    measured: false,
-  };
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const loc = profile.location ? ` à ${profile.location}` : "";
-  const prompt = `Recherche sur le web les sources qui citent ou pointent vers le site « ${signals.domain} » (${profile.niche}${loc}). Identifie les SOURCES RÉFÉRENTES NOTABLES réelles (annuaires, presse, guides, plateformes d'avis, partenaires) et estime un ORDRE DE GRANDEUR du nombre de domaines référents. Sois honnête : si rien de fiable, estimatedCount = null et notableSources = [].
+  const prompt = `Cherche sur le web les sources qui citent ou pointent vers le site « ${signals.domain} » (${profile.niche}${loc}). Appuie-toi sur des pages que tu as réellement consultées : annuaires, presse, guides, plateformes d'avis, partenaires, associations professionnelles. Donne ensuite un ORDRE DE GRANDEUR du nombre de domaines référents. Sois honnête : si tu ne trouves rien de fiable, estimatedCount = null et notableSources = [].
+
+N'invente jamais un domaine que tu n'as pas vu citer ce site.
 
 Réponds UNIQUEMENT par un objet JSON, sans texte autour :
 {
@@ -697,89 +917,53 @@ Réponds UNIQUEMENT par un objet JSON, sans texte autour :
   "summary": "1-2 phrases de synthèse sur la notoriété de liens"
 }`;
 
-  geoLog(`Backlinks — recherche web (${NICHE_MODEL})…`);
-  const response = await client.messages.create({
-    model: NICHE_MODEL,
-    max_tokens: 1500,
-    tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
-    messages: [{ role: "user", content: prompt }],
+  if (isGeminiConfigured()) {
+    geoLog("Backlinks — relevé par Gemini (recherche Google)…");
+    const grounded = await askGeminiGrounded(BACKLINKS_RESPONSE_SCHEMA, {
+      prompt,
+      label: "Backlinks",
+      maxOutputTokens: 1500,
+    });
+    if (grounded) return toBacklinks(grounded.data, grounded.sources);
+    geoLog("Backlinks — Gemini n'a rien rendu d'exploitable, repli sur le modèle de service.");
+  }
+
+  geoLog("Backlinks — estimation par le modèle de service…");
+  const parsed = await askJson(BACKLINKS_RESPONSE_SCHEMA, {
+    system:
+      "Tu estimes la notoriété de liens d'un site. Tu n'inventes jamais un domaine " +
+      "dont tu ignores l'existence. Tu réponds uniquement par un objet JSON valide.",
+    prompt,
+    role: "backlinks",
+    maxTokens: 1500,
   });
-
-  const text = response.content
-    .filter((b): b is Extract<(typeof response.content)[number], { type: "text" }> => b.type === "text")
-    .map((b) => b.text)
-    .join("\n");
-  if (!text.trim()) return empty;
-
-  const parsed = extractJson(text) as {
-    estimatedCount?: number | null;
-    notableSources?: { domain?: string; note?: string }[];
-    summary?: string;
-  };
-  const notableSources: ReferringSource[] = Array.isArray(parsed.notableSources)
-    ? parsed.notableSources
-        .filter((s) => s?.domain?.trim())
-        .slice(0, 8)
-        .map((s) => ({ domain: s.domain!.trim(), note: s.note?.trim() || "" }))
-    : [];
-  return {
-    estimatedCount:
-      typeof parsed.estimatedCount === "number" && parsed.estimatedCount >= 0
-        ? Math.round(parsed.estimatedCount)
-        : null,
-    notableSources,
-    summary: parsed.summary?.trim() || "Estimation des sources référentes via recherche web.",
-    measured: true,
-  };
+  return toBacklinks(parsed, []);
 }
 
 /**
- * ÉTAPE 2 — Audit complet (Claude Opus 4.8) : produit les notes & conclusions de
- * TOUTES les parties du dashboard selon la méthodologie geo-audit. Reçoit le
- * profil déjà détecté (il ne le re-détecte pas).
+ * ÉTAPE 2 — Audit complet : produit les notes et les conclusions de TOUTES les
+ * parties du tableau de bord selon la méthodologie geo-audit. Reçoit le profil
+ * déjà détecté (il ne le re-détecte pas) et les classements déjà mesurés auprès
+ * des moteurs (il ne les réestime pas).
  */
-async function analyzeWithClaude(
+async function analyzeWithModel(
   signals: SiteSignals,
   ctx: AnalysisContext,
   profile: BusinessProfile,
   mapsListing: MapsListing | null,
   measured: Record<AiEngine, MeasuredEngine | null>,
 ): Promise<EngineCore> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 14000,
-    thinking: { type: "adaptive" },
-    messages: [{ role: "user", content: buildPrompt(signals, ctx, profile, mapsListing, measured) }],
+  const raw = await askJson(AUDIT_RESPONSE_SCHEMA, {
+    system:
+      "Tu es un expert GEO (Generative Engine Optimization) et SEO. " +
+      "Tu rends un audit complet sous forme d'un unique objet JSON valide, sans texte autour.",
+    prompt: buildPrompt(signals, ctx, profile, mapsListing, measured),
+    role: "overview",
+    maxTokens: AUDIT_MAX_TOKENS,
   });
-
-  const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Aucune réponse textuelle de l'IA.");
-  }
-  const parsed = extractJson(textBlock.text) as {
-    businessName: string;
-    businessType: string;
-    verdict: string;
-    categories: CategoryScore[];
-    engines: {
-      engine: AiEngine;
-      score?: number;
-      estimatedPosition?: number | null;
-      visibility?: EngineScore["visibility"];
-      summary?: string;
-      competitorsAhead?: string[];
-    }[];
-    profile: Omit<BusinessProfile, "mode">;
-    localRankings: LocalRanking[];
-    webPresence: WebPresence;
-    onPageContent: OnPageContent;
-    mapsCoherence: MapsCoherence | null;
-    googleSeo: GoogleSeo;
-    recommendations: Recommendation[];
-    aiSimulation: AiSimulation;
-  };
+  // Le schéma garantit le squelette ; les normaliseurs ci-dessous réparent le
+  // détail. Le typage nominal reprend donc la main ici.
+  const parsed = raw as unknown as AuditResponse;
 
   // Normalisation des scores
   const categories: CategoryScore[] = CATEGORY_KEYS.map((key) => {
@@ -830,7 +1014,7 @@ async function analyzeWithClaude(
       topKeywords: parsed.googleSeo?.topKeywords ?? [],
     },
     recommendations: parsed.recommendations
-      .map((r) => ({ ...r, impact: Math.max(1, Math.min(10, Math.round(r.impact))) }))
+      .map((r) => ({ ...r, impact: Math.max(1, Math.min(10, Math.round(r.impact || 1))) }))
       .sort((a, b) => b.impact - a.impact),
     aiSimulation: parsed.aiSimulation,
   };
@@ -865,6 +1049,7 @@ function heuristicAnalysis(
   signals: SiteSignals,
   ctx: AnalysisContext,
   profile: BusinessProfile,
+  reason: FallbackReason,
 ): EngineCore {
   const s = signals;
   const technical = clamp(
@@ -1022,6 +1207,12 @@ function heuristicAnalysis(
     deriveEngine("ChatGPT", clamp(citability * 0.5 + brandAuthority * 0.3 + technical * 0.2), allCrawlersOk, profile),
     // Gemini : écosystème Google + données structurées
     deriveEngine("Gemini", clamp(structuredData * 0.4 + technical * 0.35 + citability * 0.25), allCrawlersOk, profile),
+    // Perplexity : il cite ses sources page par page — la citabilité prime,
+    // puis la solidité technique qui décide si la page est lue jusqu'au bout.
+    deriveEngine("Perplexity", clamp(citability * 0.5 + technical * 0.3 + contentEEAT * 0.2), allCrawlersOk, profile),
+    // Claude : il pèse ce qu'il lit avant de le reprendre — l'expertise et la
+    // notoriété du site comptent plus chez lui que son balisage.
+    deriveEngine("Claude", clamp(contentEEAT * 0.4 + brandAuthority * 0.35 + citability * 0.25), allCrawlersOk, profile),
   ];
 
   const googleScore = clamp(technical * 0.4 + contentEEAT * 0.35 + structuredData * 0.25);
@@ -1030,7 +1221,7 @@ function heuristicAnalysis(
     positioning:
       googleScore >= 70 ? "Page 1 (top 5) potentielle" : googleScore >= 45 ? "Page 2-3 estimée" : "Faiblement positionné",
     summary:
-      "Estimation SEO automatique basée sur les signaux on-page (clé API IA non configurée pour une analyse approfondie).",
+      `Estimation SEO automatique basée sur les signaux on-page (${fallbackNote(reason)}).`,
     findings: [
       s.title ? `Balise title : « ${s.title} »` : "Balise title manquante.",
       s.metaDescription ? "Meta description présente." : "Meta description manquante.",
@@ -1044,13 +1235,13 @@ function heuristicAnalysis(
     url: s.url,
     domain: s.domain,
     businessName,
-    businessType: profile.niche || "Estimation automatique (clé API IA non configurée)",
+    businessType: profile.niche || `Estimation automatique (${fallbackNote(reason)})`,
     profile,
     localRankings: [],
     webPresence: {
       score: clamp(brandAuthority * 0.6),
       summary:
-        "Notoriété éditoriale non analysée (clé API IA non configurée) : seuls les signaux on-page sont pris en compte.",
+        `Notoriété éditoriale non analysée (${fallbackNote(reason)}) : seuls les signaux on-page sont pris en compte.`,
       qualifications: [],
       articles: [],
       findings: [
@@ -1060,7 +1251,7 @@ function heuristicAnalysis(
       ],
     },
     mapsCoherence: null,
-    onPageContent: heuristicOnPage(s),
+    onPageContent: heuristicOnPage(s, reason),
     engines,
     googleSeo,
     verdict:
@@ -1133,11 +1324,21 @@ function rankingFromLive(
     isTarget: m.position === i + 1,
     note: null,
   }));
-  return { scope, label, measured: true, targetRank: m.position, competitors };
+  return {
+    scope,
+    label,
+    measured: true,
+    targetRank: m.position,
+    competitors,
+    // Un relevé réel porte sa date : c'est ce qui permet, la semaine suivante,
+    // de le garder à l'écran en disant honnêtement de quand il date plutôt que
+    // de le remplacer par une estimation.
+    measuredAt: new Date().toISOString(),
+  };
 }
 
 /**
- * Convertit un classement de marché estimé par Claude (LocalRanking, top 10)
+ * Convertit un classement de marché estimé par le modèle (LocalRanking, top 10)
  * en EngineRanking. Sert de repli quand l'appel moteur live a échoué : on
  * conserve ainsi un classement direct ET indirect par moteur.
  */
@@ -1148,10 +1349,13 @@ function localToEngineRanking(lr: LocalRanking, scope: RankingScope): EngineRank
     measured: false,
     targetRank: lr.targetRank,
     competitors: lr.competitors,
+    // Aucune date : rien n'a été relevé. L'interface s'en sert pour distinguer
+    // une estimation d'un top 10 réel qui a simplement vieilli.
+    measuredAt: null,
   };
 }
 
-/** Construit un classement ESTIMÉ (par Claude) depuis position + concurrents devant. */
+/** Construit un classement ESTIMÉ depuis position + concurrents devant. */
 function estimateToRanking(
   scope: RankingScope,
   label: string,
@@ -1166,7 +1370,14 @@ function estimateToRanking(
     competitors.push({ rank: Math.max(1, estimatedPosition), name: businessName, isTarget: true, note: null });
     competitors.sort((a, b) => a.rank - b.rank);
   }
-  return { scope, label, measured: false, targetRank: estimatedPosition, competitors };
+  return {
+    scope,
+    label,
+    measured: false,
+    targetRank: estimatedPosition,
+    competitors,
+    measuredAt: null,
+  };
 }
 
 function visibilityFromPosition(
@@ -1202,14 +1413,22 @@ function summaryFromMeasure(engine: AiEngine, m: MeasuredEngine): string {
 }
 
 /**
- * Construit les scores moteurs finaux. Pour chaque moteur, si un classement
- * DIRECT réel a été mesuré → on l'utilise (score/visibilité/résumé dérivés du
- * réel) avec ses classements (direct + éventuel indirect). Sinon → estimation
- * Claude. Aucune estimation Claude n'écrase une donnée réelle.
- * Ordre garanti : ChatGPT en premier (ALL_ENGINES).
+ * Construit les scores moteurs finaux.
+ *
+ * Un seul principe, et il vaut pour tous les moteurs : **rien n'écrase un
+ * relevé réel**. Un moteur qui a répondu prend sa mesure du jour. Un moteur
+ * muet garde le dernier top 10 qu'il avait réellement rendu, avec sa date —
+ * une panne d'API ne fait pas disparaître une position, et surtout elle ne la
+ * remplace pas par une liste sortie de la mémoire d'un modèle.
+ *
+ * L'estimation de marché (`localRankings`, produite par le modèle d'audit) ne
+ * sert donc plus que dans un seul cas : le tout premier audit, quand aucun
+ * relevé n'a jamais abouti et qu'il n'y a rien à conserver. Elle part alors
+ * avec `measured: false` et sans date, et l'interface l'annonce comme une
+ * estimation — jamais comme un classement.
  */
 function combineEngines(
-  claudeEngines: EngineScore[],
+  previousEngines: EngineScore[],
   measuredDirect: Record<AiEngine, MeasuredEngine | null>,
   measuredRankings: Record<AiEngine, EngineRanking[]>,
   localRankings: LocalRanking[],
@@ -1221,27 +1440,43 @@ function combineEngines(
 
   return ALL_ENGINES.map((engine) => {
     const m = measuredDirect[engine];
-    const base: EngineScore = m
-      ? {
-          engine,
-          score: scoreFromMeasure(m),
-          visibility: visibilityFromPosition(m.position, m.cited),
-          summary: summaryFromMeasure(engine, m),
-          measured: true,
-          rankings: [...measuredRankings[engine]],
-        }
-      : (claudeEngines.find((e) => e.engine === engine) ?? {
-          engine,
-          score: 0,
-          visibility: "absente" as const,
-          summary: "Non évalué.",
-          measured: false,
-          rankings: [],
-        });
+    const previous = previousEngines.find((e) => e.engine === engine) ?? null;
 
-    // Garantit qu'un moteur a TOUJOURS son classement direct ET indirect, même
-    // si l'appel live a échoué : on retombe sur l'estimation de marché de Claude
-    // (localRankings « niche » = direct, « general » = indirect).
+    // Le moteur a répondu : sa mesure du jour fait foi, sur toute la carte.
+    if (m) {
+      const rankings = [...measuredRankings[engine]];
+      // Le relevé indirect peut échouer alors que le direct a abouti : on garde
+      // alors l'indirect réel de la fois précédente plutôt que de le perdre.
+      if (indirectWanted && !rankings.some((r) => r.scope === "indirect")) {
+        const keptIndirect = previous?.rankings.find((r) => r.scope === "indirect" && r.measured);
+        if (keptIndirect) rankings.push(keptIndirect);
+        else if (generalLr) rankings.push(localToEngineRanking(generalLr, "indirect"));
+      }
+      return {
+        engine,
+        score: scoreFromMeasure(m),
+        visibility: visibilityFromPosition(m.position, m.cited),
+        summary: summaryFromMeasure(engine, m),
+        measured: true,
+        rankings,
+      };
+    }
+
+    // Le moteur n'a pas répondu. S'il a déjà été relevé pour de vrai, on garde
+    // ce relevé tel quel : sa date dira à l'écran qu'il n'est pas d'aujourd'hui.
+    if (previous?.rankings.some((r) => r.measured)) return previous;
+
+    // Jamais relevé : il ne reste que l'estimation de marché, annoncée comme
+    // telle. C'est le seul chemin par lequel un classement non mesuré arrive à
+    // l'écran, et il ne concerne qu'un premier audit.
+    const base: EngineScore = previous ?? {
+      engine,
+      score: 0,
+      visibility: "absente" as const,
+      summary: "Non évalué.",
+      measured: false,
+      rankings: [],
+    };
     const rankings = [...base.rankings];
     if (!rankings.some((r) => r.scope === "direct") && nicheLr) {
       rankings.unshift(localToEngineRanking(nicheLr, "direct"));
@@ -1253,11 +1488,149 @@ function combineEngines(
   });
 }
 
+/**
+ * Ce que le commerce a déclaré lui-même pendant le tunnel d'accueil.
+ *
+ * Le profil enregistré dans l'analyse vient d'une détection automatique, qui
+ * retombe sur le NOM du site quand la niche n'a pas pu être déduite — d'où des
+ * requêtes du genre « les 10 meilleurs Reliance », qui ne veulent rien dire pour
+ * un moteur. La fiche d'accueil, elle, contient la niche et les villes saisies
+ * par le client : elle prime.
+ */
+export type DeclaredRankingProfile = {
+  niche?: string | null;
+  /** Ville / zone du commerce physique. Ignorée pour un commerce en ligne. */
+  location?: string | null;
+  /** `false` force un classement sans lieu (commerce en ligne). */
+  isPhysical?: boolean;
+};
+
+export type RefreshRankingsOptions = {
+  declared?: DeclaredRankingProfile;
+  /** Moteurs à interroger. Par défaut, tous ceux du tableau de bord. */
+  engines?: AiEngine[];
+};
+
+/**
+ * Le profil qui sert à formuler la requête moteur : celui de l'analyse, corrigé
+ * par ce que le client a déclaré. La niche déclarée remplace aussi la catégorie
+ * générale détectée quand celle-ci n'est qu'un repli (« Commerce »), pour ne pas
+ * demander « les 10 meilleurs Commerce » aux moteurs.
+ */
+function rankingProfile(
+  profile: BusinessProfile,
+  declared: DeclaredRankingProfile | undefined,
+): BusinessProfile {
+  if (!declared) return profile;
+  const niche = cleanNicheLabel(declared.niche ?? undefined) || profile.niche;
+  const isPhysical = declared.isPhysical ?? profile.isPhysical;
+  const generic = /^(commerce|commerces|activité non déterminée)$/i;
+  const general = generic.test(profile.generalCategory.trim())
+    ? niche
+    : profile.generalCategory;
+  return {
+    ...profile,
+    isPhysical,
+    niche,
+    generalCategory: general,
+    location: isPhysical ? (declared.location?.trim() || profile.location) : null,
+  };
+}
+
+/**
+ * Reprend UNIQUEMENT les classements, sur une analyse déjà faite.
+ *
+ * C'est ce que le tableau de bord relance semaine après semaine : la place du
+ * commerce dans les moteurs suivis bouge, pas la structure de son site.
+ * On les réinterroge donc par leurs API respectives — eux seuls connaissent
+ * leur propre réponse — sans repayer l'audit complet.
+ *
+ * Un moteur qui ne répond pas garde sa dernière mesure connue plutôt que de
+ * disparaître : une absence de réponse n'est pas une perte de position.
+ */
+export async function refreshEngineRankings(
+  result: GeoAnalysisResult,
+  options: RefreshRankingsOptions = {},
+): Promise<{ engines: EngineScore[]; liveQuery: string | null }> {
+  const unchanged = { engines: result.engines, liveQuery: result.liveQuery ?? null };
+  if (!hasAnyEngineKey()) {
+    geoLog("Classements — aucune clé moteur configurée, relevé ignoré");
+    return unchanged;
+  }
+
+  const engineList = options.engines?.length ? options.engines : ALL_ENGINES;
+  const profile = rankingProfile(result.profile, options.declared);
+  const matchName = result.businessName || result.domain;
+  const directQuery = buildEngineQuery(profile, "direct");
+  const indirectQuery = wantsIndirect(profile) ? buildEngineQuery(profile, "indirect") : null;
+
+  const measuredDirect = emptyPerEngine<MeasuredEngine | null>(() => null);
+  const measuredRankings = emptyPerEngine<EngineRanking[]>(() => []);
+
+  geoLog("Classements — relevé des moteurs", {
+    moteurs: engineList.join(", "),
+    direct: directQuery,
+    indirect: indirectQuery ?? "(non — commerce non physique ou sans niche distincte)",
+  });
+
+  const [directLives, indirectLives] = await Promise.all([
+    gatherLiveEngines(directQuery, engineList).catch((err) => {
+      console.error("Appels moteurs (direct) échoués :", err);
+      return [] as LiveEngineResult[];
+    }),
+    indirectQuery
+      ? gatherLiveEngines(indirectQuery, engineList).catch((err) => {
+          console.error("Appels moteurs (indirect) échoués :", err);
+          return [] as LiveEngineResult[];
+        })
+      : Promise.resolve([] as LiveEngineResult[]),
+  ]);
+
+  const directLbl = rankingLabel(profile, "direct");
+  const indirectLbl = rankingLabel(profile, "indirect");
+  for (const live of directLives) {
+    if (!live.available || !live.answered) continue;
+    const m = measureEngine(live, result.domain, matchName);
+    if (!m.measured) continue;
+    measuredDirect[live.engine] = m;
+    const r = rankingFromLive(live, "direct", directLbl, result.domain, matchName);
+    if (r) measuredRankings[live.engine].push(r);
+  }
+  for (const live of indirectLives) {
+    if (!live.available || !live.answered) continue;
+    const r = rankingFromLive(live, "indirect", indirectLbl, result.domain, matchName);
+    if (r) measuredRankings[live.engine].push(r);
+  }
+
+  const fresh = ALL_ENGINES.filter((e) => measuredDirect[e]);
+  if (fresh.length === 0) {
+    geoLog("Classements — aucun moteur n'a répondu, dernières mesures conservées");
+    return unchanged;
+  }
+
+  const engines = combineEngines(
+    result.engines,
+    measuredDirect,
+    measuredRankings,
+    result.localRankings,
+    profile,
+  );
+  geoLog(
+    "Classements — relevé terminé",
+    engines.map((e) => ({
+      moteur: e.engine,
+      mesuré: e.measured,
+      rang: e.rankings.find((r) => r.scope === "direct")?.targetRank ?? null,
+    })),
+  );
+  return { engines, liveQuery: directQuery };
+}
+
 export async function analyzeSite(
   signals: SiteSignals,
   ctx: AnalysisContext,
   /**
-   * "free" : aucun appel payant (ni Claude, ni moteurs live) — uniquement le
+   * "free" : aucun appel payant (ni modèle d'audit, ni moteurs live) — seulement le
    * crawl déterministe + l'estimation heuristique. C'est l'analyse lancée à la
    * création, gratuite par défaut, pour ne JAMAIS facturer un visiteur qui ne
    * paie pas. "paid" : audit complet, déclenché une seule fois au déblocage.
@@ -1265,13 +1638,13 @@ export async function analyzeSite(
   tier: "free" | "paid",
 ): Promise<GeoAnalysisResult> {
   const useApis = tier === "paid";
-  const hasKey = useApis && !!process.env.ANTHROPIC_API_KEY;
+  const hasKey = useApis && isAiConfigured();
   geoLog("Analyse démarrée", {
     url: signals.url,
     mode: ctx.mode,
     mapsUrl: ctx.mapsUrl,
     tier,
-    claudeKey: hasKey,
+    modèleAudit: hasKey,
     moteursKey: useApis && hasAnyEngineKey(),
   });
 
@@ -1281,7 +1654,7 @@ export async function analyzeSite(
   let detectedName = "";
   if (hasKey) {
     try {
-      geoLog(`Étape 1 — Détection de la niche (${NICHE_MODEL})…`);
+      geoLog("Étape 1 — Détection de la niche…");
       const d = await detectProfile(signals, ctx);
       profile = d.profile;
       detectedName = d.businessName;
@@ -1299,25 +1672,25 @@ export async function analyzeSite(
   });
 
   // Scraping best-effort de la fiche Maps (gratuit) AVANT l'audit, pour fournir
-  // à Claude les vraies note/avis/nom et mesurer la cohérence.
+  // au modèle les vraies note/avis/nom et mesurer la cohérence.
   let mapsListing: MapsListing | null = null;
-  if (ctx.mapsUrl) {
+  if (ctx.mapsUrl && ctx.offsite !== false) {
     mapsListing = await scrapeMapsListing(ctx.mapsUrl);
     geoLog("Fiche Maps — scraping", mapsListing);
   }
 
-  // ÉTAPE 2a — Classements RÉELS d'abord (OpenAI/Gemini), AVANT l'audit Claude.
+  // ÉTAPE 2a — Classements RÉELS d'abord (ChatGPT, Gemini), AVANT l'audit.
   // Deux requêtes : DIRECTE (niche précise = concurrents directs) toujours, et
   // INDIRECTE (catégorie générale = concurrents indirects) UNIQUEMENT pour un
-  // commerce physique localisé à vraie niche. Claude n'estimera que les moteurs
-  // sans classement direct réel.
+  // commerce physique localisé à vraie niche. Le modèle d'audit n'estimera que
+  // les moteurs restés sans classement direct réel.
   const matchName = detectedName || signals.title?.split(/[|\-–—]/)[0].trim() || signals.domain;
   const directQuery = buildEngineQuery(profile, "direct");
   const indirect = wantsIndirect(profile);
   const indirectQuery = indirect ? buildEngineQuery(profile, "indirect") : null;
 
-  const measuredDirect: Record<AiEngine, MeasuredEngine | null> = { ChatGPT: null, Gemini: null };
-  const measuredRankings: Record<AiEngine, EngineRanking[]> = { ChatGPT: [], Gemini: [] };
+  const measuredDirect = emptyPerEngine<MeasuredEngine | null>(() => null);
+  const measuredRankings = emptyPerEngine<EngineRanking[]>(() => []);
 
   if (useApis && hasAnyEngineKey()) {
     geoLog("Étape 2a — Classements réels moteurs (avant audit)", {
@@ -1325,12 +1698,12 @@ export async function analyzeSite(
       indirect: indirectQuery ?? "(non — commerce non physique ou sans niche distincte)",
     });
     const [directLives, indirectLives] = await Promise.all([
-      gatherLiveEngines(directQuery).catch((err) => {
+      gatherLiveEngines(directQuery, ctx.engines).catch((err) => {
         console.error("Appels moteurs (direct) échoués :", err);
         return [] as LiveEngineResult[];
       }),
       indirectQuery
-        ? gatherLiveEngines(indirectQuery).catch((err) => {
+        ? gatherLiveEngines(indirectQuery, ctx.engines).catch((err) => {
             console.error("Appels moteurs (indirect) échoués :", err);
             return [] as LiveEngineResult[];
           })
@@ -1357,26 +1730,33 @@ export async function analyzeSite(
   const toEstimate = ALL_ENGINES.filter((e) => !measuredDirect[e]);
   geoLog("Étape 2a — Moteurs mesurés (réels)", {
     réels: realEngines,
-    àEstimerParClaude: toEstimate,
+    àEstimerParLeModèle: toEstimate,
     classements: ALL_ENGINES.map((e) => ({ moteur: e, scopes: measuredRankings[e].map((r) => r.scope) })),
   });
 
-  // ÉTAPE 2b — En parallèle : audit complet (Opus 4.8, n'estime QUE les moteurs
-  // manquants) + estimation backlinks (Claude + recherche web).
-  geoLog(`Étape 2b — Audit (${MODEL}) + backlinks en parallèle`);
-  const [core, backlinks] = await Promise.all([
+  // ÉTAPE 2b — En parallèle : audit complet (n'estime QUE les moteurs restés
+  // sans classement réel) + estimation des backlinks + mots-clés tendances.
+  geoLog("Étape 2b — Audit + backlinks + mots-clés tendances en parallèle");
+  const [core, backlinks, liveKeywords] = await Promise.all([
     (async (): Promise<EngineCore> => {
-      if (!hasKey) return heuristicAnalysis(signals, ctx, profile);
+      if (!hasKey) return heuristicAnalysis(signals, ctx, profile, "no-key");
       try {
-        return await analyzeWithClaude(signals, ctx, profile, mapsListing, measuredDirect);
+        return await analyzeWithModel(signals, ctx, profile, mapsListing, measuredDirect);
       } catch (err) {
-        console.error("Audit Claude échoué, fallback heuristique :", err);
-        return heuristicAnalysis(signals, ctx, profile);
+        console.error("Audit modèle échoué, fallback heuristique :", err);
+        return heuristicAnalysis(signals, ctx, profile, "model-failed");
       }
     })(),
-    hasKey
+    hasKey && ctx.offsite !== false
       ? estimateBacklinks(signals, profile).catch((err) => {
           console.error("Estimation backlinks échouée :", err);
+          return null;
+        })
+      : Promise.resolve(null),
+    // Mots-clés tendances : Gemini + recherche Google, payant uniquement.
+    useApis
+      ? fetchTrendingKeywords(profile, signals, ctx.brandTone ?? null).catch((err) => {
+          console.error("Mots-clés tendances échoués :", err);
           return null;
         })
       : Promise.resolve(null),
@@ -1388,8 +1768,8 @@ export async function analyzeSite(
     recommandations: core.recommendations.length,
   });
 
-  // Combinaison finale : réel prioritaire (direct + indirect), estimation Claude
-  // pour les moteurs sans classement direct réel.
+  // Combinaison finale : réel prioritaire (direct + indirect), estimation du
+  // modèle d'audit pour les moteurs sans classement direct réel.
   core.engines = combineEngines(
     core.engines,
     measuredDirect,
@@ -1409,6 +1789,16 @@ export async function analyzeSite(
   );
 
   geoLog("Backlinks — estimation", backlinks ?? "(non estimé)");
+
+  // Mots-clés tendances de la niche (title / meta description / H1). Sans
+  // réponse Gemini exploitable — et en gratuit, où l'appel n'est pas tenté — on
+  // sert le repli déterministe : l'aperçu montre la livraison, floutée, sans
+  // jamais déclencher d'appel facturé.
+  const trendingKeywords = liveKeywords ?? fallbackTrendingKeywords(profile, signals);
+  geoLog("Mots-clés tendances", {
+    source: trendingKeywords.source,
+    motsClés: trendingKeywords.keywords.length,
+  });
 
   // L'aperçu gratuit ne mesure que l'architecture : sans classements moteurs, ni
   // audit éditorial, ni analyse de mots-clés, la notation reste sévère. On
@@ -1438,11 +1828,31 @@ export async function analyzeSite(
     computeOverall(core.categories),
     useApis ? 100 : FREE_SCORE_CAP,
   );
+
+  // Filet des correctifs on-page : quand l'audit n'a rien réécrit pour un
+  // élément, la réécriture des mots-clés tendances prend le relais. Les deux
+  // travaillent sur la même page ; laisser une carte sans proposition alors
+  // qu'une réécriture existe à deux blocs de là n'a pas de sens.
+  core.onPageContent = {
+    ...core.onPageContent,
+    title: fillSuggestion(core.onPageContent.title, trendingKeywords.suggested.title),
+    metaDescription: fillSuggestion(
+      core.onPageContent.metaDescription,
+      trendingKeywords.suggested.metaDescription,
+    ),
+    h1: fillSuggestion(core.onPageContent.h1, trendingKeywords.suggested.h1),
+    firstSentence: fillSuggestion(
+      core.onPageContent.firstSentence,
+      trendingKeywords.suggested.firstParagraph,
+    ),
+  };
+
   return {
     ...core,
     overallScore,
     liveQuery,
     backlinks,
+    trendingKeywords,
     signals,
     createdAt: new Date().toISOString(),
   };

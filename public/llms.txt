@@ -1,0 +1,25 @@
+# got_the_ref
+
+> Le premier logiciel de GEO (Generative Engine Optimization) pour les commerces français, physiques et en ligne. got_the_ref pilote automatiquement la visibilité d'un site dans les réponses de ChatGPT, Gemini et Google, avec des agents IA qui travaillent en continu.
+
+got_the_ref s'adresse aux commerces qui veulent être cités quand un client pose sa question à une IA plutôt qu'à un moteur de recherche classique, sans qu'ils aient de compétence technique. Il suffit d'indiquer l'adresse du site (et la fiche Google Maps pour un commerce physique) : les agents IA analysent le site, corrigent automatiquement ce qui empêche d'être cité (architecture, données structurées, contenu, présence locale), republient, puis remesurent. Le tableau de bord affiche la progression au fil des mesures.
+
+Fondateur : Titouan Hirsch (alias bobodigital), https://titouanhirsch.com
+
+## Offres
+
+- Analyse gratuite : diagnostic de visibilité IA en quelques secondes
+- Abonnement "Tout-en-un" : 79€/mois (ou 59€/mois facturé à l'année), agents IA continus, 3 jours d'essai gratuit
+- "Coup de Boost" : 49€ en paiement unique, une passe complète (mesure, corrections, 10 articles publiés)
+
+Détail structuré : /pricing.md
+
+## Pages
+
+- Accueil : /
+- Tarifs : /tarifs
+- Démo : /demo
+- Contact : /contact
+- Mentions légales : /mentions-legales
+- CGV/CGU : /cgv-cgu
+- Politique de confidentialité : /politique-de-confidentialite

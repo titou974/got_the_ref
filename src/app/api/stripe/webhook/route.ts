@@ -1,73 +1,22 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe, resolvePriceId } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
-import { unlockAnalysisFromSession } from "@/features/billing/unlock";
+import {
+  BOOST_CHECKOUT_KIND,
+  grantBoostFromSession,
+  unlockAnalysisFromSession,
+} from "@/features/billing/unlock";
+import { syncSubscription, syncSubscriptionFromSession } from "@/features/billing/subscription";
 import { PAID_PLAN_KEYS, type PaidPlanKey } from "@/constants/plans";
 
 export const runtime = "nodejs";
-
-/**
- * Retrouve l'offre payante correspondant à un Price ID en résolvant le tarif de
- * chaque offre (l'env peut contenir un Product ID, d'où la résolution).
- */
-async function planFromPriceId(priceId: string | undefined): Promise<PaidPlanKey | null> {
-  if (!priceId) return null;
-
-  for (const plan of PAID_PLAN_KEYS) {
-    try {
-      if ((await resolvePriceId(plan)) === priceId) return plan;
-    } catch {
-      // env d'une offre absente : on ignore et on continue.
-    }
-  }
-  return null;
-}
 
 /** Valide qu'une valeur de metadata est bien une offre payante connue. */
 function asPaidPlan(value: string | undefined): PaidPlanKey | null {
   return value && (PAID_PLAN_KEYS as readonly string[]).includes(value)
     ? (value as PaidPlanKey)
     : null;
-}
-
-async function syncSubscription(sub: Stripe.Subscription, userId?: string) {
-  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-  const resolvedUserId =
-    userId ??
-    (sub.metadata?.userId as string | undefined) ??
-    (await prisma.user.findFirst({ where: { stripeCustomerId: customerId } }))?.id;
-
-  if (!resolvedUserId) return;
-
-  const priceId = sub.items.data[0]?.price.id;
-  const plan = await planFromPriceId(priceId);
-  const active = sub.status === "active" || sub.status === "trialing";
-  const periodEnd = sub.items.data[0]?.current_period_end;
-
-  await prisma.subscription.upsert({
-    where: { userId: resolvedUserId },
-    create: {
-      userId: resolvedUserId,
-      stripeCustomerId: customerId,
-      stripeSubscriptionId: sub.id,
-      stripePriceId: priceId,
-      status: sub.status,
-      currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
-    },
-    update: {
-      stripeCustomerId: customerId,
-      stripeSubscriptionId: sub.id,
-      stripePriceId: priceId,
-      status: sub.status,
-      currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
-    },
-  });
-
-  await prisma.user.update({
-    where: { id: resolvedUserId },
-    data: { plan: active && plan ? plan : "free" },
-  });
 }
 
 export async function POST(request: Request) {
@@ -87,17 +36,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const stripe = getStripe();
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode === "subscription" && session.subscription) {
-          const subId =
-            typeof session.subscription === "string"
-              ? session.subscription
-              : session.subscription.id;
-          const sub = await stripe.subscriptions.retrieve(subId);
-          await syncSubscription(sub, session.metadata?.userId);
+        if (session.mode === "subscription") {
+          // Le compte peut ne pas encore exister : l'abonnement se souscrit sans
+          // inscription préalable. `syncSubscriptionFromSession` reste alors sans
+          // effet, et c'est la création de compte qui rejoue le rattachement.
+          await syncSubscriptionFromSession(session);
 
           // Abonnement souscrit depuis un rapport : on le rattache et on l'ouvre,
           // même si le compte n'existe pas encore (il se crée juste après).
@@ -106,11 +52,20 @@ export async function POST(request: Request) {
           }
         } else if (session.mode === "payment" && session.payment_status === "paid") {
           // Déblocage d'une analyse (tunnel principal) : le paiement porte sur
-          // l'analyse, le compte peut être créé après.
+          // l'analyse, le compte peut être créé après. Un Coup de Boost pris
+          // depuis un rapport fait les deux — il ouvre le rapport ET l'offre.
           if (session.metadata?.analysisId) {
-            await unlockAnalysisFromSession(session);
+            const unlocked = await unlockAnalysisFromSession(session);
+            await grantBoostFromSession(session, unlocked?.userId);
             break;
           }
+
+          // Coup de Boost pris sans rapport : rien à ouvrir, mais l'offre est
+          // posée sur le compte du payeur — c'est elle qui déverrouille la
+          // structure et les articles. Sans compte encore créé, la page de
+          // retour s'en chargera après l'inscription.
+          if (await grantBoostFromSession(session)) break;
+          if (session.metadata?.kind === BOOST_CHECKOUT_KIND) break;
 
           // Ancien flux transactionnel lié à un compte : on accorde l'offre.
           const plan = asPaidPlan(session.metadata?.plan);

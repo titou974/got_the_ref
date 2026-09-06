@@ -1,32 +1,57 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Logo } from "@/components/Logo";
-import { AuthForm } from "@/components/AuthForm";
+import { AuthScreen } from "@/components/auth/AuthScreen";
 import { getSession } from "@/lib/auth";
-import { ROUTES } from "@/constants/routes";
+import { resolveAuthDestination } from "@/features/auth/destination";
+import { oauthErrorKey } from "@/features/auth/oauth-errors";
+import { NEXT_PARAM, ROUTES, safeNextPath, signInWithNext } from "@/constants/routes";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("auth");
-  return { title: t("metaSignup") };
+  return { title: t("metaSignup"), robots: { index: false, follow: false } };
 }
 
-export default async function InscriptionPage() {
-  if (await getSession()) redirect(ROUTES.account);
+/**
+ * L'inscription ouvre un compte, puis les tarifs : c'est là que se prend
+ * l'essai de trois jours, et le questionnaire d'accueil vient après (cf.
+ * `destination.ts`).
+ *
+ * Le `callbackURL` posé ici — le tableau de bord, faute de mieux — ne décide
+ * donc de rien pour un compte neuf : `resolveAuthDestination` ne l'honore qu'une
+ * fois l'accueil terminé. C'est exprès. Ce défaut-là n'est le souhait de
+ * personne, c'est le repli d'un formulaire, et le suivre sautait par-dessus les
+ * tarifs.
+ *
+ * Pour qui possède déjà un compte — le cas courant depuis que Google ouvre une
+ * session au lieu de refuser une adresse connue —, `resolveAuthDestination` le
+ * renvoie chez lui sans repasser par le formulaire.
+ */
+export default async function InscriptionPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const requested = params[NEXT_PARAM];
+  const next = safeNextPath(requested, ROUTES.dashboard);
+
+  // Déjà identifié : inutile de redemander — reste à savoir où l'emmener.
+  const session = await getSession();
+  if (session) redirect(await resolveAuthDestination(session.user.id, requested));
+
+  const errorKey = oauthErrorKey(params.error);
   const t = await getTranslations("auth");
 
+  // Sans destination demandée, la bascule vers la connexion n'en invente pas :
+  // c'est ce qui envoyait un client de longue date sur `/connexion?suite=/tarifs`,
+  // et donc sur la grille tarifaire, après s'être identifié.
   return (
-    <main className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-10">
-      <Logo className="mb-8" />
-      <div className="w-full max-w-sm rounded-[28px] border border-fog bg-snow p-6 shadow-[var(--shadow-md)] sm:p-8">
-        <h1 className="text-center text-2xl font-bold">{t("signupTitle")}</h1>
-        <p className="mt-1 mb-6 text-center text-sm text-muted">{t("signupSubtitle")}</p>
-        <AuthForm mode="signup" />
-      </div>
-      <Link href={ROUTES.home} className="mt-6 cursor-pointer text-sm text-muted hover:text-text">
-        {t("backHome")}
-      </Link>
-    </main>
+    <AuthScreen
+      mode="signup"
+      callbackURL={next}
+      switchHref={requested ? signInWithNext(next) : ROUTES.signIn}
+      error={errorKey ? t(errorKey) : null}
+    />
   );
 }

@@ -7,12 +7,45 @@ import { PostCheckoutAccountForm } from "@/components/PostCheckoutAccountForm";
 import { getStripe } from "@/lib/stripe";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { unlockAnalysisFromSession } from "@/features/billing/unlock";
+import {
+  BOOST_CHECKOUT_KIND,
+  SUBSCRIPTION_CHECKOUT_KIND,
+  grantBoostFromSession,
+  unlockAnalysisFromSession,
+} from "@/features/billing/unlock";
+import { syncSubscriptionFromSession } from "@/features/billing/subscription";
 import { ensurePaidAnalysis } from "@/features/analysis/service";
 import { CLAIM_METADATA_KEY, claimMatches } from "@/features/billing/claim";
+import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { ROUTES } from "@/constants/routes";
 
 type Props = { searchParams: Promise<{ session_id?: string }> };
+
+/**
+ * Les trois retours possibles de Stripe : un rapport débloqué, un abonnement
+ * souscrit, un Coup de Boost payé. Même page, même formulaire — seules les phrases
+ * changent, et elles doivent nommer ce qui vient d'être acheté.
+ */
+const SUBTITLES = {
+  report: {
+    fresh: "subtitle",
+    existing: "existingSubtitle",
+    otherDevice: "otherDeviceSubtitle",
+    skip: "skip",
+  },
+  subscription: {
+    fresh: "subscriptionSubtitle",
+    existing: "subscriptionExistingSubtitle",
+    otherDevice: "subscriptionOtherDeviceSubtitle",
+    skip: "subscriptionSkip",
+  },
+  boost: {
+    fresh: "boostSubtitle",
+    existing: "boostExistingSubtitle",
+    otherDevice: "boostOtherDeviceSubtitle",
+    skip: "subscriptionSkip",
+  },
+} as const;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("postCheckout");
@@ -36,12 +69,37 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
 
   const unlocked = session ? await unlockAnalysisFromSession(session) : null;
 
-  // Lance l'audit complet (Claude + moteurs live) dès maintenant : le visiteur
+  // Coup de Boost : l'offre est posée sur le compte du payeur dès le retour,
+  // sans attendre le webhook — le client enchaîne souvent sur son tableau de
+  // bord, et il doit y trouver la structure ouverte.
+  if (session) await grantBoostFromSession(session, unlocked?.userId);
+
+  // Même raison pour l'abonnement : le webhook peut arriver après, et il n'avait
+  // parfois aucun compte à rattacher au moment où il est passé. On rejoue donc
+  // le rattachement ici, tant que le payeur est identifiable.
+  if (session) await syncSubscriptionFromSession(session, unlocked?.userId);
+
+  // Lance l'audit complet (DeepSeek + moteurs live) dès maintenant : le visiteur
   // patiente ici de toute façon, autant qu'il découvre le vrai rapport tout de
   // suite plutôt qu'au prochain chargement de la page d'analyse.
   if (unlocked) await ensurePaidAnalysis(unlocked.analysisId);
 
-  if (!unlocked) {
+  // Payé depuis la carte tarif — abonnement ou Coup de Boost : aucun rapport à
+  // ouvrir, mais le paiement vaut engagement, il reste à créer le compte.
+  const kind = session?.metadata?.kind;
+  const paidWithoutReport =
+    !unlocked &&
+    (kind === SUBSCRIPTION_CHECKOUT_KIND || kind === BOOST_CHECKOUT_KIND) &&
+    session?.payment_status !== "unpaid";
+
+  // Ce qu'on vient d'acheter décide de la phrase d'accueil : un rapport ouvert
+  // prime toujours, sinon c'est l'offre réglée qui parle.
+  const variant = unlocked ? "report" : kind === BOOST_CHECKOUT_KIND ? "boost" : "subscription";
+  const copy = SUBTITLES[variant];
+
+  const payerEmail = unlocked?.email ?? session?.customer_details?.email ?? null;
+
+  if (!unlocked && !paidWithoutReport) {
     return (
       <main className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-10 text-center">
         <Logo className="mb-8" />
@@ -54,14 +112,19 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
     );
   }
 
-  // Déjà connecté : rien à créer, on l'emmène droit sur son rapport complet.
+  // Déjà connecté : rien à créer. Reste à savoir où l'emmener — le
+  // questionnaire d'accueil tant qu'il n'a pas été rempli, puisque c'est lui qui
+  // arme les agents ; son rapport ou son espace client une fois répondu.
   const user = await getCurrentUser();
-  if (user) redirect(ROUTES.analysis(unlocked.analysisId));
+  if (user) {
+    if (!(await isOnboardingComplete(user.id))) redirect(ROUTES.onboarding);
+    redirect(unlocked ? ROUTES.analysis(unlocked.analysisId) : ROUTES.dashboard);
+  }
 
   // Un compte existe déjà pour cet e-mail : on propose la connexion.
-  const existing = unlocked.email
+  const existing = payerEmail
     ? await prisma.user.findUnique({
-        where: { email: unlocked.email },
+        where: { email: payerEmail },
         select: { id: true },
       })
     : null;
@@ -92,7 +155,7 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
 
         <h1 className="text-center text-2xl font-bold">{t("title")}</h1>
         <p className="mt-1 mb-6 text-center text-sm text-muted">
-          {existing ? t("existingSubtitle") : canClaim ? t("subtitle") : t("otherDeviceSubtitle")}
+          {existing ? t(copy.existing) : canClaim ? t(copy.fresh) : t(copy.otherDevice)}
         </p>
 
         {existing || !canClaim ? (
@@ -103,14 +166,14 @@ export default async function PaiementSuccesPage({ searchParams }: Props) {
             {t("signIn")}
           </Link>
         ) : (
-          <PostCheckoutAccountForm sessionId={sessionId} email={unlocked.email ?? ""} />
+          <PostCheckoutAccountForm sessionId={sessionId} email={payerEmail ?? ""} />
         )}
 
         <Link
-          href={ROUTES.analysis(unlocked.analysisId)}
+          href={unlocked ? ROUTES.analysis(unlocked.analysisId) : ROUTES.home}
           className="mt-4 block cursor-pointer text-center text-sm text-muted underline decoration-pebble underline-offset-4 hover:text-text"
         >
-          {t("skip")}
+          {t(copy.skip)}
         </Link>
       </div>
     </main>

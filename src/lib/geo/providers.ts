@@ -1,9 +1,11 @@
 import "server-only";
 
+import Anthropic from "@anthropic-ai/sdk";
+
 import type { AiEngine } from "./types";
 import { geoLog } from "./log";
 
-const FETCH_TIMEOUT_MS = 45000;
+const FETCH_TIMEOUT_MS = 80000;
 
 export type EngineCitation = {
   rank: number;
@@ -38,7 +40,7 @@ function isAbortError(err: unknown): boolean {
   );
 }
 
-async function postJson(
+export async function postJson(
   url: string,
   init: RequestInit,
   label = "fetch",
@@ -371,27 +373,262 @@ async function queryGemini(query: string): Promise<LiveEngineResult> {
   }
 }
 
-/* ------------------------------ Orchestration ----------------------------- */
+/* ------------------------------- Perplexity ------------------------------- */
+/**
+ * Reproduit Perplexity « grand public » : modèle sonar, sans rien à activer —
+ * la recherche web est son fonctionnement normal, il va lire le web avant
+ * chaque réponse. Aucun system prompt, comme partout ici : on veut la réponse
+ * qu'un client obtiendrait en tapant la même question.
+ *
+ * Ses sources arrivent dans `search_results`, à part du texte et dans l'ordre
+ * où le moteur les a retenues : c'est exactement le repli dont `measureEngine`
+ * a besoin quand la réponse ne se laisse pas lire comme une liste.
+ */
+async function queryPerplexity(query: string): Promise<LiveEngineResult> {
+  const engine: AiEngine = "Perplexity";
+  const key = process.env.PERPLEXITY_API_KEY;
+  if (!key) {
+    geoLog("Perplexity — ignoré (pas de clé PERPLEXITY_API_KEY)");
+    return {
+      engine,
+      available: false,
+      answered: false,
+      answerText: "",
+      rankedItems: [],
+      citations: [],
+    };
+  }
 
-/** Y a-t-il au moins une clé moteur configurée ? */
-export function hasAnyEngineKey(): boolean {
-  return !!(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+  const model = process.env.PERPLEXITY_MODEL || "sonar";
+  const startedAt = Date.now();
+  geoLog(`Perplexity — appel (${model})…`, { requête: query.slice(0, 200) });
+  try {
+    const data = (await postJson(
+      "https://api.perplexity.ai/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: query }],
+          max_tokens: 1200,
+        }),
+      },
+      "Perplexity",
+    )) as Record<string, unknown>;
+
+    const choices = (data.choices as Array<Record<string, unknown>>) ?? [];
+    const answerText =
+      ((choices[0]?.message as Record<string, unknown> | undefined)
+        ?.content as string) ?? "";
+
+    // `search_results` porte le titre de la page en plus de son URL ; les
+    // réponses plus anciennes de l'API ne rendaient qu'une liste d'URL brutes
+    // dans `citations`. On lit la première, et on retombe sur la seconde.
+    const results =
+      (data.search_results as
+        | Array<{ title?: string; url?: string }>
+        | undefined) ?? [];
+    const rawCitations: EngineCitation[] = results.length
+      ? results.map((r, i) => ({
+          rank: i + 1,
+          title: r.title ?? null,
+          url: r.url ?? "",
+          domain: domainOf(r.url ?? ""),
+        }))
+      : ((data.citations as string[] | undefined) ?? []).map((url, i) => ({
+          rank: i + 1,
+          title: null,
+          url,
+          domain: domainOf(url),
+        }));
+
+    const rankedItems = parseRankedItems(answerText);
+    geoLog("Perplexity — ✅ résultat", {
+      tempsTotalMs: Date.now() - startedAt,
+      classement: rankedItems,
+      sourcesCitées: rawCitations.length,
+      aperçuRéponse: answerText.slice(0, 400),
+    });
+    return {
+      engine,
+      available: true,
+      answered: !!answerText || rankedItems.length > 0,
+      answerText,
+      rankedItems,
+      citations: dedupeCitations(rawCitations.filter((c) => c.url || c.title)),
+    };
+  } catch (err) {
+    geoLog(
+      `Perplexity — ❌ échec après ${Date.now() - startedAt} ms`,
+      String(err),
+    );
+    return {
+      engine,
+      available: true,
+      answered: false,
+      answerText: "",
+      rankedItems: [],
+      citations: [],
+      error: String(err),
+    };
+  }
 }
 
-/** Interroge en parallèle les moteurs configurés sur la requête cible. */
+/* --------------------------------- Claude --------------------------------- */
+/**
+ * Reproduit Claude « grand public » : le SDK Anthropic, l'outil `web_search`
+ * activé, aucun system prompt. Sans cet outil, Claude répondrait de mémoire et
+ * rendrait une liste plausible plutôt qu'un relevé — c'est précisément ce qui
+ * l'avait fait sortir des moteurs suivis la première fois.
+ *
+ * L'effort de réflexion est au plus bas : ce qu'on lui demande est une liste de
+ * dix noms, pas un problème à démêler, et l'appel est payé à chaque relevé.
+ *
+ * La réponse arrive en blocs : le texte porte le classement, les blocs
+ * `web_search_tool_result` portent les pages réellement consultées. Une
+ * recherche en échec rend un objet d'erreur là où une réussie rend une liste :
+ * on distingue les deux avant de parcourir, sinon le relevé casserait sur une
+ * réponse que l'API a pourtant bien rendue.
+ */
+
+const RANKING_SYSTEM = `Tu réponds comme un assistant grand public qui cherche sur le web avant de répondre. Quand on te demande un classement, cherche puis donne la liste demandée, ordonnée du meilleur au moins bon, en te fondant sur ce que tu as trouvé. Un ordre approximatif est attendu et suffit : n'explique pas qu'il n'existe pas de classement officiel, ne préviens pas des limites de l'exercice, ne pose pas de question. Réponds par la liste, et rien d'autre.`;
+
+async function queryClaude(query: string): Promise<LiveEngineResult> {
+  const engine: AiEngine = "Claude";
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    geoLog("Claude — ignoré (pas de clé ANTHROPIC_API_KEY)");
+    return {
+      engine,
+      available: false,
+      answered: false,
+      answerText: "",
+      rankedItems: [],
+      citations: [],
+    };
+  }
+
+  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+
+  const startedAt = Date.now();
+  geoLog(`Claude — appel (${model}, web_search)…`, {
+    requête: query.slice(0, 200),
+  });
+  try {
+    const client = new Anthropic({ apiKey: key, timeout: FETCH_TIMEOUT_MS });
+    const message = await client.messages.create({
+      model,
+      max_tokens: 2000,
+      output_config: { effort: "low" },
+      system: RANKING_SYSTEM,
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
+      messages: [{ role: "user", content: query }],
+    });
+
+    let answerText = "";
+    const citations: EngineCitation[] = [];
+    for (const block of message.content) {
+      if (block.type === "text") {
+        answerText = answerText ? `${answerText}\n${block.text}` : block.text;
+        continue;
+      }
+      if (block.type !== "web_search_tool_result") continue;
+      // Une recherche en échec rend un objet (`{ error_code }`), pas une liste.
+      if (!Array.isArray(block.content)) continue;
+      for (const result of block.content) {
+        if (result.type !== "web_search_result") continue;
+        citations.push({
+          rank: citations.length + 1,
+          title: result.title ?? null,
+          url: result.url,
+          domain: domainOf(result.url),
+        });
+      }
+    }
+
+    const rankedItems = parseRankedItems(answerText);
+    geoLog("Claude — ✅ résultat", {
+      tempsTotalMs: Date.now() - startedAt,
+      classement: rankedItems,
+      sourcesCitées: citations.length,
+      aperçuRéponse: answerText.slice(0, 400),
+    });
+    return {
+      engine,
+      available: true,
+      answered: !!answerText || rankedItems.length > 0,
+      answerText,
+      rankedItems,
+      citations: dedupeCitations(citations),
+    };
+  } catch (err) {
+    geoLog(`Claude — ❌ échec après ${Date.now() - startedAt} ms`, String(err));
+    return {
+      engine,
+      available: true,
+      answered: false,
+      answerText: "",
+      rankedItems: [],
+      citations: [],
+      error: String(err),
+    };
+  }
+}
+
+/* ------------------------------ Orchestration ----------------------------- */
+
+/**
+ * Y a-t-il au moins une clé moteur configurée ?
+ *
+ * Une clé par moteur suivi, et rien d'autre : ce sont les seuls assistants qui
+ * lisent le web avant de répondre. Une clé de modèle de service (DeepSeek) n'a
+ * pas sa place ici — elle sert à juger un site, pas à classer un marché.
+ *
+ * Une seule suffit à lancer le relevé : un moteur sans clé se signale
+ * `available: false` et garde sa dernière mesure connue, plutôt que d'empêcher
+ * les autres de partir.
+ */
+export function hasAnyEngineKey(): boolean {
+  return !!(
+    process.env.OPENAI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.PERPLEXITY_API_KEY ||
+    process.env.ANTHROPIC_API_KEY
+  );
+}
+
+/**
+ * Interroge en parallèle les moteurs configurés sur la requête cible.
+ *
+ * Chacun va chercher sa réponse sur le web : ChatGPT par son outil de
+ * recherche, Gemini par le grounding Google Search, Perplexity par
+ * construction, Claude par son outil `web_search`. Le classement qu'on en tire
+ * est donc un relevé, pas une estimation — c'est la seule raison pour laquelle
+ * on peut l'afficher comme un top 10.
+ */
 export async function gatherLiveEngines(
   query: string,
+  engines: AiEngine[] = ["ChatGPT", "Gemini", "Perplexity", "Claude"],
 ): Promise<LiveEngineResult[]> {
-  const results = await Promise.allSettled([
-    queryOpenAI(query),
-    queryGemini(query),
-  ]);
-  const fallback: AiEngine[] = ["ChatGPT", "Gemini"];
+  const callers: Record<AiEngine, (q: string) => Promise<LiveEngineResult>> = {
+    ChatGPT: queryOpenAI,
+    Gemini: queryGemini,
+    Perplexity: queryPerplexity,
+    Claude: queryClaude,
+  };
+  const wanted = engines.filter((e, i) => engines.indexOf(e) === i);
+  const results = await Promise.allSettled(
+    wanted.map((e) => callers[e](query)),
+  );
   return results.map((r, i) =>
     r.status === "fulfilled"
       ? r.value
       : {
-          engine: fallback[i],
+          engine: wanted[i],
           available: true,
           answered: false,
           answerText: "",

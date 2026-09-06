@@ -30,12 +30,287 @@ npm run dev                 # http://localhost:3000
 |----------|------|
 | `DATABASE_URL` | Connexion SQLite (`file:./dev.db` par défaut) |
 | `AUTH_SECRET` | Secret de signature des sessions JWT (`openssl rand -base64 32`) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Connexion Google (facultatif — sans eux, le bouton Google n'est pas affiché) |
 | `ANTHROPIC_API_KEY` | Clé API Claude (optionnelle — fallback heuristique sinon) |
 | `STRIPE_SECRET_KEY` | Clé secrète Stripe |
 | `STRIPE_WEBHOOK_SECRET` | Secret du webhook Stripe |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Clé publique Stripe |
 | `STRIPE_PRICE_PRO` / `STRIPE_PRICE_AGENCY` | IDs de prix (abonnements mensuels) |
 | `NEXT_PUBLIC_APP_URL` | URL publique de l'app |
+| `AI_PROVIDER` | `deepseek` (défaut) ou `moonshot` : qui mène sur le tunnel d'accueil |
+| `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` | DeepSeek V4 Flash (`deepseek-v4-flash` par défaut) |
+| `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | Kimi (`kimi-k2.6` par défaut), fournisseur de secours |
+| `FIRECRAWL_API_KEY` | Clé Firecrawl (sans elle, repli sur le parcours interne) |
+| `FIRECRAWL_URL` | Instance Firecrawl auto-hébergée (`https://api.firecrawl.dev` par défaut) |
+| `CRAWL_KEEP_HTML` | `true` pour conserver aussi le HTML brut de chaque page |
+| `CRAWL_MAX_AGE_HOURS` | Fraîcheur d'un crawl avant de le relancer (168 h par défaut) |
+| `CREDENTIALS_KEY` | Phrase secrète (32 caractères minimum) qui chiffre les identifiants de plateforme du tableau de bord. Sans elle, le rattachement d'un site est refusé. La changer rend illisibles tous les liens déjà enregistrés. |
+| `CRON_SECRET` | Ferme `/api/cron/publish`, la tâche qui dépose les articles arrivés à échéance. Sans lui, la route répond 503 et aucune publication programmée ne part. Vercel l'envoie de lui-même dès qu'il est défini sur le projet. |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | Mots-clés tendances relevés avec la recherche Google (`gemini-flash-latest` par défaut) |
+| `RESEND_API_KEY` | Clé Resend pour les e-mails transactionnels (sans elle, les envois sont journalisés en console) |
+| `RESEND_FROM` | Expéditeur, ex. `got_the_ref <bonjour@votre-domaine.fr>` (`onboarding@resend.dev` par défaut) |
+| `RESEND_REPLY_TO` | Adresse de réponse (par défaut, le contact du site) |
+| `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` | Identifiants DataForSEO ([api-access](https://app.dataforseo.com/api-access)) pour le relevé des mentions dans les IA. Sans eux, la carte reste en mode exemple. |
+| `DATAFORSEO_AUTH` | Variante à variable unique : base64 de `login:password` |
+
+## Tunnel d'accueil et crawl
+
+Après un paiement ou l'ouverture d'un essai, le client passe par sept questions
+(`/accueil`) avant d'atteindre son tableau de bord : type de commerce, site et
+fiche Google Maps, marché et villes, activité, concurrents, tonalité, Search
+Console. Les trois dernières se passent d'un clic.
+
+Le crawl passe par Firecrawl, un service hébergé appelé en HTTP : rien à faire
+tourner à côté de l'application, qui reste déployable telle quelle sur une
+plateforme sans conteneurs. Une page crawlée coûte un crédit, et l'étape « site »
+en consomme jusqu'à 25 par client.
+
+Renseignez `FIRECRAWL_API_KEY` et c'est tout. Sans clé, l'application retombe sur
+un parcours interne (fetch + cheerio, liens de même origine) : le tunnel reste
+traversable, mais les sites qui s'affichent en JavaScript ressortent vides.
+
+Chaque page crawlée est conservée en base (`CrawledSite` / `CrawledPage`),
+indexée par domaine : deux clients sur le même domaine partagent le crawl, et un
+recrawl remplace le jeu de pages plutôt que de le compléter.
+
+Deux modèles lisent ensuite ce contenu, tous deux en API compatible OpenAI :
+DeepSeek V4 Flash mène (le moins cher au token), Kimi prend le relais si le
+premier échoue. Sans aucune clé, les étapes qui dépendent d'un modèle
+(détection de la langue et des villes, liste des concurrents, lecture de la
+tonalité) restent vides sans interrompre le parcours.
+
+### Étape Search Console
+
+Le rattachement Search Console réutilise les identifiants OAuth de la connexion
+Google, avec son propre consentement (`webmasters.readonly`, lecture seule).
+Ajoutez la seconde URI de redirection dans Google Cloud :
+
+- `http://localhost:3000/api/google/callback` (développement)
+- `https://votre-domaine.fr/api/google/callback` (production)
+
+## Connexion Google (facultative)
+
+Tant que `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET` sont absents, le fournisseur
+n'est pas déclaré et le bouton « S'inscrire avec Google » n'apparaît pas : les
+pages d'inscription et de connexion ouvrent alors directement le formulaire
+e-mail. Pour l'activer :
+
+1. Google Cloud Console → **APIs & Services** → **Credentials** → **Create
+   credentials** → **OAuth client ID** → **Web application**.
+2. Renseignez les URI de redirection autorisées :
+   - `http://localhost:3000/api/auth/callback/google` (développement)
+   - `https://votre-domaine.fr/api/auth/callback/google` (production)
+3. Reportez le Client ID et le Client Secret dans `.env`.
+
+L'URL de rappel est dérivée de `baseURL` (soit `NEXT_PUBLIC_APP_URL`) : si elle
+ne correspond pas à l'URI déclarée chez Google, l'échange échoue en
+`redirect_uri_mismatch`.
+
+## Mot de passe oublié (Resend)
+
+Le parcours tient en deux pages : `/mot-de-passe-oublie` (saisie de l'adresse)
+et `/nouveau-mot-de-passe` (atterrissage du lien reçu, jeton dans l'URL). Better
+Auth émet et vérifie le jeton, valable **une heure** ; l'e-mail part par Resend
+depuis `sendResetPassword`, différé après la réponse via `after()` de Next.
+
+Pour l'activer :
+
+1. Créez une clé sur [resend.com/api-keys](https://resend.com/api-keys) →
+   `RESEND_API_KEY`.
+2. Vérifiez votre domaine sur [resend.com/domains](https://resend.com/domains)
+   (enregistrements DKIM/SPF), puis renseignez `RESEND_FROM` avec une adresse de
+   ce domaine. Sans domaine vérifié, `onboarding@resend.dev` n'expédie qu'à
+   l'adresse du compte Resend — bon pour un essai, pas pour la production.
+
+Sans `RESEND_API_KEY`, rien ne casse : la demande aboutit, l'e-mail est
+journalisé en console (`[email] RESEND_API_KEY absente …`) au lieu d'être
+expédié — et le lien reste lisible dans ce journal pour tester en local.
+
+Deux garde-fous côté serveur : la réponse est identique que l'adresse existe ou
+non (pas d'annuaire de clients), et le débit est bridé à 5 demandes par quart
+d'heure et par IP, 3 par heure et par adresse. Une réinitialisation réussie
+ferme toutes les sessions ouvertes du compte.
+
+## Tableau de bord
+
+`/tableau-de-bord`, ouvert une fois le tunnel d'accueil terminé. Six sections
+partagent la même fiche client et la même analyse, chargées une seule fois par
+requête (`features/dashboard/queries.ts`).
+
+| Section | Ce qu'elle montre |
+|---------|-------------------|
+| Accueil | Place du commerce dans chaque IA, trafic amené par les assistants, note de visibilité, prochains articles |
+| Contenu | Mots-clés tendances de la niche, éléments on-page actuels face à leur réécriture |
+| Architecture | Contrôles techniques du dernier crawl, accès des robots d'IA, volume lu |
+| Articles | Calendrier éditorial, rédaction, validation, publication, voix de la marque |
+| Présence web | Mentions relevées, liens entrants, sites de la niche à contacter |
+| Google Maps | Cohérence fiche ↔ site, posts préparés d'avance (commerces avec adresse) |
+
+À la première ouverture, le compte n'a pas encore d'audit complet : la page lance
+l'analyse elle-même (`prepareDashboardAction`) et se recharge quand elle est prête.
+
+### Trafic venu des IA
+
+Lu dans Google Analytics 4, à partir de la source de session, jamais d'un
+paramètre d'URL :
+
+- ChatGPT ajoute `?utm_source=chatgpt.com` à ses liens, GA4 range donc la visite
+  sous `chatgpt.com` ;
+- Perplexity n'ajoute pas d'`utm_source` (ses liens portent `?ct-referrer=perplexity`,
+  qu'Analytics ignore) : la visite se reconnaît à son référent `perplexity.ai` ;
+- Gemini n'ajoute rien : seul le référent `gemini.google.com` reste, et il ne
+  couvre que les clics depuis l'application. Les liens des aperçus IA de Google
+  partent de `google.com` et restent mêlés au référencement classique. L'interface
+  le dit plutôt que de gonfler le chiffre.
+
+### Mentions dans les IA (DataForSEO)
+
+La carte « Mentions dans les IA » montre comment les citations du commerce
+évoluent, modèle par modèle et mois par mois. Elle lit l'archive DataForSEO
+(`/v3/ai_optimization/llm_mentions/timeseries_delta/live`) : des millions de
+questions grand public rejouées en continu sur ChatGPT et sur les aperçus IA de
+Google, réponses et sources conservées.
+
+- **Une seule route**, sur les **douze derniers mois** glissants. `search_mentions`,
+  qui liste les réponses une à une, a été retiré : sur un commerce local il rend
+  le plus souvent une liste vide — l'archive garde les réponses détaillées bien
+  plus parcimonieusement qu'elle ne compte les mentions — et une carte qui
+  affiche « aucune mention » alors que le mouvement mensuel existe ment sur la
+  mesure.
+- La fenêtre glisse sur douze mois plutôt que de suivre l'année civile : en
+  janvier, cette dernière ne montrerait qu'une seule barre.
+- Le graphique est en **barres groupées** : une couleur par modèle d'IA, côte à
+  côte à chaque mois. Cela se lit à deux niveaux — la marche du mois, et lequel
+  des modèles la produit. La liste sous le graphique reprend la même couleur en
+  pastille, avec le mouvement net de chaque modèle sur la fenêtre.
+- La cible est le **domaine seul**, jamais le nom de la marque : c'est le site du
+  commerce qu'on suit, et lui seul s'écrit sans ambiguïté d'orthographe.
+  `search_filter: "include"` est écrit explicitement, l'API exigeant qu'au moins
+  une cible le porte.
+- Un appel par plateforme : `platform` ne prend qu'une valeur par requête, et
+  sans ce champ la route mélangerait les deux modèles dans une seule série.
+- Ce que rend cette route est `delta_mentions` : **l'écart avec le mois
+  précédent, pas un total**. Une barre peut donc descendre sous zéro, d'où la
+  ligne de base tracée à 0 ; l'interface écrit le signe partout plutôt que
+  d'appeler « nombre de mentions » un chiffre qui n'en est pas un. Les mois
+  absents de la réponse sont rétablis à zéro : un axe qui saute de mars à juin
+  ment sur l'allure.
+- L'archive ne remonte pas avant **2025-08-01** : `date_from` ne descend jamais
+  sous cette date. ChatGPT n'est historisé qu'aux États-Unis et en anglais — sa
+  série est donc toujours relevée sur `location_code: 2840` et
+  `language_code: "en"`, faute de quoi elle rendrait un vide qu'on lirait comme
+  une absence de mentions. La carte écrit la localisation de chaque série.
+- La cible est le domaine de la fiche d'accueil, sous-domaines compris ; la
+  localisation suit le pays relevé pendant l'accueil (France par défaut).
+- **Un relevé par client et par mois calendaire**, tenu en base
+  (`LlmMentionSnapshot`, une ligne par compte) et non par un cache : un cache
+  s'évapore à chaque déploiement, la facture non. Mensuel parce que la donnée
+  l'est — l'archive agrège par mois, et sur douze barres onze ne bougeront plus
+  jamais. Le mois calendaire plutôt qu'un délai de trente jours : c'est ce qui
+  fait apparaître la barre du mois neuf le 1er, et non le 12 parce que le relevé
+  précédent tombait un 12.
+- **Un compte sans ligne en base a la porte ouverte** : les clients arrivés
+  avant cet écran sont relevés à leur première ouverture du tableau de bord,
+  sans rien avoir à refaire de leur accueil.
+- La table garde deux dates : `attemptedAt`, la dernière tentative réussie **ou
+  ratée**, qui ouvre ou ferme la porte, et `fetchedAt`, le dernier relevé
+  exploitable, celui que la carte affiche. Rien ne rouvre la porte avant
+  l'heure, pas même un changement de domaine — sinon un aller-retour entre deux
+  domaines suffirait à appeler sans limite ; le relevé gardé ne ressort que s'il
+  porte sur le même domaine et la même localisation.
+- **Tout passe dans le terminal serveur** (`⚫ [DATAFORSEO]`) : la requête
+  partie avec sa cible et sa période, la réponse avec son coût en dollars et sa
+  durée, et — tout aussi important — les relevés lus en base sans qu'aucun appel
+  ne parte. Un appel qu'on ne voit pas passer est un appel qu'on découvre sur la
+  facture. Couper avec `DATAFORSEO_DEBUG="false"`.
+- Un relevé écrit par une version antérieure de cet écran n'a pas la forme
+  attendue : il est traité comme absent — la carte repasse à l'exemple — plutôt
+  que rendu à moitié. Pour forcer un nouveau relevé avant le mois prochain,
+  supprimer la ligne du compte dans `LlmMentionSnapshot`.
+- Sans identifiants, aucun appel ne part : la carte montre un exemple, net, sous
+  son bandeau « données d'exemple ».
+- La table est indispensable au garde-fou : sans elle, aucun appel ne part.
+  `npm run db:push` puis `npm run db:generate`.
+
+Pour vérifier le branchement en ligne de commande — le script parle à DataForSEO
+directement et ne passe pas par le compteur mensuel, chaque exécution est donc
+facturée :
+
+```bash
+npm run check:dataforseo -- exemple.fr        # France (2250) par défaut
+npm run check:dataforseo -- exemple.be 2056   # autre localisation
+```
+
+### Rattachement du site
+
+`constants/site-platforms.ts` décrit la porte d'entrée de chaque plateforme et ce
+qu'elle permet vraiment : déposer un article (`publish`), corriger une page
+(`edit`). WordPress, WooCommerce, Shopify et Ghost ouvrent les deux ; Wix,
+Webflow, Squarespace, PrestaShop et Framer n'ouvrent pas leur rédaction à une API
+tierce et n'accordent donc que la correction. Un site fait main passe par
+« Autre site » avec un webhook.
+
+Les identifiants sont chiffrés en AES-256-GCM (`lib/crypto.ts`, clé dérivée de
+`CREDENTIALS_KEY`) avant d'être écrits, et ne repartent jamais vers le navigateur.
+
+Le client rattache son site depuis **Tableau de bord → Réglages → Votre site**.
+Le formulaire se construit à partir du registre : ajouter une plateforme dans
+`constants/site-platforms.ts` suffit à la voir apparaître, à condition que
+`connectors.ts` sache la vérifier.
+
+#### Préflight
+
+```bash
+npm run check:site                                   # les clés d'environnement
+npm run check:site -- --wordpress https://exemple.fr --user titouan --password "abcd EFGH ijkl mnop qrst uvwx"
+npm run check:site -- --shopify ma-boutique.myshopify.com --token shpat_...
+npm run check:site -- --cron https://exemple.fr      # la route est-elle bien fermée
+```
+
+Le script ne lit que : aucun appel facturé, aucune écriture — sauf `--cron --run`,
+qui déclenche un vrai passage de publication.
+
+#### Ce que WordPress demande
+
+- **HTTPS obligatoire.** WordPress désactive les mots de passe d'application sur
+  une connexion en clair ; le rattachement est refusé d'emblée sur `http://`.
+- **Un mot de passe d'application**, pas le mot de passe de connexion :
+  Utilisateurs → Profil → Mots de passe d'application. Les espaces qu'affiche
+  l'écran de création sont retirés avant l'envoi.
+- **Un compte administrateur ou éditeur.** Un compte sans `publish_posts` est
+  rattaché quand même, mais seule la correction de textes lui est annoncée.
+- **`/wp-json` joignable.** Les extensions de sécurité (Wordfence, iThemes) le
+  ferment volontiers, et un permalien réglé sur « simple » le rend inaccessible.
+- **En-tête `Authorization` conservé.** Sur un Apache en CGI ou FastCGI, PHP ne
+  la voit pas : le site répond 401 avec des identifiants valides. Correctif dans
+  le `.htaccess` du client : `CGIPassAuth On`.
+- **Une page d'accueil statique** (Réglages → Lecture) pour que le H1 et le
+  premier paragraphe soient réécrits automatiquement. Sinon ils restent manuels.
+- Les fichiers de racine (`/llms.txt`, `/robots.txt`) ne s'écrivent pas par
+  l'API REST : leur contenu est fourni au client, à déposer lui-même.
+
+#### Ce que Shopify demande
+
+- **L'adresse en `.myshopify.com`**, jamais le domaine de vente : l'API Admin ne
+  répond que là. `admin.shopify.com/store/xxx` est accepté et converti.
+- **Une application personnalisée** (Paramètres → Applications et canaux de
+  vente → Développer des applications) et son jeton `shpat_…`, avec les portées
+  **`read_content`** et **`write_content`**.
+- **Au moins un blog** dans la boutique. Sans blog, le lien reste valable pour
+  les métachamps SEO mais la publication n'est pas annoncée. Le champ « Blog
+  visé » choisit lequel ; laissé vide, c'est le premier.
+- **La version d'API est figée** à `2026-01` dans `connectors.ts`. Shopify retire
+  chaque version au bout d'un an : cette date est à relever une fois par an.
+- La racine appartient à Shopify — `/robots.txt` et `/sitemap.xml` sont générés
+  par la plateforme, aucun fichier arbitraire ne peut y être déposé.
+
+#### Publication programmée
+
+`vercel.json` déclenche `/api/cron/publish` chaque jour à 8 h UTC. Par défaut,
+seuls les articles **validés** partent ; le pilote automatique complet demande
+`autoPublish` sur le rattachement. Chaque passage traite au plus 25 articles et
+s'arrête de lui-même au bout de 240 secondes — la route est coupée à 300 par
+l'hébergeur. Ce qui n'est pas parti repart au passage suivant.
 
 ## Configuration Stripe
 
@@ -46,6 +321,78 @@ npm run dev                 # http://localhost:3000
    ```
    Copiez le `whsec_…` affiché dans `STRIPE_WEBHOOK_SECRET`.
 3. Événements gérés : `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`.
+
+## Serveur MCP `got_the_ref`
+
+MCP (Model Context Protocol) est la prise standard entre un agent IA et un
+service. Celle-ci connecte l'agent du client — Claude Code, Codex, Cursor,
+Hermes — à son compte : l'agent relève lui-même le statut et les correctifs,
+puis les applique. Elle remplace le prompt qu'on copiait à la main.
+
+Le serveur **tourne dans cette application**, sur le même déploiement Vercel que
+le reste du site. Il n'y a rien à publier sur npm, rien à installer sur le poste
+du client, et aucune version installée quelque part ne peut diverger de celle
+qui est déployée.
+
+### Comment le client s'y branche
+
+Il crée sa clé depuis la modale du tableau de bord, puis colle une ligne :
+
+```bash
+# Claude Code
+claude mcp add --scope user --transport http got_the_ref https://gotheref.com/mcp/<clé>
+
+# Codex
+codex mcp add got_the_ref --url https://gotheref.com/mcp/<clé>
+```
+
+Cursor n'a pas de sous-commande `mcp add` : la modale lui donne un lien
+d'installation `cursor://`, avec le bloc `~/.cursor/mcp.json` en repli. Hermes
+se règle par le même bloc.
+
+### La clé
+
+La clé voyage dans le chemin de l'URL. C'est ce qui permet à la commande de
+tenir sur une ligne dans les quatre agents : Cursor et les configurations par
+fichier n'acceptent qu'une adresse, pas un en-tête. **Une adresse `/mcp/…` est
+donc un secret**, au même titre qu'un mot de passe :
+
+- le serveur n'en garde que l'empreinte (SHA-256) — elle n'existe en clair
+  qu'une fois, dans la réponse qui la crée ;
+- les réponses portent `Cache-Control: no-store` et `X-Robots-Tag: noindex`, et
+  `/mcp/` est écarté dans `robots.txt` ;
+- elle se coupe côté compte (`McpToken.revokedAt`), et une clé créée mais jamais
+  employée s'éteint dès qu'on en crée une neuve pour le même agent ;
+- l'en-tête `Authorization: Bearer` reste accepté pour les agents qui savent
+  l'envoyer.
+
+### Ce que l'agent peut faire
+
+| Outil | Rôle |
+| --- | --- |
+| `got_the_ref_statut` | Offre du compte, site suivi, dernière analyse, chantiers ouverts. |
+| `got_the_ref_correctifs` | Les correctifs à appliquer, avec les textes exacts. |
+| `got_the_ref_expliquer` | Explique l'analyse et les correctifs. |
+| `got_the_ref_signaler` | Rapporte à la plateforme ce qui a été posé. |
+
+Le prompt MCP `got_the_ref` active l'agent avec sa charte, laquelle part aussi
+dans les `instructions` du serveur, à la poignée de main.
+
+Le périmètre n'est pas une consigne qu'on demande à l'agent de respecter : c'est
+tout ce que le serveur sait produire. Les chantiers que l'offre du compte ne
+couvre pas arrivent nommés et **vides** — il n'y a rien à reconstituer. Révoquer
+un accès ne figure volontairement pas parmi les outils : c'est un geste du
+client, depuis son tableau de bord.
+
+### Où c'est écrit
+
+```
+src/app/mcp/[cle]/route.ts     Le point d'entrée HTTP (identité, débit, transport)
+src/features/mcp/server.ts     Les outils et la charte
+src/features/mcp/format.ts     La mise en pages servie à l'agent
+src/features/mcp/payload.ts    Ce que la plateforme sert : statut, correctifs
+src/constants/mcp.ts           Les commandes affichées dans la modale
+```
 
 ## Architecture
 

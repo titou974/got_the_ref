@@ -11,7 +11,15 @@ import type { AnalysisDiagnostic, DiagnosticCheck } from "./diagnostic";
  * affichés dans l'UI.
  */
 
-export type SolutionTab = "results" | "architecture" | "content" | "presence" | "maps";
+export type SolutionTab =
+  | "results"
+  | "architecture"
+  | "content"
+  | "articles"
+  | "presence"
+  | "maps"
+  /** Tout le tableau de bord d'un coup : le prompt de la barre « résoudre ». */
+  | "all";
 
 const ARCH_LABELS: Record<string, string> = {
   llmsTxt: "Fichier llms.txt",
@@ -44,8 +52,27 @@ function issues(checks: DiagnosticCheck[], labels: Record<string, string>): stri
 
 function header(result: GeoAnalysisResult): string {
   const loc = result.profile.location ? ` à ${result.profile.location}` : "";
-  return `Tu es un expert GEO (Generative Engine Optimization). Voici le diagnostic de visibilité IA de mon site ${result.domain} — ${result.profile.niche}${loc}.`;
+  return `Tu es un expert GEO (Generative Engine Optimization). Voici le diagnostic de visibilité IA de mon site ${result.domain}, ${result.profile.niche}${loc}.`;
 }
+
+/** Les onglets repris, dans l'ordre de lecture, par le prompt général. */
+const ALL_TABS: Exclude<SolutionTab, "all">[] = [
+  "results",
+  "architecture",
+  "content",
+  "articles",
+  "presence",
+  "maps",
+];
+
+const TAB_TITLES: Record<Exclude<SolutionTab, "all">, string> = {
+  results: "PLAN D'ACTION",
+  architecture: "ARCHITECTURE TECHNIQUE",
+  content: "CONTENU ET CITABILITÉ",
+  articles: "ARTICLES",
+  presence: "PRÉSENCE ET NOTORIÉTÉ",
+  maps: "FICHE GOOGLE MAPS",
+};
 
 export function buildSolutionPrompt(
   tab: SolutionTab,
@@ -55,6 +82,24 @@ export function buildSolutionPrompt(
   const h = header(result);
 
   switch (tab) {
+    // Le repli du prompt général : les six prompts d'onglet à la suite, sous
+    // un même en-tête. Moins fluide que la version écrite par le modèle, mais
+    // il ne manque aucun élément à corriger — c'est ce qui compte ici.
+    case "all": {
+      const sections = ALL_TABS.map((key) => {
+        const body = buildSolutionPrompt(key, result, diagnostic).slice(h.length).trim();
+        return `----- ${TAB_TITLES[key]} -----\n\n${body}`;
+      });
+
+      return `${h}
+
+Je veux tout corriger d'un coup. Voici, section par section, ce qui a été relevé sur mon site et ce que j'attends de toi.
+
+${sections.join("\n\n")}
+
+Traite les sections dans l'ordre : d'abord ce qui bloque l'accès des IA au site, ensuite le contenu, puis la notoriété. Pour chaque point, donne le fichier à modifier et le code ou le texte exact à poser, jamais un conseil général. Termine par la liste de ce que je dois vérifier moi-même une fois tout appliqué.`;
+    }
+
     case "architecture": {
       const list = issues(diagnostic.architecture.checks, ARCH_LABELS);
       return `${h}
@@ -73,6 +118,16 @@ Côté contenu, voici ce qui limite ma citabilité par les IA :
 ${list.length ? list.join("\n") : "- (contenu globalement solide, renforce la profondeur)"}
 
 Rédige les améliorations prêtes à publier : 3 passages auto-portants de 40 à 160 mots répondant aux questions clés de mon audience (avec des faits et chiffres précis), une FAQ structurée (questions + réponses), et des signaux E-E-A-T (bio d'auteur, sources citées).`;
+    }
+
+    case "articles": {
+      // Le repli ne connaît pas le planning (il vit hors base) : il cadre la
+      // demande, la version écrite par le modèle mini y joint les articles.
+      return `${h}
+
+Des articles ont été rédigés pour mon site et attendent d'être publiés.
+
+Explique-moi comment les mettre en ligne proprement : structure d'URL et de rubrique, balises title et méta description par article, données structurées Article/BlogPosting, maillage interne depuis la page d'accueil, et rythme de publication à tenir.`;
     }
 
     case "presence": {
@@ -101,7 +156,7 @@ ${
 Incohérences détectées entre la fiche et le site :
 ${inconsistencies.length ? inconsistencies.join("\n") : "- (à vérifier : nom, adresse, téléphone, catégorie, horaires)"}
 
-Donne-moi un plan pour aligner parfaitement ma fiche Google Maps et mon site : NAP identique, catégorie principale, description optimisée, photos, et stratégie d'avis — afin de renforcer ma cohérence locale aux yeux des IA.`;
+Donne-moi un plan pour aligner parfaitement ma fiche Google Maps et mon site : NAP identique, catégorie principale, description optimisée, photos, et stratégie d'avis, afin de renforcer ma cohérence locale aux yeux des IA.`;
     }
 
     case "results":

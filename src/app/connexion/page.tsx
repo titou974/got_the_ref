@@ -1,32 +1,59 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Logo } from "@/components/Logo";
-import { AuthForm } from "@/components/AuthForm";
+import { AuthScreen } from "@/components/auth/AuthScreen";
 import { getSession } from "@/lib/auth";
-import { ROUTES } from "@/constants/routes";
+import { resolveAuthDestination } from "@/features/auth/destination";
+import { oauthErrorKey } from "@/features/auth/oauth-errors";
+import {
+  NEXT_PARAM,
+  PASSWORD_RESET_PARAM,
+  ROUTES,
+  safeNextPath,
+  signUpWithNext,
+} from "@/constants/routes";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("auth");
-  return { title: t("metaSignin") };
+  return { title: t("metaSignin"), robots: { index: false, follow: false } };
 }
 
-export default async function ConnexionPage() {
-  if (await getSession()) redirect(ROUTES.account);
+/**
+ * La connexion sert deux publics : le client qui revient — il rentre chez lui,
+ * c'est-à-dire sur son tableau de bord, quelle que soit son offre — et celui
+ * qui venait souscrire et s'est aperçu qu'il avait déjà un compte. Pour ce
+ * dernier, `?suite=` conserve le tunnel.
+ *
+ * Déjà identifié, on ne redemande rien : `resolveAuthDestination` tranche entre
+ * l'accueil (le questionnaire n'a pas été rempli) et le tableau de bord.
+ */
+export default async function ConnexionPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const requested = params[NEXT_PARAM];
+  const next = safeNextPath(requested, ROUTES.dashboard);
+
+  const session = await getSession();
+  if (session) redirect(await resolveAuthDestination(session.user.id, requested));
+
+  // Sans destination demandée, la bascule vers l'inscription garde la sienne :
+  // lui imposer le tableau de bord n'aurait aucun sens pour qui n'a pas encore
+  // de compte.
+  const switchHref = requested ? signUpWithNext(next) : ROUTES.signUp;
+
+  const errorKey = oauthErrorKey(params.error);
   const t = await getTranslations("auth");
 
   return (
-    <main className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-10">
-      <Logo className="mb-8" />
-      <div className="w-full max-w-sm rounded-[28px] border border-fog bg-snow p-6 shadow-[var(--shadow-md)] sm:p-8">
-        <h1 className="text-center text-2xl font-bold">{t("signinTitle")}</h1>
-        <p className="mt-1 mb-6 text-center text-sm text-muted">{t("signinSubtitle")}</p>
-        <AuthForm mode="signin" />
-      </div>
-      <Link href={ROUTES.home} className="mt-6 cursor-pointer text-sm text-muted hover:text-text">
-        {t("backHome")}
-      </Link>
-    </main>
+    <AuthScreen
+      mode="signin"
+      callbackURL={next}
+      switchHref={switchHref}
+      error={errorKey ? t(errorKey) : null}
+      notice={params[PASSWORD_RESET_PARAM] ? t("passwordResetDone") : null}
+    />
   );
 }

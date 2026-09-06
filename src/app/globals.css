@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Le site n'a qu'un thème, clair. Les composants Tremor, eux, portent des
+   classes `dark:` : sans cette redéfinition, elles s'allumeraient chez tout
+   visiteur dont le système est en sombre et repeindraient les graphiques en
+   gris anthracite. Rattachée à une classe `.dark` qui n'existe nulle part, la
+   variante reste éteinte. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* ============================================================
      Awesomic — Rounded midnight marketplace (thème CLAIR)
@@ -31,8 +38,15 @@
   --color-accent: #09090b;       /* emphase = sombre (pas d'accent chromatique UI) */
   --color-cta: #09090b;          /* action principale : pilule noire */
   --color-cta-hover: #18181b;
+  /* Surlignage d'un passage clé, à la manière d'un texte sélectionné dans un
+     aperçu IA. Teinte de la palette (obsidian dilué) : lisible sans introduire
+     une couleur étrangère au système. */
+  --color-highlight: #dfe0e4;
   --color-danger: #dc2626;
   --color-warning: #d97706;
+  /* Vert de validation : celui de la console des agents, remonté en token pour
+     que le tableau de bord marque « corrigé » de la même couleur. */
+  --color-success: #11b48c;
 
   /* Typographie — Cosmica (substitut : Plus Jakarta Sans) sur tout le système */
   --font-cosmica: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -63,6 +77,64 @@
 
   /* Ombres */
   --shadow-md: rgba(0, 0, 0, 0.04) 0px 4px 12px 0px;
+
+  /* Ouverture et fermeture des calques Radix (le menu du sélecteur de site).
+     Les composants Tremor posent ces classes d'animation ; sans les
+     déclarations, le menu apparaîtrait d'un coup. */
+  --animate-hide: hide 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-down-and-fade: slideDownAndFade 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-left-and-fade: slideLeftAndFade 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-up-and-fade: slideUpAndFade 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-right-and-fade: slideRightAndFade 150ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes hide {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes slideDownAndFade {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slideLeftAndFade {
+    from {
+      opacity: 0;
+      transform: translateX(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes slideUpAndFade {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slideRightAndFade {
+    from {
+      opacity: 0;
+      transform: translateX(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
 }
 
 :root {
@@ -87,6 +159,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Supprime le délai de 300 ms hérité du double-tap-zoom sur les anciennes WebView
+   Android et navigateurs intégrés (Instagram, LinkedIn). Sans cela, un appui bref
+   sur un bouton peut n'être jamais converti en clic. */
+button,
+a,
+label,
+select,
+summary,
+[role="button"],
+input[type="button"],
+input[type="submit"] {
+  touch-action: manipulation;
+}
+
 /* Typo pilotée par la graisse, tracking normal (pas de letter-spacing serré) */
 h1, h2, h3, h4, h5 {
   font-family: var(--font-display);
@@ -99,6 +185,11 @@ h1, h2, h3, h4, h5 {
   inset: 0;
   z-index: -1;
   background: var(--color-bg);
+  /* Calque purement décoratif. Sans cette règle il reste candidat au hit-test :
+     sur iOS Safari et les WebView intégrées, un calque fixed promu en couche de
+     composition peut capter le toucher devant le contenu, et plus aucun bouton
+     de la page ne répond. */
+  pointer-events: none;
 }
 
 /* Carte « verre » version claire : blanc frosté, hairline */
@@ -129,10 +220,16 @@ h1, h2, h3, h4, h5 {
   background: var(--color-snow);
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
-.card-cal:hover {
-  transform: translateY(-4px);
-  border-color: var(--color-pebble);
-  box-shadow: var(--shadow-md);
+/* Le lift au survol est réservé aux pointeurs fins. Sur mobile, le :hover reste
+   collé après un appui : la carte garderait un `transform`, devenant le bloc
+   conteneur de ses descendants `position: fixed` (overlay d'analyse, modale).
+   Ceux-ci seraient alors rendus dans la carte au lieu du viewport, page bloquée. */
+@media (hover: hover) and (pointer: fine) {
+  .card-cal:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-pebble);
+    box-shadow: var(--shadow-md);
+  }
 }
 
 /* Bouton pilule primaire — qualité « verre pressé » réservée au CTA noir */
@@ -206,6 +303,24 @@ h1, h2, h3, h4, h5 {
   animation: spin-slow 8s linear infinite;
 }
 
+/* Traits du réseau de citations : le pointillé défile, le maillage paraît vivant. */
+@keyframes dash-flow {
+  to { stroke-dashoffset: -32; }
+}
+.net-edge {
+  stroke-dasharray: 2 6;
+  animation: dash-flow 3.2s linear infinite;
+}
+
+/* Carrousel orbital des plateformes : l'anneau tourne, chaque logo tourne en
+   sens inverse à la même vitesse — il reste donc droit tout du long. */
+.orbit-ring {
+  animation: spin-slow 44s linear infinite;
+}
+.orbit-badge {
+  animation: spin-slow 44s linear infinite reverse;
+}
+
 /* ── Ruban de preuves ────────────────────────────────────────────────────────
    Défilement continu : la piste porte deux copies de la liste et se translate
    d'exactement la moitié de sa largeur, si bien que la seconde copie occupe la
@@ -230,6 +345,15 @@ h1, h2, h3, h4, h5 {
   margin: 0;
   list-style: none;
 }
+/* Variantes de ruban : quand plusieurs rangées se superposent, des vitesses et
+   des sens différents évitent l'effet « bloc unique qui glisse ». */
+.marquee-track--fast {
+  animation-duration: 42s;
+}
+.marquee-track--reverse {
+  animation-direction: reverse;
+}
+
 .marquee:hover .marquee-track {
   animation-play-state: paused;
 }
@@ -237,12 +361,277 @@ h1, h2, h3, h4, h5 {
   to { transform: translateX(-50%); }
 }
 
+/* ── Verrou de scroll (overlay d'analyse, modales, tiroir mobile) ─────────────
+   Piloté par `lockScroll()` (src/lib/scroll-lock.ts), qui pose la classe sur
+   <html>. `overflow: hidden` seul laisse iOS Safari faire défiler la page au
+   doigt : on coupe donc aussi le pan tactile et le rebond de fin de course. */
+html.scroll-locked,
+html.scroll-locked body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* ── Anneau de score ────────────────────────────────────────────────────────
+   Diamètre porté par deux variables posées en style inline par le composant :
+   `--ring` (défaut) et `--ring-sm` (sous le point de rupture sm). Le tracé étant
+   en viewBox, il suit la largeur — un seul rendu sert les deux tailles, sans
+   mesurer la fenêtre en JavaScript. */
+.score-ring {
+  width: var(--ring);
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+}
+@media (max-width: 639px) {
+  .score-ring {
+    width: var(--ring-sm);
+  }
+}
+
+/* ── Pas de zoom automatique à la saisie sur mobile ──────────────────────────
+   iOS Safari zoome sur tout champ dont la police descend sous 16px. Les champs
+   du site sont dessinés en 13–15px : on les remonte à 16px sous le point de
+   rupture `sm`, plutôt que de neutraliser le zoom via la balise viewport, ce qui
+   priverait aussi l'utilisateur du zoom manuel. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .thinking-dot, .shimmer, .caret::after, .animate-spin-slow, .sweep::before {
+  .thinking-dot, .shimmer, .caret::after, .animate-spin-slow, .sweep::before,
+  .orbit-ring, .orbit-badge, .net-edge {
     animation: none !important;
   }
   .card-cal { transition: none !important; }
   /* Sans mouvement, le ruban devient une bande qu'on fait défiler à la main. */
   .marquee-track { animation: none !important; }
   .marquee { overflow-x: auto; }
+}
+
+/* Barre d'attente du tableau de bord : un segment qui traverse, faute de savoir
+   où en est vraiment l'audit. */
+@keyframes loading {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[loading_1\.4s_ease-in-out_infinite\] {
+    animation: none !important;
+    width: 100%;
+  }
+}
+
+/* Carte d'attente d'une recherche : le dégradé dérive lentement, sans jamais
+   revenir exactement au même endroit à l'oeil nu. Une carte parfaitement fixe
+   pendant deux minutes se lit comme un écran gelé. */
+@keyframes loader-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 0.9; }
+  50%  { transform: translate3d(-3%, 2%, 0) scale(1.08); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[loader-drift_9s_ease-in-out_infinite\] { animation: none !important; }
+}
+
+/* ============================================================
+   Atelier d'article — la feuille Tiptap
+   L'interface reste en Cosmica (Jakarta) ; le document, lui, est composé
+   en serif : on écrit dans la forme de l'article publié, pas dans une
+   zone de formulaire. La variable de fonte est posée par la page de
+   l'article, seule route qui charge cette famille.
+   ============================================================ */
+
+.article-title {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--color-obsidian);
+}
+
+/* Sur grand écran, la feuille tient sa mesure de lecture entière : le titre y
+   reprend la taille de l'article publié. */
+@media (min-width: 1024px) {
+  .article-title {
+    font-size: 34px;
+    line-height: 1.15;
+  }
+}
+
+.article-title::placeholder {
+  color: var(--color-ash);
+}
+
+/* Les pastilles de la barre d'outils (P, H2, H3, I) empruntent la même serif :
+   le bouton montre ce qu'il produit. */
+.article-glyph {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+}
+
+/* Le curseur de la scène de rédaction : il bat comme celui d'un traitement de
+   texte — plein, puis rien, sans fondu. Un clignotement en fondu se lit comme
+   une respiration ; celui-ci se lit comme une frappe en cours. */
+@keyframes caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-caret {
+  animation: caret 1.06s steps(1, end) infinite;
+}
+
+/* Le ton relevé, dans la modale ouverte depuis le pied du rail. Il emprunte lui
+   aussi la serif : ce qu'on lit est une manière d'écrire, et elle se montre dans
+   la forme où l'article se lira. Un cran sous le corps du document — c'est une
+   fiche qu'on consulte, pas un texte qu'on relit. */
+.article-voice {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.68;
+  color: var(--color-ink);
+}
+
+.article-canvas .tiptap {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--color-ink);
+  outline: none;
+}
+
+@media (min-width: 1024px) {
+  .article-canvas .tiptap {
+    font-size: 18px;
+  }
+}
+
+.article-canvas .tiptap > * + * {
+  margin-top: 1.05em;
+}
+
+.article-canvas .tiptap h2,
+.article-canvas .tiptap h3 {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  color: var(--color-obsidian);
+  scroll-margin-top: 5rem;
+}
+
+.article-canvas .tiptap h2 {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.9em;
+}
+
+@media (min-width: 1024px) {
+  .article-canvas .tiptap h2 {
+    font-size: 25px;
+  }
+}
+
+.article-canvas .tiptap h3 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 1.6em;
+}
+
+.article-canvas .tiptap > :first-child {
+  margin-top: 0;
+}
+
+.article-canvas .tiptap ul,
+.article-canvas .tiptap ol {
+  padding-left: 1.3em;
+}
+
+.article-canvas .tiptap ul {
+  list-style: disc;
+}
+
+.article-canvas .tiptap ol {
+  list-style: decimal;
+}
+
+.article-canvas .tiptap li + li {
+  margin-top: 0.35em;
+}
+
+.article-canvas .tiptap li p {
+  margin: 0;
+}
+
+.article-canvas .tiptap blockquote {
+  border-left: 2px solid var(--color-pebble);
+  padding-left: 1em;
+  font-style: italic;
+  color: var(--color-slate);
+}
+
+.article-canvas .tiptap pre {
+  background: var(--color-mist);
+  border-radius: 16px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.article-canvas .tiptap code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+
+.article-canvas .tiptap :not(pre) > code {
+  background: var(--color-mist);
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+
+.article-canvas .tiptap a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-pebble);
+}
+
+.article-canvas .tiptap a:hover {
+  text-decoration-color: var(--color-obsidian);
+}
+
+.article-canvas .tiptap strong {
+  font-weight: 650;
+}
+
+.article-canvas .tiptap hr {
+  border: none;
+  border-top: 1px solid var(--color-fog);
+  margin: 2em 0;
+}
+
+.article-canvas .tiptap ::selection {
+  background: var(--color-highlight);
+}
+
+/* Le texte d'amorce ne s'affiche que sur un document vide, et il ne pousse
+   rien : sinon la première ligne sauterait à la frappe. */
+.article-canvas .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-ash);
+  float: left;
+  height: 0;
+  pointer-events: none;
 }

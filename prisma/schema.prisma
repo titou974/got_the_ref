@@ -1,6 +1,6 @@
 generator client {
-  provider     = "prisma-client"
-  output       = "./generated/prisma"
+  provider = "prisma-client"
+  output   = "./generated/prisma"
 }
 
 datasource db {
@@ -16,15 +16,232 @@ model User {
   name             String?
   emailVerified    Boolean  @default(false)
   image            String?
-  plan             String   @default("free") // free | pro | agency
+  /// free | boost | pro | agency | demo.
+  ///
+  /// `boost` est posé par le paiement unique du Coup de Boost — il n'y a aucun
+  /// abonnement Stripe derrière, donc rien dans `Subscription` : sans cette
+  /// colonne, le compte retomberait gratuit à la première relecture.
+  ///
+  /// `demo` est posé à la main sur les comptes de démonstration : accès complet,
+  /// aucune facturation. Il ne doit jamais être écrit par un webhook.
+  plan             String   @default("free")
+  /// Date du Coup de Boost, quand il y en a eu un. Elle ouvre la fenêtre de
+  /// rédaction d'une semaine promise par l'offre (cf. `BOOST_ARTICLE_WINDOW_DAYS`) ;
+  /// les corrections de structure, elles, restent acquises.
+  boostGrantedAt   DateTime?
   stripeCustomerId String?
+  /// La branche du test A/B sur le parcours d'entrée : `pricing-first` (la
+  /// grille tarifaire après l'inscription, essai de trois jours compris) ou
+  /// `demo-first` (le questionnaire d'accueil, puis l'analyse gratuite, les
+  /// tarifs venant des voiles du tableau de bord).
+  ///
+  /// Recopiée depuis le cookie à la première visite identifiée, puis figée : la
+  /// branche doit suivre la personne d'un appareil à l'autre, sinon la mesure
+  /// compte deux visiteurs là où il n'y en a qu'un. Nulle sur les comptes
+  /// ouverts avant le test — ils lisent le parcours d'aujourd'hui.
+  pathVariant      String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  analyses     Analysis[]
-  subscription Subscription?
-  sessions     Session[]
-  accounts     Account[]
+  analyses           Analysis[]
+  analysisSnapshots  AnalysisSnapshot[]
+  subscription       Subscription?
+  sessions           Session[]
+  accounts           Account[]
+  onboarding         OnboardingProfile?
+  googleConnection   GoogleConnection?
+  siteConnection     SiteConnection?
+  brandVoice         BrandVoice?
+  articles           Article[]
+  articleGenerations ArticleGeneration[]
+  onPageRewrites     OnPageRewrite[]
+  prospects          OutreachProspect[]
+  googlePosts        GooglePost[]
+  llmMentions        LlmMentionSnapshot?
+  mapsPlace          MapsPlace?
+  mapsOptimization   MapsOptimization?
+  mapsReviewReplies  MapsReviewReply[]
+  siteHours          SiteHours?
+  mcpTokens          McpToken[]
+  mcpDeviceCodes     McpDeviceCode[]
+  mcpFixReports      McpFixReport[]
+}
+
+/// Une passe de réécriture demandée depuis l'onglet Contenu.
+///
+/// Le compteur du quota quotidien : une ligne par clic sur « Regénérer », avec
+/// l'élément visé (title + meta description, H1, paragraphe d'introduction).
+/// Chaque élément a son propre plafond, sinon trois essais sur le H1 fermeraient
+/// la porte au paragraphe, qui n'a rien demandé.
+model OnPageRewrite {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// « serp » (title + meta description), « h1 » ou « intro ».
+  element   String
+  createdAt DateTime @default(now())
+
+  @@index([userId, element, createdAt])
+}
+
+/// Le questionnaire d'accueil, rempli juste après le paiement ou l'ouverture de
+/// l'essai. Une ligne par compte : c'est la fiche d'identité du client, celle
+/// que les agents relisent avant chaque passe (marché, villes, ton, niche).
+///
+/// Chaque étape écrit son propre bloc de champs et avance `step`. On garde donc
+/// une reprise exacte : quitter au milieu et revenir plus tard rouvre l'étape
+/// laissée en plan, sans jamais reperdre ce qui était déjà répondu.
+model OnboardingProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// « physical » (boutique, artisan, agence) · « online » · « both ».
+  businessKind String?
+
+  /// Étape 2 — le site, et la fiche Google Maps si le commerce a une adresse.
+  siteUrl String?
+  domain  String?
+  mapsUrl String?
+
+  /// Déduits du crawl par l'analyse IA, puis confirmés à l'étape 3.
+  detectedLanguage String?
+  detectedCountry  String?
+  detectedCities   String[] @default([])
+  siteSummary      String?
+
+  /// Étape 3 — marché visé et villes réellement couvertes par le commerce.
+  targetMarket String?
+  cities       String[] @default([])
+
+  /// Étape 4 — ce que le client raconte lui-même de son activité.
+  description String?
+  audience    String?
+  niche       String?
+
+  /// Étape 6 — la charte et le ton, facultatifs.
+  brandColor    String?
+  toneSampleUrl String?
+  toneSummary   String?
+
+  /// Étape courante (slug) et date d'achèvement. `completedAt` non nul = le
+  /// tunnel est derrière nous, on n'y ramène plus personne.
+  step        String    @default("activite")
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  competitors Competitor[]
+}
+
+/// Un concurrent direct proposé à l'étape 5. La liste vient d'un seul appel au
+/// modèle ; `selected` retient ceux que le client garde — les autres restent en
+/// base, ils documentent ce qui lui a été proposé et pourquoi il a écarté.
+model Competitor {
+  id        String            @id @default(cuid())
+  profileId String
+  profile   OnboardingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  name     String
+  url      String?
+  domain   String?
+  reason   String?
+  /// Rang proposé par le modèle (1 = concurrent le plus direct).
+  rank     Int     @default(0)
+  selected Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, name])
+  @@index([profileId])
+}
+
+/// Un site crawlé, avec toutes ses pages conservées telles quelles.
+///
+/// La table est indexée par domaine et non par compte : deux clients qui
+/// analysent le même domaine partagent le crawl plutôt que d'en relancer un.
+/// `lastCrawledAt` sert de fraîcheur — au-delà du délai, on recrawle.
+model CrawledSite {
+  id     String @id @default(cuid())
+  domain String @unique
+  url    String
+
+  /// Ce que l'analyse du crawl a conclu, sérialisé en JSON (langue, pays,
+  /// villes, résumé, offre). Gardé brut pour ne pas figer un schéma qui bouge.
+  analysis String?
+
+  pageCount     Int      @default(0)
+  lastCrawledAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pages CrawledPage[]
+}
+
+/// Une page crawlée et son contenu. Le Markdown est ce que lisent les modèles ;
+/// le HTML brut n'est gardé que si `CRAWL_KEEP_HTML` est activé, sinon la table
+/// gonflerait pour un contenu qu'on ne relit jamais.
+model CrawledPage {
+  id     String      @id @default(cuid())
+  siteId String
+  site   CrawledSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  url        String
+  title      String?
+  statusCode Int?
+  /// Profondeur depuis la page d'accueil (0 = accueil).
+  depth      Int     @default(0)
+  markdown   String  @default("")
+  html       String?
+  wordCount  Int     @default(0)
+
+  crawledAt DateTime @default(now())
+
+  @@unique([siteId, url])
+  @@index([siteId])
+}
+
+/// Le rattachement Google d'un compte : Search Console et Analytics 4 partagent
+/// un seul jeu de jetons, parce qu'ils sont accordés dans un seul consentement.
+///
+/// `refreshToken` est le seul durable, l'access token est renouvelé à la demande.
+/// `scope` dit lesquels des deux services ont réellement été accordés : Google
+/// laisse décocher l'un sans l'autre sur l'écran de consentement.
+///
+/// La table s'appelle toujours « GscConnection » (@@map) : le schéma est déployé
+/// par `prisma db push`, qui traite un renommage de modèle comme un DROP suivi
+/// d'un CREATE. Garder le nom physique évite de perdre les rattachements déjà
+/// en base pour un simple gain de vocabulaire.
+model GoogleConnection {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  scope        String?
+
+  /// Côté Search Console — propriété retenue (ex. « sc-domain:exemple.fr ») et
+  /// toutes celles visibles au moment de la connexion, en JSON.
+  siteUrl    String?
+  properties String?
+
+  /// Côté Analytics 4. `ga4PropertyId` est le nom de ressource complet
+  /// (« properties/123456789 »), seul identifiant accepté par la Data API.
+  /// `ga4MeasurementId` (« G-XXXXXXX ») sert à vérifier plus tard que le tag est
+  /// bien posé sur le site que le client nous a déclaré.
+  ga4PropertyId    String?
+  ga4PropertyName  String?
+  ga4MeasurementId String?
+  ga4Properties    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("GscConnection")
 }
 
 model Analysis {
@@ -33,9 +250,9 @@ model Analysis {
   domain       String
   businessName String?
   businessType String?
-  mapsUrl      String?  // Lien Google Maps fourni par l'utilisateur (facultatif)
+  mapsUrl      String? // Lien Google Maps fourni par l'utilisateur (facultatif)
   overallScore Int
-  data         String   // JSON sérialisé du résultat complet
+  data         String // JSON sérialisé du résultat complet
   createdAt    DateTime @default(now())
 
   // Déverrouillage : une analyse est gratuite (aperçu partiel) tant qu'elle n'a
@@ -46,10 +263,86 @@ model Analysis {
   stripeSessionId String?   @unique
   guestEmail      String? // E-mail saisi au paiement Stripe, avant création du compte
 
-  userId       String?
-  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Date de la dernière reprise quotidienne. Distincte de `createdAt`, qui
+  /// date la première mesure : c'est elle qui autorise — ou refuse — une
+  /// nouvelle reprise dans la journée.
+  refreshedAt DateTime?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  snapshots AnalysisSnapshot[]
 
   @@index([userId])
+}
+
+/// L'état d'une analyse à un instant, gardé pour mesurer le chemin parcouru.
+///
+/// L'analyse elle-même est réécrite sur place à chaque reprise — le client
+/// garde un identifiant stable, et rien ne pointe vers un rapport orphelin.
+/// Sans trace, la reprise effacerait donc ce qu'elle est censée démontrer : la
+/// progression. Une ligne est écrite à chaque version de l'analyse, la
+/// première comprise.
+///
+/// On n'y recopie pas le rapport entier — il pèse plusieurs centaines de
+/// kilo-octets et personne ne relit un vieux `signals`. Seul ce qui se compare
+/// est retenu : la note, les notes par catégorie, les deux notes du diagnostic
+/// (architecture et contenu) et la liste des correctifs, réduite à ce qui
+/// permet de dire lesquels ont disparu.
+model AnalysisSnapshot {
+  id         String   @id @default(cuid())
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  domain       String
+  overallScore Int
+  /// `{ "citability": 62, … }` — les six catégories GEO.
+  categories   String
+  /// Les deux notes dérivées, dupliquées ici pour ne pas avoir à reconstruire
+  /// un diagnostic complet à partir de signaux qu'on ne garde pas.
+  architectureScore Int
+  contentScore      Int
+  /// `[{ "title": …, "category": …, "priority": …, "impact": … }]`.
+  recommendations   String
+  /// Ce qui a déclenché l'écriture : « initial » (mise en route ou achat) ou
+  /// « refresh » (reprise quotidienne).
+  reason            String   @default("refresh")
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([analysisId])
+}
+
+/// Adresse laissée par un visiteur avant son analyse gratuite : la liste de
+/// diffusion. Séparée de `User` (aucun compte, aucun mot de passe) et de
+/// `Analysis.guestEmail` (qui reste attaché à une analyse précise) pour qu'une
+/// même adresse n'apparaisse qu'une fois, quel que soit son nombre d'analyses.
+model Lead {
+  id    String @id @default(cuid())
+  email String @unique
+
+  /// D'où vient l'adresse — pour l'instant « free_analysis ».
+  source         String   @default("free_analysis")
+  /// Dernier domaine analysé : de quoi personnaliser un envoi Resend.
+  domain         String?
+  lastAnalysisId String?
+  /// Nombre d'analyses lancées avec cette adresse (signal d'intérêt).
+  analysisCount  Int      @default(1)
+  lastAnalysisAt DateTime @default(now())
+
+  /// Consentement d'envoi. `unsubscribedAt` garde la trace de la désinscription
+  /// : on ne supprime pas la ligne, sinon une réinscription silencieuse
+  /// remettrait l'adresse dans la liste au prochain audit.
+  marketingOptIn Boolean   @default(true)
+  unsubscribedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
 }
 
 model Subscription {
@@ -78,9 +371,9 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("session")
   @@index([userId])
   @@index([token])
+  @@map("session")
 }
 
 model Account {
@@ -99,8 +392,8 @@ model Account {
   createdAt             DateTime
   updatedAt             DateTime
 
-  @@map("account")
   @@index([userId])
+  @@map("account")
 }
 
 model Verification {
@@ -111,6 +404,463 @@ model Verification {
   createdAt  DateTime?
   updatedAt  DateTime?
 
-  @@map("verification")
   @@index([identifier])
+  @@map("verification")
+}
+
+// ── Tableau de bord ───────────────────────────────────────────────────────────
+
+/// Le rattachement au site du client : c'est par là que les agents écrivent.
+///
+/// Une ligne par compte. La plateforme est reconnue au crawl (`lib/geo/stack`)
+/// puis confirmée ici avec les identifiants qui vont avec, car chaque stack a sa
+/// porte d'entrée : jeton d'application côté Shopify, mot de passe d'application
+/// côté WordPress, clé d'API côté Wix ou Webflow. Le reste du produit ne regarde
+/// que `status` et `capabilities` : savoir publier un article et savoir corriger
+/// une balise ne vont pas ensemble sur toutes les plateformes.
+model SiteConnection {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Clé du registre `constants/site-platforms` : « shopify », « wordpress »…
+  platform String
+  siteUrl  String?
+
+  /// « pending » tant que rien n'a été vérifié, « connected » après un appel
+  /// d'essai réussi, « error » quand la plateforme a refusé les identifiants.
+  status    String  @default("pending")
+  lastError String?
+
+  /// Identifiants de la plateforme, chiffrés au repos (`lib/crypto`). Jamais
+  /// renvoyés au navigateur : seul le serveur les relit pour appeler l'API.
+  credentials String?
+
+  /// Ce que le lien permet réellement, décidé à la connexion : « publish »
+  /// (déposer un article), « edit » (réécrire une balise ou un bloc).
+  capabilities String[] @default([])
+
+  /// Publier sans relecture. Faux par défaut : la tâche planifiée ne dépose
+  /// alors que les articles validés par le client, à la date prévue. Vrai, elle
+  /// dépose aussi les articles rédigés et jamais ouverts — c'est le pilote
+  /// automatique complet, et cela reste un choix explicite du client.
+  autoPublish Boolean @default(false)
+
+  connectedAt DateTime?
+  lastSyncAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+/// La voix de la marque, telle que le client la corrige au fil des articles.
+///
+/// Séparée du ton relevé pendant l'accueil (`OnboardingProfile.toneSummary`,
+/// déduit d'une page qu'il nous a montrée) : celui-ci décrit ce que le site dit
+/// déjà, celle-là ce que le client veut lire. Les deux nourrissent le prompt de
+/// rédaction, et c'est la consigne explicite qui l'emporte.
+model BrandVoice {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Consigne de ton en clair, écrite par le client (« tutoiement, phrases
+  /// courtes, aucun superlatif »).
+  instructions String   @default("")
+  /// Termes à bannir : noms de concurrents, mots interdits par la marque.
+  banned       String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Un article du planning éditorial, de l'idée jusqu'à la publication.
+///
+/// Le calendrier n'est pas une table à part : `scheduledFor` suffit, et une
+/// ligne sans corps est simplement un sujet retenu qu'aucun agent n'a encore
+/// rédigé. `externalUrl` est rempli après dépôt sur le site du client.
+model Article {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title   String
+  slug    String?
+  /// Mot-clé visé, repris de la page Contenu.
+  keyword String?
+  /// Plan proposé (liste de titres), sérialisé en JSON.
+  outline String?
+  /// Corps rédigé, en Markdown. Vide tant que l'article n'est qu'un sujet.
+  body    String  @default("")
+  excerpt String?
+
+  /// « planned » (sujet retenu) · « drafted » (rédigé) · « approved » (validé
+  /// par le client) · « published » (déposé sur le site) · « rejected ».
+  status       String    @default("planned")
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+  externalUrl  String?
+  externalId   String?
+
+  /// Nombre de régénérations demandées : de quoi repérer un sujet qui ne prend pas.
+  revisions Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, scheduledFor])
+  @@index([userId, status])
+}
+
+/// Une passe de rédaction facturée au quota hebdomadaire.
+///
+/// Le compteur ne peut pas se déduire de la table `Article` : une reprise
+/// réécrit une ligne existante sans en créer de nouvelle, et coûte pourtant le
+/// même appel au grand modèle. On garde donc une ligne par appel, avec sa date,
+/// et la fenêtre glissante se lit d'un `count` sur les sept derniers jours.
+///
+/// `articleId` reste une simple référence textuelle, sans relation : un article
+/// supprimé ne doit pas effacer la trace de la rédaction qu'il a consommée.
+model ArticleGeneration {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  articleId String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// Un site de la niche qui publie des articles, et le contact qui va avec.
+///
+/// La liste est constituée par recherche : sites qui traitent déjà le sujet du
+/// client et acceptent des contributions. On garde l'adresse trouvée et l'état
+/// de la prise de contact, pour ne pas réécrire deux fois au même éditeur.
+model OutreachProspect {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  domain       String
+  name         String
+  /// Pourquoi ce site : angle éditorial, audience, proximité avec la niche.
+  reason       String?
+  contactEmail String?
+  contactUrl   String?
+  /// Autorité estimée (0-100) : sert au tri, pas à une promesse de résultat.
+  authority    Int     @default(0)
+
+  /// « found » · « drafted » (message préparé) · « contacted » · « replied » ·
+  /// « published » · « declined ».
+  status  String  @default("found")
+  /// Message prêt à envoyer, relu et modifiable par le client.
+  message String?
+
+  contactedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, domain])
+  @@index([userId, status])
+}
+
+/// Un post Google Business prévu pour la fiche du commerce.
+///
+/// Réservé aux commerces qui ont une adresse : la fiche est le premier endroit
+/// où une recherche locale les trouve, et un post par semaine y pèse plus qu'une
+/// page de plus sur le site.
+model GooglePost {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title   String
+  body    String
+  /// Bouton de la fiche : « CALL » · « BOOK » · « ORDER » · « LEARN_MORE »…
+  cta     String?
+  ctaUrl  String?
+  keyword String?
+
+  /// La photo de la fiche qui illustre le post, choisie parmi celles du
+  /// commerce. Un post Google sans image passe presque inaperçu dans le fil, et
+  /// une photo tirée d'une banque d'images ne montrerait pas l'établissement :
+  /// on ne propose donc que ce que le commerce a déjà publié.
+  imageUrl String?
+
+  /// « planned » · « approved » · « published ».
+  status       String    @default("planned")
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, scheduledFor])
+}
+
+/// Le dernier relevé des mentions dans les IA, un par compte.
+///
+/// La table n'est pas qu'un cache : c'est le compteur qui tient la règle « un
+/// relevé DataForSEO par mois calendaire et par client ». Chaque appel est
+/// facturé, et l'accueil du tableau de bord est rechargé plusieurs fois par
+/// jour — sans garde-fou, une visite tous les quarts d'heure ferait autant de
+/// factures.
+///
+/// D'où deux dates plutôt qu'une : `attemptedAt` retient la dernière tentative,
+/// réussie ou non, et c'est elle qui ouvre ou ferme la porte ; `fetchedAt`
+/// retient le dernier relevé exploitable, celui que la carte affiche. Une panne
+/// DataForSEO ne doit pas rendre la main pour réessayer à chaque rechargement :
+/// elle consommerait le mois en appels perdus.
+model LlmMentionSnapshot {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le domaine et la localisation interrogés. Un changement de l'un des deux
+  /// rouvre le droit d'appel : la question posée n'est plus la même.
+  domain       String
+  locationCode Int
+
+  /// Le rapport sérialisé en JSON : une série mensuelle par modèle d'IA, le
+  /// mouvement net de la fenêtre, et la date du relevé.
+  payload String?
+
+  /// Le message d'erreur de la dernière tentative ratée, effacé au succès.
+  lastError String?
+
+  attemptedAt DateTime  @default(now())
+  fetchedAt   DateTime?
+
+  /// Vestiges de l'historique de marque, relevé à part quand la carte tenait
+  /// deux routes DataForSEO. Elle n'en tient plus qu'une, et l'évolution est
+  /// désormais dans `payload` avec le reste. Ces colonnes ne sont plus écrites ;
+  /// elles restent là parce que les supprimer coûterait une migration
+  /// destructive pour ne rien gagner.
+  historyBrand     String?
+  historyPayload   String?
+  historyFetchedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// La fiche Google Maps du commerce, relevée chez Google via Apify.
+///
+/// Une ligne par compte : le client n'a qu'un établissement à tenir, et la
+/// fiche est une photo à un instant donné, pas un flux. On garde le relevé
+/// entier en JSON — la fiche se réaffiche telle quelle, y compris hors ligne
+/// d'Apify — et on remonte en colonnes les trois chiffres qu'on interroge sans
+/// ouvrir le JSON : le nom, la note, le nombre d'avis.
+///
+/// `fetchedAt` sert aussi de garde-fou : chaque relevé est un run Apify facturé,
+/// et deux clics de suite sur « Actualiser » ne doivent pas le payer deux fois.
+model MapsPlace {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le lien relevé. Un changement de lien invalide le relevé précédent : ce
+  /// n'est plus le même établissement.
+  mapsUrl String
+
+  placeId      String?
+  title        String?
+  rating       Float?
+  reviewsCount Int?
+
+  /// La fiche normalisée, sérialisée en JSON (voir `lib/apify/place-types.ts`).
+  payload String
+
+  /// Le message d'erreur du dernier relevé raté, effacé au succès.
+  lastError String?
+
+  fetchedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Ce qu'il faut changer sur la fiche Google Maps : le titre, les deux
+/// descriptions, et les attributs à cocher.
+///
+/// Une ligne par compte, comme la fiche elle-même. Le contenu est un JSON
+/// (voir `lib/apify/place-types.ts`, type `MapsAdvice`) parce que la forme de
+/// l'avis suit celle de la fiche : trois textes et une liste de groupes
+/// d'attributs, tous relus ensemble ou pas du tout.
+///
+/// La proposition se rejoue telle quelle après un rechargement : le client la
+/// copie dans son back-office Google en plusieurs fois, souvent sur plusieurs
+/// jours, et retrouver un texte différent à chaque visite lui ferait recopier
+/// deux fois le même champ.
+model MapsOptimization {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// L'identifiant de la fiche sur laquelle porte l'avis. Une fiche relevée
+  /// ailleurs invalide la proposition : ce n'est plus le même établissement.
+  placeId String?
+
+  /// Les propositions sérialisées en JSON.
+  payload String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Une réponse rédigée pour un avis Google, en attente d'être collée.
+///
+/// Une ligne par avis, et l'identifiant Google de l'avis en clé : le client
+/// répond avis par avis, sur plusieurs jours, et une réponse déjà relue ne doit
+/// pas être réécrite parce qu'un autre avis vient d'arriver.
+///
+/// Rien n'est publié d'ici : l'API Business Profile réclame une validation du
+/// compte marchand que nous n'avons pas. Le texte est écrit, copié, collé.
+model MapsReviewReply {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// L'identifiant Google de l'avis auquel cette réponse répond.
+  reviewId String
+
+  /// Le nom de l'auteur et sa note, recopiés pour afficher le fil sans
+  /// dépendre du dernier relevé : un avis peut disparaître du relevé suivant.
+  reviewerName String
+  stars        Int
+  /// Le texte de l'avis au moment de la rédaction. Un avis modifié après coup
+  /// rend la réponse à revoir, et cette copie permet de s'en apercevoir.
+  reviewText String?
+
+  /// La réponse proposée.
+  reply String
+
+  /// « draft » · « approved ». Une réponse validée n'est plus réécrite.
+  status String @default("draft")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, reviewId])
+  @@index([userId, status])
+}
+
+/// Les horaires lus sur la page d'accueil du site.
+///
+/// Google croise la fiche et le site : deux horaires qui se contredisent
+/// affaiblissent les deux, et c'est l'erreur locale la plus fréquente — le site
+/// garde les horaires d'été trois ans de suite pendant que la fiche est à jour.
+///
+/// L'extraction relit le crawl déjà en base, elle ne recharge pas le site : les
+/// horaires y sont écrits en toutes lettres au milieu d'un pied de page, et
+/// c'est un modèle rapide qui les en sort.
+model SiteHours {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le domaine analysé. Un changement de site rouvre l'extraction.
+  domain String
+
+  /// Les horaires relevés et leur comparaison avec la fiche, en JSON.
+  payload String
+
+  /// Vrai quand la page d'accueil n'affiche aucun horaire : c'est un résultat,
+  /// pas un échec, et il ne faut pas le relire à chaque affichage.
+  absent Boolean @default(false)
+
+  fetchedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Un jeton d'accès MCP : la clé que porte l'agent IA du client (Claude Code,
+/// Codex, Cursor, Hermes) pour lire son statut et ses correctifs.
+///
+/// Seule l'empreinte est stockée. Le jeton en clair n'existe que deux fois : dans
+/// la réponse qui l'accorde, et dans le fichier local de l'agent. Une fuite de la
+/// table ne rend donc personne capable de se connecter — même règle que pour un
+/// mot de passe.
+///
+/// `revokedAt` plutôt qu'une suppression : un client qui coupe l'accès d'un poste
+/// doit pouvoir constater ensuite qu'il l'a bien coupé, et quand.
+model McpToken {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// SHA-256 du jeton en clair, en hexadécimal.
+  tokenHash String @unique
+  /// Le nom que l'agent s'est donné en s'appairant (« Claude Code », « Cursor »…).
+  clientName String @default("agent")
+
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// Un appairage en cours, façon « device flow » : l'agent demande un code, le
+/// client l'autorise depuis son navigateur, l'agent récupère son jeton.
+///
+/// L'agent tourne dans un terminal : il n'a ni cookie de session, ni écran de
+/// connexion. Le code affiché dans le terminal puis confirmé dans le navigateur
+/// est ce qui relie les deux — l'agent ne voit jamais le mot de passe du compte,
+/// et le navigateur n'a rien à recopier.
+///
+/// `grantedToken` porte le jeton en clair entre l'autorisation et le premier
+/// relevé de l'agent, quelques secondes plus tard. La ligne est détruite dès
+/// qu'il l'a lu, et de toute façon à l'expiration : c'est la seule fenêtre où le
+/// jeton existe ailleurs que chez l'agent.
+model McpDeviceCode {
+  id String @id @default(cuid())
+
+  /// Secret détenu par l'agent seul, avec lequel il interroge l'appairage.
+  deviceCode String @unique
+  /// Le code court lu à l'écran par le client (8 caractères, sans ambiguïté).
+  userCode   String @unique
+
+  /// pending · approved · denied.
+  status     String @default("pending")
+  clientName String @default("agent")
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  grantedToken String?
+
+  expiresAt  DateTime
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+/// Ce que l'agent rapporte après une passe : les correctifs qu'il a réellement
+/// posés, chantier par chantier.
+///
+/// Sans cette trace, le client autorise un agent puis n'apprend jamais ce qu'il
+/// a fait — il lui reste à relire son dépôt. La ligne alimente l'écran de
+/// rattachement : « Claude Code a appliqué 4 correctifs il y a trois minutes ».
+///
+/// Elle n'est pas une preuve : c'est l'agent qui la déclare. Elle dit ce qui a
+/// été tenté, pas ce que le prochain audit constatera.
+model McpFixReport {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Le nom que portait l'agent au moment de la passe.
+  clientName String @default("agent")
+  /// L'onglet visé : results · content · architecture · articles · presence · maps.
+  chantier   String
+
+  /// Les correctifs déclarés appliqués, et ceux laissés de côté avec leur raison.
+  applied String[] @default([])
+  skipped String[] @default([])
+  note    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
