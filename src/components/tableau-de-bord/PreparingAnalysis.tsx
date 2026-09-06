@@ -6,6 +6,7 @@ import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
 import {
   dashboardReadyAction,
+  loadingQuestionsAction,
   prepareDashboardAction,
   seedEditorialMonthAction,
 } from "@/features/dashboard/actions";
@@ -13,13 +14,7 @@ import { draftsSeedArticles, type AccessTier } from "@/constants/access";
 import { buildLoadingPrompts, type BusinessHint } from "@/lib/geo/loading-prompts";
 import { Card } from "./Card";
 import { AiKeysAnimation } from "./AiKeysAnimation";
-import {
-  ARTICLES_PHASE,
-  KEYBOARD_PHASE,
-  PHASE_LABEL_KEYS,
-  PhaseAnimation,
-  auditPhaseFor,
-} from "./AnalysisPhases";
+import { ARTICLES_PHASE, PHASE_LABEL_KEYS, auditPhaseFor } from "./AnalysisPhases";
 
 /**
  * L'analyse lancée à la première ouverture du tableau de bord — et rejouée le
@@ -44,12 +39,14 @@ import {
  *
  * ## Ce que l'écran montre
  *
- * Une scène à la fois, comme sur l'écran d'analyse d'origine : l'animation du
- * temps en cours, son nom, la barre. Sur l'étape des moteurs, cette scène est
- * le clavier — la question du client s'y écrit, « boulangerie artisanale au
- * Havre », et c'est la requête dont dépend son chiffre d'affaires. C'est de
- * loin l'étape la plus longue, parce que c'est la seule où il y a quelque
- * chose à lire plutôt qu'à regarder.
+ * Une seule scène, comme sur l'écran d'analyse d'origine : le clavier, le nom
+ * de l'étape en cours, la barre. La question du client s'écrit sur le clavier —
+ * « boulangerie artisanale au Havre » —, et c'est la requête dont dépend son
+ * chiffre d'affaires. Elle est posée aux quatre moteurs à tour de rôle, et elle
+ * est écrite pour son commerce par DeepSeek Flash (cf. `niche-questions`), avec
+ * les gabarits locaux en repli le temps que le modèle réponde. C'est la seule
+ * chose de cet écran qu'on lise plutôt qu'on regarde, et c'est pour ça qu'elle
+ * y reste du début à la fin.
  *
  * La barre de progression n'est pas un pourcentage mesuré — personne ne sait à
  * l'avance combien de pages a un site. C'est une avance dans le temps, bornée
@@ -177,12 +174,32 @@ export function PreparingAnalysis({
   /** Le travail est fini mais le serveur ne l'a pas encore montré. */
   const [stalled, setStalled] = useState(false);
 
-  // Les questions sont composées une fois pour toutes : elles ne dépendent que
-  // de la niche et de la ville, qui ne bougent pas pendant l'attente.
-  const prompts = useMemo(
+  // Les questions de repli sont composées une fois pour toutes : elles ne
+  // dépendent que de la niche et de la ville, qui ne bougent pas pendant
+  // l'attente. Elles s'affichent tout de suite, sans attendre le modèle.
+  const localPrompts = useMemo(
     () => buildLoadingPrompts(business ?? { niche: null, city: null, isPhysical: true }),
     [business],
   );
+
+  /** Les questions écrites par DeepSeek Flash, dès qu'elles arrivent. */
+  const [written, setWritten] = useState<string[]>([]);
+  const questions = useAction(loadingQuestionsAction, {
+    onSuccess: ({ data }) => setWritten(data?.questions ?? []),
+  });
+
+  // Un seul appel, au montage : c'est un appel de modèle, et il n'a rien à
+  // redire tant que l'écran est là. Une panne ne se rattrape pas non plus —
+  // le repli local tourne déjà, et le client ne verra pas la différence.
+  const askQuestions = useRef(questions.execute);
+  useEffect(() => {
+    askQuestions.current = questions.execute;
+  });
+  useEffect(() => {
+    askQuestions.current({});
+  }, []);
+
+  const prompts = written.length ? written : localPrompts;
 
   // Le mois d'articles est posé dans la foulée de l'audit : le client arrive
   // sur un calendrier rempli, dont la première semaine est déjà rédigée. Si
@@ -390,14 +407,12 @@ export function PreparingAnalysis({
 
       <section className="rounded-[36px] border border-border bg-surface px-5 py-7 sm:px-8 sm:py-9">
         <div className="flex flex-col items-center">
-          {/* Une seule scène à la fois. Sur l'étape des moteurs, le clavier
-              prend toute la place : c'est le moment où le client a quelque
-              chose à lire — sa propre requête — plutôt qu'à regarder. */}
-          {phase === KEYBOARD_PHASE ? (
-            <AiKeysAnimation prompts={prompts} />
-          ) : (
-            <PhaseAnimation index={phase} />
-          )}
+          {/* Une seule scène, du début à la fin : le clavier. C'est le seul
+              moment de l'attente où le client a quelque chose à lire — sa
+              propre requête, posée aux quatre moteurs — plutôt qu'à regarder.
+              Les animations qui défilaient ici illustraient l'attente sans rien
+              en dire, et changeaient de sujet toutes les vingt secondes. */}
+          <AiKeysAnimation prompts={prompts} />
 
           <p
             aria-live="polite"

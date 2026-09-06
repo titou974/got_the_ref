@@ -18,6 +18,7 @@ import type { GooglePlace, MapsAdvice } from "@/lib/apify/place-types";
 import { collectSignals } from "@/lib/geo/fetcher";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { regenerateOnPageElement } from "@/lib/geo/keywords";
+import { generateNicheQuestions } from "@/lib/geo/niche-questions";
 import { findContactPoints, normalizeDomain } from "@/lib/geo/contact-finder";
 import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
@@ -463,6 +464,39 @@ export const refreshAnalysisAction = authActionClient
 export const dashboardReadyAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => ({ ready: await isDashboardReady(ctx.auth.user.id) }));
+
+/**
+ * Les questions tapées sur le clavier de l'écran d'attente, écrites par
+ * DeepSeek Flash pour ce commerce-là.
+ *
+ * L'écran sait déjà composer des questions tout seul à partir de la niche
+ * (`buildLoadingPrompts`) : c'est ce qu'il affiche pendant que cet appel est en
+ * vol, et ce qu'il garde si l'appel échoue. Le modèle n'apporte pas la
+ * possibilité d'écrire, il apporte le vocabulaire du métier — « pain au levain »
+ * plutôt que « boulangerie », le mot que le client final tape vraiment.
+ *
+ * Appel de modèle, donc lecture bornée : une seule fois par montage de l'écran,
+ * jamais en boucle, et le cache de `generateNicheQuestions` absorbe les
+ * changements de page pendant l'attente. Ne rend jamais d'erreur — l'audit
+ * tourne très bien pendant ce temps, et un écran d'attente n'a pas à annoncer
+ * l'échec de sa propre décoration.
+ */
+export const loadingQuestionsAction = authActionClient
+  .inputSchema(disconnectSiteSchema)
+  .action(async ({ ctx }) => {
+    const context = await getDashboardContext(ctx.auth.user.id);
+    const domain = context.domain ?? "";
+    if (!domain) return { questions: [] as string[] };
+
+    const { questions } = await generateNicheQuestions({
+      domain,
+      businessName: context.businessName || null,
+      niche: context.niche,
+      location: context.cities[0] ?? null,
+      isPhysical: context.isPhysical,
+    });
+    return { questions };
+  });
 
 /** Le niveau d'accès inscrit dans une analyse enregistrée, s'il l'a été. */
 function readAnalysisTier(raw: string): AccessTier | null {
