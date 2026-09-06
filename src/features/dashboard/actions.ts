@@ -26,7 +26,11 @@ import {
   type EngineScore,
   type GeoAnalysisResult,
 } from "@/lib/geo/types";
-import { publishArticle, verifyConnection, type Credentials } from "./connectors";
+import {
+  publishArticle,
+  verifyConnection,
+  type Credentials,
+} from "./connectors";
 import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
 import {
@@ -60,7 +64,6 @@ import {
   articleTopicsFor,
   canFetchPlace,
   PAID_ARTICLE_TOPICS,
-  canFetchPlace,
   draftsSeedArticles,
   runsEngine,
   tierAtLeast,
@@ -186,7 +189,9 @@ export const prepareDashboardAction = authActionClient
     // Et on s'arrête aux appels utiles : les relevés hors-site nourrissent des
     // onglets qui resteront sous voile, on ne les paie donc pas.
     const { tier } = await getAccess(userId);
-    const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(tier, engine));
+    const engines = DASHBOARD_ENGINES.filter((engine) =>
+      runsEngine(tier, engine),
+    );
 
     const existing = await prisma.analysis.findFirst({
       where: { userId, ...(profile.domain ? { domain: profile.domain } : {}) },
@@ -197,7 +202,10 @@ export const prepareDashboardAction = authActionClient
     // Une analyse déjà faite au niveau du compte n'a aucune raison d'être
     // refaite : elle a coûté ce qu'elle devait coûter, et rejouer l'audit à
     // chaque ouverture reviendrait à repayer le même rapport.
-    if (existing && !analysisNeedsUpgrade(readAnalysisTier(existing.data), tier)) {
+    if (
+      existing &&
+      !analysisNeedsUpgrade(readAnalysisTier(existing.data), tier)
+    ) {
       return { id: existing.id };
     }
 
@@ -213,7 +221,8 @@ export const prepareDashboardAction = authActionClient
         offsite: tierAtLeast(tier, "allin"),
         mapsUrl: profile.mapsUrl ?? null,
         declaredNiche: profile.niche,
-        declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
+        declaredLocation:
+          mode === "physical" ? (profile.cities[0] ?? null) : null,
         // Relevé juste au-dessus dès le premier achat : les correctifs on-page
         // de l'audit sont alors écrits dans la voix du client, pas dans celle
         // d'un modèle. En gratuit il n'y en a pas, et ils restent neutres.
@@ -339,7 +348,11 @@ async function refreshRankingsIfDue(
     city: string | null;
     isPhysical: boolean;
   },
-): Promise<{ engines: EngineScore[]; liveQuery: string | null; checkedAt: string | null }> {
+): Promise<{
+  engines: EngineScore[];
+  liveQuery: string | null;
+  checkedAt: string | null;
+}> {
   const unchanged = {
     engines: stored.engines,
     liveQuery: stored.liveQuery ?? null,
@@ -350,17 +363,22 @@ async function refreshRankingsIfDue(
 
   // Un compte gratuit ne fait mesurer que Gemini, dont le relevé passe par le
   // grounding Google Search sans appel facturé en plus.
-  const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(options.tier, engine));
+  const engines = DASHBOARD_ENGINES.filter((engine) =>
+    runsEngine(options.tier, engine),
+  );
   if (engines.length === 0) return unchanged;
 
-  const { engines: refreshed, liveQuery } = await refreshEngineRankings(stored, {
-    declared: {
-      niche: options.niche,
-      location: options.isPhysical ? options.city : null,
-      isPhysical: options.isPhysical,
+  const { engines: refreshed, liveQuery } = await refreshEngineRankings(
+    stored,
+    {
+      declared: {
+        niche: options.niche,
+        location: options.isPhysical ? options.city : null,
+        isPhysical: options.isPhysical,
+      },
+      engines,
     },
-    engines,
-  });
+  );
 
   return { engines: refreshed, liveQuery, checkedAt: new Date().toISOString() };
 }
@@ -457,7 +475,8 @@ export const refreshAnalysisAction = authActionClient
         signalsHash: true,
       },
     });
-    if (!record) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
+    if (!record)
+      throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
 
     // Sans reprise antérieure, c'est la date de l'analyse elle-même qui compte :
     // un audit fait ce matin n'a rien à remesurer ce soir.
@@ -504,7 +523,8 @@ export const refreshAnalysisAction = authActionClient
             offsite: false,
             mapsUrl: profile.mapsUrl ?? null,
             declaredNiche: profile.niche,
-            declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
+            declaredLocation:
+              mode === "physical" ? (profile.cities[0] ?? null) : null,
             brandTone: profile.toneSummary,
           },
           "paid",
@@ -585,7 +605,9 @@ export const refreshAnalysisAction = authActionClient
  */
 export const dashboardReadyAction = authActionClient
   .inputSchema(disconnectSiteSchema)
-  .action(async ({ ctx }) => ({ ready: await isDashboardReady(ctx.auth.user.id) }));
+  .action(async ({ ctx }) => ({
+    ready: await isDashboardReady(ctx.auth.user.id),
+  }));
 
 /**
  * Les questions tapées sur le clavier de l'écran d'attente, écrites par
@@ -659,7 +681,8 @@ export const refreshRankingsAction = authActionClient
       orderBy: { createdAt: "desc" },
       select: { id: true, data: true },
     });
-    if (!record) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
+    if (!record)
+      throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
 
     let stored: StoredAnalysis & { tier?: string };
     try {
@@ -703,7 +726,9 @@ export const refreshRankingsAction = authActionClient
     });
 
     revalidateDashboard();
-    return { measured: rankings.engines.filter((engine) => engine.measured).length };
+    return {
+      measured: rankings.engines.filter((engine) => engine.measured).length,
+    };
   });
 
 // ── Mois éditorial d'accueil ─────────────────────────────────────────────────
@@ -777,7 +802,9 @@ function seedSchedule(from: Date, count: number): Date[] {
 function seedSlots(count: number): number[] {
   const span = PAID_ARTICLE_TOPICS;
   if (count >= span) return Array.from({ length: span }, (_, index) => index);
-  return Array.from({ length: count }, (_, index) => Math.round((index * span) / count));
+  return Array.from({ length: count }, (_, index) =>
+    Math.round((index * span) / count),
+  );
 }
 
 /**
@@ -842,7 +869,11 @@ export const seedEditorialMonthAction = authActionClient
         title: topic.title,
         keyword: topic.keyword,
         outline: serializeOutline(
-          topic.outline.map((heading) => ({ heading, level: 2 as const, instruction: "" })),
+          topic.outline.map((heading) => ({
+            heading,
+            level: 2 as const,
+            instruction: "",
+          })),
         ),
         excerpt: topic.angle,
         scheduledFor: dates[index],
@@ -904,7 +935,8 @@ export const connectSiteAction = authActionClient
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
     const connector = connectorFor(parsedInput.platform);
-    if (!connector) throw new AppError("Plateforme inconnue.", "UNKNOWN_PLATFORM", 400);
+    if (!connector)
+      throw new AppError("Plateforme inconnue.", "UNKNOWN_PLATFORM", 400);
 
     // Le formulaire grise les plateformes qui ne sont pas ouvertes ; l'inspecteur
     // du navigateur, lui, ne grise rien. Le refus tient ici.
@@ -925,10 +957,17 @@ export const connectSiteAction = authActionClient
     }
 
     const missing = connector.fields
-      .filter((field) => field.required && !parsedInput.credentials[field.name]?.trim())
+      .filter(
+        (field) =>
+          field.required && !parsedInput.credentials[field.name]?.trim(),
+      )
       .map((field) => field.name);
     if (missing.length) {
-      throw new AppError(`Champs manquants : ${missing.join(", ")}.`, "MISSING_FIELDS", 400);
+      throw new AppError(
+        `Champs manquants : ${missing.join(", ")}.`,
+        "MISSING_FIELDS",
+        400,
+      );
     }
 
     const credentials = parsedInput.credentials as Credentials;
@@ -949,17 +988,25 @@ export const connectSiteAction = authActionClient
       create: { userId, ...data },
       // Un essai raté ne doit pas effacer un lien qui marchait : on garde les
       // identifiants précédents et on note seulement l'erreur.
-      update: verified.ok ? data : { status: "error", lastError: data.lastError },
+      update: verified.ok
+        ? data
+        : { status: "error", lastError: data.lastError },
     });
 
     revalidateDashboard();
-    return { ok: verified.ok, capabilities: verified.capabilities, error: data.lastError };
+    return {
+      ok: verified.ok,
+      capabilities: verified.capabilities,
+      error: data.lastError,
+    };
   });
 
 export const disconnectSiteAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
-    await prisma.siteConnection.deleteMany({ where: { userId: ctx.auth.user.id } });
+    await prisma.siteConnection.deleteMany({
+      where: { userId: ctx.auth.user.id },
+    });
     revalidateDashboard();
     return { ok: true };
   });
@@ -1031,7 +1078,8 @@ export const applyOnPageAction = authActionClient
       where: { userId },
       data: {
         lastSyncAt: new Date(),
-        lastError: steps.find((step) => step.status === "failed")?.detail ?? null,
+        lastError:
+          steps.find((step) => step.status === "failed")?.detail ?? null,
       },
     });
 
@@ -1057,7 +1105,8 @@ export const applyStructureAction = authActionClient
     const { link, credentials } = await requireEditableLink(userId);
 
     const context = await getDashboardContext(userId);
-    if (!context.analysis) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
+    if (!context.analysis)
+      throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
 
     const files = buildStructureFiles(context.analysis);
     if (files.length === 0) {
@@ -1067,14 +1116,19 @@ export const applyStructureAction = authActionClient
     const steps = await applyStructure(
       link.platform,
       credentials,
-      files.map((file) => ({ kind: file.kind, path: file.path, content: file.content })),
+      files.map((file) => ({
+        kind: file.kind,
+        path: file.path,
+        content: file.content,
+      })),
     );
 
     await prisma.siteConnection.update({
       where: { userId },
       data: {
         lastSyncAt: new Date(),
-        lastError: steps.find((step) => step.status === "failed")?.detail ?? null,
+        lastError:
+          steps.find((step) => step.status === "failed")?.detail ?? null,
       },
     });
 
@@ -1095,7 +1149,8 @@ export const rewriteOnPageAction = authActionClient
     // (`regenerateOnPageAction`) et reste ouvert au compte gratuit.
     await requireSection(ctx.auth.user.id, "architecture");
     const context = await getDashboardContext(ctx.auth.user.id);
-    if (!context.analysis) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
+    if (!context.analysis)
+      throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
     return rewriteOnPage(context);
   });
 
@@ -1168,12 +1223,19 @@ export const regenerateOnPageAction = authActionClient
     }
     if (!rewritten) {
       await releaseOnPageRewrite(reservation.id);
-      throw new AppError("La réécriture n'a rien donné. Réessayez.", "REWRITE_FAILED", 502);
+      throw new AppError(
+        "La réécriture n'a rien donné. Réessayez.",
+        "REWRITE_FAILED",
+        502,
+      );
     }
 
     const updated: GeoAnalysisResult = {
       ...analysis,
-      trendingKeywords: { ...insight, suggested: { ...insight.suggested, ...rewritten } },
+      trendingKeywords: {
+        ...insight,
+        suggested: { ...insight.suggested, ...rewritten },
+      },
     };
 
     await prisma.analysis.update({
@@ -1205,7 +1267,10 @@ export const planArticlesAction = authActionClient
       select: { scheduledFor: true },
     });
 
-    const start = last?.scheduledFor && last.scheduledFor > new Date() ? last.scheduledFor : new Date();
+    const start =
+      last?.scheduledFor && last.scheduledFor > new Date()
+        ? last.scheduledFor
+        : new Date();
     const step = parsedInput.everyDays * 86_400_000;
 
     await prisma.article.createMany({
@@ -1214,7 +1279,11 @@ export const planArticlesAction = authActionClient
         title: topic.title,
         keyword: topic.keyword,
         outline: serializeOutline(
-          topic.outline.map((heading) => ({ heading, level: 2 as const, instruction: "" })),
+          topic.outline.map((heading) => ({
+            heading,
+            level: 2 as const,
+            instruction: "",
+          })),
         ),
         excerpt: topic.angle,
         // Calé sur le passage de la file, comme les sujets du planning initial.
@@ -1223,7 +1292,9 @@ export const planArticlesAction = authActionClient
         // se produit est exactement ce qu'on cherche à supprimer.
         scheduledFor: new Date(
           preferredPassOnDay(
-            new Date(start.getTime() + step * (index + 1)).toISOString().slice(0, 10),
+            new Date(start.getTime() + step * (index + 1))
+              .toISOString()
+              .slice(0, 10),
           ),
         ),
         status: "planned",
@@ -1239,7 +1310,9 @@ export const writeArticleAction = authActionClient
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
     await requireSection(userId, "articles");
-    const article = await prisma.article.findFirst({ where: { id: parsedInput.id, userId } });
+    const article = await prisma.article.findFirst({
+      where: { id: parsedInput.id, userId },
+    });
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
 
     // Le Coup de Boost achète une semaine de rédaction, pas le mois affiché au
@@ -1318,10 +1391,14 @@ export const updateArticleAction = authActionClient
         title: parsedInput.title,
         body: parsedInput.body,
         excerpt: parsedInput.excerpt,
-        scheduledFor: parsedInput.scheduledFor ? new Date(parsedInput.scheduledFor) : undefined,
+        scheduledFor: parsedInput.scheduledFor
+          ? new Date(parsedInput.scheduledFor)
+          : undefined,
         // Plan absent de l'envoi = plan inchangé. Une liste vide, elle, efface
         // volontairement le plan : c'est un geste du client, pas un oubli.
-        outline: parsedInput.outline ? serializeOutline(parsedInput.outline) : undefined,
+        outline: parsedInput.outline
+          ? serializeOutline(parsedInput.outline)
+          : undefined,
       },
     });
     if (!count) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
@@ -1340,13 +1417,24 @@ export const approveArticleAction = authActionClient
   .inputSchema(approveArticleSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { count } = await prisma.article.updateMany({
-      where: { id: parsedInput.id, userId: ctx.auth.user.id, body: { not: "" } },
+      where: {
+        id: parsedInput.id,
+        userId: ctx.auth.user.id,
+        body: { not: "" },
+      },
       data: {
         status: "approved",
-        scheduledFor: parsedInput.scheduledFor ? new Date(parsedInput.scheduledFor) : undefined,
+        scheduledFor: parsedInput.scheduledFor
+          ? new Date(parsedInput.scheduledFor)
+          : undefined,
       },
     });
-    if (!count) throw new AppError("Article introuvable ou pas encore rédigé.", "NOT_FOUND", 404);
+    if (!count)
+      throw new AppError(
+        "Article introuvable ou pas encore rédigé.",
+        "NOT_FOUND",
+        404,
+      );
 
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
@@ -1370,10 +1458,19 @@ export const unapproveArticleAction = authActionClient
   .inputSchema(articleIdSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { count } = await prisma.article.updateMany({
-      where: { id: parsedInput.id, userId: ctx.auth.user.id, status: "approved" },
+      where: {
+        id: parsedInput.id,
+        userId: ctx.auth.user.id,
+        status: "approved",
+      },
       data: { status: "drafted" },
     });
-    if (!count) throw new AppError("Article introuvable ou déjà publié.", "NOT_FOUND", 404);
+    if (!count)
+      throw new AppError(
+        "Article introuvable ou déjà publié.",
+        "NOT_FOUND",
+        404,
+      );
 
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
@@ -1404,7 +1501,12 @@ export const scheduleArticleAction = authActionClient
       where: { id: parsedInput.id, userId, publishedAt: null },
       data: { scheduledFor: new Date(parsedInput.scheduledFor) },
     });
-    if (!count) throw new AppError("Article introuvable ou déjà publié.", "NOT_FOUND", 404);
+    if (!count)
+      throw new AppError(
+        "Article introuvable ou déjà publié.",
+        "NOT_FOUND",
+        404,
+      );
 
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
@@ -1429,7 +1531,8 @@ export const setAutoPublishAction = authActionClient
       where: { userId },
       data: { autoPublish: parsedInput.autoPublish },
     });
-    if (!count) throw new AppError("Aucun site rattaché.", "NO_SITE_CONNECTION", 400);
+    if (!count)
+      throw new AppError("Aucun site rattaché.", "NO_SITE_CONNECTION", 400);
 
     revalidatePath(ROUTES.dashboardArticles);
     return { autoPublish: parsedInput.autoPublish };
@@ -1441,9 +1544,12 @@ export const publishArticleAction = authActionClient
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
     await requireSection(userId, "articles");
-    const article = await prisma.article.findFirst({ where: { id: parsedInput.id, userId } });
+    const article = await prisma.article.findFirst({
+      where: { id: parsedInput.id, userId },
+    });
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
-    if (!article.body) throw new AppError("Article encore vide.", "EMPTY_ARTICLE", 400);
+    if (!article.body)
+      throw new AppError("Article encore vide.", "EMPTY_ARTICLE", 400);
 
     const link = await prisma.siteConnection.findUnique({ where: { userId } });
     if (!link || link.status !== "connected") {
@@ -1459,7 +1565,11 @@ export const publishArticleAction = authActionClient
 
     const credentials = await readSiteCredentials<Credentials>(userId);
     if (!credentials) {
-      throw new AppError("Identifiants illisibles : refaites le rattachement.", "BAD_CREDENTIALS", 400);
+      throw new AppError(
+        "Identifiants illisibles : refaites le rattachement.",
+        "BAD_CREDENTIALS",
+        400,
+      );
     }
 
     const published = await publishArticle(link.platform, credentials, {
@@ -1478,7 +1588,10 @@ export const publishArticleAction = authActionClient
         externalId: published.externalId,
       },
     });
-    await prisma.siteConnection.update({ where: { userId }, data: { lastSyncAt: new Date() } });
+    await prisma.siteConnection.update({
+      where: { userId },
+      data: { lastSyncAt: new Date() },
+    });
 
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(article.id));
@@ -1504,8 +1617,15 @@ export const saveBrandVoiceAction = authActionClient
     const userId = ctx.auth.user.id;
     await prisma.brandVoice.upsert({
       where: { userId },
-      create: { userId, instructions: parsedInput.instructions, banned: parsedInput.banned },
-      update: { instructions: parsedInput.instructions, banned: parsedInput.banned },
+      create: {
+        userId,
+        instructions: parsedInput.instructions,
+        banned: parsedInput.banned,
+      },
+      update: {
+        instructions: parsedInput.instructions,
+        banned: parsedInput.banned,
+      },
     });
 
     revalidatePath(ROUTES.dashboardArticles);
@@ -1549,7 +1669,10 @@ export const saveSettingsAction = authActionClient
     };
 
     await prisma.$transaction([
-      prisma.user.update({ where: { id: userId }, data: { name: parsedInput.name } }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { name: parsedInput.name },
+      }),
       prisma.onboardingProfile.upsert({
         where: { userId },
         create: { userId, ...profileFields },
@@ -1629,7 +1752,10 @@ async function resolveMissingContacts(userId: string): Promise<number> {
   if (pending.length === 0) return 0;
 
   const points = await findContactPoints(
-    pending.map((prospect) => ({ name: prospect.name, domain: prospect.domain })),
+    pending.map((prospect) => ({
+      name: prospect.name,
+      domain: prospect.domain,
+    })),
   );
 
   let updated = 0;
@@ -1692,7 +1818,8 @@ export const setProspectStatusAction = authActionClient
       where: { id: parsedInput.id, userId },
       data: {
         status: parsedInput.status,
-        contactedAt: parsedInput.status === "contacted" ? new Date() : undefined,
+        contactedAt:
+          parsedInput.status === "contacted" ? new Date() : undefined,
       },
     });
     if (!count) throw new AppError("Site introuvable.", "NOT_FOUND", 404);
@@ -1703,7 +1830,15 @@ export const setProspectStatusAction = authActionClient
 
 // ── Google Maps ──────────────────────────────────────────────────────────────
 
-const WEEKDAYS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+const WEEKDAYS = [
+  "dimanche",
+  "lundi",
+  "mardi",
+  "mercredi",
+  "jeudi",
+  "vendredi",
+  "samedi",
+];
 
 /**
  * La date de publication d'un post : la cadence, puis le bon jour.
@@ -1737,14 +1872,21 @@ export const planGooglePostsAction = authActionClient
     ]);
     // La fiche donne les photos et ce que les avis retiennent. Sans relevé, les
     // posts s'écrivent quand même : ils sortent sans image, et le disent.
-    const posts = await planGooglePosts(context, parsedInput.count, snapshot?.place ?? null);
+    const posts = await planGooglePosts(
+      context,
+      parsedInput.count,
+      snapshot?.place ?? null,
+    );
 
     const last = await prisma.googlePost.findFirst({
       where: { userId, scheduledFor: { not: null } },
       orderBy: { scheduledFor: "desc" },
       select: { scheduledFor: true },
     });
-    const start = last?.scheduledFor && last.scheduledFor > new Date() ? last.scheduledFor : new Date();
+    const start =
+      last?.scheduledFor && last.scheduledFor > new Date()
+        ? last.scheduledFor
+        : new Date();
     const step = parsedInput.everyDays * 86_400_000;
 
     await prisma.googlePost.createMany({
@@ -1755,7 +1897,10 @@ export const planGooglePostsAction = authActionClient
         keyword: post.keyword,
         cta: post.cta === "NONE" ? null : post.cta,
         imageUrl: post.imageUrl,
-        scheduledFor: nextSlot(new Date(start.getTime() + step * (index + 1)), post.weekday),
+        scheduledFor: nextSlot(
+          new Date(start.getTime() + step * (index + 1)),
+          post.weekday,
+        ),
       })),
     });
 
@@ -1825,7 +1970,11 @@ export const saveMapsUrlAction = authActionClient
     }
 
     if (!mapsUrl) {
-      throw new AppError("Collez le lien de votre fiche.", "INVALID_MAPS_URL", 400);
+      throw new AppError(
+        "Collez le lien de votre fiche.",
+        "INVALID_MAPS_URL",
+        400,
+      );
     }
 
     await prisma.onboardingProfile.upsert({
@@ -1879,8 +2028,16 @@ export const refreshMapsPlaceAction = authActionClient
 
     const sameLink = existing?.mapsUrl === mapsUrl;
     const age = existing ? Date.now() - existing.fetchedAt.getTime() : Infinity;
-    if (existing && sameLink && !parsedInput.force && age < MAPS_PLACE_COOLDOWN_MS) {
-      const minutes = Math.max(1, Math.ceil((MAPS_PLACE_COOLDOWN_MS - age) / 60_000));
+    if (
+      existing &&
+      sameLink &&
+      !parsedInput.force &&
+      age < MAPS_PLACE_COOLDOWN_MS
+    ) {
+      const minutes = Math.max(
+        1,
+        Math.ceil((MAPS_PLACE_COOLDOWN_MS - age) / 60_000),
+      );
       throw new AppError(
         `Fiche relevée il y a moins d'une heure. Nouveau relevé possible dans ${minutes} min.`,
         "MAPS_PLACE_COOLDOWN",
@@ -1898,7 +2055,10 @@ export const refreshMapsPlaceAction = authActionClient
           : "Le relevé de la fiche a échoué. Réessayez dans quelques minutes.";
       // On note l'échec sans toucher au relevé précédent, s'il y en a un.
       if (existing) {
-        await prisma.mapsPlace.update({ where: { userId }, data: { lastError: message } });
+        await prisma.mapsPlace.update({
+          where: { userId },
+          data: { lastError: message },
+        });
       }
       throw new AppError(message, "MAPS_PLACE_FAILED", 502);
     }
@@ -1921,7 +2081,11 @@ export const refreshMapsPlaceAction = authActionClient
       lastError: null,
       fetchedAt: new Date(),
     };
-    await prisma.mapsPlace.upsert({ where: { userId }, create: { userId, ...data }, update: data });
+    await prisma.mapsPlace.upsert({
+      where: { userId },
+      create: { userId, ...data },
+      update: data,
+    });
 
     revalidatePath(ROUTES.dashboardMaps);
     return { title: place.title, reviewsCount: place.reviewsCount };
@@ -1956,7 +2120,11 @@ export const writeMapsAdviceAction = authActionClient
     }
 
     const place = snapshot.place;
-    const attributes = await adviseAttributes(context, place, auditAttributes(place));
+    const attributes = await adviseAttributes(
+      context,
+      place,
+      auditAttributes(place),
+    );
     const advice = await writeListingAdvice(context, place);
     const payload: MapsAdvice = { ...advice, attributes };
 
@@ -1988,7 +2156,10 @@ export const draftReviewRepliesAction = authActionClient
     const [context, snapshot, existing] = await Promise.all([
       getDashboardContext(userId),
       getMapsPlace(userId),
-      prisma.mapsReviewReply.findMany({ where: { userId }, select: { reviewId: true, status: true } }),
+      prisma.mapsReviewReply.findMany({
+        where: { userId },
+        select: { reviewId: true, status: true },
+      }),
     ]);
     if (!snapshot) {
       throw new AppError(
@@ -1999,7 +2170,9 @@ export const draftReviewRepliesAction = authActionClient
     }
 
     const approved = new Set(
-      existing.filter((row) => row.status === "approved").map((row) => row.reviewId),
+      existing
+        .filter((row) => row.status === "approved")
+        .map((row) => row.reviewId),
     );
     const wanted = new Set(parsedInput.reviewIds);
     const targets = snapshot.place.reviews.filter((review) => {
@@ -2075,7 +2248,10 @@ export const readSiteHoursAction = authActionClient
       throw new AppError("Aucun site enregistré.", "NO_DOMAIN", 400);
     }
 
-    const [text, snapshot] = await Promise.all([homepageText(domain), getMapsPlace(userId)]);
+    const [text, snapshot] = await Promise.all([
+      homepageText(domain),
+      getMapsPlace(userId),
+    ]);
     if (!text) {
       throw new AppError(
         "La page d'accueil n'a pas encore été explorée. Relancez une analyse.",
