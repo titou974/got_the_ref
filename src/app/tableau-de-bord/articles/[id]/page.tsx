@@ -3,7 +3,7 @@ import { Newsreader } from "next/font/google";
 import { requireUser } from "@/lib/auth";
 import { getArticle, getArticleQuota, getDashboardContext } from "@/features/dashboard/queries";
 import { parseOutline } from "@/features/dashboard/outline";
-import { canOpen } from "@/constants/access";
+import { canOpen, tierAtLeast } from "@/constants/access";
 import { ArticleWorkspace } from "@/components/tableau-de-bord/article/ArticleWorkspace";
 
 export const maxDuration = 300;
@@ -66,6 +66,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
         quotaRemaining={quota.remaining}
         domain={context.domain}
         platform={context.analysis?.signals.stack?.name ?? null}
+        // Le ton relevé sur le site du client, au pied du rail : c'est la voix
+        // sous laquelle l'article a été écrit, et celle sous laquelle on le
+        // relit. Réservé aux offres qui font écrire — démo, abonnement, Coup de
+        // Boost : ce sont les seules où le relevé est lancé (cf.
+        // `ensureBrandIdentity`), et une carte vide sur un compte gratuit ne
+        // ferait que nommer un manque qu'on ne lui a pas vendu.
+        tone={tierAtLeast(context.tier, "boost") ? context.tone : null}
+        voice={context.brandVoice}
       />
     </div>
   );

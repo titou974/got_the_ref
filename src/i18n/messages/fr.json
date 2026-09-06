@@ -2008,7 +2008,9 @@
         "detectedEmpty": "Aucun texte exploitable n'a pu être lu : les agents écrivent dans un ton neutre.",
         "sample": "Voir le texte de référence",
         "instructions": "Vos consignes",
-        "instructionsEmpty": "Aucune consigne ajoutée. Les agents s'en tiennent au ton relevé."
+        "instructionsEmpty": "Aucune consigne ajoutée. Les agents s'en tiennent au ton relevé.",
+        "readAll": "Lire le ton en entier",
+        "close": "Fermer"
       },
       "toolbar": {
         "p": "Paragraphe",
@@ -2051,13 +2053,7 @@
       "departure": "Départ",
       "noDate": "Sans date",
       "meter": "{words} mots · {minutes} min",
-      "closeOutline": "Fermer le plan",
-      "citableCard": "Citable par les IA",
-      "citableNone": "Le plan est vide : ajoutez une section pour commencer.",
-      "issueAll": "Chaque section ouvre sur une réponse citable telle quelle.",
-      "issueShort": "Une section ouvre trop court pour être citée telle quelle : « {section} ».",
-      "issueLong": "Une section ouvre trop long pour être citée telle quelle : « {section} ».",
-      "issueMissing": "Une section n'ouvre pas sur une réponse citable : « {section} »."
+      "closeOutline": "Fermer le plan"
     },
     "presence": {
       "pageTitle": "Présence web",

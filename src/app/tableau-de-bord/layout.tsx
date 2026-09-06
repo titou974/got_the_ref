@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { ROUTES } from "@/constants/routes";
 import { analysisNeedsUpgrade, tierAtLeast } from "@/constants/access";
 import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { getDashboardContext } from "@/features/dashboard/queries";
+import { backfillBrandTone } from "@/features/dashboard/brand-tone";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { CrispChat } from "@/components/CrispChat";
 import { DashboardShell } from "@/components/tableau-de-bord/DashboardShell";
@@ -29,6 +31,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!(await isOnboardingComplete(user.id))) redirect(ROUTES.onboarding);
 
   const context = await getDashboardContext(user.id);
+
+  // Le ton de la marque, rattrapé au retour du client dans son interface.
+  //
+  // Il ne se relevait qu'à l'analyse — sautée dès qu'il y en a déjà une au bon
+  // niveau — ou à la première rédaction. Un Coup de Boost pris avant l'ouverture
+  // de ce relevé, ou une lecture tombée un jour où le site ne répondait pas,
+  // laissaient donc le champ vide indéfiniment : les articles sortaient dans la
+  // voix de personne et l'atelier affichait une carte de ton vide. La coque est
+  // le seul endroit par lequel tout le monde repasse, quel que soit l'onglet.
+  //
+  // Derrière `after()` : la lecture crawle et interroge un modèle, et le tableau
+  // de bord n'a pas à l'attendre pour s'afficher. Elle ne part que là où le ton
+  // sert — démo, abonnement, Coup de Boost — et seulement s'il manque encore.
+  after(() => backfillBrandTone(user.id));
 
   // La barre d'exécution ne se monte qu'une fois l'analyse en place. Avant
   // ça — première ouverture, ou achat qui vient de rouvrir des mesures — les

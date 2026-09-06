@@ -59,7 +59,7 @@ import {
   type AccessTier,
 } from "@/constants/access";
 import { getAccess, requireSection } from "@/features/billing/access";
-import { detectBrandIdentity } from "@/features/onboarding/service";
+import { ensureBrandIdentity } from "./brand-tone";
 import { parseOutline, serializeOutline } from "./outline";
 import {
   draftOutreachMessage,
@@ -145,83 +145,13 @@ const revalidateDashboard = () => {
  * Ensuite elle est de nouveau à jour, et plus rien ne repart.
  */
 /**
- * Le ton de la marque et sa couleur, relevés une fois, dès le premier achat.
- *
- * Cette lecture-là ne se vend pas à l'unité : elle ne sert que là où des textes
- * sortent au nom du client — les articles, les réécritures on-page, les posts.
- * Un compte gratuit n'en publie aucun, et la question ne lui est donc pas
- * posée. Dès le Coup de Boost en revanche, elle l'est : cette offre ouvre
- * l'onglet Articles et fait rédiger la première semaine dans la foulée de
- * l'achat (cf. `seedEditorialMonthAction`). Ces articles-là sont les premiers
- * textes que le client lit sous son propre nom ; les écrire sans avoir relevé
- * sa manière d'écrire revenait à les lui rendre dans la voix de personne, et
- * c'est exactement ce qui les faisait finir non publiés.
- *
- * D'où le fait qu'elle vive ici, dans l'analyse du tableau de bord, et pas dans
- * le tunnel d'accueil. Un client qui ouvre un compte gratuit puis achète trois
- * semaines plus tard ne repasse pas par l'accueil ; il repasse en revanche par
- * cette analyse, refaite une fois au niveau qu'il vient d'acheter. Le ton se
- * relève donc au moment exact où il devient utile, sans lui redemander quoi que
- * ce soit.
- *
- * Le texte lu est celui du crawl Firecrawl déjà en base (`getOrCrawlSite`), et
- * la lecture part sur le nano d'OpenAI (rôle `tone`) : c'est une extraction,
- * pas un jugement.
- *
- * Best-effort de bout en bout : un site injoignable ou un modèle muet rend le
- * ton déjà en base (souvent `null`), et l'audit continue. Rien de ce qui est
- * ici ne vaut de faire échouer l'analyse que le client attend à l'écran.
- */
-async function ensureBrandIdentity(
-  userId: string,
-  tier: AccessTier,
-  profile: {
-    siteUrl: string | null;
-    toneSummary: string | null;
-    toneSampleUrl: string | null;
-    brandColor: string | null;
-  },
-): Promise<string | null> {
-  if (!tierAtLeast(tier, "boost")) return profile.toneSummary;
-
-  // Déjà relevés : la voix d'une marque ne change pas d'une analyse à l'autre,
-  // et la relire à chaque remesure serait un appel de modèle pour rien.
-  if (profile.toneSummary && profile.brandColor) return profile.toneSummary;
-
-  try {
-    const brand = await detectBrandIdentity({
-      siteUrl: profile.siteUrl,
-      sampleUrl: profile.toneSampleUrl,
-    });
-
-    // Écriture champ par champ : une seconde passe qui ne retrouve que la
-    // couleur ne doit pas effacer le ton relevé à la première.
-    const data = {
-      ...(brand.tone ? { toneSummary: brand.tone } : {}),
-      ...(brand.color ? { brandColor: brand.color } : {}),
-      ...(brand.sourceUrl ? { toneSampleUrl: brand.sourceUrl } : {}),
-    };
-    if (Object.keys(data).length > 0) {
-      await prisma.onboardingProfile.update({ where: { userId }, data });
-    }
-
-    return brand.tone ?? profile.toneSummary;
-  } catch (err) {
-    console.error("Relevé du ton de marque échoué :", err);
-    return profile.toneSummary;
-  }
-}
-
-/**
  * Le contexte du tableau de bord, avec le ton de la marque relevé si besoin.
  *
- * `ensureBrandIdentity` ne passe que dans l'analyse, et l'analyse ne se refait
- * qu'au changement de niveau (cf. `analysisNeedsUpgrade`). Deux comptes lui
- * échappent donc, et ce sont précisément ceux qui écrivent : celui dont
- * l'analyse portait déjà le niveau acheté — les Coups de Boost pris avant
- * l'ouverture de ce relevé —, et celui dont la lecture avait échoué ce jour-là
- * sans jamais être retentée. Les deux feraient écrire leurs articles dans la
- * voix de personne.
+ * Le rattrapage de la coque (`backfillBrandTone`) couvre déjà le cas courant :
+ * le ton se relève au retour du client dans son interface, avant même qu'il
+ * ouvre un article. Il court derrière la réponse, en revanche, et il s'arrête
+ * six heures après un échec — une rédaction lancée dans cette fenêtre-là
+ * partirait sans le ton.
  *
  * On repose donc la question ici, au moment d'écrire, et seulement si le ton
  * manque encore. Un compte qui l'a déjà ne déclenche rien ; un compte gratuit

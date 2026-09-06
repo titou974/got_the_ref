@@ -475,6 +475,17 @@ html.scroll-locked body {
   font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
 }
 
+/* Le ton relevé, dans la modale ouverte depuis le pied du rail. Il emprunte lui
+   aussi la serif : ce qu'on lit est une manière d'écrire, et elle se montre dans
+   la forme où l'article se lira. Un cran sous le corps du document — c'est une
+   fiche qu'on consulte, pas un texte qu'on relit. */
+.article-voice {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.68;
+  color: var(--color-ink);
+}
+
 .article-canvas .tiptap {
   font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
   font-size: 17px;

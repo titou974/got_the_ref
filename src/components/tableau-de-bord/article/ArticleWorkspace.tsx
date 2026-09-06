@@ -84,6 +84,8 @@ export function ArticleWorkspace({
   quotaRemaining,
   domain,
   platform,
+  tone = null,
+  voice = null,
 }: {
   article: EditorArticle;
   canPublish: boolean;
@@ -104,6 +106,15 @@ export function ArticleWorkspace({
   domain: string | null;
   /** Plateforme reconnue sur le site : elle change les consignes de dépôt. */
   platform: string | null;
+  /**
+   * Le ton relevé sur le site du client, posé au pied du rail.
+   *
+   * Nul sur les offres qui ne font pas écrire : la page ne le passe que pour la
+   * démo, l'abonnement et le Coup de Boost, les seules où il est relevé.
+   */
+  tone?: { summary: string | null; color: string | null; sampleUrl: string | null } | null;
+  /** Les consignes de voix du client, lues sous le relevé. */
+  voice?: { instructions: string; banned: string[] } | null;
 }) {
   const t = useTranslations("dashboard.article");
   const router = useRouter();
@@ -307,6 +318,8 @@ export function ArticleWorkspace({
       }}
       onJump={jump}
       onAddSection={addSection}
+      tone={tone}
+      voice={voice}
     />
   ) : null;
 

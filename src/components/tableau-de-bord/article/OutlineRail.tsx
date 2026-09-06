@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/react";
-import { answerState, type DocHeading } from "@/lib/article-doc";
+import { answerState } from "@/lib/article-doc";
 import { AutoTextarea } from "../AutoTextarea";
+import { BrandToneCard } from "./BrandToneCard";
 import { useDocumentStructure } from "./useDocumentStructure";
 
 /**
@@ -12,23 +13,19 @@ import { useDocumentStructure } from "./useDocumentStructure";
  *
  * Il tient toute la hauteur de la colonne de gauche. En haut le plan, lu dans le
  * document à chaque frappe — ce n'est plus une liste tenue à côté du texte qu'il
- * fallait resynchroniser à la main. En bas, calée au pied du rail, la mesure que
- * ce produit est seul à donner : combien de sections ouvrent sur une réponse
- * qu'une IA peut citer telle quelle.
+ * fallait resynchroniser à la main. En bas, calé au pied du rail, le ton de la
+ * marque sous lequel l'article a été écrit.
  *
  * Une entrée ne porte de note que lorsqu'elle sort du contrat. Le compte de mots
  * affiché sous chaque titre disait la même chose de toutes les sections, y
  * compris des dix-neuf qui allaient bien : le rail se lisait comme un tableau de
- * chiffres au lieu de signaler les deux endroits à reprendre.
+ * chiffres au lieu de signaler les deux endroits à reprendre. C'est aussi ce qui
+ * a fini par emporter la carte de citabilité qui occupait le pied : elle
+ * recomptait en gros ce que ces notes-là disent déjà, une section à la fois.
  *
  * La consigne de section reste attachée au titre : c'est elle qui permet de
  * faire reprendre un passage sans faire réécrire l'article entier.
  */
-
-/** La section à nommer dans la carte du bas : la première qui sort du contrat. */
-function firstIssue(headings: DocHeading[]): DocHeading | null {
-  return headings.find((heading) => answerState(heading) !== "ok") ?? null;
-}
 
 export function OutlineRail({
   editor,
@@ -37,6 +34,8 @@ export function OutlineRail({
   onJump,
   onAddSection,
   keyword,
+  tone = null,
+  voice = null,
 }: {
   editor: Editor;
   instructions: Record<string, string>;
@@ -45,21 +44,19 @@ export function OutlineRail({
   onAddSection: () => void;
   /** Le mot-clé visé, rappelé sous le titre du rail. */
   keyword?: string | null;
+  /**
+   * Le ton relevé sur le site du client, et les consignes qui l'amendent.
+   *
+   * Nul sur les offres qui ne font pas écrire : le relevé n'y est pas lancé, et
+   * une carte vide ne dirait au client qu'une chose, qu'il lui manque quelque
+   * chose qu'on ne lui a pas vendu.
+   */
+  tone?: { summary: string | null; color: string | null; sampleUrl: string | null } | null;
+  voice?: { instructions: string; banned: string[] } | null;
 }) {
   const t = useTranslations("dashboard.article");
   const [open, setOpen] = useState<string | null>(null);
   const { headings, activeIndex } = useDocumentStructure(editor);
-
-  const citable = headings.filter((heading) => answerState(heading) === "ok").length;
-  const issue = firstIssue(headings);
-  const ratio = headings.length ? citable / headings.length : 0;
-  const issueKey = issue
-    ? answerState(issue) === "missing"
-      ? "issueMissing"
-      : answerState(issue) === "long"
-        ? "issueLong"
-        : "issueShort"
-    : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto px-5 py-6">
@@ -175,31 +172,12 @@ export function OutlineRail({
 
       <span aria-hidden className="flex-1" />
 
-      {/* La citabilité, au pied du rail. Elle n'a pas sa place en tête : on la
-          consulte après avoir écrit, pas avant. */}
-      <div className="shrink-0 rounded-3xl border border-border p-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[13px] font-semibold">{t("citableCard")}</span>
-          <span className="shrink-0 text-[13px] font-bold tabular-nums">
-            {citable}/{headings.length}
-          </span>
-        </div>
-
-        <span aria-hidden className="mt-2.5 block h-1.5 overflow-hidden rounded-pill bg-mist">
-          <span
-            className="block h-full rounded-pill bg-success transition-[width] duration-300"
-            style={{ width: `${Math.round(ratio * 100)}%` }}
-          />
-        </span>
-
-        <p className="mt-2.5 text-xs leading-relaxed text-steel">
-          {!headings.length
-            ? t("citableNone")
-            : issue && issueKey
-              ? t(issueKey, { section: issue.text || t("untitledSection") })
-              : t("issueAll")}
-        </p>
-      </div>
+      {/* Le ton de la marque, au pied du rail. Il y remplace la citabilité :
+          celle-ci comptait en gros ce que chaque entrée du plan signale déjà,
+          section par section, et la voix sous laquelle l'article est écrit ne se
+          lisait nulle part. On la consulte au même moment — après avoir écrit,
+          en relisant — et au même endroit d'un article à l'autre. */}
+      {tone ? <BrandToneCard tone={tone} voice={voice} /> : null}
     </div>
   );
 }
