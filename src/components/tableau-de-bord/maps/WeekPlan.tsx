@@ -177,7 +177,11 @@ export function WeekPlan({
                             onClick={() => goNext(index)}
                             className="cursor-pointer rounded-pill bg-obsidian px-[18px] py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-ink"
                           >
-                            {tasks[index + 1] ? "Chantier suivant" : "J'ai terminé"}
+                            {tasks[index + 1]
+                              ? "Chantier suivant"
+                              : locked
+                                ? "Replier"
+                                : "J'ai terminé"}
                           </button>
                           <span className="text-[13px] tabular-nums text-muted">
                             Chantier {index + 1} sur {tasks.length}

@@ -8,18 +8,19 @@ import {
   SidebarMenuItem,
 } from "@/components/tremor/Sidebar";
 import { canOpen, offerFor, type AccessTier } from "@/constants/access";
-import { cx } from "@/lib/utils";
 import { isActiveItem, navItems } from "./navItems";
 
 /**
  * La liste des sections, servie telle quelle à la colonne de gauche et au
  * tiroir du téléphone.
  *
- * Une section que l'offre n'ouvre pas reste cliquable, en gris, avec le nom de
- * l'offre qui l'ouvrirait posé à droite. La retirer de la colonne cacherait ce
- * qu'on vend ; la désactiver laisserait le client sans le moyen d'aller voir.
- * Il tombe donc sur l'écran voilé, qui montre la forme du contenu et mène aux
- * tarifs.
+ * Une section que l'offre n'ouvre pas se lit comme les autres : même encre,
+ * même survol, seul le nom de l'offre qui l'ouvrirait est posé à droite. Elle
+ * était grisée, et le gris disait « n'y allez pas » au moment précis où l'on
+ * veut qu'on y aille : ces onglets montrent maintenant la fiche relevée, le
+ * squelette du site, la place de chaque correction sous voile. C'est la
+ * meilleure vitrine du produit, et une entrée éteinte n'y mène personne. Le
+ * badge suffit à dire ce qui s'achète, l'écran voilé fait le reste.
  */
 export function SidebarNav({
   showMaps,
@@ -52,7 +53,6 @@ export function SidebarNav({
               icon={item.icon}
               isActive={active}
               onClick={onNavigate}
-              className={cx(locked && !active && "text-pebble hover:bg-mist/50 hover:text-steel")}
               badge={
                 locked ? (
                   // L'offre qui ouvre l'onglet, en toutes lettres : « Coup de

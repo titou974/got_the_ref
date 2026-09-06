@@ -155,8 +155,26 @@ export function offerForTier(required: AccessTier): UpsellOffer {
   return required === "allin" ? "allin" : "boost";
 }
 
+/**
+ * L'offre mise en avant sur un onglet fermé, badge de la barre latérale compris.
+ *
+ * Elle suit le niveau exigé par la section, à une exception écrite ici : les
+ * articles. `SECTION_TIER.articles` reste au Coup de Boost — la passe donne
+ * bien dix articles sur une semaine (cf. `plans.ts`, `BOOST_ARTICLE_WINDOW_DAYS`)
+ * et un client qui l'a payée garde son onglet ouvert. Mais à qui n'a encore
+ * rien pris, c'est l'abonnement qu'on montre : la rédaction n'a de valeur que
+ * répétée, et vendre une semaine à quelqu'un qui découvre le calendrier du mois
+ * lui promet moins que ce qu'il a sous les yeux.
+ *
+ * L'écart ne touche donc que la vitrine — le badge et le texte du voile. La
+ * porte, elle, reste ouverte par `canOpen`, sur `SECTION_TIER`.
+ */
+const SECTION_UPSELL: Partial<Record<DashboardSection, UpsellOffer>> = {
+  articles: "allin",
+};
+
 export function offerFor(section: DashboardSection): UpsellOffer {
-  return offerForTier(SECTION_TIER[section]);
+  return SECTION_UPSELL[section] ?? offerForTier(SECTION_TIER[section]);
 }
 
 export function offerForBlock(block: HomeBlock): UpsellOffer {
