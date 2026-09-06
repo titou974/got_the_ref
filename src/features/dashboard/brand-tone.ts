@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { tierAtLeast, type AccessTier } from "@/constants/access";
 import { getAccess } from "@/features/billing/access";
 import { detectBrandIdentity } from "@/features/onboarding/service";
+import { getDashboardContext, type DashboardContext } from "./queries";
 
 /**
  * Le ton de la marque : son relevé, et son rattrapage.
@@ -148,4 +149,33 @@ export async function backfillBrandTone(userId: string): Promise<void> {
     // Rien de ce qui se passe ici ne concerne le client : il a déjà sa page.
     console.error("Rattrapage du ton de marque échoué :", err);
   }
+}
+
+/**
+ * Le contexte du tableau de bord, avec le ton de la marque relevé si besoin.
+ *
+ * `backfillBrandTone` couvre déjà le cas courant : le ton se relève au retour du
+ * client dans son interface, avant même qu'il ouvre un article. Il court
+ * derrière la réponse, en revanche, et il s'arrête six heures après un échec —
+ * une rédaction lancée dans cette fenêtre-là partirait sans le ton.
+ *
+ * On repose donc la question ici, au moment d'écrire, et seulement si le ton
+ * manque encore. Un compte qui l'a déjà ne déclenche rien ; un compte gratuit
+ * non plus, il ne publie pas. Best-effort comme partout ailleurs : une lecture
+ * qui échoue rend le contexte tel quel et la rédaction continue sans le ton.
+ */
+export async function contextForWriting(userId: string): Promise<DashboardContext> {
+  const context = await getDashboardContext(userId);
+  if (context.tone.summary || !context.siteUrl) return context;
+  if (!tierAtLeast(context.tier, "boost")) return context;
+
+  const tone = await ensureBrandIdentity(userId, context.tier, {
+    siteUrl: context.siteUrl,
+    toneSummary: context.tone.summary,
+    toneSampleUrl: context.tone.sampleUrl,
+    brandColor: context.tone.color,
+  });
+  if (!tone) return context;
+
+  return { ...context, tone: { ...context.tone, summary: tone } };
 }

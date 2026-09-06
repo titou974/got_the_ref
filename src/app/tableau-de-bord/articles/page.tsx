@@ -93,6 +93,7 @@ export default async function ArticlesPage() {
           blocked={plan.blocked}
           linked={plan.linked}
           canPublish={plan.canPublish}
+          domain={context.domain}
         />
       )}
 

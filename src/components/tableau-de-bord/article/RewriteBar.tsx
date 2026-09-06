@@ -28,6 +28,7 @@ export function RewriteBar({
   disabled,
   remaining,
   locked,
+  hasBody,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -39,6 +40,14 @@ export function RewriteBar({
   remaining: number;
   /** L'offre du compte n'ouvre pas la rédaction : le champ mène aux tarifs. */
   locked: boolean;
+  /**
+   * L'article a déjà un texte.
+   *
+   * Sans lui, la barre demandait « ce qui ne va pas » devant une page blanche et
+   * son bouton disait « réécrire » : le premier geste de l'atelier, celui qui
+   * fait écrire l'article, se présentait comme une correction.
+   */
+  hasBody: boolean;
 }) {
   const t = useTranslations("dashboard.article");
 
@@ -74,8 +83,8 @@ export function RewriteBar({
           value={value}
           disabled={spent}
           onChange={(event) => onChange(event.target.value)}
-          placeholder={t("rewriteHint")}
-          aria-label={t("rewrite")}
+          placeholder={hasBody ? t("rewriteHint") : t("writeHint")}
+          aria-label={hasBody ? t("rewrite") : t("writeCta")}
           className="min-w-0 flex-1 bg-transparent text-sm text-text placeholder:text-ash focus:outline-none disabled:cursor-not-allowed"
         />
         <button
@@ -83,7 +92,7 @@ export function RewriteBar({
           disabled={pending || disabled || spent}
           className="shrink-0 cursor-pointer rounded-pill bg-cta px-[18px] py-2.5 text-[13px] font-medium text-white transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:bg-mist disabled:text-steel"
         >
-          {pending ? t("writing") : t("rewriteCta")}
+          {pending ? t("writing") : hasBody ? t("rewriteCta") : t("writeCta")}
         </button>
       </form>
 
@@ -95,7 +104,7 @@ export function RewriteBar({
           ? "Rédactions de la semaine épuisées. Votre brouillon reste modifiable à la main."
           : `${remaining} rédaction${remaining > 1 ? "s" : ""} restante${
               remaining > 1 ? "s" : ""
-            } cette semaine. Une reprise en consomme une.`}
+            } cette semaine. ${hasBody ? "Une reprise" : "Cette rédaction"} en consomme une.`}
       </p>
 
       {pending ? (

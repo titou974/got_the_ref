@@ -243,7 +243,10 @@ export function ArticleActionBar({
               : "border-pebble text-graphite hover:bg-mist"
           }`}
         >
-          {t("rewrite")}
+          {/* Sur un article encore vide, l'agent ne « réécrit » rien : il
+              l'écrit. Le bouton nommait la reprise avant même qu'il y ait un
+              texte à reprendre, et c'est pourtant lui qui lance la rédaction. */}
+          {hasBody ? t("rewrite") : t("write")}
         </button>
 
         {/* Les gestes qu'on cherche : sous les trois points, pas dans la ligne. */}

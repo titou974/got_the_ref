@@ -31,6 +31,7 @@ import { ArticleActionBar } from "./ArticleActionBar";
 import { DocumentCanvas } from "./DocumentCanvas";
 import { OutlineRail } from "./OutlineRail";
 import { RewriteBar } from "./RewriteBar";
+import { WritingScene } from "./WritingScene";
 import { useDocumentStructure } from "./useDocumentStructure";
 
 /**
@@ -64,6 +65,10 @@ import { useDocumentStructure } from "./useDocumentStructure";
  * l'écran.
  */
 
+/** Rythme et durée du guet, quand la rédaction tourne en tâche de fond. */
+const AUTO_WRITING_POLL_MS = 8_000;
+const AUTO_WRITING_POLLS = 38;
+
 export type EditorArticle = {
   id: string;
   title: string;
@@ -86,6 +91,7 @@ export function ArticleWorkspace({
   platform,
   tone = null,
   voice = null,
+  autoWriting = false,
 }: {
   article: EditorArticle;
   canPublish: boolean;
@@ -115,6 +121,14 @@ export function ArticleWorkspace({
   tone?: { summary: string | null; color: string | null; sampleUrl: string | null } | null;
   /** Les consignes de voix du client, lues sous le relevé. */
   voice?: { instructions: string; banned: string[] } | null;
+  /**
+   * L'article attend son tour dans la file qui écrit le mois de l'abonnement.
+   *
+   * Le client n'a rien lancé : son texte s'écrit en tâche de fond, et sans ce
+   * signal l'atelier lui montrerait une page blanche sans rien dire, comme si
+   * l'article avait été oublié.
+   */
+  autoWriting?: boolean;
 }) {
   const t = useTranslations("dashboard.article");
   const router = useRouter();
@@ -307,6 +321,50 @@ export function ArticleWorkspace({
     setDirty(true);
   };
 
+  /**
+   * L'article a-t-il un texte ?
+   *
+   * Lu dans l'éditeur tant qu'il est monté, dans la valeur enregistrée sinon.
+   * Il décide de trois libellés au pied de l'écran : sur une page blanche,
+   * l'agent rédige, il ne réécrit pas.
+   */
+  const hasBody = Boolean(editor ? editor.getText().trim() : article.body.trim());
+
+  /**
+   * Une rédaction est en cours pour cet article.
+   *
+   * Deux origines, une seule scène. Le client vient de la demander, ou la file
+   * qui écrit le mois de l'abonnement n'est pas encore arrivée à cet article-là
+   * (`autoWriting`) : dans les deux cas il attend le même texte, et une page
+   * blanche muette ne dit ni que quelqu'un écrit, ni combien de temps ça prend.
+   */
+  const writing = write.isPending || (autoWriting && !hasBody);
+
+  /**
+   * Le texte écrit en tâche de fond n'arrive pas tout seul à l'écran.
+   *
+   * Une rédaction demandée à l'écran rend son texte dans la réponse ; celle qui
+   * tourne en file, non — la page a été rendue avant, et rien ne la prévient.
+   * On redemande donc la page à intervalles, tant que l'article est vide, et on
+   * s'arrête au bout de quelques minutes : passé ce délai, la rédaction a
+   * échoué, et interroger le serveur toute la journée n'y changera rien.
+   */
+  useEffect(() => {
+    if (!autoWriting || hasBody) return;
+
+    let polls = 0;
+    const timer = setInterval(() => {
+      polls += 1;
+      if (polls > AUTO_WRITING_POLLS) {
+        clearInterval(timer);
+        return;
+      }
+      router.refresh();
+    }, AUTO_WRITING_POLL_MS);
+
+    return () => clearInterval(timer);
+  }, [autoWriting, hasBody, router]);
+
   const rail = editor ? (
     <OutlineRail
       editor={editor}
@@ -406,12 +464,26 @@ export function ArticleWorkspace({
       </div>
 
       {/* ----------------------------- Le corps --------------------------- */}
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         {preview ? null : (
           <aside className="hidden w-72 shrink-0 border-r border-border bg-surface lg:block">
             {rail}
           </aside>
         )}
+
+        {/* La rédaction en cours, posée par-dessus la feuille.
+            En calque plutôt qu'à la place de l'éditeur : le démonter puis le
+            remonter perdrait le document et la position du curseur, alors qu'il
+            n'y a rien à perdre — on écrit par-dessus, on ne remplace rien. */}
+        {writing ? (
+          <div className={`absolute inset-0 z-30 bg-surface ${preview ? "" : "lg:left-72"}`}>
+            <WritingScene
+              title={title}
+              outline={article.outline.map((section) => section.heading)}
+              auto={!write.isPending}
+            />
+          </div>
+        ) : null}
 
         {editor ? (
           <DocumentCanvas
@@ -474,6 +546,7 @@ export function ArticleWorkspace({
               pending={write.isPending}
               disabled={busy && !write.isPending}
               remaining={remaining}
+              hasBody={hasBody}
               locked={locked}
             />
           </div>
@@ -482,7 +555,7 @@ export function ArticleWorkspace({
             articleId={article.id}
             status={article.status}
             scheduledFor={day ? preferredPassOnDay(day) : article.scheduledFor}
-            hasBody={Boolean(editor ? editor.getText().trim() : article.body.trim())}
+            hasBody={hasBody}
             canPublish={canPublish}
             locked={locked}
             domain={domain}
