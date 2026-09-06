@@ -6,11 +6,14 @@ import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { useTranslations } from "next-intl";
 import { motion, useReducedMotion } from "framer-motion";
-import { approveArticleAction, publishArticleAction } from "@/features/dashboard/actions";
+import {
+  approveArticleAction,
+  publishArticleAction,
+  unapproveArticleAction,
+} from "@/features/dashboard/actions";
 import {
   formatPublishDate,
   formatPublishTime,
-  nextPublishPass,
   preferredPassOnDay,
   splitPublishInstant,
 } from "@/constants/publishing";
@@ -47,11 +50,14 @@ export function ArticleActionBar({
   scheduledFor,
   hasBody,
   canPublish,
+  linked,
+  beyondPlan,
   locked,
   domain,
   externalUrl,
   onDrop,
   dropPending,
+  onConnectSite,
   onPreparePublish,
   onRewrite,
   rewriteOpen,
@@ -64,8 +70,20 @@ export function ArticleActionBar({
   hasBody: boolean;
   /** Le rattachement du site accepte le dépôt automatique. */
   canPublish: boolean;
+  /**
+   * Un site est rattaché — sans préjuger de ce qu'il laisse faire.
+   *
+   * La nuance décide de ce que propose le bouton quand rien ne peut partir tout
+   * seul : rattacher le site, ou composer le texte à déposer à la main.
+   */
+  linked: boolean;
   /** L'offre du compte n'ouvre pas la publication : la barre mène aux tarifs. */
   locked: boolean;
+  /**
+   * L'offre rédige, mais pas cet article-là — le Coup de Boost au-delà de sa
+   * première semaine. La barre mène alors à l'abonnement.
+   */
+  beyondPlan: boolean;
   /** Le domaine où l'article sera déposé, nommé dans la confirmation. */
   domain: string | null;
   /** L'adresse de l'article en ligne, quand il est déjà parti. */
@@ -74,11 +92,20 @@ export function ArticleActionBar({
   onDrop: () => void;
   dropPending: boolean;
   /**
-   * Composer le prompt de dépôt, quand le site ne s'ouvre pas à une API.
+   * Ouvrir le rattachement du site, quand rien n'est encore rattaché.
    *
    * Le geste remplace « publier maintenant » plutôt que de s'ajouter à lui :
-   * c'est la même intention — poser l'article en ligne — pour un site qui
-   * demande qu'on le fasse à la main.
+   * c'est la même intention — poser l'article en ligne — pour un client à qui il
+   * manque la porte.
+   */
+  onConnectSite: () => void;
+  /**
+   * Composer le texte de dépôt, pour un site rattaché qui n'ouvre pas d'API.
+   *
+   * Le seul recours de ces comptes-là : les agents ne peuvent rien y déposer, et
+   * l'article se recopie dans l'éditeur du client. Le geste ne se propose donc
+   * qu'à eux — ailleurs, ce serait une porte de secours présentée comme la voie
+   * normale.
    */
   onPreparePublish: () => void;
   /** Ouvrir ou fermer la consigne de réécriture, qui vit au-dessus de la pilule. */
@@ -117,6 +144,11 @@ export function ArticleActionBar({
     },
   });
 
+  // Retirer la validation ne demande aucune confirmation : le geste est
+  // réversible d'un clic, et rien n'est perdu — l'article garde son texte, son
+  // plan et sa date, il ne part simplement plus tout seul.
+  const unapprove = useAction(unapproveArticleAction, { onSuccess: () => router.refresh() });
+
   // Un menu qui reste ouvert derrière le clic suivant colle à l'écran : il se
   // referme dès qu'on touche ailleurs, ou qu'on appuie sur Échap.
   useEffect(() => {
@@ -144,12 +176,6 @@ export function ArticleActionBar({
   const instant = preferredPassOnDay(day);
   const departure = new Date(instant);
 
-  const scheduledLabel = scheduledFor
-    ? t("scheduledOn", {
-        date: formatPublishDate(nextPublishPass(new Date(scheduledFor))),
-        time: formatPublishTime(nextPublishPass(new Date(scheduledFor))),
-      })
-    : t("undated");
 
   /* -------------------- L'article est parti, ou écarté -------------------- */
 
@@ -183,14 +209,17 @@ export function ArticleActionBar({
 
   /* ------------------------------- Verrouillé ----------------------------- */
 
-  if (locked) {
+  // Deux portes fermées : l'offre n'ouvre pas la rédaction, ou elle s'arrête
+  // avant cet article-là. La seconde ne se dit pas comme la première — le
+  // client a payé, et cinq de ses articles sont écrits.
+  if (locked || beyondPlan) {
     return (
       <Shell reduced={reduced}>
         <Link
           href={ROUTES.pricing}
           className="flex cursor-pointer items-center justify-center rounded-pill bg-cta px-[22px] py-[11px] text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
-          {t("unlock")}
+          {beyondPlan ? t("unlockAllIn") : t("unlock")}
         </Link>
       </Shell>
     );
@@ -198,31 +227,41 @@ export function ArticleActionBar({
 
   /* ------------------------------ Les gestes ------------------------------ */
 
-  /** Publier hors tour : un dépôt réel, ou le prompt quand le site est fermé. */
+  /**
+   * Publier hors tour, ou aller chercher la porte qui manque.
+   *
+   * Trois situations, et il ne faut pas les confondre. Le site est rattaché et
+   * ouvre sa rédaction : on dépose, c'est « publier maintenant ». Il est
+   * rattaché mais n'ouvre pas d'API — une boutique sans blog, une clé sans les
+   * pages de contenu : le dépôt se fait à la main, et le bouton compose le
+   * texte à recopier. Rien n'est rattaché du tout : proposer un prompt de dépôt
+   * à ce moment-là, c'est répondre à côté — ce qui manque n'est pas le texte,
+   * c'est la porte. Le bouton mène alors au rattachement.
+   */
   const publishNow = () =>
-    canPublish ? setAsking("publish") : onPreparePublish();
-  const publishLabel = canPublish ? t("publishNow") : t("preparePublish");
+    canPublish ? setAsking("publish") : linked ? onPreparePublish() : onConnectSite();
+  const publishLabel = canPublish
+    ? t("publishNow")
+    : linked
+      ? t("preparePublish")
+      : t("connectSite");
 
   const primaryLabel = approved ? publishLabel : t("approve");
-  const onPrimary = approved ? publishNow : () => {
-    setChosenDay(null);
-    setAsking("approve");
-  };
+  const onPrimary = approved
+    ? publishNow
+    : () => {
+        setChosenDay(null);
+        setAsking("approve");
+      };
 
   return (
     <>
       {/* ------------------------- Grand écran : la pilule ------------------ */}
+      {/* L'état du départ n'est plus ici : il est remonté dans la barre du haut,
+          contre la date de publication. Les deux disaient la même chose à deux
+          endroits de l'écran, et celui du bas séparait le libellé de la date à
+          laquelle il se rapportait. */}
       <Shell reduced={reduced} className="hidden lg:flex">
-        {/* L'état du départ, à gauche : la décision se prend en sachant ce qui
-            est déjà prévu, pas en le cherchant plus haut. */}
-        <span className="flex max-w-[18rem] items-center gap-2 truncate py-0 pl-3.5 pr-3 text-[13px] text-slate">
-          <span
-            aria-hidden
-            className={`size-[7px] shrink-0 rounded-pill ${approved ? "bg-success" : "bg-warning"}`}
-          />
-          <span className="truncate">{approved ? scheduledLabel : t("notValidated")}</span>
-        </span>
-
         <button
           type="button"
           disabled={!hasBody}
@@ -233,17 +272,29 @@ export function ArticleActionBar({
           {primaryLabel}
         </button>
 
+        {/* Une fois l'article validé, le geste de repli n'est plus de le faire
+            réécrire : il part tout seul à sa date, et la seule chose qu'on peut
+            encore vouloir, c'est le retenir. Avant validation, c'est l'agent qui
+            tient cette place — et sur un article encore vide il l'écrit, il ne
+            le « réécrit » pas. */}
         <button
           type="button"
-          onClick={onRewrite}
-          aria-expanded={rewriteOpen}
-          className={`flex cursor-pointer items-center justify-center rounded-pill border px-[18px] py-[11px] text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${
-            rewriteOpen
+          onClick={approved ? () => unapprove.execute({ id: articleId }) : onRewrite}
+          disabled={approved && unapprove.isPending}
+          aria-expanded={approved ? undefined : rewriteOpen}
+          className={`flex cursor-pointer items-center justify-center rounded-pill border px-[18px] py-[11px] text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 disabled:cursor-not-allowed disabled:opacity-60 ${
+            rewriteOpen && !approved
               ? "border-obsidian bg-mist text-obsidian"
               : "border-pebble text-graphite hover:bg-mist"
           }`}
         >
-          {t("rewrite")}
+          {approved
+            ? unapprove.isPending
+              ? t("unapproving")
+              : t("unapprove")
+            : hasBody
+              ? t("rewrite")
+              : t("write")}
         </button>
 
         {/* Les gestes qu'on cherche : sous les trois points, pas dans la ligne. */}
@@ -265,29 +316,10 @@ export function ArticleActionBar({
               role="menu"
               className="absolute bottom-[calc(100%+10px)] right-0 z-10 w-64 overflow-hidden rounded-3xl border border-border bg-snow p-1.5 shadow-[rgba(0,0,0,0.12)_0_10px_28px]"
             >
-              {approved ? null : (
-                <MenuItem
-                  onClick={() => {
-                    setMenuOpen(false);
-                    publishNow();
-                  }}
-                  disabled={!hasBody}
-                >
-                  {publishLabel}
-                </MenuItem>
-              )}
-
-              {approved && canPublish ? (
-                <MenuItem
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onPreparePublish();
-                  }}
-                >
-                  {t("preparePublish")}
-                </MenuItem>
-              ) : null}
-
+              {/* Un seul geste sous les trois points : écarter. Publier hors
+                  tour est déjà porté par le bouton plein, et le prompt de dépôt
+                  y arrive par le même bouton quand le site n'ouvre pas son API :
+                  les répéter ici donnait trois chemins vers deux actions. */}
               <MenuItem
                 danger
                 disabled={dropPending}
@@ -319,7 +351,19 @@ export function ArticleActionBar({
         </button>
 
         <div className="mt-2.5 flex items-center justify-center gap-5">
-          {approved ? null : (
+          {/* Validé, le geste de repli est de retenir l'article ; avant, c'est
+              de le faire partir hors tour. Le bouton plein porte déjà l'autre
+              moitié dans les deux cas. */}
+          {approved ? (
+            <button
+              type="button"
+              disabled={unapprove.isPending}
+              onClick={() => unapprove.execute({ id: articleId })}
+              className="cursor-pointer text-[13px] text-slate transition-colors duration-200 hover:text-ink disabled:opacity-50"
+            >
+              {unapprove.isPending ? t("unapproving") : t("unapprove")}
+            </button>
+          ) : (
             <button
               type="button"
               disabled={!hasBody}

@@ -45,6 +45,12 @@ export const ROUTES = {
   dashboardMaps: "/tableau-de-bord/google-maps",
   dashboardSettings: "/tableau-de-bord/reglages",
   /**
+   * La section « ton » des réglages, où le relevé et les consignes s'amendent.
+   * Nommée à part parce qu'on y arrive depuis l'atelier d'article : y déposer le
+   * client en haut de page lui ferait chercher le champ qu'il vient ouvrir.
+   */
+  dashboardSettingsTone: "/tableau-de-bord/reglages#ton",
+  /**
    * L'écran d'appairage d'un agent IA. L'agent affiche un code dans le
    * terminal, le client le confirme ici — c'est le seul endroit où le
    * rattachement se décide.

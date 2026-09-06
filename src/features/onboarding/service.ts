@@ -353,29 +353,63 @@ type CandidatePage = { url: string; title: string | null; markdown: string; word
  */
 const ARTICLE_PATH = /\/(blog|article|articles|actualites?|actus?|news|journal|magazine|conseils?|guides?|dossiers?|posts?|carnet)(\/|$)/i;
 
-/** Les pages qui ne disent rien de la manière d'écrire du client. */
+/**
+ * Les pages qui ne disent rien de la manière d'écrire du client.
+ *
+ * Ce sont des textes de forme : des conditions de vente, une politique de
+ * confidentialité, des mentions légales. Personne ne les écrit, on les recopie,
+ * et le ton qu'on y relèverait est celui d'un modèle de contrat — la dernière
+ * voix dans laquelle on voudrait voir sortir un article de commerçant.
+ *
+ * La liste est volontairement large, et les variantes d'écriture y sont toutes :
+ * un même texte s'appelle `/cgv`, `/conditions-generales-de-vente` ou
+ * `/politique-de-vente` selon le site, et un seul de ces chemins oublié suffit à
+ * faire lire la mauvaise page.
+ */
 const NOT_EDITORIAL =
-  /\/(mentions-legales|cgv|cgu|conditions|politique-de-confidentialite|privacy|panier|cart|checkout|compte|account|connexion|login|plan-du-site|sitemap|contact)(\/|$)/i;
+  /\/(mentions?-legales?|cgv|cgu|cgav|conditions|conditions-generales[\w-]*|politique[\w-]*|confidentialite|privacy|donnees-personnelles|rgpd|gdpr|cookies?|livraison|retours?|remboursement|garantie|paiement|panier|cart|checkout|compte|account|connexion|login|inscription|plan-du-site|sitemap|contact|recrutement|mentions)(\/|$)/i;
+
+/**
+ * Les pages où une marque se raconte elle-même.
+ *
+ * Un commerçant qui ne tient pas de blog n'a écrit que deux textes de sa main :
+ * sa page d'accueil et sa page « à propos ». La seconde est souvent la plus
+ * parlante des deux — l'accueil est fait de titres et de boutons, l'« à propos »
+ * de phrases entières — et elle restait pourtant hors du relevé, qui ne
+ * connaissait que l'article et l'accueil.
+ */
+const ABOUT_PATH =
+  /\/(a-propos|apropos|about(-us)?|qui-sommes-nous|notre-histoire|histoire|story|notre-equipe|equipe|team|notre-maison|la-maison|notre-atelier|savoir-faire|nos-valeurs|valeurs|philosophie|engagements?|presentation)(\/|$)/i;
 
 /** Un mot-clé d'article dans le titre : le second indice après l'URL. */
 const ARTICLE_TITLE = /\b(comment|pourquoi|guide|conseils?|astuces?|top \d|\d+ (?:façons|raisons|erreurs|étapes))\b/i;
 
-/**
- * La page la plus représentative de la manière d'écrire du client.
- *
- * L'ordre de préférence tient en une phrase : un article s'il y en a un, la
- * page d'accueil sinon. Un article est du texte que le client a écrit pour être
- * lu ; une page produit est du texte écrit pour vendre, et une page de mentions
- * légales n'est pas de lui. Entre deux articles, le plus fourni gagne : trois
- * cents mots ne suffisent pas à faire apparaître un rythme de phrase.
- *
- * Rend `null` quand rien n'atteint le seuil de longueur : mieux vaut aucune
- * consigne de ton qu'une consigne tirée d'un pied de page.
- */
-function pickToneSource(pages: CandidatePage[], homeUrl: string): CandidatePage | null {
-  const usable = pages.filter((page) => page.markdown.trim().length > 400);
-  if (usable.length === 0) return null;
+/** Pages retenues au plus pour composer l'échantillon soumis au modèle. */
+const MAX_TONE_PAGES = 3;
 
+/**
+ * Les pages où lire la manière d'écrire du client.
+ *
+ * L'ordre de préférence tient en une phrase : un article s'il y en a un, sinon
+ * la page d'accueil et les pages où la marque se raconte. Un article est du
+ * texte écrit pour être lu, et un seul suffit à faire apparaître un rythme de
+ * phrase ; entre deux, le plus fourni gagne.
+ *
+ * Sans article — le cas de la plupart des commerçants — on ne lit plus la seule
+ * page d'accueil. Une accueil est faite de titres, de boutons et d'arguments de
+ * dix mots : on y relève une manière de vendre plutôt qu'une manière d'écrire.
+ * Les pages « à propos », « notre histoire », « qui sommes-nous » sont, elles,
+ * faites de phrases entières, et ce sont les seules du site où le commerçant
+ * parle en son nom. On les lit donc avec l'accueil, jusqu'à trois pages, et le
+ * modèle voit la voix plutôt qu'une accroche.
+ *
+ * Les pages de forme sont écartées d'entrée et ne reviennent par aucun repli :
+ * des conditions de vente ou une politique de confidentialité sont recopiées
+ * d'un modèle, et un ton relevé dessus ferait écrire des articles en langue de
+ * contrat. Mieux vaut aucun ton qu'un ton faux — c'est aussi pourquoi la
+ * fonction rend une liste vide plutôt que la première page venue.
+ */
+function pickToneSources(pages: CandidatePage[], homeUrl: string): CandidatePage[] {
   const isHome = (page: CandidatePage): boolean => {
     try {
       return new URL(page.url).pathname.replace(/\/+$/, "") === "";
@@ -384,22 +418,37 @@ function pickToneSource(pages: CandidatePage[], homeUrl: string): CandidatePage 
     }
   };
 
+  const usable = pages.filter(
+    (page) => page.markdown.trim().length > 400 && (isHome(page) || !NOT_EDITORIAL.test(page.url)),
+  );
+  if (usable.length === 0) return [];
+
   const articles = usable
-    .filter((page) => !isHome(page) && !NOT_EDITORIAL.test(page.url))
+    .filter((page) => !isHome(page))
     .filter(
       (page) =>
         ARTICLE_PATH.test(page.url) ||
         ARTICLE_TITLE.test(page.title ?? "") ||
-        page.wordCount >= 600,
+        // La longueur seule ne fait un article que hors des pages d'identité :
+        // une page « à propos » bavarde en compte souvent six cents, et la
+        // prendre pour un article la privait de la lecture d'ensemble.
+        (page.wordCount >= 600 && !ABOUT_PATH.test(page.url)),
     )
-    // Un chemin explicite l'emporte sur la seule longueur : une page « à propos »
-    // bavarde ne vaut pas un article, même si elle compte plus de mots.
     .sort((a, b) => {
       const pathScore = Number(ARTICLE_PATH.test(b.url)) - Number(ARTICLE_PATH.test(a.url));
       return pathScore !== 0 ? pathScore : b.wordCount - a.wordCount;
     });
 
-  return articles[0] ?? usable.find(isHome) ?? usable[0] ?? null;
+  if (articles[0]) return [articles[0]];
+
+  // L'accueil ouvre — c'est là que la marque se présente — et les pages
+  // d'identité suivent, la plus fournie d'abord.
+  const home = usable.find(isHome);
+  const about = usable
+    .filter((page) => !isHome(page) && ABOUT_PATH.test(page.url))
+    .sort((a, b) => b.wordCount - a.wordCount);
+
+  return [...(home ? [home] : []), ...about].slice(0, MAX_TONE_PAGES);
 }
 
 /**
@@ -411,6 +460,24 @@ function pickToneSource(pages: CandidatePage[], homeUrl: string): CandidatePage 
  * met plus longtemps à répondre.
  */
 const TONE_SAMPLE_CHARS = 12_000;
+
+/**
+ * L'échantillon soumis au modèle, composé des pages retenues.
+ *
+ * Le budget se partage entre elles au lieu d'aller au premier arrivé : une
+ * accueil bavarde de onze mille caractères aurait sinon mangé toute la place, et
+ * la page « à propos » — souvent la plus parlante des deux — ne serait arrivée
+ * que par trois lignes. Chaque page est annoncée par son adresse : le modèle
+ * lit alors trois textes d'un même auteur, et non un seul texte décousu dont
+ * les ruptures passeraient pour un changement de ton.
+ */
+function composeToneSample(pages: CandidatePage[]): string {
+  const share = Math.floor(TONE_SAMPLE_CHARS / Math.max(1, pages.length));
+
+  return pages
+    .map((page) => `--- ${page.url} ---\n${page.markdown.trim().slice(0, share)}`)
+    .join("\n\n");
+}
 
 /**
  * La manière d'écrire du client et sa couleur, en un seul appel.
@@ -429,7 +496,7 @@ async function readBrandFrom(
   colors: ColorCandidate[],
 ): Promise<{ tone: string | null; color: string | null }> {
   aiLog("Tonalité — texte soumis au modèle", {
-    source: fromArticle ? "article du client" : "page d'accueil",
+    source: fromArticle ? "article du client" : "accueil et pages d'identité",
     caracteresDisponibles: text.length,
     caracteresEnvoyes: Math.min(text.length, TONE_SAMPLE_CHARS),
     couleursRelevees: colors.map((candidate) => candidate.hex),
@@ -461,7 +528,7 @@ async function readBrandFrom(
     prompt: [
       fromArticle
         ? "Voici un article publié par le client. Il sert d'exemple de sa manière d'écrire."
-        : "Voici la page d'accueil du client. Le site ne publie pas d'articles : c'est le seul texte qu'il ait écrit lui-même.",
+        : "Voici les pages où le client parle en son nom : sa page d'accueil, et celles où il présente sa maison. Le site ne publie pas d'articles : c'est tout ce qu'il ait écrit lui-même. Chaque page est annoncée par son adresse ; elles sont du même auteur, lis-les comme un seul échantillon.",
       "",
       text.slice(0, TONE_SAMPLE_CHARS),
       ...colorBlock,
@@ -565,13 +632,17 @@ export async function detectBrandIdentity({
 
   // Le crawl de l'accueil est en base : on le relit, on ne recrawle pas.
   const site = await getOrCrawlSite(siteUrl, { maxPages: 25, maxDepth: 2 });
-  const page = pickToneSource(site.pages, site.url);
+  const sources = pickToneSources(site.pages, site.url);
 
   // Aucun texte exploitable : la couleur, elle, a pu être relevée. On rend ce
   // qu'on a plutôt que de tout jeter parce que la moitié manque.
-  if (!page) return { ...empty, color: colors[0]?.hex ?? null };
+  if (sources.length === 0) return { ...empty, color: colors[0]?.hex ?? null };
 
-  const fromArticle = page.url !== site.url && ARTICLE_PATH.test(page.url);
-  const read = await readBrandFrom(page.markdown, fromArticle, colors);
-  return { ...read, sourceUrl: page.url, fromArticle };
+  const first = sources[0];
+  const fromArticle = first.url !== site.url && ARTICLE_PATH.test(first.url);
+
+  // La page citée au client est la première de la liste : c'est celle qui pèse
+  // le plus dans le relevé, et lui en montrer trois ne l'aiderait pas à juger.
+  const read = await readBrandFrom(composeToneSample(sources), fromArticle, colors);
+  return { ...read, sourceUrl: first.url, fromArticle };
 }

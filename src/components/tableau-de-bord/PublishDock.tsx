@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { RiArrowRightUpLine } from "@remixicon/react";
 import { ROUTES } from "@/constants/routes";
 import { Card } from "./Card";
+import { ConnectSiteCta } from "./ConnectSiteCta";
+import { SiteFavicon } from "./SiteFavicon";
 
 /**
  * Le quai de départ : ce qui part, et ce qu'on attend de vous.
@@ -46,6 +48,7 @@ export function PublishDock({
   blocked,
   linked,
   canPublish,
+  domain,
 }: {
   next: DockArticle | null;
   /** Articles rédigés qui attendent la validation du client. */
@@ -57,6 +60,8 @@ export function PublishDock({
   /** Un site est rattaché — sans préjuger de ce qu'il laisse faire. */
   linked: boolean;
   canPublish: boolean;
+  /** Le domaine suivi, nommé et montré tant que la porte manque. */
+  domain: string | null;
 }) {
   return (
     <Card className="overflow-hidden p-0">
@@ -72,7 +77,7 @@ export function PublishDock({
 
           <div className="min-w-0 flex-1">
             {!canPublish ? (
-              <NoDoor linked={linked} blocked={blocked} />
+              <NoDoor linked={linked} blocked={blocked} domain={domain} />
             ) : !next ? (
               <Empty />
             ) : (
@@ -192,15 +197,37 @@ async function Review({ count, firstId }: { count: number; firstId: string | nul
  * dépôt se fait à la main, article par article, et envoyer le client aux
  * réglages l'y ferait tourner en rond.
  */
-async function NoDoor({ linked, blocked }: { linked: boolean; blocked: number }) {
+async function NoDoor({
+  linked,
+  blocked,
+  domain,
+}: {
+  linked: boolean;
+  blocked: number;
+  domain: string | null;
+}) {
   const t = await getTranslations("dashboard.dock");
 
   return (
     <div className="p-5 sm:p-6">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-steel">
-        {t("eyebrow")}
-      </p>
-      <p className="mt-3 text-base font-medium text-text">
+      {/* Pas de surtitre ici. « Prochaine publication » annonçait un départ
+          au-dessus d'une carte qui explique justement que rien ne peut partir :
+          sans porte, il n'y a pas de prochaine publication à annoncer. Le nom du
+          site ouvre donc directement. */}
+
+      {/* Le site, nommé et reconnaissable, avant qu'on parle de le rattacher.
+          La carte annonçait « aucun site » à un client qui en a un, qu'on
+          mesure depuis son inscription et dont on connaît l'adresse : ce qui
+          manque, c'est la clé de dépôt, pas le site. Son icône le dit plus vite
+          que la phrase — c'est celle de son onglet de navigateur. */}
+      {domain ? (
+        <span className="inline-flex max-w-full items-center gap-2 rounded-pill border border-border bg-mist px-3 py-1.5">
+          <SiteFavicon domain={domain} className="size-4" />
+          <span className="truncate text-[13px] font-medium text-text">{domain}</span>
+        </span>
+      ) : null}
+
+      <p className={`text-base font-medium text-text ${domain ? "mt-2.5" : ""}`}>
         {linked ? t("manualTitle") : t("unconnectedTitle")}
       </p>
       <p className="mt-1 text-sm leading-relaxed text-muted">
@@ -211,13 +238,10 @@ async function NoDoor({ linked, blocked }: { linked: boolean; blocked: number })
             : t("unconnectedBody")}
       </p>
 
+      {/* Le rattachement s'ouvre là où on le demande : dans la modale que porte
+          la barre du bas de cette page, avec le formulaire dedans. */}
       {linked ? null : (
-        <Link
-          href={ROUTES.dashboardSettings}
-          className="mt-4 inline-flex cursor-pointer items-center rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
-        >
-          {t("connect")}
-        </Link>
+        <ConnectSiteCta label={domain ? t("connectDomain", { domain }) : t("connect")} />
       )}
     </div>
   );

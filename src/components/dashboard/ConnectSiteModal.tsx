@@ -153,6 +153,111 @@ function AgentConsole({
 }
 
 /**
+ * Le même bandeau, pour la publication : des articles qui se posent sur le site.
+ *
+ * La console des correctifs raconte l'audit — des manques qui passent en
+ * « corrigé ». Ce n'est pas ce que le client vient chercher depuis son
+ * calendrier d'articles : lui a des textes prêts et pas de porte pour les
+ * déposer. Les lignes portent donc ses articles, avec leur date de départ, et
+ * elles passent une à une « en ligne ».
+ *
+ * Même grammaire que la console : barre de fenêtre, lignes sur fond obsidian,
+ * compteur à droite. C'est la même maison qui parle, dans son autre métier.
+ */
+function PublishConsole({
+  domain,
+  articles,
+}: {
+  domain: string;
+  /** Les prochains articles du client : titre et date, tels qu'il les a vus. */
+  articles: { title: string; dateLabel: string }[];
+}) {
+  const t = useTranslations("analysisReport.solve.modal");
+  const reduced = useReducedMotion();
+  const [step, setStep] = useState(reduced ? articles.length : 0);
+
+  useEffect(() => {
+    if (reduced) return;
+    const id = setInterval(() => {
+      setStep((s) => (s > articles.length ? 0 : s + 1));
+    }, FIX_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [reduced, articles.length]);
+
+  const publishedCount = Math.min(step, articles.length);
+
+  return (
+    <div className="relative overflow-hidden rounded-t-[28px] bg-obsidian px-5 pb-5 pt-4">
+      <div className="flex items-center gap-2.5">
+        <span className="flex shrink-0 gap-1.5" aria-hidden>
+          <span className="h-2 w-2 rounded-full bg-white/25" />
+          <span className="h-2 w-2 rounded-full bg-white/25" />
+          <span className="h-2 w-2 rounded-full bg-white/25" />
+        </span>
+        <span className="min-w-0 flex-1 truncate rounded-full bg-white/10 px-3 py-1 text-[11px] text-white/70">
+          {domain}
+        </span>
+        <span className="shrink-0 text-[11px] font-semibold tabular-nums text-white/70">
+          {t("publishedCount", { count: publishedCount, total: articles.length })}
+        </span>
+      </div>
+
+      <div className="relative mt-3" style={{ height: articles.length * ROW_HEIGHT }}>
+        {articles.map((article, i) => {
+          const online = i < publishedCount;
+          return (
+            <div
+              key={article.title}
+              className="flex items-center justify-between gap-3 border-b border-white/10 last:border-0"
+              style={{ height: ROW_HEIGHT }}
+            >
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm text-white/80">{article.title}</span>
+                <span className="truncate text-[11px] text-white/40">{article.dateLabel}</span>
+              </span>
+
+              {/* L'article ne change pas de place en partant : il change d'état.
+                  Le faire glisser vers le haut aurait donné l'idée d'une file
+                  qui se vide, alors qu'il reste au calendrier une fois posé. */}
+              <motion.span
+                animate={{
+                  backgroundColor: online ? "rgba(17,180,140,0.18)" : "rgba(255,255,255,0.08)",
+                  color: online ? "#3ddcae" : "rgba(255,255,255,0.5)",
+                }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  {online ? (
+                    <path
+                      d="M5 13l4 4L19 7"
+                      stroke="currentColor"
+                      strokeWidth="2.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ) : (
+                    /* Une flèche vers le haut : l'article monte vers le site. */
+                    <path
+                      d="M12 20V5M12 5 6 11M12 5l6 6"
+                      stroke="currentColor"
+                      strokeWidth="2.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+                </svg>
+                {online ? t("statusOnline") : t("statusQueued")}
+              </motion.span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Ce qu'on envoie au développeur quand le client ne pose pas les mains
  * lui-même : l'adresse de la prise, la phrase. Deux lignes qui tiennent dans un
  * SMS et qui suffisent à démarrer sans avoir accès au tableau de bord.
@@ -274,12 +379,28 @@ export function ConnectSiteModal({
   issues,
   locked = false,
   connect = null,
+  purpose = "fix",
+  articles = [],
   onClose,
 }: {
   domain: string;
   stack: DetectedStack | null;
   /** Manques relevés dans le rapport, rejoués dans l'en-tête (3 au plus). */
   issues: string[];
+  /**
+   * Ce que le client est venu brancher.
+   *
+   * `fix` est le cas général : il vient faire corriger son site, et l'en-tête
+   * rejoue ses manques. `publish` est le cas du calendrier d'articles — il a des
+   * textes prêts et cherche par où les faire partir. Les deux demandent
+   * exactement la même chose (le site, ou la prise MCP) ; seul change ce qu'on
+   * lui montre et ce qu'on lui promet, et lui vendre des correctifs quand il
+   * vient publier lui ferait chercher son sujet dans un écran qui parle d'autre
+   * chose.
+   */
+  purpose?: "fix" | "publish";
+  /** Les prochains articles, montrés dans l'en-tête en mode `publish`. */
+  articles?: { title: string; dateLabel: string }[];
   /**
    * Compte gratuit : la prise de l'agent s'affiche à l'identique — c'est le
    * serveur MCP qui borne ensuite ce qu'il reçoit —, mais le rattachement du
@@ -297,6 +418,11 @@ export function ConnectSiteModal({
   const t = useTranslations("analysisReport.solve.modal");
   const [shared, setShared] = useState(false);
   const [connecting, setConnecting] = useState(false);
+
+  // La console de publication n'a de quoi jouer que s'il y a des articles au
+  // calendrier. Sans eux, on retombe sur celle des correctifs, qui en a
+  // toujours : mieux vaut parler d'autre chose que montrer un cadre vide.
+  const publishing = purpose === "publish" && articles.length > 0;
 
   // L'adresse de la prise, quand le client vient de créer sa clé dans le
   // panneau. Elle remonte ici pour que la transmission au développeur porte la
@@ -368,14 +494,21 @@ export function ConnectSiteModal({
         exit={{ opacity: 0, y: 22, scale: 0.96 }}
         transition={{ type: "spring", stiffness: 320, damping: 30 }}
       >
-        <AgentConsole domain={domain} issues={issues} />
+        {/* En mode publication, l'en-tête ne rejoue les articles que s'il y en
+            a : une console vide ne montrerait rien, et la console des
+            correctifs, elle, a toujours de quoi jouer. */}
+        {publishing ? (
+          <PublishConsole domain={domain} articles={articles} />
+        ) : (
+          <AgentConsole domain={domain} issues={issues} />
+        )}
 
         <div className="p-6 sm:p-7">
           <h2 id="connect-site-title" className="text-xl font-bold text-text">
-            {t("title")}
+            {publishing ? t("publishTitle") : t("title")}
           </h2>
           <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">
-            {t("body")}
+            {publishing ? t("publishBody") : t("body")}
           </p>
 
           {stack && (
@@ -430,7 +563,7 @@ export function ConnectSiteModal({
               <div className="mt-7 border-t border-fog pt-6">
                 <h3 className="text-base font-bold text-text">{t("agentTitle")}</h3>
                 <p className="mt-1.5 text-pretty text-sm leading-relaxed text-muted">
-                  {t("agentBody")}
+                  {publishing ? t("agentBodyPublish") : t("agentBody")}
                 </p>
 
                 <div className="mt-4">

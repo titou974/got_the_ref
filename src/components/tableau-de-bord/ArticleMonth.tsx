@@ -60,6 +60,16 @@ export type MonthArticle = {
   status: string;
   /** Date de publication en ISO, ou `null` si le sujet n'est pas encore daté. */
   scheduledFor: string | null;
+  /**
+   * Le sujet est au calendrier, mais l'offre du compte ne le rédige pas.
+   *
+   * C'est le cas du Coup de Boost au-delà de sa première semaine : le mois
+   * entier est posé — c'est lui qui montre ce que le site publierait dans la
+   * durée — et seuls les cinq premiers s'écrivent. La vignette reste lisible,
+   * sous un voile, et mène aux tarifs plutôt qu'à un atelier qui refuserait
+   * d'écrire.
+   */
+  beyondPlan?: boolean;
 };
 
 /**
@@ -363,6 +373,7 @@ function MonthGrid({
   today: string;
   locked: boolean;
 }) {
+  const t = useTranslations("dashboard.calendar");
   const offset = mondayOffset(year, month);
   const daysInMonth = daysInMonthUtc(year, month);
   const cells = Array.from({ length: offset + daysInMonth }, (_, i) =>
@@ -408,8 +419,15 @@ function MonthGrid({
               {dayArticles.map((article) => (
                 <Link
                   key={article.id}
-                  href={locked ? ROUTES.pricing : ROUTES.dashboardArticle(article.id)}
-                  className={`block cursor-pointer overflow-hidden rounded-lg border px-1.5 py-1 text-[10px] leading-snug transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${tileClass(article.status)}`}
+                  href={
+                    locked || article.beyondPlan
+                      ? ROUTES.pricing
+                      : ROUTES.dashboardArticle(article.id)
+                  }
+                  title={article.beyondPlan ? t("beyondPlanHint") : undefined}
+                  className={`relative block cursor-pointer overflow-hidden rounded-lg border px-1.5 py-1 text-[10px] leading-snug transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${tileClass(article.status)} ${
+                    article.beyondPlan ? "opacity-45 hover:opacity-70" : ""
+                  }`}
                 >
                   <span className="line-clamp-3">{article.title}</span>
                   {/* L'heure n'apparaît que sur ce qui part : ailleurs, elle
@@ -516,18 +534,27 @@ function WeekRail({
                       return (
                         <Link
                           key={article.id}
-                          href={locked ? ROUTES.pricing : ROUTES.dashboardArticle(article.id)}
-                          className={`block cursor-pointer rounded-xl border px-3 py-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${tileClass(article.status)}`}
+                          href={
+                            locked || article.beyondPlan
+                              ? ROUTES.pricing
+                              : ROUTES.dashboardArticle(article.id)
+                          }
+                          className={`block cursor-pointer rounded-xl border px-3 py-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 ${tileClass(article.status)} ${
+                            article.beyondPlan ? "opacity-60 hover:opacity-100" : ""
+                          }`}
                         >
                           <span className="block text-[13px] font-medium leading-snug">
                             {article.title}
                           </span>
+                          {/* Le rail a la place de nommer ce qui manque : à
+                              cette largeur, un voile seul laisserait le client
+                              deviner pourquoi la vignette est éteinte. */}
                           <span
                             className={`mt-0.5 flex items-center gap-1.5 text-[11px] ${
                               approved ? "text-white/70" : "text-steel"
                             }`}
                           >
-                            {ts(article.status)}
+                            {article.beyondPlan ? t("beyondPlanTag") : ts(article.status)}
                             {approved ? (
                               <span className="font-semibold tabular-nums">
                                 {hourOf(article.scheduledFor)}

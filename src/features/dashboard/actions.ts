@@ -25,7 +25,6 @@ import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
 import {
   MAPS_PLACE_COOLDOWN_MS,
-  type DashboardContext,
   getArticleQuota,
   getDashboardContext,
   getMapsPlace,
@@ -59,7 +58,8 @@ import {
   type AccessTier,
 } from "@/constants/access";
 import { getAccess, requireSection } from "@/features/billing/access";
-import { detectBrandIdentity } from "@/features/onboarding/service";
+import { contextForWriting, ensureBrandIdentity } from "./brand-tone";
+import { canDraftArticle } from "./upcoming-drafts";
 import { parseOutline, serializeOutline } from "./outline";
 import {
   draftOutreachMessage,
@@ -144,106 +144,6 @@ const revalidateDashboard = () => {
  * donc refaite une fois, à son nouveau niveau, et remplace la précédente.
  * Ensuite elle est de nouveau à jour, et plus rien ne repart.
  */
-/**
- * Le ton de la marque et sa couleur, relevés une fois, dès le premier achat.
- *
- * Cette lecture-là ne se vend pas à l'unité : elle ne sert que là où des textes
- * sortent au nom du client — les articles, les réécritures on-page, les posts.
- * Un compte gratuit n'en publie aucun, et la question ne lui est donc pas
- * posée. Dès le Coup de Boost en revanche, elle l'est : cette offre ouvre
- * l'onglet Articles et fait rédiger la première semaine dans la foulée de
- * l'achat (cf. `seedEditorialMonthAction`). Ces articles-là sont les premiers
- * textes que le client lit sous son propre nom ; les écrire sans avoir relevé
- * sa manière d'écrire revenait à les lui rendre dans la voix de personne, et
- * c'est exactement ce qui les faisait finir non publiés.
- *
- * D'où le fait qu'elle vive ici, dans l'analyse du tableau de bord, et pas dans
- * le tunnel d'accueil. Un client qui ouvre un compte gratuit puis achète trois
- * semaines plus tard ne repasse pas par l'accueil ; il repasse en revanche par
- * cette analyse, refaite une fois au niveau qu'il vient d'acheter. Le ton se
- * relève donc au moment exact où il devient utile, sans lui redemander quoi que
- * ce soit.
- *
- * Le texte lu est celui du crawl Firecrawl déjà en base (`getOrCrawlSite`), et
- * la lecture part sur le nano d'OpenAI (rôle `tone`) : c'est une extraction,
- * pas un jugement.
- *
- * Best-effort de bout en bout : un site injoignable ou un modèle muet rend le
- * ton déjà en base (souvent `null`), et l'audit continue. Rien de ce qui est
- * ici ne vaut de faire échouer l'analyse que le client attend à l'écran.
- */
-async function ensureBrandIdentity(
-  userId: string,
-  tier: AccessTier,
-  profile: {
-    siteUrl: string | null;
-    toneSummary: string | null;
-    toneSampleUrl: string | null;
-    brandColor: string | null;
-  },
-): Promise<string | null> {
-  if (!tierAtLeast(tier, "boost")) return profile.toneSummary;
-
-  // Déjà relevés : la voix d'une marque ne change pas d'une analyse à l'autre,
-  // et la relire à chaque remesure serait un appel de modèle pour rien.
-  if (profile.toneSummary && profile.brandColor) return profile.toneSummary;
-
-  try {
-    const brand = await detectBrandIdentity({
-      siteUrl: profile.siteUrl,
-      sampleUrl: profile.toneSampleUrl,
-    });
-
-    // Écriture champ par champ : une seconde passe qui ne retrouve que la
-    // couleur ne doit pas effacer le ton relevé à la première.
-    const data = {
-      ...(brand.tone ? { toneSummary: brand.tone } : {}),
-      ...(brand.color ? { brandColor: brand.color } : {}),
-      ...(brand.sourceUrl ? { toneSampleUrl: brand.sourceUrl } : {}),
-    };
-    if (Object.keys(data).length > 0) {
-      await prisma.onboardingProfile.update({ where: { userId }, data });
-    }
-
-    return brand.tone ?? profile.toneSummary;
-  } catch (err) {
-    console.error("Relevé du ton de marque échoué :", err);
-    return profile.toneSummary;
-  }
-}
-
-/**
- * Le contexte du tableau de bord, avec le ton de la marque relevé si besoin.
- *
- * `ensureBrandIdentity` ne passe que dans l'analyse, et l'analyse ne se refait
- * qu'au changement de niveau (cf. `analysisNeedsUpgrade`). Deux comptes lui
- * échappent donc, et ce sont précisément ceux qui écrivent : celui dont
- * l'analyse portait déjà le niveau acheté — les Coups de Boost pris avant
- * l'ouverture de ce relevé —, et celui dont la lecture avait échoué ce jour-là
- * sans jamais être retentée. Les deux feraient écrire leurs articles dans la
- * voix de personne.
- *
- * On repose donc la question ici, au moment d'écrire, et seulement si le ton
- * manque encore. Un compte qui l'a déjà ne déclenche rien ; un compte gratuit
- * non plus, il ne publie pas. Best-effort comme partout ailleurs : une lecture
- * qui échoue rend le contexte tel quel et la rédaction continue sans le ton.
- */
-async function contextForWriting(userId: string): Promise<DashboardContext> {
-  const context = await getDashboardContext(userId);
-  if (context.tone.summary || !context.siteUrl) return context;
-  if (!tierAtLeast(context.tier, "boost")) return context;
-
-  const tone = await ensureBrandIdentity(userId, context.tier, {
-    siteUrl: context.siteUrl,
-    toneSummary: context.tone.summary,
-    toneSampleUrl: context.tone.sampleUrl,
-    brandColor: context.tone.color,
-  });
-  if (!tone) return context;
-
-  return { ...context, tone: { ...context.tone, summary: tone } };
-}
-
 export const prepareDashboardAction = authActionClient
   .inputSchema(disconnectSiteSchema)
   .action(async ({ ctx }) => {
@@ -764,7 +664,10 @@ export const seedEditorialMonthAction = authActionClient
 
     // Les trois premiers du planning encore à l'état de sujet, rédigés
     // ensemble : trois appels en parallèle tiennent dans le budget de la
-    // préparation, trois à la suite non.
+    // préparation, trois à la suite non. Le reste de ce que l'offre couvre —
+    // la semaine du Coup de Boost, les deux semaines de l'abonnement — est
+    // écrit par la file, dès la première ouverture du tableau de bord
+    // (cf. `backfillUpcomingDrafts`).
     const firstWeek = await prisma.article.findMany({
       where: { userId, status: "planned" },
       orderBy: { scheduledFor: "asc" },
@@ -1144,6 +1047,18 @@ export const writeArticleAction = authActionClient
     const article = await prisma.article.findFirst({ where: { id: parsedInput.id, userId } });
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
 
+    // Le Coup de Boost achète une semaine de rédaction, pas le mois affiché au
+    // calendrier. Les sujets suivants restent lisibles — c'est ce qui montre ce
+    // que le site publierait dans la durée — mais ils ne s'écrivent pas ici.
+    // L'écran le dit déjà ; ce garde-fou tient la porte côté serveur.
+    if (!(await canDraftArticle(userId, article.id))) {
+      throw new AppError(
+        "Le Coup de Boost rédige la première semaine du planning. L'abonnement Tout-en-un écrit les suivantes.",
+        "ARTICLE_BEYOND_PLAN",
+        403,
+      );
+    }
+
     // La place est prise avant l'appel au modèle, et rendue s'il échoue : une
     // rédaction qui n'aboutit pas ne coûte rien, et deux demandes lancées en
     // même temps ne peuvent pas consommer deux fois la dernière passe.
@@ -1237,6 +1152,33 @@ export const approveArticleAction = authActionClient
       },
     });
     if (!count) throw new AppError("Article introuvable ou pas encore rédigé.", "NOT_FOUND", 404);
+
+    revalidatePath(ROUTES.dashboardArticles);
+    revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
+    return { ok: true };
+  });
+
+/**
+ * Annule la validation d'un article : il ne partira plus tout seul.
+ *
+ * Le pendant de la validation, et le seul geste qui compte une fois l'article
+ * validé — il attend sa date, il n'y a plus rien à décider tant qu'on ne change
+ * pas d'avis. L'article revient à l'état de brouillon : son texte, son plan et
+ * sa date sont intacts, seul le départ automatique est retiré. On le revalide
+ * d'un bouton.
+ *
+ * Sans effet sur un article déjà déposé : `status` est contraint à `approved`,
+ * et rien ne rattrape une publication faite. Le client qui veut retirer un
+ * article en ligne le fait depuis son site.
+ */
+export const unapproveArticleAction = authActionClient
+  .inputSchema(articleIdSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const { count } = await prisma.article.updateMany({
+      where: { id: parsedInput.id, userId: ctx.auth.user.id, status: "approved" },
+      data: { status: "drafted" },
+    });
+    if (!count) throw new AppError("Article introuvable ou déjà publié.", "NOT_FOUND", 404);
 
     revalidatePath(ROUTES.dashboardArticles);
     revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
@@ -1403,6 +1345,12 @@ export const saveSettingsAction = authActionClient
       targetMarket: orNull(parsedInput.targetMarket),
       description: orNull(parsedInput.description),
       audience: orNull(parsedInput.audience),
+      // Le relevé de la marque s'écrit aussi d'ici. Il vient d'une lecture du
+      // site, mais le client est seul à savoir si sa voix y est : effacé, il
+      // sera relu à la prochaine ouverture (cf. `backfillBrandTone`) ; corrigé,
+      // il tient, puisque cette relecture ne repasse que sur un champ vide.
+      toneSummary: orNull(parsedInput.toneSummary),
+      brandColor: orNull(parsedInput.brandColor),
     };
 
     await prisma.$transaction([

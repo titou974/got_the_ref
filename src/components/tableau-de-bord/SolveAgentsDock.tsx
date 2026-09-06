@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
-import { isCredentialsKeySet } from "@/lib/crypto";
+import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
-import { connectorForStack } from "@/constants/site-platforms";
+import { formatPublishDate, nextPublishPass } from "@/constants/publishing";
 import { getDashboardContext } from "@/features/dashboard/queries";
-import type { SiteConnectSetup } from "@/components/tableau-de-bord/SiteConnectForm";
+import { connectSetupFor } from "@/features/dashboard/connect-setup";
 import type { AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { SolveAgentsBar } from "@/components/dashboard/SolveAgentsBar";
@@ -91,27 +91,18 @@ async function Dock({
   // s'abonner puis de découvrir qu'il lui manque un mot de passe d'application.
   const context = await getDashboardContext(userId);
 
-  // La date est mise en forme ici : la modale est rendue chez le client, et son
-  // fuseau ferait diverger le premier rendu de celui du serveur.
-  const connectedOn = context.site?.connectedAt
-    ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(context.site.connectedAt)
-    : null;
+  // Les prochains textes du client, pour la modale ouverte depuis son
+  // calendrier : elle y montre ses articles qui se posent sur son site, avec
+  // leurs vrais titres et leurs vraies dates. Trois lignes suffisent à faire
+  // comprendre le mouvement, et les lire coûte une requête indexée.
+  const nextArticles = await prisma.article.findMany({
+    where: { userId, status: { in: ["drafted", "approved"] } },
+    orderBy: { scheduledFor: "asc" },
+    take: 3,
+    select: { title: true, scheduledFor: true },
+  });
 
-  const connect: SiteConnectSetup = {
-    link: context.site
-      ? {
-          platform: context.site.platform,
-          siteUrl: context.site.siteUrl,
-          status: context.site.status,
-          capabilities: context.site.capabilities,
-          connectedOn,
-          lastError: context.site.lastError,
-        }
-      : null,
-    suggestedPlatform: connectorForStack(result.signals.stack?.id).id,
-    suggestedSiteUrl: context.siteUrl ?? (context.domain ? `https://${context.domain}` : null),
-    credentialsKeyReady: isCredentialsKeySet(),
-  };
+  const connect = connectSetupFor(context, result.signals.stack?.id);
 
   return (
     <>
@@ -130,6 +121,15 @@ async function Dock({
         // console : c'est le seul travail que son offre lui ouvre, et la barre
         // l'y emmène tant qu'il n'y est pas.
         contentHref={locked ? ROUTES.dashboardContent : null}
+        // Sur le calendrier d'articles, la barre change de propos : le client y
+        // a des textes prêts, pas des manques à corriger.
+        articlesHref={ROUTES.dashboardArticles}
+        articles={nextArticles.map((article) => ({
+          title: article.title,
+          dateLabel: article.scheduledFor
+            ? formatPublishDate(nextPublishPass(article.scheduledFor))
+            : t("solve.modal.undated"),
+        }))}
       />
     </>
   );

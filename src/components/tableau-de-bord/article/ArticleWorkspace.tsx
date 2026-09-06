@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
@@ -26,11 +27,14 @@ import {
   splitPublishInstant,
 } from "@/constants/publishing";
 import { ROUTES } from "@/constants/routes";
+import { ConnectSiteModal } from "@/components/dashboard/ConnectSiteModal";
+import type { SiteConnectSetup } from "@/components/tableau-de-bord/SiteConnectForm";
 import { PublishPromptPanel } from "../PublishPromptPanel";
 import { ArticleActionBar } from "./ArticleActionBar";
 import { DocumentCanvas } from "./DocumentCanvas";
 import { OutlineRail } from "./OutlineRail";
 import { RewriteBar } from "./RewriteBar";
+import { WritingScene } from "./WritingScene";
 import { useDocumentStructure } from "./useDocumentStructure";
 
 /**
@@ -64,6 +68,10 @@ import { useDocumentStructure } from "./useDocumentStructure";
  * l'écran.
  */
 
+/** Rythme et durée du guet, quand la rédaction tourne en tâche de fond. */
+const AUTO_WRITING_POLL_MS = 8_000;
+const AUTO_WRITING_POLLS = 38;
+
 export type EditorArticle = {
   id: string;
   title: string;
@@ -80,13 +88,22 @@ export type EditorArticle = {
 export function ArticleWorkspace({
   article,
   canPublish,
+  linked,
   locked = false,
+  beyondPlan = false,
   quotaRemaining,
+  quotaRenewsAt,
   domain,
   platform,
+  tone = null,
+  voice = null,
+  autoWriting = false,
+  connect = null,
 }: {
   article: EditorArticle;
   canPublish: boolean;
+  /** Un site est rattaché, même s'il n'accepte pas le dépôt automatique. */
+  linked: boolean;
   /**
    * L'offre du compte n'ouvre pas la rédaction.
    *
@@ -98,12 +115,53 @@ export function ArticleWorkspace({
    * client de les découvrir par un message d'erreur.
    */
   locked?: boolean;
+  /**
+   * Le sujet est au calendrier, mais l'offre du compte ne le rédige pas.
+   *
+   * Le Coup de Boost écrit sa première semaine ; les sujets suivants restent
+   * lisibles — titre, mot-clé, plan, comme partout ailleurs — et la barre du bas
+   * mène à l'abonnement au lieu d'appeler un agent qui refuserait d'écrire
+   * (cf. `canDraftArticle`, côté serveur).
+   */
+  beyondPlan?: boolean;
   /** Rédactions encore disponibles cette semaine, lues à l'ouverture de la page. */
   quotaRemaining: number;
+  /**
+   * Quand la prochaine se libère, mise en forme côté serveur.
+   *
+   * Composée là-bas parce que le fuseau du navigateur ferait diverger le premier
+   * rendu de l'hydratation. Nulle quand il n'y a rien à attendre.
+   */
+  quotaRenewsAt: string | null;
   /** Le domaine suivi, nommé dans le prompt de publication. */
   domain: string | null;
   /** Plateforme reconnue sur le site : elle change les consignes de dépôt. */
   platform: string | null;
+  /**
+   * Le ton relevé sur le site du client, posé au pied du rail.
+   *
+   * Nul sur les offres qui ne font pas écrire : la page ne le passe que pour la
+   * démo, l'abonnement et le Coup de Boost, les seules où il est relevé.
+   */
+  tone?: { summary: string | null; color: string | null; sampleUrl: string | null } | null;
+  /** Les consignes de voix du client, lues sous le relevé. */
+  voice?: { instructions: string; banned: string[] } | null;
+  /**
+   * L'article attend son tour dans la file de rédaction de l'abonnement.
+   *
+   * Le client n'a rien lancé : son texte s'écrit en tâche de fond, et sans ce
+   * signal l'atelier lui montrerait une page blanche sans rien dire, comme si
+   * l'article avait été oublié.
+   */
+  autoWriting?: boolean;
+  /**
+   * De quoi rattacher le site sans quitter l'atelier.
+   *
+   * La modale de rattachement vit d'ordinaire dans la barre des agents, que
+   * l'atelier ne monte pas — il prend l'écran entier. Il la monte donc lui-même,
+   * et il lui faut ce que le formulaire demande.
+   */
+  connect?: SiteConnectSetup | null;
 }) {
   const t = useTranslations("dashboard.article");
   const router = useRouter();
@@ -119,6 +177,8 @@ export function ArticleWorkspace({
   const [planOpen, setPlanOpen] = useState(false);
   /** La consigne de reprise, ouverte depuis la pilule du bas. */
   const [rewriteOpen, setRewriteOpen] = useState(false);
+  /** Le rattachement du site, ouvert depuis le bouton de publication. */
+  const [connectOpen, setConnectOpen] = useState(false);
 
   // Les consignes de section sont classées par titre : c'est la seule clé que
   // le document et le plan enregistré ont en commun une fois le texte retouché.
@@ -296,6 +356,50 @@ export function ArticleWorkspace({
     setDirty(true);
   };
 
+  /**
+   * L'article a-t-il un texte ?
+   *
+   * Lu dans l'éditeur tant qu'il est monté, dans la valeur enregistrée sinon.
+   * Il décide de trois libellés au pied de l'écran : sur une page blanche,
+   * l'agent rédige, il ne réécrit pas.
+   */
+  const hasBody = Boolean(editor ? editor.getText().trim() : article.body.trim());
+
+  /**
+   * Une rédaction est en cours pour cet article.
+   *
+   * Deux origines, une seule scène. Le client vient de la demander, ou la file
+   * de l'abonnement n'est pas encore arrivée à cet article-là
+   * (`autoWriting`) : dans les deux cas il attend le même texte, et une page
+   * blanche muette ne dit ni que quelqu'un écrit, ni combien de temps ça prend.
+   */
+  const writing = write.isPending || (autoWriting && !hasBody);
+
+  /**
+   * Le texte écrit en tâche de fond n'arrive pas tout seul à l'écran.
+   *
+   * Une rédaction demandée à l'écran rend son texte dans la réponse ; celle qui
+   * tourne en file, non — la page a été rendue avant, et rien ne la prévient.
+   * On redemande donc la page à intervalles, tant que l'article est vide, et on
+   * s'arrête au bout de quelques minutes : passé ce délai, la rédaction a
+   * échoué, et interroger le serveur toute la journée n'y changera rien.
+   */
+  useEffect(() => {
+    if (!autoWriting || hasBody) return;
+
+    let polls = 0;
+    const timer = setInterval(() => {
+      polls += 1;
+      if (polls > AUTO_WRITING_POLLS) {
+        clearInterval(timer);
+        return;
+      }
+      router.refresh();
+    }, AUTO_WRITING_POLL_MS);
+
+    return () => clearInterval(timer);
+  }, [autoWriting, hasBody, router]);
+
   const rail = editor ? (
     <OutlineRail
       editor={editor}
@@ -307,6 +411,8 @@ export function ArticleWorkspace({
       }}
       onJump={jump}
       onAddSection={addSection}
+      tone={tone}
+      voice={voice}
     />
   ) : null;
 
@@ -347,6 +453,11 @@ export function ArticleWorkspace({
             setDirty(true);
           }}
         />
+
+        {/* L'état de la validation, contre la date : c'est elle qu'il qualifie.
+            Il vivait au pied de l'écran, dans la barre des boutons, à deux
+            cents pixels de la date dont il parlait. */}
+        <ApprovalState status={article.status} />
 
         <span aria-hidden className="flex-1" />
 
@@ -393,12 +504,26 @@ export function ArticleWorkspace({
       </div>
 
       {/* ----------------------------- Le corps --------------------------- */}
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         {preview ? null : (
           <aside className="hidden w-72 shrink-0 border-r border-border bg-surface lg:block">
             {rail}
           </aside>
         )}
+
+        {/* La rédaction en cours, posée par-dessus la feuille.
+            En calque plutôt qu'à la place de l'éditeur : le démonter puis le
+            remonter perdrait le document et la position du curseur, alors qu'il
+            n'y a rien à perdre — on écrit par-dessus, on ne remplace rien. */}
+        {writing ? (
+          <div className={`absolute inset-0 z-30 bg-surface ${preview ? "" : "lg:left-72"}`}>
+            <WritingScene
+              title={title}
+              outline={article.outline.map((section) => section.heading)}
+              auto={!write.isPending}
+            />
+          </div>
+        ) : null}
 
         {editor ? (
           <DocumentCanvas
@@ -445,8 +570,14 @@ export function ArticleWorkspace({
 
       {/* ------------------------ Le pied de l'écran ---------------------- */}
       {/* Une seule colonne d'actions : la consigne de reprise s'y glisse
-          au-dessus de la décision, jamais à côté. */}
-      {preview ? null : (
+          au-dessus de la décision, jamais à côté.
+
+          Rien pendant que l'article s'écrit. Le pied flotte au-dessus du corps,
+          et il retombait sur la scène de rédaction : le clavier passait sous une
+          pilule de boutons qui, de toute façon, ne servaient à rien — on ne
+          valide pas, on ne publie pas, on ne relance pas un texte qui est en
+          train d'arriver. */}
+      {preview || writing ? null : (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2.5 bg-[linear-gradient(to_top,var(--color-snow)_72%,transparent)] px-4 pb-5 pt-14 lg:bg-none lg:px-6 lg:pb-6 lg:pt-0">
           {/* Sur téléphone la consigne est toujours là — c'est le geste le plus
               fréquent, et un bouton pour l'ouvrir aurait coûté un tap de plus à
@@ -461,7 +592,10 @@ export function ArticleWorkspace({
               pending={write.isPending}
               disabled={busy && !write.isPending}
               remaining={remaining}
+              renewsAt={quotaRenewsAt}
+              hasBody={hasBody}
               locked={locked}
+              beyondPlan={beyondPlan}
             />
           </div>
 
@@ -469,8 +603,10 @@ export function ArticleWorkspace({
             articleId={article.id}
             status={article.status}
             scheduledFor={day ? preferredPassOnDay(day) : article.scheduledFor}
-            hasBody={Boolean(editor ? editor.getText().trim() : article.body.trim())}
+            hasBody={hasBody}
             canPublish={canPublish}
+            linked={linked}
+            beyondPlan={beyondPlan}
             locked={locked}
             domain={domain}
             externalUrl={article.externalUrl}
@@ -478,6 +614,10 @@ export function ArticleWorkspace({
             dropPending={busy}
             onRewrite={() => setRewriteOpen((open) => !open)}
             rewriteOpen={rewriteOpen}
+            // Le rattachement s'ouvre ici même, dans la modale que l'atelier
+            // monte par-dessus sa feuille : c'est là que le client colle ses
+            // identifiants, et non deux écrans plus loin dans les réglages.
+            onConnectSite={() => setConnectOpen(true)}
             onPreparePublish={() =>
               setPublishPrompt(
                 buildArticlePublishPrompt({
@@ -494,6 +634,33 @@ export function ArticleWorkspace({
           />
         </div>
       )}
+
+      {/* ------------------ Le rattachement, par-dessus ------------------- */}
+      {/* L'atelier prend l'écran entier : la barre des agents, qui porte cette
+          modale partout ailleurs, n'y est pas montée. Il la monte donc lui-même,
+          avec l'article ouvert en tête — c'est celui-là que le client cherche à
+          faire partir, et lui montrer les trois prochains du planning répondrait
+          à côté. */}
+      <AnimatePresence>
+        {connectOpen && connect ? (
+          <ConnectSiteModal
+            domain={domain ?? ""}
+            stack={null}
+            issues={[]}
+            purpose="publish"
+            articles={[
+              {
+                title,
+                dateLabel: day
+                  ? formatPublishDateShort(new Date(preferredPassOnDay(day)))
+                  : t("noDate"),
+              },
+            ]}
+            connect={connect}
+            onClose={() => setConnectOpen(false)}
+          />
+        ) : null}
+      </AnimatePresence>
 
       {/* --------------------- Le sommaire, en tiroir --------------------- */}
       {planOpen ? (
@@ -554,6 +721,35 @@ function SaveState({
     >
       {pending ? t("saving") : t("save")}
     </button>
+  );
+}
+
+/**
+ * L'article part-il tout seul à sa date ?
+ *
+ * Une pastille et deux mots, posés contre la date de publication qu'ils
+ * qualifient. Tant que l'article n'est pas validé, la date affichée à côté est
+ * une intention, pas un départ : sans cette mention, elle se lit comme une
+ * promesse que rien ne tient.
+ *
+ * Un article déjà publié ou écarté ne porte rien : sa date est derrière lui, et
+ * l'état de la validation n'a plus de sens pour lui.
+ */
+function ApprovalState({ status }: { status: string }) {
+  const t = useTranslations("dashboard.articleBar");
+
+  if (status === "published" || status === "rejected") return null;
+
+  const approved = status === "approved";
+
+  return (
+    <span className="flex shrink-0 items-center gap-2 text-[13px] text-ash">
+      <span
+        aria-hidden
+        className={`size-[7px] shrink-0 rounded-pill ${approved ? "bg-success" : "bg-warning"}`}
+      />
+      {approved ? t("validated") : t("notValidated")}
+    </span>
   );
 }
 

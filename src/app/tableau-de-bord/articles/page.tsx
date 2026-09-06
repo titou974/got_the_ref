@@ -16,7 +16,7 @@ import { ArticleMonth } from "@/components/tableau-de-bord/ArticleMonth";
 import { PublishDock } from "@/components/tableau-de-bord/PublishDock";
 import { PlanArticlesButton } from "@/components/tableau-de-bord/PlanArticlesButton";
 import { ArticlesIntroModal } from "@/components/tableau-de-bord/ArticlesIntroModal";
-import { canOpen } from "@/constants/access";
+import { canOpen, draftableArticles } from "@/constants/access";
 
 export const maxDuration = 300;
 
@@ -64,6 +64,29 @@ export default async function ArticlesPage() {
   // est justement ce qui donne envie de les faire écrire.
   const locked = !canOpen(context.tier, "articles");
 
+  /**
+   * Les sujets que l'offre du compte ne rédigera pas.
+   *
+   * Le Coup de Boost pose le mois entier au calendrier et n'écrit que sa
+   * première semaine : les cinq premiers du planning. Le reste garde ses titres
+   * — c'est ce qui montre au client ce que son site publierait dans la durée —
+   * mais sous un voile, et le clic mène aux tarifs plutôt qu'à un atelier qui
+   * refuserait d'écrire.
+   *
+   * Vide pour l'abonnement, qui écrit tout, et pour le compte gratuit, dont la
+   * grille entière est déjà verrouillée par `locked`.
+   */
+  const drafted = draftableArticles(context.tier);
+  const covered = new Set(
+    drafted === null || locked
+      ? []
+      : [...articles]
+          .filter((article) => article.scheduledFor)
+          .sort((a, b) => a.scheduledFor!.getTime() - b.scheduledFor!.getTime())
+          .slice(0, drafted)
+          .map((article) => article.id),
+  );
+
   return (
     <>
       <PageHeader title={t("pageTitle")} />
@@ -93,6 +116,7 @@ export default async function ArticlesPage() {
           blocked={plan.blocked}
           linked={plan.linked}
           canPublish={plan.canPublish}
+          domain={context.domain}
         />
       )}
 
@@ -108,6 +132,11 @@ export default async function ArticlesPage() {
           title: article.title,
           status: article.status,
           scheduledFor: article.scheduledFor?.toISOString() ?? null,
+          // Hors de ce que l'offre rédige : la vignette s'éteint et mène aux
+          // tarifs. Un article déjà écrit reste ouvert, quoi qu'il arrive —
+          // c'est du travail rendu, on ne le remet pas sous voile.
+          beyondPlan:
+            drafted !== null && !covered.has(article.id) && !article.body?.trim(),
         }))}
       />
     </>

@@ -119,6 +119,26 @@ export const settingsSchema = z.object({
   targetMarket: z.string().trim().max(120),
   description: z.string().trim().max(1500),
   audience: z.string().trim().max(600),
+  /**
+   * Le ton relevé sur le site du client, tel qu'il peut le corriger.
+   *
+   * Il est écrit par la lecture du site (cf. `ensureBrandIdentity`), mais il
+   * n'est pas gravé : c'est un relevé, et le client est seul à savoir si sa
+   * voix y est. Le champ est donc modifiable, et ce qu'il y écrit tient — la
+   * relecture automatique ne repasse que sur un ton absent. Large : le relevé
+   * fait six phrases, et un client qui le réécrit à sa main en écrit autant.
+   */
+  toneSummary: z.string().trim().max(4000),
+  /**
+   * La couleur de la marque, en hexadécimal à six chiffres. La chaîne vide vaut
+   * « pas de couleur » : c'est ainsi que le champ revient quand le relevé n'a
+   * rien trouvé, et le client doit pouvoir l'effacer comme il l'a corrigée.
+   */
+  brandColor: z
+    .string()
+    .trim()
+    .regex(/^(#[0-9a-fA-F]{6})?$/, "Indiquez une couleur au format #1a2b3c.")
+    .transform((value) => value.toLowerCase()),
   toneInstructions: z.string().trim().max(1500),
   /** Une entrée par ligne dans le formulaire, découpée avant validation. */
   toneBanned: z.array(z.string().min(1).max(80)).max(40).default([]),
