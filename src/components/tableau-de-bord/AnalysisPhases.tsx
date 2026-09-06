@@ -11,8 +11,14 @@ const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
  * Les six temps de la mise en route, et ce qu'on regarde à chacun.
  *
  * Les animations sont celles de la toute première version de l'analyse — le
- * document, le satellite, la loupe, la fusée, et la citabilité. Elles ont été
- * choisies pour cet écran-là, et c'est là qu'elles reviennent.
+ * satellite, la loupe, la fusée, et la citabilité. Elles ont été choisies pour
+ * cet écran-là, et c'est là qu'elles reviennent.
+ *
+ * Sauf à la première étape. Le carnet de notes gris qui l'occupait n'illustrait
+ * rien de ce qui se passe pendant qu'on lit le site : c'est le clavier qui y
+ * tient sa place désormais, comme à l'étape des moteurs — le client voit tout
+ * de suite la question dont dépend son chiffre d'affaires plutôt qu'une page
+ * qui se remplit toute seule.
  *
  * Une seule scène à la fois, comme sur l'écran d'origine. La version
  * précédente empilait l'animation et le clavier en permanence : deux objets
@@ -41,7 +47,7 @@ type AnimationModule = { default: any };
  * il est dessiné.
  */
 const LOADERS: (null | (() => Promise<AnimationModule>))[] = [
-  () => import("@/assets/animation1.json"), // document
+  null, // le clavier : la lecture du site
   () => import("@/assets/animation2.json"), // satellite + bulles
   () => import("@/lottie/citability.json"), // citabilité
   null, // le clavier : les moteurs interrogés
@@ -60,8 +66,16 @@ export const PHASE_LABEL_KEYS = [
   "phaseArticles",
 ] as const;
 
-/** L'étape où l'on interroge les moteurs : c'est le clavier qui l'occupe. */
-export const KEYBOARD_PHASE = 3;
+/**
+ * L'étape est-elle une étape de clavier ?
+ *
+ * La question se lit sur la table des chargeurs plutôt que sur une liste tenue
+ * à côté : une étape sans fichier Lottie est une étape que le clavier occupe,
+ * et les deux ne peuvent pas se contredire.
+ */
+export function usesKeyboard(index: number): boolean {
+  return LOADERS[index] === null;
+}
 
 /** La dernière étape, celle de la planification des articles (seconde passe). */
 export const ARTICLES_PHASE = 5;

@@ -52,17 +52,13 @@ export default async function ArchitecturePage() {
   const analysis = context.analysis;
   const tree = buildSiteTree(analysis);
 
-  // Le squelette reste au-dessus du voile quand l'offre ne l'ouvre pas, et
-  // c'est le seul écran du produit à s'ouvrir ainsi. Il ne coûte aucun appel —
-  // l'arbre se déduit de l'analyse déjà en base — et c'est la pièce qui se
-  // comprend sans explication : sept adresses, celles qui répondent en vert,
-  // celles qui manquent masquées à leur place exacte. Le client voit la forme
-  // de son site et l'endroit du trou ; ce qu'il achète, c'est le nom du fichier
-  // absent et le contenu prêt à déposer.
-  //
-  // Le masquage est fait au serveur (cf. `veilSiteTree`) : les noms, les notes
-  // et le contenu des correctifs ne partent tout simplement pas dans la page.
-  // Un flou de feuille de style se retire dans un inspecteur.
+  // Le squelette reste au-dessus du voile, même quand l'offre n'ouvre pas la
+  // page. Il ne coûte aucun appel — l'arbre se déduit de l'analyse déjà en base
+  // — et c'est la pièce qui se comprend sans explication : sept adresses,
+  // celles qui répondent en vert, celles qui manquent masquées à leur place
+  // exacte. Le client voit la forme de son site et l'endroit du trou ; ce qu'il
+  // achète, c'est le nom du fichier absent et le contenu prêt à déposer (cf.
+  // `veilSiteTree`), et l'appel le mène aux tarifs (cf. `TierGate`).
   const locked = !canOpen(context.tier, "architecture");
 
   // Le dépôt demande un rattachement vivant ET un connecteur qui sait écrire :
@@ -70,6 +66,8 @@ export default async function ArchitecturePage() {
   // un clic dont il connaîtrait déjà l'échec.
   const canApply =
     context.site?.status === "connected" && context.site.capabilities.includes("edit");
+
+  const openFixes = tree.missingCount + tree.warnCount;
 
   return (
     <>
@@ -81,7 +79,7 @@ export default async function ArchitecturePage() {
       {locked ? null : <StructureIntroModal domain={analysis.signals.domain} />}
 
       {locked ? (
-        <TierGate offer="boost" item="architectureFiles" reveal values={{ count: tree.missingCount }}>
+        <TierGate offer="boost" item="architectureFiles" reveal values={{ count: openFixes }}>
           <SiteSkeleton
             tree={veilSiteTree(tree)}
             stack={analysis.signals.stack ?? null}

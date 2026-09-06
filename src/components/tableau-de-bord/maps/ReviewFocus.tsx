@@ -318,7 +318,7 @@ function VeiledReply() {
       </div>
 
       <div className="[grid-area:1/1]">
-        <GatePanel offer="allin" item="mapsReviews" flow />
+        <GatePanel offer="allin" item="mapsReviews" />
       </div>
     </div>
   );
