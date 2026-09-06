@@ -122,7 +122,7 @@ export function ArticleWorkspace({
   /** Les consignes de voix du client, lues sous le relevé. */
   voice?: { instructions: string; banned: string[] } | null;
   /**
-   * L'article attend son tour dans la file qui écrit le mois de l'abonnement.
+   * L'article attend son tour dans la file de rédaction de l'abonnement.
    *
    * Le client n'a rien lancé : son texte s'écrit en tâche de fond, et sans ce
    * signal l'atelier lui montrerait une page blanche sans rien dire, comme si
@@ -334,7 +334,7 @@ export function ArticleWorkspace({
    * Une rédaction est en cours pour cet article.
    *
    * Deux origines, une seule scène. Le client vient de la demander, ou la file
-   * qui écrit le mois de l'abonnement n'est pas encore arrivée à cet article-là
+   * de l'abonnement n'est pas encore arrivée à cet article-là
    * (`autoWriting`) : dans les deux cas il attend le même texte, et une page
    * blanche muette ne dit ni que quelqu'un écrit, ni combien de temps ça prend.
    */
@@ -418,6 +418,11 @@ export function ArticleWorkspace({
             setDirty(true);
           }}
         />
+
+        {/* L'état de la validation, contre la date : c'est elle qu'il qualifie.
+            Il vivait au pied de l'écran, dans la barre des boutons, à deux
+            cents pixels de la date dont il parlait. */}
+        <ApprovalState status={article.status} />
 
         <span aria-hidden className="flex-1" />
 
@@ -640,6 +645,35 @@ function SaveState({
     >
       {pending ? t("saving") : t("save")}
     </button>
+  );
+}
+
+/**
+ * L'article part-il tout seul à sa date ?
+ *
+ * Une pastille et deux mots, posés contre la date de publication qu'ils
+ * qualifient. Tant que l'article n'est pas validé, la date affichée à côté est
+ * une intention, pas un départ : sans cette mention, elle se lit comme une
+ * promesse que rien ne tient.
+ *
+ * Un article déjà publié ou écarté ne porte rien : sa date est derrière lui, et
+ * l'état de la validation n'a plus de sens pour lui.
+ */
+function ApprovalState({ status }: { status: string }) {
+  const t = useTranslations("dashboard.articleBar");
+
+  if (status === "published" || status === "rejected") return null;
+
+  const approved = status === "approved";
+
+  return (
+    <span className="flex shrink-0 items-center gap-2 text-[13px] text-ash">
+      <span
+        aria-hidden
+        className={`size-[7px] shrink-0 rounded-pill ${approved ? "bg-success" : "bg-warning"}`}
+      />
+      {approved ? t("validated") : t("notValidated")}
+    </span>
   );
 }
 

@@ -3,7 +3,7 @@ import { Newsreader } from "next/font/google";
 import { requireUser } from "@/lib/auth";
 import { getArticle, getArticleQuota, getDashboardContext } from "@/features/dashboard/queries";
 import { parseOutline } from "@/features/dashboard/outline";
-import { monthDraftsPending } from "@/features/dashboard/month-drafts";
+import { isQueuedForDrafting } from "@/features/dashboard/upcoming-drafts";
 import { canOpen, tierAtLeast } from "@/constants/access";
 import { ArticleWorkspace } from "@/components/tableau-de-bord/article/ArticleWorkspace";
 
@@ -35,14 +35,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const user = await requireUser();
 
-  const [article, context, quota, monthPending] = await Promise.all([
+  const [article, context, quota] = await Promise.all([
     getArticle(user.id, id),
     getDashboardContext(user.id),
     getArticleQuota(user.id),
-    // Vrai tant que la file de l'abonnement n'a pas fini d'écrire le mois.
-    monthDraftsPending(user.id),
   ]);
   if (!article) notFound();
+
+  // Cet article-là est-il dans la file qui écrit les deux semaines à venir ?
+  // La question porte sur son état et sa date : elle ne se pose qu'une fois
+  // l'article lu.
+  const queued = await isQueuedForDrafting(user.id, article);
 
   return (
     <div className={editorial.variable}>
@@ -77,10 +80,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
         // ferait que nommer un manque qu'on ne lui a pas vendu.
         tone={tierAtLeast(context.tier, "boost") ? context.tone : null}
         voice={context.brandVoice}
-        // Cet article-là n'a pas encore de texte, et la file de l'abonnement
-        // n'a pas fini son mois : son tour vient. L'atelier montre alors la
-        // rédaction en cours plutôt qu'une feuille blanche sans explication.
-        autoWriting={monthPending && article.status === "planned" && !article.body.trim()}
+        // Son tour vient : l'atelier montre la rédaction en cours plutôt qu'une
+        // feuille blanche sans explication.
+        autoWriting={queued}
       />
     </div>
   );

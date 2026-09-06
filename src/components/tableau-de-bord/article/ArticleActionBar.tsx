@@ -10,7 +10,6 @@ import { approveArticleAction, publishArticleAction } from "@/features/dashboard
 import {
   formatPublishDate,
   formatPublishTime,
-  nextPublishPass,
   preferredPassOnDay,
   splitPublishInstant,
 } from "@/constants/publishing";
@@ -144,12 +143,6 @@ export function ArticleActionBar({
   const instant = preferredPassOnDay(day);
   const departure = new Date(instant);
 
-  const scheduledLabel = scheduledFor
-    ? t("scheduledOn", {
-        date: formatPublishDate(nextPublishPass(new Date(scheduledFor))),
-        time: formatPublishTime(nextPublishPass(new Date(scheduledFor))),
-      })
-    : t("undated");
 
   /* -------------------- L'article est parti, ou écarté -------------------- */
 
@@ -212,17 +205,11 @@ export function ArticleActionBar({
   return (
     <>
       {/* ------------------------- Grand écran : la pilule ------------------ */}
+      {/* L'état du départ n'est plus ici : il est remonté dans la barre du haut,
+          contre la date de publication. Les deux disaient la même chose à deux
+          endroits de l'écran, et celui du bas séparait le libellé de la date à
+          laquelle il se rapportait. */}
       <Shell reduced={reduced} className="hidden lg:flex">
-        {/* L'état du départ, à gauche : la décision se prend en sachant ce qui
-            est déjà prévu, pas en le cherchant plus haut. */}
-        <span className="flex max-w-[18rem] items-center gap-2 truncate py-0 pl-3.5 pr-3 text-[13px] text-slate">
-          <span
-            aria-hidden
-            className={`size-[7px] shrink-0 rounded-pill ${approved ? "bg-success" : "bg-warning"}`}
-          />
-          <span className="truncate">{approved ? scheduledLabel : t("notValidated")}</span>
-        </span>
-
         <button
           type="button"
           disabled={!hasBody}
@@ -268,29 +255,10 @@ export function ArticleActionBar({
               role="menu"
               className="absolute bottom-[calc(100%+10px)] right-0 z-10 w-64 overflow-hidden rounded-3xl border border-border bg-snow p-1.5 shadow-[rgba(0,0,0,0.12)_0_10px_28px]"
             >
-              {approved ? null : (
-                <MenuItem
-                  onClick={() => {
-                    setMenuOpen(false);
-                    publishNow();
-                  }}
-                  disabled={!hasBody}
-                >
-                  {publishLabel}
-                </MenuItem>
-              )}
-
-              {approved && canPublish ? (
-                <MenuItem
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onPreparePublish();
-                  }}
-                >
-                  {t("preparePublish")}
-                </MenuItem>
-              ) : null}
-
+              {/* Un seul geste sous les trois points : écarter. Publier hors
+                  tour est déjà porté par le bouton plein, et le prompt de dépôt
+                  y arrive par le même bouton quand le site n'ouvre pas son API :
+                  les répéter ici donnait trois chemins vers deux actions. */}
               <MenuItem
                 danger
                 disabled={dropPending}

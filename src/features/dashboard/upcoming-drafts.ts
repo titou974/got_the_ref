@@ -8,7 +8,7 @@ import { parseOutline } from "./outline";
 import { writeArticle } from "./service";
 
 /**
- * Le mois écrit d'avance, pour l'abonnement Tout-en-un.
+ * Les articles à venir, écrits d'avance pour l'abonnement Tout-en-un.
  *
  * La mise en route pose vingt-deux sujets au calendrier et n'en rédige que
  * trois : ces rédactions partent en parallèle derrière l'écran d'attente, et
@@ -16,15 +16,20 @@ import { writeArticle } from "./service";
  * le Coup de Boost, qui vend une semaine de rédaction et dont la semaine est
  * précisément là. Ça ne l'est pas pour un abonnement : le client ouvre son
  * onglet Articles, y trouve dix-neuf lignes de titres sans texte, et rien ne lui
- * dit qu'elles s'écriront un jour. Il a payé pour un mois publié, pas pour un
- * sommaire.
+ * dit qu'elles s'écriront un jour.
  *
- * Le reste du mois s'écrit donc ici, en tâche de fond, à chaque retour du client
- * dans son interface — jamais devant lui : `after()` rend la main à la page,
- * puis les rédactions partent. Une passe s'arrête avant la fin du temps alloué à
- * la route, et la visite suivante reprend là où celle-ci s'est arrêtée. Le
- * client voit donc son mois se remplir d'une ouverture à l'autre, sans jamais
- * attendre devant un écran figé.
+ * L'abonné a donc toujours deux semaines d'avance : celle qui court et la
+ * suivante. Pas le mois entier — vingt-deux rédactions lancées sur un compte qui
+ * vient d'ouvrir coûtent cher pour des textes qui ne partiront que dans trois
+ * semaines, et que le client aura eu le temps de faire reprendre dix fois d'ici
+ * là. Deux semaines, c'est ce qu'il faut pour qu'il ait toujours de la lecture
+ * d'avance et que rien ne parte sans avoir été relu.
+ *
+ * La fenêtre avance avec lui. À chaque retour dans son interface, les sujets
+ * qui viennent d'y entrer sont écrits, et jamais devant lui : `after()` rend la
+ * main à la page, puis les rédactions partent. Une passe s'arrête avant la fin
+ * du temps alloué à la route, et la visite suivante reprend là où celle-ci s'est
+ * arrêtée.
  *
  * Rien n'est décompté du quota hebdomadaire : ces articles-là sont ce que
  * l'abonnement vend, au même titre que les trois de la mise en route. Le quota
@@ -67,18 +72,42 @@ const running = new Set<string>();
 type Planned = { id: string; title: string; keyword: string | null; outline: string | null };
 
 /**
- * Écrit les sujets du mois qui n'ont pas encore de texte.
+ * Le dernier instant couvert par la rédaction d'avance : la fin de la semaine
+ * suivante, dimanche soir.
+ *
+ * Des semaines de calendrier, et non quatorze jours glissants. Le planning est
+ * posé du lundi au vendredi, le client le lit par semaines, et une fenêtre
+ * glissante lui aurait fait entrer les articles un par jour au lieu d'une
+ * semaine d'un coup. Le lundi il a donc quatorze jours d'avance, le vendredi
+ * neuf : dans les deux cas, tout ce qui doit partir avant son prochain lundi
+ * est déjà écrit.
+ */
+export function draftHorizon(now: Date = new Date()): Date {
+  const end = new Date(now);
+  // `getDay()` compte le dimanche comme zéro. On le ramène en fin de semaine,
+  // à sa place dans un calendrier français.
+  const weekday = (end.getDay() + 6) % 7;
+  end.setDate(end.getDate() + (6 - weekday) + 7);
+  end.setHours(23, 59, 59, 999);
+  return end;
+}
+
+/**
+ * Écrit les sujets des deux semaines qui viennent, quand ils n'ont pas de texte.
  *
  * Réservé à l'abonnement — et à la démonstration, qui montre l'abonnement. Le
  * Coup de Boost garde sa semaine : il vend trois rédactions, elles sont faites à
- * la mise en route, et lui en écrire vingt-deux reviendrait à lui offrir
+ * la mise en route, et lui en écrire d'autres reviendrait à lui offrir
  * l'abonnement.
+ *
+ * Les sujets en retard sont pris avec les autres : une date passée sans texte
+ * est un article qui aurait dû partir, et c'est le plus urgent de la liste.
  *
  * Best-effort de bout en bout : un article dont la rédaction échoue reste un
  * sujet, la passe suivante le reprendra, et rien de ce qui se passe ici ne
  * remonte au client — il a déjà sa page.
  */
-export async function backfillMonthDrafts(userId: string): Promise<void> {
+export async function backfillUpcomingDrafts(userId: string): Promise<void> {
   if (running.has(userId)) return;
 
   try {
@@ -86,7 +115,7 @@ export async function backfillMonthDrafts(userId: string): Promise<void> {
     if (!tierAtLeast(tier, "allin")) return;
 
     const planned = await prisma.article.findMany({
-      where: { userId, status: "planned", body: "" },
+      where: { userId, ...pendingWhere() },
       orderBy: { scheduledFor: "asc" },
       select: { id: true, title: true, keyword: true, outline: true },
     });
@@ -95,8 +124,8 @@ export async function backfillMonthDrafts(userId: string): Promise<void> {
     running.add(userId);
     try {
       // Le contexte est lu une fois pour toute la passe : il ne change pas d'un
-      // article à l'autre, et le relire vingt-deux fois ferait vingt-deux fois
-      // les six requêtes du tableau de bord.
+      // article à l'autre, et le relire dix fois ferait dix fois les six
+      // requêtes du tableau de bord.
       const context = await contextForWriting(userId);
       const until = Date.now() + BUDGET_MS;
 
@@ -108,8 +137,25 @@ export async function backfillMonthDrafts(userId: string): Promise<void> {
       running.delete(userId);
     }
   } catch (err) {
-    console.error("Rédaction du mois en tâche de fond échouée :", err);
+    console.error("Rédaction des articles à venir échouée :", err);
   }
+}
+
+/**
+ * Les sujets que la file prend en charge : sans texte, et datés d'ici la fin de
+ * la semaine suivante.
+ *
+ * Un sujet sans date n'en fait pas partie. Le planning en date toujours un ;
+ * s'il en restait un sans, il attendrait que le client le demande depuis son
+ * atelier, plutôt que de passer devant des articles qui, eux, ont une date à
+ * tenir.
+ */
+function pendingWhere() {
+  return {
+    status: "planned",
+    body: "",
+    scheduledFor: { not: null, lte: draftHorizon() },
+  } as const;
 }
 
 /** Rédige un sujet et le passe en brouillon. */
@@ -137,19 +183,23 @@ function draft(context: Awaited<ReturnType<typeof contextForWriting>>) {
 }
 
 /**
- * Reste-t-il des sujets du mois à écrire pour ce compte ?
+ * Cet article attend-il son tour dans la file ?
  *
- * Lu par l'atelier d'article : un article vide dont le sujet est encore au
- * planning n'est pas un article vide, c'est un article dont c'est le tour qui
- * n'est pas venu. L'écran le dit alors — et montre la rédaction en cours —
- * plutôt que de laisser le client devant une page blanche.
+ * Lu par l'atelier : un article vide dont le sujet tombe dans les deux semaines
+ * couvertes n'est pas un article vide, c'est un article dont le tour n'est pas
+ * venu. L'écran le dit alors — et montre la rédaction en cours — plutôt que de
+ * laisser le client devant une page blanche.
+ *
+ * Un sujet plus lointain, lui, ne promet rien : son atelier propose de le faire
+ * écrire, ce qui est exactement ce qui l'attend.
  */
-export async function monthDraftsPending(userId: string): Promise<boolean> {
-  const { tier } = await getAccess(userId);
-  if (!tierAtLeast(tier, "allin")) return false;
+export async function isQueuedForDrafting(
+  userId: string,
+  article: { status: string; body: string; scheduledFor: Date | null },
+): Promise<boolean> {
+  if (article.status !== "planned" || article.body.trim().length > 0) return false;
+  if (!article.scheduledFor || article.scheduledFor > draftHorizon()) return false;
 
-  const remaining = await prisma.article.count({
-    where: { userId, status: "planned", body: "" },
-  });
-  return remaining > 0;
+  const { tier } = await getAccess(userId);
+  return tierAtLeast(tier, "allin");
 }

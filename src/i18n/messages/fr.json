@@ -1907,7 +1907,8 @@
       "drop": "Écarter",
       "unlock": "Débloquer la publication",
       "needsBody": "Rédigez l'article avant de le faire partir.",
-      "notValidated": "Pas encore validé : rien ne partira tout seul.",
+      "notValidated": "Pas encore validé",
+      "validated": "Validé",
       "scheduledOn": "Part {date} à {time}",
       "undated": "Aucune date de publication",
       "cancel": "Annuler",
@@ -1979,7 +1980,7 @@
       "writing": "Rédaction…",
       "writingScene": {
         "asked": "L'agent écrit votre article. Comptez une minute ou deux : le texte apparaît ici dès qu'il est prêt.",
-        "auto": "Vos articles du mois s'écrivent l'un après l'autre. Celui-ci attend son tour ; la page se met à jour quand son texte arrive."
+        "auto": "Vos articles des deux semaines qui viennent s'écrivent l'un après l'autre. Celui-ci attend son tour ; la page se met à jour quand son texte arrive."
       },
       "writeCta": "Rédiger l'article",
       "rewriteCta": "Réécrire",

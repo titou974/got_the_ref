@@ -77,7 +77,7 @@ export function WritingScene({
   outline: string[];
   /**
    * La rédaction n'a pas été demandée à l'écran : elle vient de la file qui
-   * écrit le mois. Le client n'a rien lancé, il faut donc lui dire pourquoi son
+   * écrit les deux semaines à venir. Le client n'a rien lancé, il faut donc lui dire pourquoi son
    * article s'écrit tout seul.
    */
   auto: boolean;

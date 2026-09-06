@@ -8,7 +8,7 @@ import { analysisNeedsUpgrade, tierAtLeast } from "@/constants/access";
 import { isOnboardingComplete } from "@/features/onboarding/queries";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import { backfillBrandTone } from "@/features/dashboard/brand-tone";
-import { backfillMonthDrafts } from "@/features/dashboard/month-drafts";
+import { backfillUpcomingDrafts } from "@/features/dashboard/upcoming-drafts";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { CrispChat } from "@/components/CrispChat";
 import { DashboardShell } from "@/components/tableau-de-bord/DashboardShell";
@@ -46,16 +46,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // de bord n'a pas à l'attendre pour s'afficher. Elle ne part que là où le ton
   // sert — démo, abonnement, Coup de Boost — et seulement s'il manque encore.
   //
-  // Puis le mois éditorial, écrit en tâche de fond pour l'abonnement Tout-en-un.
+  // Puis les articles à venir, écrits en tâche de fond pour l'abonnement
+  // Tout-en-un : la semaine qui court et la suivante, jamais devant le client.
   //
-  // La mise en route pose vingt-deux sujets et n'en rédige que trois : c'est la
-  // semaine que vend le Coup de Boost, et c'est un sommaire pour un abonné, qui
-  // a payé un mois publié. Le reste s'écrit donc d'une visite à l'autre, jamais
-  // devant lui — le ton d'abord, puisque c'est lui qui donne leur voix aux
-  // articles, et la rédaction ensuite, dans le même passage.
+  // La mise en route n'en rédige que trois — c'est la semaine que vend le Coup
+  // de Boost, et c'est un sommaire pour un abonné. La fenêtre avance à chaque
+  // retour : les sujets qui viennent d'y entrer sont écrits pendant qu'il lit
+  // sa page. Le ton d'abord, puisque c'est lui qui donne leur voix aux articles,
+  // et la rédaction ensuite, dans le même passage.
   after(async () => {
     await backfillBrandTone(user.id);
-    await backfillMonthDrafts(user.id);
+    await backfillUpcomingDrafts(user.id);
   });
 
   // La barre d'exécution ne se monte qu'une fois l'analyse en place. Avant
