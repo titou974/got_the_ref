@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
@@ -26,6 +27,8 @@ import {
   splitPublishInstant,
 } from "@/constants/publishing";
 import { ROUTES } from "@/constants/routes";
+import { ConnectSiteModal } from "@/components/dashboard/ConnectSiteModal";
+import type { SiteConnectSetup } from "@/components/tableau-de-bord/SiteConnectForm";
 import { PublishPromptPanel } from "../PublishPromptPanel";
 import { ArticleActionBar } from "./ArticleActionBar";
 import { DocumentCanvas } from "./DocumentCanvas";
@@ -87,12 +90,15 @@ export function ArticleWorkspace({
   canPublish,
   linked,
   locked = false,
+  beyondPlan = false,
   quotaRemaining,
+  quotaRenewsAt,
   domain,
   platform,
   tone = null,
   voice = null,
   autoWriting = false,
+  connect = null,
 }: {
   article: EditorArticle;
   canPublish: boolean;
@@ -109,8 +115,24 @@ export function ArticleWorkspace({
    * client de les découvrir par un message d'erreur.
    */
   locked?: boolean;
+  /**
+   * Le sujet est au calendrier, mais l'offre du compte ne le rédige pas.
+   *
+   * Le Coup de Boost écrit sa première semaine ; les sujets suivants restent
+   * lisibles — titre, mot-clé, plan, comme partout ailleurs — et la barre du bas
+   * mène à l'abonnement au lieu d'appeler un agent qui refuserait d'écrire
+   * (cf. `canDraftArticle`, côté serveur).
+   */
+  beyondPlan?: boolean;
   /** Rédactions encore disponibles cette semaine, lues à l'ouverture de la page. */
   quotaRemaining: number;
+  /**
+   * Quand la prochaine se libère, mise en forme côté serveur.
+   *
+   * Composée là-bas parce que le fuseau du navigateur ferait diverger le premier
+   * rendu de l'hydratation. Nulle quand il n'y a rien à attendre.
+   */
+  quotaRenewsAt: string | null;
   /** Le domaine suivi, nommé dans le prompt de publication. */
   domain: string | null;
   /** Plateforme reconnue sur le site : elle change les consignes de dépôt. */
@@ -132,6 +154,14 @@ export function ArticleWorkspace({
    * l'article avait été oublié.
    */
   autoWriting?: boolean;
+  /**
+   * De quoi rattacher le site sans quitter l'atelier.
+   *
+   * La modale de rattachement vit d'ordinaire dans la barre des agents, que
+   * l'atelier ne monte pas — il prend l'écran entier. Il la monte donc lui-même,
+   * et il lui faut ce que le formulaire demande.
+   */
+  connect?: SiteConnectSetup | null;
 }) {
   const t = useTranslations("dashboard.article");
   const router = useRouter();
@@ -147,6 +177,8 @@ export function ArticleWorkspace({
   const [planOpen, setPlanOpen] = useState(false);
   /** La consigne de reprise, ouverte depuis la pilule du bas. */
   const [rewriteOpen, setRewriteOpen] = useState(false);
+  /** Le rattachement du site, ouvert depuis le bouton de publication. */
+  const [connectOpen, setConnectOpen] = useState(false);
 
   // Les consignes de section sont classées par titre : c'est la seule clé que
   // le document et le plan enregistré ont en commun une fois le texte retouché.
@@ -560,8 +592,10 @@ export function ArticleWorkspace({
               pending={write.isPending}
               disabled={busy && !write.isPending}
               remaining={remaining}
+              renewsAt={quotaRenewsAt}
               hasBody={hasBody}
               locked={locked}
+              beyondPlan={beyondPlan}
             />
           </div>
 
@@ -571,6 +605,8 @@ export function ArticleWorkspace({
             scheduledFor={day ? preferredPassOnDay(day) : article.scheduledFor}
             hasBody={hasBody}
             canPublish={canPublish}
+            linked={linked}
+            beyondPlan={beyondPlan}
             locked={locked}
             domain={domain}
             externalUrl={article.externalUrl}
@@ -578,12 +614,10 @@ export function ArticleWorkspace({
             dropPending={busy}
             onRewrite={() => setRewriteOpen((open) => !open)}
             rewriteOpen={rewriteOpen}
-            linked={linked}
-            // Le rattachement se fait dans les réglages, où vit le formulaire.
-            // L'atelier ne monte pas la barre des agents — il prend l'écran
-            // entier — et ouvrir sa modale ici demanderait de porter tout son
-            // contexte jusque dans un écran qui n'a rien à voir.
-            onConnectSite={() => router.push(ROUTES.dashboardSettings)}
+            // Le rattachement s'ouvre ici même, dans la modale que l'atelier
+            // monte par-dessus sa feuille : c'est là que le client colle ses
+            // identifiants, et non deux écrans plus loin dans les réglages.
+            onConnectSite={() => setConnectOpen(true)}
             onPreparePublish={() =>
               setPublishPrompt(
                 buildArticlePublishPrompt({
@@ -600,6 +634,33 @@ export function ArticleWorkspace({
           />
         </div>
       )}
+
+      {/* ------------------ Le rattachement, par-dessus ------------------- */}
+      {/* L'atelier prend l'écran entier : la barre des agents, qui porte cette
+          modale partout ailleurs, n'y est pas montée. Il la monte donc lui-même,
+          avec l'article ouvert en tête — c'est celui-là que le client cherche à
+          faire partir, et lui montrer les trois prochains du planning répondrait
+          à côté. */}
+      <AnimatePresence>
+        {connectOpen && connect ? (
+          <ConnectSiteModal
+            domain={domain ?? ""}
+            stack={null}
+            issues={[]}
+            purpose="publish"
+            articles={[
+              {
+                title,
+                dateLabel: day
+                  ? formatPublishDateShort(new Date(preferredPassOnDay(day)))
+                  : t("noDate"),
+              },
+            ]}
+            connect={connect}
+            onClose={() => setConnectOpen(false)}
+          />
+        ) : null}
+      </AnimatePresence>
 
       {/* --------------------- Le sommaire, en tiroir --------------------- */}
       {planOpen ? (

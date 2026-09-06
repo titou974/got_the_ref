@@ -59,6 +59,7 @@ import {
 } from "@/constants/access";
 import { getAccess, requireSection } from "@/features/billing/access";
 import { contextForWriting, ensureBrandIdentity } from "./brand-tone";
+import { canDraftArticle } from "./upcoming-drafts";
 import { parseOutline, serializeOutline } from "./outline";
 import {
   draftOutreachMessage,
@@ -663,7 +664,10 @@ export const seedEditorialMonthAction = authActionClient
 
     // Les trois premiers du planning encore à l'état de sujet, rédigés
     // ensemble : trois appels en parallèle tiennent dans le budget de la
-    // préparation, trois à la suite non.
+    // préparation, trois à la suite non. Le reste de ce que l'offre couvre —
+    // la semaine du Coup de Boost, les deux semaines de l'abonnement — est
+    // écrit par la file, dès la première ouverture du tableau de bord
+    // (cf. `backfillUpcomingDrafts`).
     const firstWeek = await prisma.article.findMany({
       where: { userId, status: "planned" },
       orderBy: { scheduledFor: "asc" },
@@ -1042,6 +1046,18 @@ export const writeArticleAction = authActionClient
     await requireSection(userId, "articles");
     const article = await prisma.article.findFirst({ where: { id: parsedInput.id, userId } });
     if (!article) throw new AppError("Article introuvable.", "NOT_FOUND", 404);
+
+    // Le Coup de Boost achète une semaine de rédaction, pas le mois affiché au
+    // calendrier. Les sujets suivants restent lisibles — c'est ce qui montre ce
+    // que le site publierait dans la durée — mais ils ne s'écrivent pas ici.
+    // L'écran le dit déjà ; ce garde-fou tient la porte côté serveur.
+    if (!(await canDraftArticle(userId, article.id))) {
+      throw new AppError(
+        "Le Coup de Boost rédige la première semaine du planning. L'abonnement Tout-en-un écrit les suivantes.",
+        "ARTICLE_BEYOND_PLAN",
+        403,
+      );
+    }
 
     // La place est prise avant l'appel au modèle, et rendue s'il échoue : une
     // rédaction qui n'aboutit pas ne coûte rien, et deux demandes lancées en

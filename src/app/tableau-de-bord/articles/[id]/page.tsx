@@ -3,8 +3,10 @@ import { Newsreader } from "next/font/google";
 import { requireUser } from "@/lib/auth";
 import { getArticle, getArticleQuota, getDashboardContext } from "@/features/dashboard/queries";
 import { parseOutline } from "@/features/dashboard/outline";
-import { isQueuedForDrafting } from "@/features/dashboard/upcoming-drafts";
+import { canDraftArticle, isQueuedForDrafting } from "@/features/dashboard/upcoming-drafts";
+import { connectSetupFor } from "@/features/dashboard/connect-setup";
 import { canOpen, tierAtLeast } from "@/constants/access";
+import { formatPublishDate, formatPublishTime } from "@/constants/publishing";
 import { ArticleWorkspace } from "@/components/tableau-de-bord/article/ArticleWorkspace";
 
 export const maxDuration = 300;
@@ -45,7 +47,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   // Cet article-là est-il dans la file qui écrit les deux semaines à venir ?
   // La question porte sur son état et sa date : elle ne se pose qu'une fois
   // l'article lu.
-  const queued = await isQueuedForDrafting(user.id, article);
+  const [queued, draftable] = await Promise.all([
+    isQueuedForDrafting(user.id, article),
+    canDraftArticle(user.id, article.id),
+  ]);
 
   return (
     <div className={editorial.variable}>
@@ -68,11 +73,25 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
         // Rattaché ou non : sans site, le bouton mène au rattachement plutôt
         // que de composer un texte à déposer sur une porte qui n'existe pas.
         linked={Boolean(context.site)}
+        // De quoi rattacher le site sans quitter l'atelier : il monte sa propre
+        // modale, la barre des agents n'étant pas là pour la porter.
+        connect={connectSetupFor(context, context.analysis?.signals.stack?.id)}
         // Le sujet se lit à tous les niveaux — c'est ce que le calendrier de
         // l'accueil promet — mais l'écrire et le publier s'achètent : sur une
         // offre qui ne les ouvre pas, les boutons mènent aux tarifs.
         locked={!canOpen(context.tier, "articles")}
+        // Le Coup de Boost au-delà de sa semaine : le sujet, son mot-clé et son
+        // plan restent lisibles, mais la rédaction ne s'ouvre pas ici. Un texte
+        // déjà écrit ne retombe jamais sous ce voile — c'est du travail rendu.
+        beyondPlan={!draftable && !article.body.trim()}
         quotaRemaining={quota.remaining}
+        // Mise en forme ici : l'atelier est rendu chez le client, et son fuseau
+        // ferait diverger le premier rendu de l'hydratation.
+        quotaRenewsAt={
+          quota.renewsAt
+            ? `${formatPublishDate(quota.renewsAt)} à ${formatPublishTime(quota.renewsAt)}`
+            : null
+        }
         domain={context.domain}
         platform={context.analysis?.signals.stack?.name ?? null}
         // Le ton relevé sur le site du client, au pied du rail : c'est la voix

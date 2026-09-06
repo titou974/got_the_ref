@@ -292,6 +292,29 @@ export function draftsSeedArticles(tier: AccessTier): boolean {
 }
 
 /**
+ * Une semaine de publication : cinq jours ouvrés, cinq articles.
+ *
+ * C'est ce que le Coup de Boost fait rédiger, et rien de plus. L'offre est une
+ * passe : elle pose le mois entier au calendrier — le client voit ce que son
+ * site publierait sur la durée — mais n'écrit que la première semaine. Les
+ * sujets suivants restent des titres, avec l'abonnement en face.
+ */
+export const BOOST_DRAFTED_ARTICLES = 5;
+
+/**
+ * Combien d'articles du planning cette offre fait rédiger, en partant du
+ * premier. `null` : aucune borne, tout ce qui entre dans la fenêtre s'écrit.
+ *
+ * Le Coup de Boost s'arrête à sa semaine. L'abonnement n'a pas de borne de ce
+ * genre — ce qui limite sa file est une date, la fin de la semaine suivante (cf.
+ * `draftHorizon`), et elle avance avec le client.
+ */
+export function draftableArticles(tier: AccessTier): number | null {
+  if (!tierAtLeast(tier, "boost")) return 0;
+  return tier === "boost" ? BOOST_DRAFTED_ARTICLES : null;
+}
+
+/**
  * L'analyse enregistrée a-t-elle été faite à un niveau plus étroit que celui du
  * compte aujourd'hui ?
  *

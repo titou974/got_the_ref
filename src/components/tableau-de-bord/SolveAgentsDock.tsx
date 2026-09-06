@@ -1,12 +1,10 @@
 import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
-import { isCredentialsKeySet } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
 import { formatPublishDate, nextPublishPass } from "@/constants/publishing";
-import { connectorForStack } from "@/constants/site-platforms";
 import { getDashboardContext } from "@/features/dashboard/queries";
-import type { SiteConnectSetup } from "@/components/tableau-de-bord/SiteConnectForm";
+import { connectSetupFor } from "@/features/dashboard/connect-setup";
 import type { AnalysisDiagnostic } from "@/lib/geo/diagnostic";
 import type { GeoAnalysisResult } from "@/lib/geo/types";
 import { SolveAgentsBar } from "@/components/dashboard/SolveAgentsBar";
@@ -104,27 +102,7 @@ async function Dock({
     select: { title: true, scheduledFor: true },
   });
 
-  // La date est mise en forme ici : la modale est rendue chez le client, et son
-  // fuseau ferait diverger le premier rendu de celui du serveur.
-  const connectedOn = context.site?.connectedAt
-    ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(context.site.connectedAt)
-    : null;
-
-  const connect: SiteConnectSetup = {
-    link: context.site
-      ? {
-          platform: context.site.platform,
-          siteUrl: context.site.siteUrl,
-          status: context.site.status,
-          capabilities: context.site.capabilities,
-          connectedOn,
-          lastError: context.site.lastError,
-        }
-      : null,
-    suggestedPlatform: connectorForStack(result.signals.stack?.id).id,
-    suggestedSiteUrl: context.siteUrl ?? (context.domain ? `https://${context.domain}` : null),
-    credentialsKeyReady: isCredentialsKeySet(),
-  };
+  const connect = connectSetupFor(context, result.signals.stack?.id);
 
   return (
     <>
