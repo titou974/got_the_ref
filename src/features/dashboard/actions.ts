@@ -1333,6 +1333,12 @@ export const saveSettingsAction = authActionClient
       targetMarket: orNull(parsedInput.targetMarket),
       description: orNull(parsedInput.description),
       audience: orNull(parsedInput.audience),
+      // Le relevé de la marque s'écrit aussi d'ici. Il vient d'une lecture du
+      // site, mais le client est seul à savoir si sa voix y est : effacé, il
+      // sera relu à la prochaine ouverture (cf. `backfillBrandTone`) ; corrigé,
+      // il tient, puisque cette relecture ne repasse que sur un champ vide.
+      toneSummary: orNull(parsedInput.toneSummary),
+      brandColor: orNull(parsedInput.brandColor),
     };
 
     await prisma.$transaction([

@@ -8,7 +8,7 @@ import { saveSettingsAction } from "@/features/dashboard/actions";
 import { ROUTES } from "@/constants/routes";
 import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { SignOutButton } from "@/components/SignOutButton";
-import { AreaField, Divider, SelectField, TextField } from "./Field";
+import { AreaField, ColorField, Divider, SelectField, TextField } from "./Field";
 
 /**
  * L'écran de réglages, sur le patron du bloc « settings » de Tremor : à gauche
@@ -39,6 +39,8 @@ export function SettingsForm({
   targetMarket,
   description,
   audience,
+  toneSummary,
+  brandColor,
   toneInstructions,
   toneBanned,
 }: {
@@ -50,6 +52,10 @@ export function SettingsForm({
   targetMarket: string;
   description: string;
   audience: string;
+  /** Le ton relevé sur le site, modifiable : c'est une lecture, pas un verdict. */
+  toneSummary: string;
+  /** La couleur relevée sur le site, au format `#1a2b3c`, ou la chaîne vide. */
+  brandColor: string;
   toneInstructions: string;
   toneBanned: string[];
 }) {
@@ -64,6 +70,8 @@ export function SettingsForm({
     targetMarket,
     description,
     audience,
+    toneSummary,
+    brandColor,
     toneInstructions,
     toneBanned: toneBanned.join("\n"),
   });
@@ -201,7 +209,32 @@ export function SettingsForm({
 
       <Divider className="my-12" />
 
-      <Section title={t("tone.title")} body={t("tone.body")}>
+      <Section id="ton" title={t("tone.title")} body={t("tone.body")}>
+        {/* Le relevé d'abord, les consignes ensuite : c'est l'ordre dans lequel
+            ils agissent sur le texte produit, et le second ne se comprend qu'en
+            regard du premier. */}
+        <div className="col-span-full">
+          <AreaField
+            name="toneSummary"
+            label={t("tone.summary")}
+            rows={6}
+            value={form.toneSummary}
+            onChange={(event) => set("toneSummary")(event.target.value)}
+            placeholder={t("tone.summaryPlaceholder")}
+            hint={t("tone.summaryHint")}
+            error={errorFor("toneSummary")}
+          />
+        </div>
+        <div className="col-span-full sm:col-span-3">
+          <ColorField
+            name="brandColor"
+            label={t("tone.color")}
+            value={form.brandColor}
+            onChange={set("brandColor")}
+            hint={t("tone.colorHint")}
+            error={errorFor("brandColor")}
+          />
+        </div>
         <div className="col-span-full">
           <AreaField
             name="toneInstructions"
@@ -259,14 +292,22 @@ export function SettingsForm({
 function Section({
   title,
   body,
+  id,
   children,
 }: {
   title: string;
   body: string;
+  /**
+   * L'ancre par laquelle on arrive de l'extérieur. Seule la section du ton en
+   * porte une : l'atelier d'article y renvoie depuis sa carte de marque, et
+   * déposer le client en haut d'un écran de quinze champs lui ferait chercher
+   * celui qu'il vient ouvrir.
+   */
+  id?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-10">
+    <div id={id} className="grid grid-cols-1 gap-8 scroll-mt-8 md:grid-cols-3 md:gap-10">
       <div>
         <h2 className="font-semibold">{title}</h2>
         <p className="mt-1 text-sm leading-6 text-muted">{body}</p>

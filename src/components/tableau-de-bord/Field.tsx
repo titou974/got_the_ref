@@ -77,6 +77,62 @@ export function TextField({
   );
 }
 
+/**
+ * Une couleur : la pipette du navigateur, et son code écrit à côté.
+ *
+ * Les deux, parce qu'aucun ne suffit seul. La pipette choisit une teinte sans
+ * rien connaître de l'hexadécimal, mais elle ne se copie pas et ne se colle pas ;
+ * le code, lui, se recopie depuis une charte graphique, ce que fera tout client
+ * qui en a une. Ils écrivent la même valeur, chacun met l'autre à jour.
+ *
+ * Le champ texte accepte ce qu'on y tape, y compris un code inachevé : la
+ * validation se fait à l'envoi (cf. `settingsSchema`), pas à la frappe, sans
+ * quoi il serait impossible d'effacer une couleur pour en écrire une autre.
+ */
+export function ColorField({
+  name,
+  label,
+  value,
+  onChange,
+  error,
+  hint,
+}: {
+  name: string;
+  label: string;
+  /** `#1a2b3c`, ou la chaîne vide quand aucune couleur n'est posée. */
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  hint?: string;
+}) {
+  return (
+    <Shell name={name} label={label} error={error} hint={hint}>
+      <div className="flex items-center gap-3">
+        <input
+          type="color"
+          aria-label={label}
+          // La pipette réclame une valeur valide : sans couleur posée, elle
+          // s'ouvre sur le gris de l'interface plutôt que sur le noir par
+          // défaut, qui se lirait comme une couleur choisie.
+          value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : "#d4d4d8"}
+          onChange={(event) => onChange(event.target.value)}
+          className="size-11 shrink-0 cursor-pointer rounded-xl border border-border bg-surface p-1"
+        />
+        <input
+          id={name}
+          name={name}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="#1a2b3c"
+          spellCheck={false}
+          aria-invalid={error ? true : undefined}
+          className={cx(control, "font-mono tabular-nums", border(error))}
+        />
+      </div>
+    </Shell>
+  );
+}
+
 export function AreaField({
   name,
   label,

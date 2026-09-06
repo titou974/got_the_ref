@@ -10,7 +10,6 @@ import { Divider } from "@/components/tableau-de-bord/Field";
 import { SettingsForm } from "@/components/tableau-de-bord/SettingsForm";
 import { SiteConnectionPanel } from "@/components/tableau-de-bord/SiteConnectionPanel";
 import { AutoPublishChoice } from "@/components/tableau-de-bord/AutoPublishChoice";
-import { BrandToneBar } from "@/components/tableau-de-bord/BrandToneBar";
 
 /**
  * Le libellé d'offre affiché dans les réglages.
@@ -83,21 +82,15 @@ export default async function SettingsPage() {
         targetMarket={profile?.targetMarket ?? ""}
         description={profile?.description ?? ""}
         audience={profile?.audience ?? ""}
+        // Le relevé de la marque est dans le formulaire, et non plus dans une
+        // carte posée dessous. Il s'y lisait sans pouvoir s'y corriger : le
+        // client arrivait depuis l'atelier par un lien « modifier le ton » qui
+        // ne menait qu'à une copie en lecture seule.
+        toneSummary={profile?.toneSummary ?? ""}
+        brandColor={profile?.brandColor ?? ""}
         toneInstructions={voice?.instructions ?? ""}
         toneBanned={voice?.banned ?? []}
       />
-
-      {/* Ce que les agents ont relevé de votre manière d'écrire, contre le
-          formulaire qui l'amende. La carte était en tête de l'atelier
-          d'article ; elle y répétait à chaque ouverture une contrainte qu'on
-          pose une fois. Ici, le relevé et les consignes se lisent côte à côte,
-          à l'endroit où l'on écrit les secondes. */}
-      <div className="mt-6">
-        <BrandToneBar
-          tone={context.tone}
-          voice={voice ? { instructions: voice.instructions, banned: voice.banned } : null}
-        />
-      </div>
 
       <Divider className="my-12" />
 

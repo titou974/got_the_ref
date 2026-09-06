@@ -8,27 +8,23 @@ import { lockScroll } from "@/lib/scroll-lock";
 import { ROUTES } from "@/constants/routes";
 
 /**
- * Le ton de la marque, au pied du rail de l'atelier.
+ * La marque du client, au pied du rail de l'atelier : sa couleur, puis son ton.
  *
- * C'est la contrainte sous laquelle l'article a été écrit, et celle sous
- * laquelle on le relit : elle se lit pendant la lecture, pas à deux écrans de
- * là. Elle prend la place de la carte de citabilité, qui occupait ce pied de
- * rail : la mesure y répétait en gros ce que les entrées du plan signalent
- * déjà, section par section, tandis que la voix ne se lisait nulle part.
+ * C'est sous ces deux-là que l'article a été écrit, et sous elles qu'on le
+ * relit : elles se lisent pendant la lecture, pas à deux écrans de là. Elles
+ * prennent la place de la carte de citabilité, qui occupait ce pied de rail :
+ * la mesure y répétait en gros ce que les entrées du plan signalent déjà,
+ * section par section, tandis que la voix ne se lisait nulle part.
  *
- * Deux lignes seulement, et le reste dans une modale. Le relevé fait six
- * phrases — de quoi remplir la colonne entière et pousser le plan hors de
- * l'écran ; deux lignes suffisent à reconnaître sa propre voix, et le clic
- * donne le reste quand on veut le vérifier.
+ * Les deux cartes tiennent en hauteur fixe, et le rail ne défile plus autour
+ * d'elles : le plan seul défile, au-dessus. Un pied qu'il faut aller chercher
+ * en faisant défiler la colonne n'est plus un pied, et le relevé fait six
+ * phrases — de quoi remplir la colonne entière. Le ton est donc coupé à deux
+ * lignes, et le clic donne le reste dans une modale.
  *
- * Le filet de gauche est peint à la couleur relevée sur le site du client. Le
- * rail emploie déjà ce trait, plus haut, pour marquer la section où l'on écrit ;
- * ici il ne marque rien, il porte la couleur — c'est le seul endroit de l'écran
- * qui appartienne au client plutôt qu'au produit.
- *
- * La carte n'est montée que là où le ton sert — démo, abonnement, Coup de
+ * Les cartes ne sont montées que là où le ton sert — démo, abonnement, Coup de
  * Boost : ce sont les offres qui font écrire des textes au nom du client. Un
- * compte gratuit ne la voit pas, la page ne la lui passe pas.
+ * compte gratuit ne les voit pas, la page ne les lui passe pas.
  */
 export function BrandToneCard({
   tone,
@@ -38,51 +34,59 @@ export function BrandToneCard({
   voice: { instructions: string; banned: string[] } | null;
 }) {
   const t = useTranslations("dashboard.article.tone");
+  const c = useTranslations("dashboard.article.brandColor");
   const [open, setOpen] = useState(false);
 
   return (
-    <>
+    <div className="shrink-0 space-y-2">
+      {/* La couleur, dans son propre carré. Elle tenait un filet le long du ton :
+          un trait de trois pixels ne montre pas une couleur, il la signale. */}
+      <div className="flex items-center gap-3 rounded-2xl border border-border px-3.5 py-2.5">
+        <span
+          aria-hidden
+          className="size-7 shrink-0 rounded-lg border border-border"
+          style={{ background: tone.color ?? "var(--color-mist)" }}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[11px] font-semibold uppercase tracking-wider text-steel">
+            {c("title")}
+          </span>
+          <span className="block text-[13px] tabular-nums text-text">
+            {tone.color ?? c("empty")}
+          </span>
+        </span>
+      </div>
+
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        className="group relative shrink-0 cursor-pointer overflow-hidden rounded-3xl border border-border p-4 pl-5 text-left transition-colors duration-200 hover:border-graphite"
+        className="group w-full cursor-pointer rounded-2xl border border-border px-3.5 py-2.5 text-left transition-colors duration-200 hover:border-graphite"
       >
-        {/* Le filet de la marque, à même le bord de la carte. Il retombe sur le
-            gris des liserés quand la couleur n'a pas pu être relevée : un trait
-            absent creuserait un décalage dans la carte. */}
-        <span
-          aria-hidden
-          className="absolute inset-y-4 left-0 w-[3px] rounded-pill"
-          style={{ background: tone.color ?? "var(--color-pebble)" }}
-        />
-
         <span className="block text-[11px] font-semibold uppercase tracking-wider text-steel">
           {t("title")}
         </span>
 
         {tone.summary ? (
-          <span className="mt-1.5 block line-clamp-2 text-xs leading-relaxed text-slate">
+          /* Deux lignes, pas une de plus : `line-clamp` pose lui-même son
+             `display`, et lui adjoindre `block` annulait la coupe — le relevé
+             entier s'affichait alors dans le rail. */
+          <span className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate">
             {tone.summary}
           </span>
         ) : (
-          <span className="mt-1.5 block text-xs italic leading-relaxed text-muted">
+          <span className="mt-1 line-clamp-2 text-xs italic leading-relaxed text-muted">
             {t("detectedEmpty")}
           </span>
         )}
 
-        <span className="mt-2 block text-[11px] text-ash transition-colors duration-200 group-hover:text-text">
+        <span className="mt-1.5 block text-[11px] text-ash transition-colors duration-200 group-hover:text-text">
           {t("readAll")}
         </span>
       </button>
 
-      <BrandToneDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        tone={tone}
-        voice={voice}
-      />
-    </>
+      <BrandToneDialog open={open} onClose={() => setOpen(false)} tone={tone} voice={voice} />
+    </div>
   );
 }
 
@@ -213,8 +217,12 @@ function BrandToneDialog({
               </div>
 
               <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
+                {/* Le lien tombe sur la section « ton » des réglages, où le
+                    relevé s'amende dans un champ : y arriver en haut d'une page
+                    qui n'en montrait qu'une copie en lecture seule était une
+                    porte fermée. */}
                 <Link
-                  href={ROUTES.dashboardSettings}
+                  href={ROUTES.dashboardSettingsTone}
                   className="cursor-pointer text-[13px] font-medium text-text underline decoration-pebble underline-offset-4 transition-colors duration-200 hover:decoration-obsidian"
                 >
                   {t("edit")}

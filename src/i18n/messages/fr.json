@@ -2012,6 +2012,10 @@
         "readAll": "Lire le ton en entier",
         "close": "Fermer"
       },
+      "brandColor": {
+        "title": "Couleur de la marque",
+        "empty": "Non relevée"
+      },
       "toolbar": {
         "p": "Paragraphe",
         "h2": "Titre de section",
@@ -2205,6 +2209,11 @@
       "tone": {
         "title": "Ton éditorial",
         "body": "La voix de vos textes. Ce que vous corrigez ici vaut pour les articles à venir, pas pour ceux déjà rédigés.",
+        "summary": "Ton de la marque",
+        "summaryPlaceholder": "Vous vous adressez au lecteur au « vous », en phrases courtes, sans jargon…",
+        "summaryHint": "Relevé sur vos propres textes : un de vos articles, ou votre page d'accueil. Corrigez-le si votre voix n'y est pas. Laissé vide, il sera relu sur votre site.",
+        "color": "Couleur de la marque",
+        "colorHint": "Relevée sur les boutons de votre site. Au format #1a2b3c.",
         "instructions": "Consigne de ton",
         "instructionsPlaceholder": "Tutoiement, phrases courtes, aucun superlatif.",
         "instructionsHint": "Relue avant chaque rédaction.",
