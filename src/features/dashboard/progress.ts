@@ -2,7 +2,12 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
-import { CATEGORY_META, type CategoryKey, type GeoAnalysisResult } from "@/lib/geo/types";
+import {
+  DASHBOARD_ENGINES,
+  type AiEngine,
+  type CategoryKey,
+  type GeoAnalysisResult,
+} from "@/lib/geo/types";
 import { startOfDay } from "./queries";
 
 /**
@@ -24,6 +29,13 @@ export type SnapshotRecommendation = {
   impact: number;
 };
 
+/** Ce qu'un moteur valait au moment de la mesure : sa note, et le rang relevé. */
+export type SnapshotEngine = {
+  score: number;
+  /** Rang sur la requête directe. `null` quand le commerce est hors classement. */
+  position: number | null;
+};
+
 export type AnalysisSnapshot = {
   id: string;
   createdAt: Date;
@@ -31,6 +43,7 @@ export type AnalysisSnapshot = {
   architectureScore: number;
   contentScore: number;
   categories: Partial<Record<CategoryKey, number>>;
+  engines: Partial<Record<AiEngine, SnapshotEngine>>;
   recommendations: SnapshotRecommendation[];
   reason: string;
 };
@@ -44,6 +57,16 @@ export type ScoreDelta = {
   delta: number;
 };
 
+/** Ce qu'un moteur a gagné ou perdu depuis la mesure précédente. */
+export type EngineProgress = {
+  engine: AiEngine;
+  before: number;
+  after: number;
+  delta: number;
+  positionBefore: number | null;
+  positionAfter: number | null;
+};
+
 export type AnalysisProgress = {
   /** La reprise la plus récente : celle que le tableau de bord affiche. */
   current: AnalysisSnapshot;
@@ -53,31 +76,23 @@ export type AnalysisProgress = {
   first: AnalysisSnapshot;
   overall: ScoreDelta;
   sinceStart: ScoreDelta;
-  /** Architecture et contenu : les deux volets du diagnostic. */
-  sections: ScoreDelta[];
-  /** Les six catégories GEO. */
-  categories: ScoreDelta[];
-  /** Les correctifs disparus depuis la version précédente : le travail fait. */
-  resolved: SnapshotRecommendation[];
-  /** Ceux apparus depuis : ce que la nouvelle mesure a trouvé en plus. */
-  appeared: SnapshotRecommendation[];
-  /** La courbe de la note, du plus ancien au plus récent (30 relevés au plus). */
-  history: { date: string; score: number }[];
+  /** Un moteur par carte : ChatGPT, Gemini, Perplexity, Claude. */
+  engines: EngineProgress[];
 };
-
-/** Une clé de correctif stable : le titre, sans casse ni accents ni ponctuation. */
-function fingerprint(recommendation: SnapshotRecommendation): string {
-  return recommendation.title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
 
 function parseCategories(raw: string): Partial<Record<CategoryKey, number>> {
   try {
     return JSON.parse(raw) as Partial<Record<CategoryKey, number>>;
+  } catch {
+    return {};
+  }
+}
+
+function parseEngines(raw: string | null): Partial<Record<AiEngine, SnapshotEngine>> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Partial<Record<AiEngine, SnapshotEngine>>;
+    return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
   }
@@ -90,6 +105,13 @@ function parseRecommendations(raw: string): SnapshotRecommendation[] {
   } catch {
     return [];
   }
+}
+
+/** Le rang du commerce sur la requête directe du moteur, s'il en a un. */
+function directPosition(result: GeoAnalysisResult, engine: AiEngine): number | null {
+  const found = result.engines.find((e) => e.engine === engine);
+  const direct = found?.rankings.find((r) => r.scope === "direct") ?? found?.rankings[0];
+  return direct?.targetRank ?? null;
 }
 
 /**
@@ -113,6 +135,18 @@ export async function recordAnalysisSnapshot(params: {
     result.categories.map((category) => [category.key, Math.round(category.score)]),
   );
 
+  const engines = Object.fromEntries(
+    DASHBOARD_ENGINES.filter((engine) => result.engines.some((e) => e.engine === engine)).map(
+      (engine) => [
+        engine,
+        {
+          score: Math.round(result.engines.find((e) => e.engine === engine)?.score ?? 0),
+          position: directPosition(result, engine),
+        } satisfies SnapshotEngine,
+      ],
+    ),
+  );
+
   const recommendations: SnapshotRecommendation[] = result.recommendations.map((r) => ({
     title: r.title,
     category: r.category,
@@ -130,6 +164,7 @@ export async function recordAnalysisSnapshot(params: {
         categories: JSON.stringify(categories),
         architectureScore: diagnostic.architecture.score,
         contentScore: diagnostic.content.score,
+        engines: JSON.stringify(engines),
         recommendations: JSON.stringify(recommendations),
         reason,
       },
@@ -139,9 +174,6 @@ export async function recordAnalysisSnapshot(params: {
   }
 }
 
-/** Trente relevés : un mois de reprises quotidiennes, de quoi tracer la courbe. */
-const HISTORY_LIMIT = 30;
-
 /** Convertit une ligne de base en relevé exploitable. */
 function toSnapshot(row: {
   id: string;
@@ -150,6 +182,7 @@ function toSnapshot(row: {
   architectureScore: number;
   contentScore: number;
   categories: string;
+  engines: string | null;
   recommendations: string;
   reason: string;
 }): AnalysisSnapshot {
@@ -160,6 +193,7 @@ function toSnapshot(row: {
     architectureScore: row.architectureScore,
     contentScore: row.contentScore,
     categories: parseCategories(row.categories),
+    engines: parseEngines(row.engines),
     recommendations: parseRecommendations(row.recommendations),
     reason: row.reason,
   };
@@ -175,50 +209,52 @@ function delta(key: string, label: string, before: number, after: number): Score
  * `null` tant qu'il n'y a pas deux relevés : à la première analyse, il n'y a
  * pas de progression à raconter, et une carte pleine de « +0 » ferait croire à
  * un échec plutôt qu'à un début.
+ *
+ * Seuls deux chiffres sortent d'ici : la note de visibilité, et son écart
+ * moteur par moteur. Le détail — quelle catégorie, quel correctif — vit dans le
+ * plan d'action, qui est fait pour ça. La carte de progression répond à une
+ * seule question : est-ce que ça monte, et où.
  */
 export async function getAnalysisProgress(userId: string): Promise<AnalysisProgress | null> {
-  const rows = await prisma.analysisSnapshot.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: HISTORY_LIMIT,
+  // Deux relevés suffisent à la comparaison du jour ; la toute première mesure
+  // se demande à part. La prendre au fond d'une page de trente lignes la faisait
+  // disparaître au bout d'un mois de reprises, et « depuis le début » se mettait
+  // alors à compter depuis trente jours.
+  const [rows, oldest] = await Promise.all([
+    prisma.analysisSnapshot.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 2,
+    }),
+    prisma.analysisSnapshot.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  if (rows.length < 2 || !oldest) return null;
+
+  const current = toSnapshot(rows[0]);
+  const previous = toSnapshot(rows[1]);
+  const first = toSnapshot(oldest);
+
+  // Un moteur n'entre dans la comparaison que s'il a été relevé aux deux
+  // dates. Le comparer à un zéro par défaut inventerait une chute le jour où le
+  // relevé hebdomadaire n'a pas eu lieu.
+  const engines: EngineProgress[] = DASHBOARD_ENGINES.filter(
+    (engine) => current.engines[engine] && previous.engines[engine],
+  ).map((engine) => {
+    const after = current.engines[engine] as SnapshotEngine;
+    const before = previous.engines[engine] as SnapshotEngine;
+    return {
+      engine,
+      before: before.score,
+      after: after.score,
+      delta: after.score - before.score,
+      positionBefore: before.position,
+      positionAfter: after.position,
+    };
   });
-
-  if (rows.length < 2) return null;
-
-  const snapshots = rows.map(toSnapshot);
-  const current = snapshots[0];
-  const previous = snapshots[1];
-  const first = snapshots[snapshots.length - 1];
-
-  const categories = (Object.keys(CATEGORY_META) as CategoryKey[])
-    .filter(
-      (key) =>
-        current.categories[key] !== undefined && previous.categories[key] !== undefined,
-    )
-    .map((key) =>
-      delta(
-        key,
-        CATEGORY_META[key].short,
-        previous.categories[key] ?? 0,
-        current.categories[key] ?? 0,
-      ),
-    );
-
-  // Un correctif « résolu » est un correctif que la nouvelle mesure ne relève
-  // plus. C'est la seule preuve dont on dispose : le produit ne sait pas qui a
-  // appliqué quoi, il sait ce que le site montre aujourd'hui.
-  const before = new Map(previous.recommendations.map((r) => [fingerprint(r), r]));
-  const after = new Map(current.recommendations.map((r) => [fingerprint(r), r]));
-
-  const resolved = [...before.entries()]
-    .filter(([key]) => !after.has(key))
-    .map(([, recommendation]) => recommendation)
-    .sort((a, b) => b.impact - a.impact);
-
-  const appeared = [...after.entries()]
-    .filter(([key]) => !before.has(key))
-    .map(([, recommendation]) => recommendation)
-    .sort((a, b) => b.impact - a.impact);
 
   return {
     current,
@@ -226,22 +262,7 @@ export async function getAnalysisProgress(userId: string): Promise<AnalysisProgr
     first,
     overall: delta("overall", "Note globale", previous.overallScore, current.overallScore),
     sinceStart: delta("start", "Depuis le début", first.overallScore, current.overallScore),
-    sections: [
-      delta(
-        "architecture",
-        "Architecture",
-        previous.architectureScore,
-        current.architectureScore,
-      ),
-      delta("content", "Contenu", previous.contentScore, current.contentScore),
-    ],
-    categories,
-    resolved,
-    appeared,
-    history: [...snapshots].reverse().map((snapshot) => ({
-      date: snapshot.createdAt.toISOString(),
-      score: snapshot.overallScore,
-    })),
+    engines,
   };
 }
 

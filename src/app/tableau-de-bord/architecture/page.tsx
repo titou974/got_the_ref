@@ -52,13 +52,17 @@ export default async function ArchitecturePage() {
   const analysis = context.analysis;
   const tree = buildSiteTree(analysis);
 
-  // Le squelette reste au-dessus du voile, même quand l'offre n'ouvre pas la
-  // page. Il ne coûte aucun appel — l'arbre se déduit de l'analyse déjà en base
-  // — et c'est la pièce qui se comprend sans explication : sept adresses,
-  // celles qui répondent en vert, celles qui manquent masquées à leur place
-  // exacte. Le client voit la forme de son site et l'endroit du trou ; ce qu'il
-  // achète, c'est le nom du fichier absent et le contenu prêt à déposer (cf.
-  // `veilSiteTree`), et l'appel le mène aux tarifs (cf. `TierGate`).
+  // Le squelette reste au-dessus du voile quand l'offre ne l'ouvre pas, et
+  // c'est le seul écran du produit à s'ouvrir ainsi. Il ne coûte aucun appel —
+  // l'arbre se déduit de l'analyse déjà en base — et c'est la pièce qui se
+  // comprend sans explication : sept adresses, celles qui répondent en vert,
+  // celles qui manquent masquées à leur place exacte. Le client voit la forme
+  // de son site et l'endroit du trou ; ce qu'il achète, c'est le nom du fichier
+  // absent et le contenu prêt à déposer.
+  //
+  // Le masquage est fait au serveur (cf. `veilSiteTree`) : les noms, les notes
+  // et le contenu des correctifs ne partent tout simplement pas dans la page.
+  // Un flou de feuille de style se retire dans un inspecteur.
   const locked = !canOpen(context.tier, "architecture");
 
   // Le dépôt demande un rattachement vivant ET un connecteur qui sait écrire :
@@ -79,7 +83,7 @@ export default async function ArchitecturePage() {
       {locked ? null : <StructureIntroModal domain={analysis.signals.domain} />}
 
       {locked ? (
-        <TierGate offer="boost" item="architectureFiles" reveal values={{ count: openFixes }}>
+        <TierGate offer="boost" item="architectureFiles" reveal values={{ count: tree.missingCount }}>
           <SiteSkeleton
             tree={veilSiteTree(tree)}
             stack={analysis.signals.stack ?? null}

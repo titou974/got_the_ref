@@ -19,7 +19,15 @@ import { ANALYSIS_QUOTAS, type PlanKey } from "@/constants/plans";
 export type AnalysisActor = { id: string; plan: PlanKey } | null;
 
 export type AnalysisResult =
-  | { ok: true; id: string }
+  | {
+      ok: true;
+      id: string;
+      /**
+       * Vrai quand l'analyse n'a pas été refaite : c'est celle que ce visiteur
+       * avait déjà de ce site, rouverte telle quelle.
+       */
+      reused?: boolean;
+    }
   | { ok: false; reason: "invalid_url"; status: 400 }
   | { ok: false; reason: "invalid_maps_url"; status: 400 }
   | { ok: false; reason: "blocked_url"; status: 400; detail: string }
@@ -71,8 +79,76 @@ async function checkQuota(
 }
 
 /**
- * Orchestration complète d'une analyse GEO :
- * validation d'URL → anti-SSRF → quota → collecte de signaux → analyse → persistance.
+ * L'analyse que ce visiteur a déjà de ce site, s'il en a une.
+ *
+ * Un même site ne se mesure qu'une fois par personne. Sans ce repêchage, celui
+ * qui recolle son adresse — parce qu'il a fermé l'onglet, perdu le lien, ou
+ * simplement recommencé depuis l'accueil — repartait pour un crawl complet et
+ * repartait avec un deuxième rapport du même site, sur une autre adresse, aux
+ * notes légèrement différentes. Deux vérités pour un seul site : il n'y en a
+ * qu'une, et c'est celle-là qu'on rouvre.
+ *
+ * Le repêchage reste strictement personnel, et c'est délibéré. Une analyse
+ * anonyme se débloque en la payant, et son déblocage récrit le rapport en place
+ * : rendre une ligne à quelqu'un d'autre que son auteur ferait passer l'achat
+ * de l'un pour le rapport complet de l'autre.
+ *
+ * Deux chemins seulement, donc, et tous deux sont des preuves : la session du
+ * compte, ou le cookie déposé au moment de l'analyse. L'adresse e-mail saisie
+ * dans le formulaire n'en est pas une — elle se tape, et taper celle d'un
+ * inconnu suffirait à repartir avec son rapport. Un visiteur qui a effacé ses
+ * cookies refait donc son analyse : c'est le prix à payer pour que personne ne
+ * puisse réclamer celle d'autrui.
+ */
+async function findReusableAnalysis(params: {
+  actor: AnalysisActor;
+  domain: string;
+  mapsUrl: string | null;
+  usedAnalysisId: string | null;
+}): Promise<string | null> {
+  const { actor, domain, mapsUrl, usedAnalysisId } = params;
+
+  // La fiche Google est une donnée en plus. Quand le visiteur en apporte une
+  // que l'ancienne mesure n'avait pas, il demande bien autre chose : la mesure
+  // repart plutôt que de lui rendre un rapport aveugle sur sa fiche.
+  const sameMaps = (stored: string | null) => mapsUrl === null || stored === mapsUrl;
+
+  if (actor) {
+    // Les offres payantes remesurent quand elles veulent — c'est ce qu'elles
+    // achètent. Le compte gratuit, lui, a une analyse à vie : la lui rendre
+    // vaut mieux que de l'envoyer sur la page des tarifs pour un site qu'il a
+    // déjà fait mesurer.
+    if (actor.plan !== "free") return null;
+
+    const own = await prisma.analysis.findFirst({
+      where: { userId: actor.id, domain },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, mapsUrl: true },
+    });
+    return own && sameMaps(own.mapsUrl) ? own.id : null;
+  }
+
+  // Le cookie de l'analyse gratuite : le chemin le plus sûr, c'est le sien.
+  if (usedAnalysisId) {
+    const cookied = await prisma.analysis.findUnique({
+      where: { id: usedAnalysisId },
+      select: { id: true, domain: true, mapsUrl: true },
+    });
+    if (cookied && cookied.domain === domain && sameMaps(cookied.mapsUrl)) {
+      return cookied.id;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Orchestration complète d'une analyse GEO : validation d'URL → anti-SSRF →
+ * repêchage → quota → collecte de signaux → analyse → persistance.
+ *
+ * Le repêchage passe avant le quota : rouvrir sa propre analyse d'un site déjà
+ * mesuré ne coûte rien et ne consomme donc rien.
+ *
  * Aucune dépendance au framework (pas de NextResponse) : réutilisable en route ou server action.
  */
 export async function runAnalysis(params: {
@@ -116,16 +192,34 @@ export async function runAnalysis(params: {
     return { ok: false, reason: "blocked_url", status: 400, detail };
   }
 
+  // Visiteur anonyme : son e-mail est rattaché à l'analyse (même colonne que
+  // l'e-mail de paiement invité). Une saisie farfelue est simplement ignorée.
+  const guestEmail = params.actor ? null : normalizeEmail(params.leadEmail);
+  const domain = new URL(url).hostname.replace(/^www\./, "");
+
+  // Le même site, déjà mesuré pour ce visiteur : on le rouvre. Avant le quota,
+  // parce que rouvrir son propre rapport ne consomme rien — ni crawl, ni
+  // analyse, ni le droit à la mesure qu'il n'a pas encore utilisé.
+  const reusable = await findReusableAnalysis({
+    actor: params.actor,
+    domain,
+    mapsUrl,
+    usedAnalysisId: params.usedAnalysisId ?? null,
+  });
+
+  if (reusable) {
+    // L'adresse repart quand même vers la liste de diffusion : elle vit hors du
+    // cycle des analyses, et le visiteur vient de la donner à nouveau.
+    if (guestEmail) await rememberLead(guestEmail, domain, reusable);
+    return { ok: true, id: reusable, reused: true };
+  }
+
   const quotaFailure = await checkQuota(
     params.actor,
     params.ip,
     params.usedAnalysisId ?? null,
   );
   if (quotaFailure) return quotaFailure;
-
-  // Visiteur anonyme : son e-mail est rattaché à l'analyse (même colonne que
-  // l'e-mail de paiement invité). Une saisie farfelue est simplement ignorée.
-  const guestEmail = params.actor ? null : normalizeEmail(params.leadEmail);
 
   try {
     const signals = await collectSignals(url);
@@ -147,25 +241,30 @@ export async function runAnalysis(params: {
       },
     });
 
-    // Liste de diffusion : une ligne par adresse, hors du cycle de vie des
-    // analyses. Best-effort — une erreur ici ne doit pas priver le visiteur du
-    // rapport qu'il vient d'attendre.
-    if (guestEmail) {
-      try {
-        await captureLead({
-          email: guestEmail,
-          domain: result.domain,
-          analysisId: record.id,
-        });
-      } catch (err) {
-        console.error("Enregistrement du lead échoué :", err);
-      }
-    }
+    if (guestEmail) await rememberLead(guestEmail, result.domain, record.id);
 
     return { ok: true, id: record.id };
   } catch (err) {
     console.error("Erreur d'analyse :", err);
     return { ok: false, reason: "failed", status: 500 };
+  }
+}
+
+/**
+ * Liste de diffusion : une ligne par adresse, hors du cycle de vie des analyses.
+ *
+ * Best-effort — une erreur ici ne doit pas priver le visiteur du rapport qu'il
+ * vient d'attendre.
+ */
+async function rememberLead(
+  email: string,
+  domain: string,
+  analysisId: string,
+): Promise<void> {
+  try {
+    await captureLead({ email, domain, analysisId });
+  } catch (err) {
+    console.error("Enregistrement du lead échoué :", err);
   }
 }
 

@@ -25,12 +25,12 @@ import { LockedPill, Obscured, Redacted } from "@/components/dashboard/LockedCon
 const PREVIEW_DECOY_COUNT = 10;
 
 /** Logos des moteurs IA (chemins dans /public), indexés par nom de moteur. */
-export const ENGINE_LOGOS: Record<string, string> = {
-  ChatGPT: "/chatgpt.png",
-  Gemini: "/gemini.webp",
-  Perplexity: "/perplexity.png",
-  Claude: "/claude.svg",
-};
+import { ENGINE_LOGOS } from "@/constants/engine-logos";
+
+// Ré-exporté ici pour ne pas casser les appelants clients qui le lisaient déjà
+// à cette adresse. La table elle-même vit dans un module neutre : un composant
+// serveur ne peut pas lire un objet exporté depuis un module « use client ».
+export { ENGINE_LOGOS };
 
 /**
  * D'où vient ce top 10, dit en une ligne sous le classement.

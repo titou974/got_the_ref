@@ -16,11 +16,16 @@ import { fetchGooglePlace } from "@/lib/apify/google-place";
 import { InvalidMapsUrlError, normalizeMapsUrl } from "@/lib/geo/maps";
 import type { GooglePlace, MapsAdvice } from "@/lib/apify/place-types";
 import { collectSignals } from "@/lib/geo/fetcher";
+import { signalsFingerprint } from "@/lib/geo/fingerprint";
 import { analyzeSite, refreshEngineRankings } from "@/lib/geo/analyzer";
 import { regenerateOnPageElement } from "@/lib/geo/keywords";
 import { generateNicheQuestions } from "@/lib/geo/niche-questions";
 import { findContactPoints, normalizeDomain } from "@/lib/geo/contact-finder";
-import { DASHBOARD_ENGINES, type GeoAnalysisResult } from "@/lib/geo/types";
+import {
+  DASHBOARD_ENGINES,
+  type EngineScore,
+  type GeoAnalysisResult,
+} from "@/lib/geo/types";
 import { publishArticle, verifyConnection, type Credentials } from "./connectors";
 import { applyOnPage, applyStructure } from "./site-sync";
 import { buildStructureFiles } from "@/lib/geo/structure-files";
@@ -53,6 +58,7 @@ import {
   FREE_CONTENT_REWRITES,
   analysisNeedsUpgrade,
   articleTopicsFor,
+  canFetchPlace,
   PAID_ARTICLE_TOPICS,
   canFetchPlace,
   draftsSeedArticles,
@@ -235,6 +241,9 @@ export const prepareDashboardAction = authActionClient
       overallScore: result.overallScore,
       data,
       unlocked: true,
+      // L'empreinte de ce qui vient d'être noté : la première reprise s'y
+      // compare pour savoir si le site a bougé, avant de payer un jugement.
+      signalsHash: signalsFingerprint(signals),
     };
 
     // Mise à jour plutôt que création quand l'analyse existait déjà : le client
@@ -288,6 +297,75 @@ export const prepareDashboardAction = authActionClient
   });
 
 /**
+ * Sept jours entre deux relevés de classement.
+ *
+ * Interroger ChatGPT, Gemini, Perplexity et Claude sur deux requêtes chacun est
+ * de loin l'appel le plus cher du produit, et le seul dont le résultat ne
+ * dépend pas du site : une place gagnée dans un classement se joue sur des
+ * semaines de travail hors-site, pas d'un matin à l'autre. Une fois par
+ * semaine, donc — sur la reprise quotidienne comme sur le bouton de la section
+ * « Classements IA », qui partagent ce même compteur.
+ */
+const RANKINGS_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** L'analyse enregistrée, avec la date du dernier relevé de classement. */
+type StoredAnalysis = GeoAnalysisResult & { rankingsCheckedAt?: string | null };
+
+/** La date du prochain relevé autorisé, ou `null` s'il est ouvert maintenant. */
+function rankingsBlockedUntil(stored: StoredAnalysis): Date | null {
+  const raw = stored.rankingsCheckedAt;
+  if (!raw) return null;
+
+  const last = new Date(raw);
+  if (Number.isNaN(last.getTime())) return null;
+
+  const next = new Date(last.getTime() + RANKINGS_INTERVAL_MS);
+  return next > new Date() ? next : null;
+}
+
+/**
+ * Relève les classements si la semaine est écoulée, sinon recopie les anciens.
+ *
+ * Rend toujours de quoi réécrire l'analyse : les moteurs à enregistrer, la
+ * requête envoyée, et la date à inscrire comme dernier relevé. Un moteur qui ne
+ * répond pas garde son dernier classement réel — `refreshEngineRankings` s'en
+ * charge — plutôt que de recevoir un zéro.
+ */
+async function refreshRankingsIfDue(
+  stored: StoredAnalysis,
+  options: {
+    tier: AccessTier;
+    niche: string | null;
+    city: string | null;
+    isPhysical: boolean;
+  },
+): Promise<{ engines: EngineScore[]; liveQuery: string | null; checkedAt: string | null }> {
+  const unchanged = {
+    engines: stored.engines,
+    liveQuery: stored.liveQuery ?? null,
+    checkedAt: stored.rankingsCheckedAt ?? null,
+  };
+
+  if (rankingsBlockedUntil(stored)) return unchanged;
+
+  // Un compte gratuit ne fait mesurer que Gemini, dont le relevé passe par le
+  // grounding Google Search sans appel facturé en plus.
+  const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(options.tier, engine));
+  if (engines.length === 0) return unchanged;
+
+  const { engines: refreshed, liveQuery } = await refreshEngineRankings(stored, {
+    declared: {
+      niche: options.niche,
+      location: options.isPhysical ? options.city : null,
+      isPhysical: options.isPhysical,
+    },
+    engines,
+  });
+
+  return { engines: refreshed, liveQuery, checkedAt: new Date().toISOString() };
+}
+
+/**
  * La reprise quotidienne de l'analyse.
  *
  * Le client corrige son site — il colle un H1 réécrit, il pose un JSON-LD, il
@@ -307,10 +385,19 @@ export const prepareDashboardAction = authActionClient
  *     false`) et l'ancien bloc est recopié tel quel : une estimation refaite
  *     chaque jour ferait osciller un chiffre que le client construit sur des
  *     mois, et effacerait le travail de prospection déjà mené.
- *   — les classements moteurs. Ils ont leur propre reprise
- *     (`refreshRankingsAction`), qui coûte quatre appels payants ; aucun moteur
- *     n'est interrogé ici (`engines: []`) et les relevés en place sont
- *     conservés.
+ *   — les classements moteurs. Ce sont les appels les plus chers du produit —
+ *     quatre API interrogées, deux requêtes chacune — et une place dans un
+ *     classement ne bouge pas d'un jour sur l'autre. La reprise quotidienne ne
+ *     les redemande donc qu'une fois par semaine (`RANKINGS_INTERVAL_MS`) ;
+ *     les six autres jours, les relevés en place sont recopiés tels quels.
+ *
+ * Et ce qu'elle ne refait pas non plus, c'est la notation d'une page qui n'a
+ * pas changé. Le crawl, lui, part tous les jours : il est gratuit. Son
+ * empreinte (`signalsFingerprint`) est comparée à celle de la dernière
+ * notation, et si le site lit exactement pareil, le modèle n'est pas appelé :
+ * les notes de la veille sont reconduites au chiffre près. Sans cette
+ * comparaison, deux jugements du même modèle sur la même page rendaient 62 puis
+ * 64, et le tableau de bord annonçait un progrès que personne n'avait fait.
  *
  * Une fois par journée civile, pas par tranche de vingt-quatre heures : une
  * reprise lancée à 23 h ne doit pas fermer la porte jusqu'au lendemain soir.
@@ -362,7 +449,13 @@ export const refreshAnalysisAction = authActionClient
     const record = await prisma.analysis.findFirst({
       where: { userId, ...(profile.domain ? { domain: profile.domain } : {}) },
       orderBy: { createdAt: "desc" },
-      select: { id: true, data: true, createdAt: true, refreshedAt: true },
+      select: {
+        id: true,
+        data: true,
+        createdAt: true,
+        refreshedAt: true,
+        signalsHash: true,
+      },
     });
     if (!record) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
 
@@ -377,9 +470,9 @@ export const refreshAnalysisAction = authActionClient
       );
     }
 
-    let stored: GeoAnalysisResult & { tier?: string; accessTier?: AccessTier };
+    let stored: StoredAnalysis & { tier?: string; accessTier?: AccessTier };
     try {
-      stored = JSON.parse(record.data) as GeoAnalysisResult & {
+      stored = JSON.parse(record.data) as StoredAnalysis & {
         tier?: string;
         accessTier?: AccessTier;
       };
@@ -388,23 +481,43 @@ export const refreshAnalysisAction = authActionClient
     }
 
     const mode = profile.businessKind === "online" ? "online" : "physical";
-    const signals = await collectSignals(profile.siteUrl);
 
-    const fresh = await analyzeSite(
-      signals,
-      {
-        mode,
-        // Aucun moteur interrogé, aucun relevé hors-site : la reprise mesure la
-        // page, pas le marché. Ce qui coûte cher a sa propre commande.
-        engines: [],
-        offsite: false,
-        mapsUrl: profile.mapsUrl ?? null,
-        declaredNiche: profile.niche,
-        declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
-        brandTone: profile.toneSummary,
-      },
-      "paid",
-    );
+    // Le crawl part tous les jours : il ne coûte rien, et c'est lui qui dit si
+    // le site a bougé.
+    const signals = await collectSignals(profile.siteUrl);
+    const hash = signalsFingerprint(signals);
+    const rescore = hash !== record.signalsHash;
+
+    // Une page identique garde ses notes, au chiffre près. Le modèle n'est
+    // appelé que si le crawl a lu autre chose qu'hier : c'est ce qui fait qu'un
+    // écart affiché au tableau de bord vient d'une correction, et jamais de
+    // l'humeur d'un jugement rejoué.
+    const fresh = rescore
+      ? await analyzeSite(
+          signals,
+          {
+            mode,
+            // Aucun moteur interrogé ici, aucun relevé hors-site : la notation
+            // mesure la page. Les classements sont repris juste en dessous, au
+            // rythme hebdomadaire qui leur convient.
+            engines: [],
+            offsite: false,
+            mapsUrl: profile.mapsUrl ?? null,
+            declaredNiche: profile.niche,
+            declaredLocation: mode === "physical" ? (profile.cities[0] ?? null) : null,
+            brandTone: profile.toneSummary,
+          },
+          "paid",
+        )
+      : stored;
+
+    // Les classements, une fois par semaine et pas plus.
+    const rankings = await refreshRankingsIfDue(stored, {
+      tier,
+      niche: profile.niche,
+      city: mode === "physical" ? (profile.cities[0] ?? null) : null,
+      isPhysical: mode === "physical",
+    });
 
     // Le rapport enregistré est celui d'aujourd'hui pour tout ce qui vient de la
     // page, et celui d'hier pour tout ce que la reprise n'a pas mesuré. Les
@@ -413,8 +526,8 @@ export const refreshAnalysisAction = authActionClient
     const merged: GeoAnalysisResult = {
       ...stored,
       ...fresh,
-      engines: stored.engines,
-      liveQuery: stored.liveQuery ?? null,
+      engines: rankings.engines,
+      liveQuery: rankings.liveQuery,
       localRankings: stored.localRankings,
       webPresence: stored.webPresence,
       backlinks: stored.backlinks ?? null,
@@ -431,7 +544,14 @@ export const refreshAnalysisAction = authActionClient
         businessType: merged.businessType,
         overallScore: merged.overallScore,
         refreshedAt: new Date(),
-        data: JSON.stringify({ ...stored, ...merged, tier: "paid", accessTier: tier }),
+        signalsHash: hash,
+        data: JSON.stringify({
+          ...stored,
+          ...merged,
+          rankingsCheckedAt: rankings.checkedAt,
+          tier: "paid",
+          accessTier: tier,
+        }),
       },
     });
 
@@ -517,6 +637,11 @@ function readAnalysisTier(raw: string): AccessTier | null {
  * moteurs, plutôt que de relancer l'audit complet. Le reste de l'analyse
  * enregistrée est conservé tel quel.
  *
+ * Une fois par semaine, et le bouton le dit. Ce sont les appels les plus chers
+ * du produit, et ils partagent leur compteur avec la reprise quotidienne : un
+ * relevé lancé ici ferme la porte pour sept jours, à la main comme
+ * automatiquement.
+ *
  * La requête envoyée est formée sur la niche et la ville déclarées à l'accueil,
  * comme dans l'analyse de base — pas sur le nom du site.
  */
@@ -536,29 +661,33 @@ export const refreshRankingsAction = authActionClient
     });
     if (!record) throw new AppError("Analyse indisponible.", "NO_ANALYSIS", 400);
 
-    let stored: GeoAnalysisResult & { tier?: string };
+    let stored: StoredAnalysis & { tier?: string };
     try {
-      stored = JSON.parse(record.data) as GeoAnalysisResult & { tier?: string };
+      stored = JSON.parse(record.data) as StoredAnalysis & { tier?: string };
     } catch {
       throw new AppError("Analyse illisible.", "BAD_ANALYSIS", 500);
     }
 
+    const blockedUntil = rankingsBlockedUntil(stored);
+    if (blockedUntil) {
+      throw new AppError(
+        `Les classements se relèvent une fois par semaine. Le prochain relevé s'ouvre le ${blockedUntil.toLocaleDateString(
+          "fr-FR",
+          { day: "numeric", month: "long" },
+        )}.`,
+        "RANKINGS_COOLDOWN",
+        429,
+      );
+    }
+
     const isPhysical = profile?.businessKind !== "online";
-
-    // Un compte gratuit ne fait mesurer que Gemini : son relevé passe par le
-    // grounding Google Search, sans appel facturé en plus. ChatGPT, Perplexity
-    // et Claude se paient à chaque passage — ils ne sont donc pas exécutés, et
-    // leurs cartes restent voilées plutôt que remplies d'un chiffre inventé.
     const { tier } = await getAccess(userId);
-    const engines = DASHBOARD_ENGINES.filter((engine) => runsEngine(tier, engine));
 
-    const { engines: refreshed, liveQuery } = await refreshEngineRankings(stored, {
-      declared: {
-        niche: profile?.niche ?? null,
-        location: isPhysical ? (profile?.cities[0] ?? null) : null,
-        isPhysical,
-      },
-      engines,
+    const rankings = await refreshRankingsIfDue(stored, {
+      tier,
+      niche: profile?.niche ?? null,
+      city: profile?.cities[0] ?? null,
+      isPhysical,
     });
 
     await prisma.analysis.update({
@@ -566,15 +695,15 @@ export const refreshRankingsAction = authActionClient
       data: {
         data: JSON.stringify({
           ...stored,
-          engines: refreshed,
-          liveQuery,
-          rankingsCheckedAt: new Date().toISOString(),
+          engines: rankings.engines,
+          liveQuery: rankings.liveQuery,
+          rankingsCheckedAt: rankings.checkedAt,
         }),
       },
     });
 
     revalidateDashboard();
-    return { measured: refreshed.filter((engine) => engine.measured).length };
+    return { measured: rankings.engines.filter((engine) => engine.measured).length };
   });
 
 // ── Mois éditorial d'accueil ─────────────────────────────────────────────────
