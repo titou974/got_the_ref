@@ -33,13 +33,17 @@ const APPEAR_MS = 320;
 export function MapsGate({
   hasUrl,
   hasPlace,
-  /** Section fermée par l'offre : on ne demande rien qu'on ne saurait relever. */
-  locked,
+  /**
+   * Le relevé peut partir : l'offre l'ouvre, ou c'est le premier — celui qui est
+   * accordé à un compte gratuit (cf. `canFetchPlace`). Faux, on ne demande rien
+   * qu'on ne saurait relever.
+   */
+  canFetch,
   children,
 }: {
   hasUrl: boolean;
   hasPlace: boolean;
-  locked: boolean;
+  canFetch: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -69,10 +73,10 @@ export function MapsGate({
   // La fenêtre monte une fois la page posée : ouverte à la milliseconde zéro,
   // elle passerait pour un défaut d'affichage plutôt que pour une question.
   useEffect(() => {
-    if (hasUrl || locked) return;
+    if (hasUrl || !canFetch) return;
     const timer = setTimeout(() => setOpen(true), APPEAR_MS);
     return () => clearTimeout(timer);
-  }, [hasUrl, locked]);
+  }, [hasUrl, canFetch]);
 
   const working = running || sync.isPending || isRefreshing;
 
@@ -87,7 +91,7 @@ export function MapsGate({
       ) : (
         <FirstRun
           hasUrl={hasUrl}
-          locked={locked}
+          canFetch={canFetch}
           error={sync.result.serverError ?? null}
           onAskLink={() => setOpen(true)}
           onSync={() => {
@@ -116,13 +120,13 @@ export function MapsGate({
  */
 function FirstRun({
   hasUrl,
-  locked,
+  canFetch,
   error,
   onAskLink,
   onSync,
 }: {
   hasUrl: boolean;
-  locked: boolean;
+  canFetch: boolean;
   error: string | null;
   onAskLink: () => void;
   onSync: () => void;
@@ -142,7 +146,7 @@ function FirstRun({
           : "Collez le lien de votre fiche Google Maps. C'est elle que nous relevons chez Google, avec vos photos, vos horaires et vos avis."}
       </p>
 
-      {locked ? null : (
+      {canFetch ? (
         <button
           type="button"
           onClick={hasUrl ? onSync : onAskLink}
@@ -150,7 +154,7 @@ function FirstRun({
         >
           {hasUrl ? "Relever ma fiche" : "Ajouter ma fiche"}
         </button>
-      )}
+      ) : null}
 
       {error ? <p className="mx-auto mt-4 max-w-md text-sm text-danger">{error}</p> : null}
     </section>

@@ -27,6 +27,7 @@ export function WeekPlan({
   checked,
   total,
   panels,
+  locked = false,
 }: {
   tasks: MapsTask[];
   /** Cases cochées sur la fiche, et cases que Google propose pour ce commerce. */
@@ -34,6 +35,8 @@ export function WeekPlan({
   total: number;
   /** La correction de chaque chantier qui s'ouvre sur place, rendue au serveur. */
   panels: Partial<Record<MapsTaskId, React.ReactNode>>;
+  /** L'offre n'ouvre pas les corrections : le tiroir montre leur place, pas leur texte. */
+  locked?: boolean;
 }) {
   const reduced = useReducedMotion();
   const [openId, setOpenId] = useState<MapsTaskId | null>(null);
@@ -79,7 +82,9 @@ export function WeekPlan({
           ) : null}
           {tasks.length === 0
             ? "Rien n'attend de vous. Revenez après votre prochain relevé."
-            : "Dans l'ordre de ce que ça rapporte. Ouvrez, corrigez, passez au suivant."}
+            : locked
+              ? "Dans l'ordre de ce que ça rapporte. Ouvrez pour voir où se pose chaque correction."
+              : "Dans l'ordre de ce que ça rapporte. Ouvrez, corrigez, passez au suivant."}
         </p>
       </header>
 

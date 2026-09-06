@@ -90,11 +90,22 @@ export function SiteSkeleton({
   pagesCrawled,
   /** Le site est rattaché et le connecteur sait écrire : le dépôt est possible. */
   canApply,
+  /**
+   * L'offre n'ouvre pas la page : l'arbre se montre, le pied de carte se tait.
+   *
+   * Les lignes à corriger arrivent alors déjà masquées du serveur (cf.
+   * `veilSiteTree`) et se floutent ici ; le dépôt et les contenus proposés
+   * disparaissent, puisqu'il n'y a rien à déposer ni à lire. L'appel vers les
+   * tarifs est posé sous la carte par le voile qui l'enveloppe, pas ici : une
+   * carte ne vend pas, elle montre.
+   */
+  locked = false,
 }: {
   tree: SiteTree;
   stack: DetectedStack | null;
   pagesCrawled: number;
   canApply: boolean;
+  locked?: boolean;
 }) {
   const router = useRouter();
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -168,13 +179,13 @@ export function SiteSkeleton({
           <TreeRow
             key={node.key}
             node={node}
-            open={showAll || openKey === node.key}
+            open={!node.veiled && (showAll || openKey === node.key)}
             onToggle={() => setOpenKey((current) => (current === node.key ? null : node.key))}
           />
         ))}
       </ul>
 
-      {tree.hasFixes ? (
+      {tree.hasFixes && !locked ? (
         <footer className="mt-2 border-t border-fog px-5 py-5 sm:px-7">
           <div className="flex flex-wrap items-center gap-3">
             <p className="min-w-60 flex-1 text-pretty text-[13px] text-muted">
@@ -293,7 +304,10 @@ function TreeRow({
   }
 
   const tone = TONE[node.status];
-  const expandable = Boolean(node.fix);
+  const expandable = Boolean(node.fix) && !node.veiled;
+  // Le flou ne cache rien qui soit là : le nom et le relevé ont été retirés au
+  // serveur. Il dit seulement, à l'œil, que cette ligne-là se paie.
+  const veil = node.veiled ? "select-none blur-[5px]" : "";
 
   return (
     <li>
@@ -307,18 +321,20 @@ function TreeRow({
         />
         <span
           aria-hidden
-          className={`flex h-[22px] w-[26px] shrink-0 items-center justify-center rounded-[7px] font-mono text-[9px] font-bold ${tone.glyph} ${tone.border}`}
+          className={`flex h-[22px] w-[26px] shrink-0 items-center justify-center rounded-[7px] font-mono text-[9px] font-bold ${tone.glyph} ${tone.border} ${veil}`}
         >
           {node.glyph}
         </span>
 
         <span
-          className={`shrink-0 font-mono text-[13px] ${
+          aria-hidden={node.veiled || undefined}
+          className={`shrink-0 font-mono text-[13px] ${veil} ${
             node.status === "missing" ? "font-semibold text-text" : "text-graphite"
           }`}
         >
           {node.name}
         </span>
+        {node.veiled ? <span className="sr-only">Ligne réservée au Coup de Boost</span> : null}
         {/* La note est le premier élément sacrifié quand la ligne se resserre :
             le nom du fichier et son état suffisent à la lire. */}
         <span className="hidden truncate text-xs text-ash sm:block">{node.note}</span>
