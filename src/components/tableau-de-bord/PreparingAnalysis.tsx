@@ -14,7 +14,13 @@ import { draftsSeedArticles, type AccessTier } from "@/constants/access";
 import { buildLoadingPrompts, type BusinessHint } from "@/lib/geo/loading-prompts";
 import { Card } from "./Card";
 import { AiKeysAnimation } from "./AiKeysAnimation";
-import { ARTICLES_PHASE, PHASE_LABEL_KEYS, auditPhaseFor } from "./AnalysisPhases";
+import {
+  ARTICLES_PHASE,
+  PHASE_LABEL_KEYS,
+  PhaseAnimation,
+  auditPhaseFor,
+  usesKeyboard,
+} from "./AnalysisPhases";
 
 /**
  * L'analyse lancée à la première ouverture du tableau de bord — et rejouée le
@@ -39,14 +45,15 @@ import { ARTICLES_PHASE, PHASE_LABEL_KEYS, auditPhaseFor } from "./AnalysisPhase
  *
  * ## Ce que l'écran montre
  *
- * Une seule scène, comme sur l'écran d'analyse d'origine : le clavier, le nom
- * de l'étape en cours, la barre. La question du client s'écrit sur le clavier —
- * « boulangerie artisanale au Havre » —, et c'est la requête dont dépend son
+ * Une scène à la fois, comme sur l'écran d'analyse d'origine : l'animation du
+ * temps en cours, son nom, la barre. Sur la lecture du site et sur l'étape des
+ * moteurs, cette scène est le clavier — la question du client s'y écrit,
+ * « boulangerie artisanale au Havre », et c'est la requête dont dépend son
  * chiffre d'affaires. Elle est posée aux quatre moteurs à tour de rôle, et elle
  * est écrite pour son commerce par DeepSeek Flash (cf. `niche-questions`), avec
- * les gabarits locaux en repli le temps que le modèle réponde. C'est la seule
- * chose de cet écran qu'on lise plutôt qu'on regarde, et c'est pour ça qu'elle
- * y reste du début à la fin.
+ * les gabarits locaux en repli le temps que le modèle réponde. Ce sont les
+ * seuls moments de l'attente où il y a quelque chose à lire plutôt qu'à
+ * regarder.
  *
  * La barre de progression n'est pas un pourcentage mesuré — personne ne sait à
  * l'avance combien de pages a un site. C'est une avance dans le temps, bornée
@@ -407,12 +414,15 @@ export function PreparingAnalysis({
 
       <section className="rounded-[36px] border border-border bg-surface px-5 py-7 sm:px-8 sm:py-9">
         <div className="flex flex-col items-center">
-          {/* Une seule scène, du début à la fin : le clavier. C'est le seul
-              moment de l'attente où le client a quelque chose à lire — sa
-              propre requête, posée aux quatre moteurs — plutôt qu'à regarder.
-              Les animations qui défilaient ici illustraient l'attente sans rien
-              en dire, et changeaient de sujet toutes les vingt secondes. */}
-          <AiKeysAnimation prompts={prompts} />
+          {/* Une seule scène à la fois. Sur la lecture du site et sur l'étape
+              des moteurs, cette scène est le clavier : ce sont les moments où
+              le client a quelque chose à lire — sa propre requête — plutôt
+              qu'à regarder. Les autres étapes gardent leur animation. */}
+          {usesKeyboard(phase) ? (
+            <AiKeysAnimation prompts={prompts} />
+          ) : (
+            <PhaseAnimation index={phase} />
+          )}
 
           <p
             aria-live="polite"
