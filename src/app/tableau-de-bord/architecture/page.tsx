@@ -71,6 +71,8 @@ export default async function ArchitecturePage() {
   const canApply =
     context.site?.status === "connected" && context.site.capabilities.includes("edit");
 
+  const openFixes = tree.missingCount + tree.warnCount;
+
   return (
     <>
       <PageHeader title={t("pageTitle")} subtitle={ta("architecture.subtitle")} />

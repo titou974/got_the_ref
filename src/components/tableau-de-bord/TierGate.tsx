@@ -155,6 +155,20 @@ function GateBar({
  *
  * Il se pose dans un parent `relative isolate` : c'est la carte qui décide de
  * quelle zone il couvre, elle seule sait où son flou commence.
+ *
+ * Deux façons de le poser, et le choix tient à une question : la zone floutée
+ * est-elle plus haute que l'appel ?
+ *
+ *   — En absolu (par défaut) : oui. Une courbe, un classement, une grille de
+ *     vignettes occupent déjà la place ; le panneau se pose dessus sans rien
+ *     déplacer.
+ *
+ *   — `flow` : non. La zone est courte — quatre barres grises, un tiroir de
+ *     correction — et un panneau posé en absolu n'y compte pour rien : le bloc
+ *     garde la hauteur du flou, et l'appel en déborde, rogné en haut comme en
+ *     bas par l'`overflow-hidden` de la carte. En flux, il partage la case de
+ *     grille avec le flou (`[grid-area:1/1]`) et c'est le plus haut des deux qui
+ *     donne sa hauteur au bloc : l'appel est bien par-dessus, jamais dedans.
  */
 export function GatePanel({
   offer,
@@ -162,15 +176,22 @@ export function GatePanel({
   logo,
   logoAlt = "",
   values,
+  flow = false,
 }: {
   offer: UpsellOffer;
   item: string;
   logo?: string;
   logoAlt?: string;
   values?: Record<string, string | number>;
+  /** L'appel donne sa hauteur au bloc au lieu d'être posé en absolu dessus. */
+  flow?: boolean;
 }) {
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+    <div
+      className={`z-10 flex items-center justify-center p-4 ${
+        flow ? "relative h-full w-full" : "absolute inset-0"
+      }`}
+    >
       <div className="w-full max-w-sm rounded-3xl border border-fog bg-snow/95 p-5 text-center shadow-[var(--shadow-md)] backdrop-blur-sm">
         <div className="flex flex-col items-center gap-2.5">
           <OfferBadge offer={offer} />
