@@ -209,9 +209,10 @@ async function NoDoor({
 
   return (
     <div className="p-5 sm:p-6">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-steel">
-        {t("eyebrow")}
-      </p>
+      {/* Pas de surtitre ici. « Prochaine publication » annonçait un départ
+          au-dessus d'une carte qui explique justement que rien ne peut partir :
+          sans porte, il n'y a pas de prochaine publication à annoncer. Le nom du
+          site ouvre donc directement. */}
 
       {/* Le site, nommé et reconnaissable, avant qu'on parle de le rattacher.
           La carte annonçait « aucun site » à un client qui en a un, qu'on
@@ -219,13 +220,13 @@ async function NoDoor({
           manque, c'est la clé de dépôt, pas le site. Son icône le dit plus vite
           que la phrase — c'est celle de son onglet de navigateur. */}
       {domain ? (
-        <span className="mt-3 inline-flex max-w-full items-center gap-2 rounded-pill border border-border bg-mist px-3 py-1.5">
+        <span className="inline-flex max-w-full items-center gap-2 rounded-pill border border-border bg-mist px-3 py-1.5">
           <SiteFavicon domain={domain} className="size-4" />
           <span className="truncate text-[13px] font-medium text-text">{domain}</span>
         </span>
       ) : null}
 
-      <p className={`text-base font-medium text-text ${domain ? "mt-2.5" : "mt-3"}`}>
+      <p className={`text-base font-medium text-text ${domain ? "mt-2.5" : ""}`}>
         {linked ? t("manualTitle") : t("unconnectedTitle")}
       </p>
       <p className="mt-1 text-sm leading-relaxed text-muted">
