@@ -34,6 +34,12 @@ export const maxDuration = 300;
  *
  * La grille du contenu éditorial est passée, elle, à l'écran Contenu, où sa
  * note se calcule.
+ *
+ * L'écran ne se ferme plus en bloc pour un compte gratuit : la carte reste
+ * lisible, l'arbre entier, les lignes en place en vert. Seules celles qui
+ * manquent sont masquées — au serveur, pas à la feuille de style — et l'appel
+ * passe en pied de carte. C'est la forme du site qu'on montre ; c'est le nom du
+ * fichier absent et son contenu qu'on vend.
  */
 export default async function ArchitecturePage() {
   const user = await requireUser();
@@ -68,8 +74,8 @@ export default async function ArchitecturePage() {
       <PageHeader title={t("pageTitle")} subtitle={ta("architecture.subtitle")} />
 
       {/* Ce que l'écran fait, une seule fois, pour les offres qui l'ouvrent. Sous
-          voile, l'arborescence n'a aucune valeur à montrer : l'expliquer ne
-          servirait qu'à vendre. */}
+          voile, les lignes qui manquent n'ont pas de nom : expliquer comment les
+          déposer ne servirait qu'à vendre. */}
       {locked ? null : <StructureIntroModal domain={analysis.signals.domain} />}
 
       {locked ? (

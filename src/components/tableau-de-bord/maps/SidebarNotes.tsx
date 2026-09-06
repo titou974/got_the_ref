@@ -43,11 +43,24 @@ export function CoherenceNote({ matches }: { matches: CoherenceMatch[] }) {
 
 type TextState = { label: string; tone: "empty" | "proposed" | "ok"; badge: string };
 
-export function TextsNote({ place, advice }: { place: GooglePlace; advice: MapsAdvice | null }) {
+export function TextsNote({
+  place,
+  advice,
+  locked = false,
+}: {
+  place: GooglePlace;
+  advice: MapsAdvice | null;
+  /**
+   * Aucune réécriture n'a été demandée, et il n'y en aura pas avant
+   * l'abonnement : un texte présent se dit alors « Écrit », jamais « Conforme »
+   * — conforme à quoi, puisque rien n'a été proposé ?
+   */
+  locked?: boolean;
+}) {
   const rows: TextState[] = [
-    state("Le nom", place.title, advice?.title ?? null),
-    state("Description courte", place.description, advice?.description ?? null),
-    state("« À propos »", place.ownerDescription, advice?.about ?? null),
+    state("Le nom", place.title, advice?.title ?? null, locked),
+    state("Description courte", place.description, advice?.description ?? null, locked),
+    state("« À propos »", place.ownerDescription, advice?.about ?? null, locked),
   ];
 
   return (
@@ -78,8 +91,14 @@ export function TextsNote({ place, advice }: { place: GooglePlace; advice: MapsA
 }
 
 /** Vide sur la fiche, réécrit ici, ou tel quel : les trois seuls états d'un texte. */
-function state(label: string, current: string | null, proposed: string | null): TextState {
+function state(
+  label: string,
+  current: string | null,
+  proposed: string | null,
+  locked: boolean,
+): TextState {
   if (!current) return { label, tone: "empty", badge: "Vide" };
+  if (locked) return { label, tone: "ok", badge: "Écrit" };
   if (proposed && proposed.trim() !== current.trim()) {
     return { label, tone: "proposed", badge: "Proposé" };
   }

@@ -296,7 +296,7 @@ export default async function GoogleMapsPage() {
                 <PlaceMiniCard place={place} fetchedLabel={fetchedLabel} />
                 <SyncPlaceButton hasPlace stale={snapshot?.stale} block locked={locked} />
                 <CoherenceNote matches={coherence?.matches ?? []} />
-                <TextsNote place={place} advice={advice} />
+                <TextsNote place={place} advice={advice} locked={locked} />
               </div>
             </div>
           ) : null}
