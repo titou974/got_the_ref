@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import type { DetectedStack } from "@/lib/geo/types";
 import type { SiteConnectSetup } from "@/components/tableau-de-bord/SiteConnectForm";
 import { ConnectSiteModal } from "./ConnectSiteModal";
+import { useConnectSite } from "./ConnectSiteTrigger";
 
 /**
  * Barre d'action du rapport. Elle reste à portée de pouce en permanence :
@@ -90,10 +91,19 @@ export function SolveAgentsBar({
 }) {
   const t = useTranslations("analysisReport.solve");
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const onArticles = Boolean(articlesHref && pathname === articlesHref);
+
+  // Le bandeau du haut de la page Articles demande la même modale : il n'en
+  // monte pas une seconde, il lève l'état que la coque tient pour les deux. Hors
+  // du tableau de bord — sur le rapport public — il n'y a pas de coque, et la
+  // barre garde alors son propre état.
+  const trigger = useConnectSite();
+  const open = trigger ? trigger.open : localOpen;
+  const close = trigger ? trigger.close : () => setLocalOpen(false);
+  const show = trigger ? trigger.requestOpen : () => setLocalOpen(true);
 
   // Le renvoi ne vaut que hors de l'onglet Contenu : une fois dessus, un bouton
   // qui recharge la page où l'on est déjà ne ferait rien de visible.
@@ -158,7 +168,7 @@ export function SolveAgentsBar({
           ) : (
             <button
               type="button"
-              onClick={() => setOpen(true)}
+              onClick={show}
               className="flex min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:px-6"
             >
               <SparkIcon />
@@ -221,7 +231,7 @@ export function SolveAgentsBar({
             connect={connect}
             purpose={onArticles ? "publish" : "fix"}
             articles={articles}
-            onClose={() => setOpen(false)}
+            onClose={close}
           />
         )}
       </AnimatePresence>
