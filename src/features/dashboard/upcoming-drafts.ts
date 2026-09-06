@@ -1,7 +1,12 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { tierAtLeast } from "@/constants/access";
+import {
+  BOOST_DRAFTED_ARTICLES,
+  draftableArticles,
+  tierAtLeast,
+  type AccessTier,
+} from "@/constants/access";
 import { getAccess } from "@/features/billing/access";
 import { contextForWriting } from "./brand-tone";
 import { parseOutline } from "./outline";
@@ -24,6 +29,12 @@ import { writeArticle } from "./service";
  * semaines, et que le client aura eu le temps de faire reprendre dix fois d'ici
  * là. Deux semaines, c'est ce qu'il faut pour qu'il ait toujours de la lecture
  * d'avance et que rien ne parte sans avoir été relu.
+ *
+ * Le Coup de Boost passe par la même file, avec une autre borne : sa semaine.
+ * Les cinq premiers articles du planning s'écrivent dès son arrivée, et s'y
+ * arrêtent. Le mois entier reste posé au calendrier — c'est ce qui montre ce que
+ * son site publierait dans la durée —, mais les sujets suivants gardent leurs
+ * titres, avec l'abonnement en face.
  *
  * La fenêtre avance avec lui. À chaque retour dans son interface, les sujets
  * qui viennent d'y entrer sont écrits, et jamais devant lui : `after()` rend la
@@ -112,13 +123,9 @@ export async function backfillUpcomingDrafts(userId: string): Promise<void> {
 
   try {
     const { tier } = await getAccess(userId);
-    if (!tierAtLeast(tier, "allin")) return;
+    if (!tierAtLeast(tier, "boost")) return;
 
-    const planned = await prisma.article.findMany({
-      where: { userId, ...pendingWhere() },
-      orderBy: { scheduledFor: "asc" },
-      select: { id: true, title: true, keyword: true, outline: true },
-    });
+    const planned = await draftableQueue(userId, tier);
     if (planned.length === 0) return;
 
     running.add(userId);
@@ -142,20 +149,50 @@ export async function backfillUpcomingDrafts(userId: string): Promise<void> {
 }
 
 /**
- * Les sujets que la file prend en charge : sans texte, et datés d'ici la fin de
- * la semaine suivante.
+ * Les sujets que la file prend en charge, dans l'ordre du planning.
  *
- * Un sujet sans date n'en fait pas partie. Le planning en date toujours un ;
- * s'il en restait un sans, il attendrait que le client le demande depuis son
- * atelier, plutôt que de passer devant des articles qui, eux, ont une date à
- * tenir.
+ * Deux bornes selon l'offre, et une seule question au bout : cet article-là
+ * est-il de ceux qu'on a vendus ?
+ *
+ * L'abonnement borne par la date — la fin de la semaine suivante — et la borne
+ * avance à chaque visite. Le Coup de Boost borne par le compte : sa semaine, les
+ * cinq premiers du planning, quelle que soit leur date. Un client qui achète un
+ * jeudi aurait sinon deux articles pour une semaine vendue, la borne de date
+ * tombant deux jours plus tard.
+ *
+ * Un sujet sans date reste dehors dans les deux cas. Le planning en date
+ * toujours un ; s'il en restait un sans, il attendrait que le client le demande
+ * depuis son atelier plutôt que de passer devant des articles qui, eux, ont une
+ * date à tenir.
  */
-function pendingWhere() {
-  return {
-    status: "planned",
-    body: "",
-    scheduledFor: { not: null, lte: draftHorizon() },
-  } as const;
+async function draftableQueue(userId: string, tier: AccessTier): Promise<Planned[]> {
+  const limit = draftableArticles(tier);
+
+  // Le Coup de Boost : les N premiers du planning, écrits ou non. On compte
+  // depuis le début, faute de quoi une reprise déjà rédigée décalerait la borne
+  // et ferait entrer un sixième article dans la semaine vendue.
+  if (limit !== null) {
+    const firstWeek = await prisma.article.findMany({
+      where: { userId, scheduledFor: { not: null } },
+      orderBy: { scheduledFor: "asc" },
+      take: limit,
+      select: { id: true, title: true, keyword: true, outline: true, status: true, body: true },
+    });
+    return firstWeek
+      .filter((article) => article.status === "planned" && article.body === "")
+      .map(({ id, title, keyword, outline }) => ({ id, title, keyword, outline }));
+  }
+
+  return prisma.article.findMany({
+    where: {
+      userId,
+      status: "planned",
+      body: "",
+      scheduledFor: { not: null, lte: draftHorizon() },
+    },
+    orderBy: { scheduledFor: "asc" },
+    select: { id: true, title: true, keyword: true, outline: true },
+  });
 }
 
 /** Rédige un sujet et le passe en brouillon. */
@@ -195,11 +232,57 @@ function draft(context: Awaited<ReturnType<typeof contextForWriting>>) {
  */
 export async function isQueuedForDrafting(
   userId: string,
-  article: { status: string; body: string; scheduledFor: Date | null },
+  article: { id: string; status: string; body: string; scheduledFor: Date | null },
 ): Promise<boolean> {
   if (article.status !== "planned" || article.body.trim().length > 0) return false;
-  if (!article.scheduledFor || article.scheduledFor > draftHorizon()) return false;
+  if (!article.scheduledFor) return false;
 
   const { tier } = await getAccess(userId);
-  return tierAtLeast(tier, "allin");
+  if (!tierAtLeast(tier, "boost")) return false;
+
+  // Le Coup de Boost : sa semaine, et rien après. L'abonnement : ce qui tombe
+  // d'ici la fin de la semaine suivante.
+  return draftableArticles(tier) !== null
+    ? withinBoostWeek(userId, article.id)
+    : article.scheduledFor <= draftHorizon();
+}
+
+/**
+ * L'offre du compte couvre-t-elle la rédaction de cet article ?
+ *
+ * La question que pose l'atelier avant d'ouvrir sa barre, et l'action serveur
+ * avant d'appeler le modèle. Un Coup de Boost achète une semaine : les cinq
+ * premiers articles du planning s'écrivent, les dix-sept suivants restent des
+ * titres jusqu'à l'abonnement. Le reste du produit ne connaît que `canOpen`,
+ * qui répond « oui » pour tout le mois — c'est vrai de l'onglet, pas de chaque
+ * article.
+ *
+ * L'abonnement, lui, n'a pas de borne de ce genre : ce qui règle sa file est une
+ * date, et un article plus lointain se rédige quand même si le client le demande
+ * depuis son atelier. C'est son quota hebdomadaire qui l'arrête, pas le
+ * calendrier.
+ */
+export async function canDraftArticle(userId: string, articleId: string): Promise<boolean> {
+  const { tier } = await getAccess(userId);
+  if (!tierAtLeast(tier, "boost")) return false;
+  if (draftableArticles(tier) === null) return true;
+  return withinBoostWeek(userId, articleId);
+}
+
+/**
+ * L'article fait-il partie des premiers du planning, ceux que le Coup de Boost
+ * rédige ?
+ *
+ * On lit les identifiants plutôt que de comparer des dates : le planning peut
+ * être redaté par le client, et une borne de date laisserait alors entrer un
+ * article qu'il aurait simplement avancé.
+ */
+async function withinBoostWeek(userId: string, articleId: string): Promise<boolean> {
+  const first = await prisma.article.findMany({
+    where: { userId, scheduledFor: { not: null } },
+    orderBy: { scheduledFor: "asc" },
+    take: BOOST_DRAFTED_ARTICLES,
+    select: { id: true },
+  });
+  return first.some((article) => article.id === articleId);
 }

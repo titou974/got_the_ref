@@ -11,6 +11,7 @@ import { backfillBrandTone } from "@/features/dashboard/brand-tone";
 import { backfillUpcomingDrafts } from "@/features/dashboard/upcoming-drafts";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
 import { CrispChat } from "@/components/CrispChat";
+import { ConnectSiteProvider } from "@/components/dashboard/ConnectSiteTrigger";
 import { DashboardShell } from "@/components/tableau-de-bord/DashboardShell";
 import { DockSlot } from "@/components/tableau-de-bord/DockSlot";
 import { SolveAgentsDock } from "@/components/tableau-de-bord/SolveAgentsDock";
@@ -78,38 +79,45 @@ export default async function DashboardLayout({ children }: { children: React.Re
           et l'espacement vertical du contenu décalerait son ancrage. */}
       <WelcomeModal />
 
-      <DashboardShell
-        domain={context.domain}
-        showMaps={context.isPhysical}
-        tier={context.tier}
-        userName={user.name ?? user.email}
-      >
-        {children}
+      {/* Le rattachement du site s'ouvre depuis deux endroits d'une même page —
+          la barre du bas, et le bandeau du haut sur les articles. Le fournisseur
+          les relie : une seule modale, deux boutons qui la demandent. */}
+      <ConnectSiteProvider>
+        <DashboardShell
+          domain={context.domain}
+          showMaps={context.isPhysical}
+          tier={context.tier}
+          userName={user.name ?? user.email}
+        >
+          {children}
 
-        {/* L'exécution ne vit pas au bas d'une page : la barre fixe la porte, et
-            elle suit le client d'un onglet à l'autre. Elle mène aux deux voies —
-            rattacher le site, les agents publient alors eux-mêmes, ou brancher
-            son agent IA sur le serveur MCP, qui lui sert les six chantiers.
+          {/* L'exécution ne vit pas au bas d'une page : la barre fixe la porte,
+              et elle suit le client d'un onglet à l'autre. Elle mène aux deux
+              voies — rattacher le site, les agents publient alors eux-mêmes, ou
+              brancher son agent IA sur le serveur MCP, qui lui sert les six
+              chantiers.
 
-            Elle est là pour tout le monde : c'est le geste que le produit vend,
-            et une page qui ne le montre pas ne le vend pas. Sur un compte
-            gratuit, elle ramène d'abord à l'onglet Contenu — le seul travail que
-            son offre lui ouvre — et n'y déploie la console des agents qu'une
-            fois arrivée. Ce que l'offre borne ensuite, c'est ce que le serveur
-            sert à l'agent : les chantiers fermés arrivent nommés et vides. */}
-        {analysis && (
-          /* Sauf dans un article ouvert : l'atelier y pose sa propre barre, qui
-             publie ou valide le texte affiché. */
-          <DockSlot>
-            <SolveAgentsDock
-              userId={user.id}
-              locked={!tierAtLeast(context.tier, "boost")}
-              result={analysis}
-              diagnostic={buildDiagnostic(analysis)}
-            />
-          </DockSlot>
-        )}
-      </DashboardShell>
+              Elle est là pour tout le monde : c'est le geste que le produit
+              vend, et une page qui ne le montre pas ne le vend pas. Sur un
+              compte gratuit, elle ramène d'abord à l'onglet Contenu — le seul
+              travail que son offre lui ouvre — et n'y déploie la console des
+              agents qu'une fois arrivée. Ce que l'offre borne ensuite, c'est ce
+              que le serveur sert à l'agent : les chantiers fermés arrivent
+              nommés et vides. */}
+          {analysis && (
+            /* Sauf dans un article ouvert : l'atelier y pose sa propre barre,
+               qui publie ou valide le texte affiché. */
+            <DockSlot>
+              <SolveAgentsDock
+                userId={user.id}
+                locked={!tierAtLeast(context.tier, "boost")}
+                result={analysis}
+                diagnostic={buildDiagnostic(analysis)}
+              />
+            </DockSlot>
+          )}
+        </DashboardShell>
+      </ConnectSiteProvider>
     </>
   );
 }

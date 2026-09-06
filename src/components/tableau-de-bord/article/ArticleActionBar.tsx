@@ -51,6 +51,7 @@ export function ArticleActionBar({
   hasBody,
   canPublish,
   linked,
+  beyondPlan,
   locked,
   domain,
   externalUrl,
@@ -78,6 +79,11 @@ export function ArticleActionBar({
   linked: boolean;
   /** L'offre du compte n'ouvre pas la publication : la barre mène aux tarifs. */
   locked: boolean;
+  /**
+   * L'offre rédige, mais pas cet article-là — le Coup de Boost au-delà de sa
+   * première semaine. La barre mène alors à l'abonnement.
+   */
+  beyondPlan: boolean;
   /** Le domaine où l'article sera déposé, nommé dans la confirmation. */
   domain: string | null;
   /** L'adresse de l'article en ligne, quand il est déjà parti. */
@@ -203,14 +209,17 @@ export function ArticleActionBar({
 
   /* ------------------------------- Verrouillé ----------------------------- */
 
-  if (locked) {
+  // Deux portes fermées : l'offre n'ouvre pas la rédaction, ou elle s'arrête
+  // avant cet article-là. La seconde ne se dit pas comme la première — le
+  // client a payé, et cinq de ses articles sont écrits.
+  if (locked || beyondPlan) {
     return (
       <Shell reduced={reduced}>
         <Link
           href={ROUTES.pricing}
           className="flex cursor-pointer items-center justify-center rounded-pill bg-cta px-[22px] py-[11px] text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40"
         >
-          {t("unlock")}
+          {beyondPlan ? t("unlockAllIn") : t("unlock")}
         </Link>
       </Shell>
     );

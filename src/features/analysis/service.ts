@@ -90,19 +90,23 @@ async function checkQuota(
  *
  * Le repêchage reste strictement personnel, et c'est délibéré. Une analyse
  * anonyme se débloque en la payant, et son déblocage récrit le rapport en place
- * : partager une même ligne entre deux visiteurs du même domaine ferait passer
- * l'achat de l'un pour le rapport complet de l'autre. Trois chemins, donc, tous
- * rattachés à la même personne — son compte, son cookie, ou l'adresse e-mail
- * qu'elle vient de saisir.
+ * : rendre une ligne à quelqu'un d'autre que son auteur ferait passer l'achat
+ * de l'un pour le rapport complet de l'autre.
+ *
+ * Deux chemins seulement, donc, et tous deux sont des preuves : la session du
+ * compte, ou le cookie déposé au moment de l'analyse. L'adresse e-mail saisie
+ * dans le formulaire n'en est pas une — elle se tape, et taper celle d'un
+ * inconnu suffirait à repartir avec son rapport. Un visiteur qui a effacé ses
+ * cookies refait donc son analyse : c'est le prix à payer pour que personne ne
+ * puisse réclamer celle d'autrui.
  */
 async function findReusableAnalysis(params: {
   actor: AnalysisActor;
   domain: string;
   mapsUrl: string | null;
   usedAnalysisId: string | null;
-  guestEmail: string | null;
 }): Promise<string | null> {
-  const { actor, domain, mapsUrl, usedAnalysisId, guestEmail } = params;
+  const { actor, domain, mapsUrl, usedAnalysisId } = params;
 
   // La fiche Google est une donnée en plus. Quand le visiteur en apporte une
   // que l'ancienne mesure n'avait pas, il demande bien autre chose : la mesure
@@ -133,19 +137,6 @@ async function findReusableAnalysis(params: {
     if (cookied && cookied.domain === domain && sameMaps(cookied.mapsUrl)) {
       return cookied.id;
     }
-  }
-
-  // Sans cookie — navigation privée, appareil changé, cookies effacés —
-  // l'adresse e-mail saisie rattache le visiteur à son propre rapport. Seules
-  // les analyses anonymes encore fermées entrent ici : une analyse déjà payée
-  // ne se retrouve pas sur une simple saisie d'adresse.
-  if (guestEmail) {
-    const previous = await prisma.analysis.findFirst({
-      where: { guestEmail, domain, userId: null, unlocked: false },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, mapsUrl: true },
-    });
-    if (previous && sameMaps(previous.mapsUrl)) return previous.id;
   }
 
   return null;
@@ -214,7 +205,6 @@ export async function runAnalysis(params: {
     domain,
     mapsUrl,
     usedAnalysisId: params.usedAnalysisId ?? null,
-    guestEmail,
   });
 
   if (reusable) {
