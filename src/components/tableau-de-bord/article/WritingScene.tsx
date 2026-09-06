@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { Keyboard } from "@/components/Keyboard";
 
 /**
  * L'article en train de s'écrire, posé sur la feuille.
@@ -19,21 +20,16 @@ import { useTranslations } from "next-intl";
  * que ce qui est déjà décidé, jamais des phrases d'article factices qui
  * mentiraient sur le texte à venir.
  *
- * Sous la feuille, un clavier. La touche qui s'enfonce est celle de la lettre en
- * train d'être tapée — c'est tout l'intérêt du dispositif : sans cette
- * correspondance, un clavier qui clignote au hasard n'est qu'un décor de plus.
- * Il est en AZERTY, comme celui du client.
+ * Sous la feuille, le clavier du produit (cf. `Keyboard`), celui de l'écran
+ * d'analyse, en plus petit : ici il accompagne un texte, là-bas il est le sujet.
+ * La touche qui s'enfonce est celle de la lettre en train d'être tapée, et c'est
+ * tout l'intérêt du dispositif — sans cette correspondance, un clavier qui
+ * clignote au hasard n'est qu'un décor. Les touches des moteurs ne viennent pas
+ * avec : on n'interroge personne, on écrit.
  *
  * Mouvement réduit : le titre est posé d'un coup, le clavier reste au repos, et
  * la ligne d'état dit ce qui se passe. Personne ne perd d'information.
  */
-
-/** Les trois rangées de lettres d'un clavier français, telles qu'on les voit. */
-const ROWS = [
-  ["a", "z", "e", "r", "t", "y", "u", "i", "o", "p"],
-  ["q", "s", "d", "f", "g", "h", "j", "k", "l", "m"],
-  ["w", "x", "c", "v", "b", "n", "'", ",", "."],
-] as const;
 
 /**
  * Le rythme de la frappe, en millisecondes par caractère.
@@ -51,22 +47,6 @@ const LINE_PAUSE_MS = 900;
 /** Lignes gardées à l'écran. Au-delà, la plus ancienne sort par le haut. */
 const VISIBLE_LINES = 4;
 
-/**
- * La touche correspondant à un caractère.
- *
- * Les accents sont ramenés à leur lettre : sur un clavier, « é » se tape sur une
- * touche que cette rangée-là n'a pas, et faire clignoter la mauvaise touche
- * serait pire que n'en éclairer aucune.
- */
-function keyFor(char: string): string | null {
-  const lower = char
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-  if (lower === " ") return " ";
-  return ROWS.some((row) => row.includes(lower as never)) ? lower : null;
-}
-
 export function WritingScene({
   title,
   outline,
@@ -77,8 +57,8 @@ export function WritingScene({
   outline: string[];
   /**
    * La rédaction n'a pas été demandée à l'écran : elle vient de la file qui
-   * écrit les deux semaines à venir. Le client n'a rien lancé, il faut donc lui dire pourquoi son
-   * article s'écrit tout seul.
+   * écrit les deux semaines à venir. Le client n'a rien lancé, il faut donc lui
+   * dire pourquoi son article s'écrit tout seul.
    */
   auto: boolean;
 }) {
@@ -116,10 +96,21 @@ export function WritingScene({
     return () => clearTimeout(timer.current);
   }, [typed, lineIndex, lines, reduced]);
 
-  const pressed = typed.length > 0 ? keyFor(typed[typed.length - 1]) : null;
+  /**
+   * Le caractère en cours, ramené à sa touche.
+   *
+   * Les accents tombent : sur un clavier, « é » se tape sur une touche que ces
+   * trois rangées n'ont pas, et en éclairer une autre serait pire que n'en
+   * éclairer aucune. La ponctuation n'allume rien non plus.
+   */
+  const last = typed.length > 0 ? typed[typed.length - 1] : "";
+  const key = last
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-7 px-6 py-8">
+    <div className="flex h-full flex-col items-center justify-center gap-6 px-6 py-8">
       {/* ---------------------------- La feuille --------------------------- */}
       <div aria-hidden className="w-full max-w-[34rem]">
         {/* Les lignes déjà frappées s'éteignent vers le haut : la ligne vive est
@@ -147,45 +138,12 @@ export function WritingScene({
       </div>
 
       {/* ---------------------------- Le clavier --------------------------- */}
-      <div aria-hidden className="flex w-full max-w-[26rem] flex-col items-center gap-1.5">
-        {ROWS.map((row, index) => (
-          <div key={index} className="flex justify-center gap-1.5">
-            {row.map((key) => (
-              <Key key={key} label={key} down={pressed === key} />
-            ))}
-          </div>
-        ))}
-        <Key label=" " down={pressed === " "} wide />
-      </div>
+      <Keyboard size="compact" pressed={reduced ? "" : key} spacePressed={!reduced && last === " "} />
 
       {/* --------------------------- Ce qui se passe ----------------------- */}
       <p role="status" className="max-w-sm text-center text-sm leading-relaxed text-muted">
         {auto ? t("auto") : t("asked")}
       </p>
     </div>
-  );
-}
-
-/**
- * Une touche.
- *
- * Au repos elle est de la couleur de la feuille, avec un liseré et une ombre
- * d'un pixel qui lui donne son épaisseur ; enfoncée, elle passe au noir du
- * système, descend d'un pixel et perd son ombre. C'est le mouvement d'un vrai
- * capuchon, et il suffit : ni couleur nouvelle, ni halo.
- */
-function Key({ label, down, wide = false }: { label: string; down: boolean; wide?: boolean }) {
-  return (
-    <span
-      className={`flex h-7 items-center justify-center rounded-md border text-[11px] font-medium uppercase transition-all duration-100 ${
-        wide ? "w-40" : "w-7"
-      } ${
-        down
-          ? "translate-y-px border-obsidian bg-obsidian text-white shadow-none"
-          : "border-fog bg-snow text-ash shadow-[rgba(9,9,11,0.06)_0_1px_0]"
-      }`}
-    >
-      {label.trim()}
-    </span>
   );
 }

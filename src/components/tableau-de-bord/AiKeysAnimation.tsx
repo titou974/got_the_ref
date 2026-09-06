@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { AiKeycaps } from "@/components/AiKeycaps";
+import { Keyboard } from "@/components/Keyboard";
 
 /**
  * Ce que l'audit est en train de faire, montré plutôt que décrit : la question
@@ -40,27 +41,12 @@ import { AiKeycaps } from "@/components/AiKeycaps";
  * changement de moteur ferait un fond sonore de trois minutes.
  */
 
-/** Trois rangées, disposition française. Assez pour qu'on y reconnaisse un clavier. */
-const ROWS = [
-  ["A", "Z", "E", "R", "T", "Y", "U", "I", "O", "P"],
-  ["Q", "S", "D", "F", "G", "H", "J", "K", "L", "M"],
-  ["W", "X", "C", "V", "B", "N"],
-];
-
-/** Le décalage de chaque rangée, en classes de retrait — l'escalier du clavier. */
-const ROW_INDENT = ["", "pl-3 sm:pl-5", "pl-8 sm:pl-[3.25rem]"];
-
 /** Une frappe toutes les 55 ms : le rythme d'une main qui va vite sans courir. */
 const TYPE_MS = 55;
 /** Le temps de lire la question une fois écrite, avant de passer à la suivante. */
 const HOLD_MS = 1800;
 /** Sans mouvement, chaque question reste lisible le temps d'être lue en entier. */
 const STATIC_MS = 4500;
-
-/** Capuchon au repos : arête claire et lèvre intérieure, comme une touche moulée. */
-const CAP_UP = "inset 0 -2px 0 0 rgba(9, 9, 11, 0.09), 0 1px 1px 0 rgba(9, 9, 11, 0.04)";
-/** Capuchon enfoncé : la lèvre s'écrase, l'ombre portée disparaît. */
-const CAP_DOWN = "inset 0 1px 0 0 rgba(255, 255, 255, 0.18)";
 
 export function AiKeysAnimation({ prompts }: { prompts: string[] }) {
   const reduced = useReducedMotion();
@@ -109,58 +95,7 @@ export function AiKeysAnimation({ prompts }: { prompts: string[] }) {
       </div>
 
       {/* Le clavier. Socle sourd, capuchons pleins, rangées en escalier. */}
-      <div className="inline-flex flex-col gap-1.5 rounded-[24px] border border-fog bg-mist p-3 sm:gap-2 sm:p-4">
-        {ROWS.map((row, rowIndex) => (
-          <div key={rowIndex} className={`flex gap-1.5 sm:gap-2 ${ROW_INDENT[rowIndex]}`}>
-            {row.map((key) => (
-              <Keycap key={key} label={key} pressed={key === lastChar} />
-            ))}
-          </div>
-        ))}
-        {/* La barre d'espace est centrée sous les trois rangées, comme sur un
-            clavier : alignée sur le retrait de la dernière, elle tirait tout le
-            bloc vers la gauche. */}
-        <div className="flex justify-center">
-          <Keycap wide pressed={question[typed - 1] === " " && !reduced} />
-        </div>
-      </div>
+      <Keyboard pressed={lastChar} spacePressed={question[typed - 1] === " " && !reduced} />
     </div>
-  );
-}
-
-/**
- * Un capuchon de lettre. Au repos il porte sa lèvre et son ombre ; enfoncé il
- * descend de deux pixels, se remplit de noir et perd son relief — la descente
- * et la perte d'ombre font l'appui, la couleur ne fait que le confirmer.
- *
- * Les touches des moteurs, elles, ne passent pas par ici : leurs visuels de
- * marque sont déjà dessinés en volume (cf. `AiKeycaps`), et les poser dans ce
- * cadre ferait une touche dans une touche.
- */
-function Keycap({
-  label,
-  pressed,
-  wide = false,
-}: {
-  label?: string;
-  pressed: boolean;
-  wide?: boolean;
-}) {
-  return (
-    <motion.span
-      animate={{
-        y: pressed ? 2 : 0,
-        backgroundColor: pressed ? "#09090b" : "#ffffff",
-        borderColor: pressed ? "#09090b" : "#d4d4d8",
-        color: pressed ? "#ffffff" : "#71717a",
-        boxShadow: pressed ? CAP_DOWN : CAP_UP,
-      }}
-      transition={{ duration: 0.09, ease: "easeOut" }}
-      className={`flex h-9 items-center justify-center rounded-xl border text-[11px] font-semibold sm:h-12 sm:text-[13px] ${
-        wide ? "w-40 sm:w-56" : "w-6 sm:w-10"
-      }`}
-    >
-      {label}
-    </motion.span>
   );
 }

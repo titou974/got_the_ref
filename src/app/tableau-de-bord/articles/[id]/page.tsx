@@ -65,6 +65,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
         canPublish={
           context.site?.status === "connected" && context.site.capabilities.includes("publish")
         }
+        // Rattaché ou non : sans site, le bouton mène au rattachement plutôt
+        // que de composer un texte à déposer sur une porte qui n'existe pas.
+        linked={Boolean(context.site)}
         // Le sujet se lit à tous les niveaux — c'est ce que le calendrier de
         // l'accueil promet — mais l'écrire et le publier s'achètent : sur une
         // offre qui ne les ouvre pas, les boutons mènent aux tarifs.

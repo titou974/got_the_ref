@@ -85,6 +85,7 @@ export type EditorArticle = {
 export function ArticleWorkspace({
   article,
   canPublish,
+  linked,
   locked = false,
   quotaRemaining,
   domain,
@@ -95,6 +96,8 @@ export function ArticleWorkspace({
 }: {
   article: EditorArticle;
   canPublish: boolean;
+  /** Un site est rattaché, même s'il n'accepte pas le dépôt automatique. */
+  linked: boolean;
   /**
    * L'offre du compte n'ouvre pas la rédaction.
    *
@@ -535,8 +538,14 @@ export function ArticleWorkspace({
 
       {/* ------------------------ Le pied de l'écran ---------------------- */}
       {/* Une seule colonne d'actions : la consigne de reprise s'y glisse
-          au-dessus de la décision, jamais à côté. */}
-      {preview ? null : (
+          au-dessus de la décision, jamais à côté.
+
+          Rien pendant que l'article s'écrit. Le pied flotte au-dessus du corps,
+          et il retombait sur la scène de rédaction : le clavier passait sous une
+          pilule de boutons qui, de toute façon, ne servaient à rien — on ne
+          valide pas, on ne publie pas, on ne relance pas un texte qui est en
+          train d'arriver. */}
+      {preview || writing ? null : (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2.5 bg-[linear-gradient(to_top,var(--color-snow)_72%,transparent)] px-4 pb-5 pt-14 lg:bg-none lg:px-6 lg:pb-6 lg:pt-0">
           {/* Sur téléphone la consigne est toujours là — c'est le geste le plus
               fréquent, et un bouton pour l'ouvrir aurait coûté un tap de plus à
@@ -569,6 +578,12 @@ export function ArticleWorkspace({
             dropPending={busy}
             onRewrite={() => setRewriteOpen((open) => !open)}
             rewriteOpen={rewriteOpen}
+            linked={linked}
+            // Le rattachement se fait dans les réglages, où vit le formulaire.
+            // L'atelier ne monte pas la barre des agents — il prend l'écran
+            // entier — et ouvrir sa modale ici demanderait de porter tout son
+            // contexte jusque dans un écran qui n'a rien à voir.
+            onConnectSite={() => router.push(ROUTES.dashboardSettings)}
             onPreparePublish={() =>
               setPublishPrompt(
                 buildArticlePublishPrompt({

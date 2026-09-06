@@ -43,6 +43,8 @@ export function SolveAgentsBar({
   locked = false,
   connect = null,
   contentHref = null,
+  articlesHref = null,
+  articles = [],
 }: {
   domain: string;
   stack: DetectedStack | null;
@@ -74,11 +76,24 @@ export function SolveAgentsBar({
    * la modale partout.
    */
   contentHref?: string | null;
+  /**
+   * L'onglet Articles, et les prochains textes du client.
+   *
+   * Sur cet écran, la barre ne parle plus de correctifs : le client y regarde un
+   * calendrier de textes prêts, et ce qui lui manque est la porte par où ils
+   * partiront. Elle dit donc « connecter le site », et la modale montre ses
+   * articles qui se posent plutôt que ses manques qui se corrigent. C'est la
+   * même modale et le même geste : seule change la raison qu'on lui en donne.
+   */
+  articlesHref?: string | null;
+  articles?: { title: string; dateLabel: string }[];
 }) {
   const t = useTranslations("analysisReport.solve");
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const onArticles = Boolean(articlesHref && pathname === articlesHref);
 
   // Le renvoi ne vaut que hors de l'onglet Contenu : une fois dessus, un bouton
   // qui recharge la page où l'on est déjà ne ferait rien de visible.
@@ -147,10 +162,12 @@ export function SolveAgentsBar({
               className="flex min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-cta px-5 py-3 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-obsidian/40 sm:px-6"
             >
               <SparkIcon />
-              {t("cta")}
-              {issues.length > 0 && (
+              {onArticles ? t("ctaPublish") : t("cta")}
+              {/* Le compteur porte ce que le bouton promet : des manques à
+                  corriger ailleurs, des articles à faire partir ici. */}
+              {(onArticles ? articles.length : issues.length) > 0 && (
                 <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold tabular-nums">
-                  {issues.length}
+                  {onArticles ? articles.length : issues.length}
                 </span>
               )}
             </button>
@@ -202,6 +219,8 @@ export function SolveAgentsBar({
             issues={issues}
             locked={locked}
             connect={connect}
+            purpose={onArticles ? "publish" : "fix"}
+            articles={articles}
             onClose={() => setOpen(false)}
           />
         )}

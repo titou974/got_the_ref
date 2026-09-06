@@ -1143,6 +1143,33 @@ export const approveArticleAction = authActionClient
   });
 
 /**
+ * Annule la validation d'un article : il ne partira plus tout seul.
+ *
+ * Le pendant de la validation, et le seul geste qui compte une fois l'article
+ * validé — il attend sa date, il n'y a plus rien à décider tant qu'on ne change
+ * pas d'avis. L'article revient à l'état de brouillon : son texte, son plan et
+ * sa date sont intacts, seul le départ automatique est retiré. On le revalide
+ * d'un bouton.
+ *
+ * Sans effet sur un article déjà déposé : `status` est contraint à `approved`,
+ * et rien ne rattrape une publication faite. Le client qui veut retirer un
+ * article en ligne le fait depuis son site.
+ */
+export const unapproveArticleAction = authActionClient
+  .inputSchema(articleIdSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const { count } = await prisma.article.updateMany({
+      where: { id: parsedInput.id, userId: ctx.auth.user.id, status: "approved" },
+      data: { status: "drafted" },
+    });
+    if (!count) throw new AppError("Article introuvable ou déjà publié.", "NOT_FOUND", 404);
+
+    revalidatePath(ROUTES.dashboardArticles);
+    revalidatePath(ROUTES.dashboardArticle(parsedInput.id));
+    return { ok: true };
+  });
+
+/**
  * Déplace la date de publication d'un article.
  *
  * Le geste est réversible et sans effet de bord : il ne valide pas, ne rédige

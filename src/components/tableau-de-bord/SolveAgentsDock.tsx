@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { isCredentialsKeySet } from "@/lib/crypto";
+import { prisma } from "@/lib/prisma";
 import { ROUTES } from "@/constants/routes";
+import { formatPublishDate, nextPublishPass } from "@/constants/publishing";
 import { connectorForStack } from "@/constants/site-platforms";
 import { getDashboardContext } from "@/features/dashboard/queries";
 import type { SiteConnectSetup } from "@/components/tableau-de-bord/SiteConnectForm";
@@ -91,6 +93,17 @@ async function Dock({
   // s'abonner puis de découvrir qu'il lui manque un mot de passe d'application.
   const context = await getDashboardContext(userId);
 
+  // Les prochains textes du client, pour la modale ouverte depuis son
+  // calendrier : elle y montre ses articles qui se posent sur son site, avec
+  // leurs vrais titres et leurs vraies dates. Trois lignes suffisent à faire
+  // comprendre le mouvement, et les lire coûte une requête indexée.
+  const nextArticles = await prisma.article.findMany({
+    where: { userId, status: { in: ["drafted", "approved"] } },
+    orderBy: { scheduledFor: "asc" },
+    take: 3,
+    select: { title: true, scheduledFor: true },
+  });
+
   // La date est mise en forme ici : la modale est rendue chez le client, et son
   // fuseau ferait diverger le premier rendu de celui du serveur.
   const connectedOn = context.site?.connectedAt
@@ -130,6 +143,15 @@ async function Dock({
         // console : c'est le seul travail que son offre lui ouvre, et la barre
         // l'y emmène tant qu'il n'y est pas.
         contentHref={locked ? ROUTES.dashboardContent : null}
+        // Sur le calendrier d'articles, la barre change de propos : le client y
+        // a des textes prêts, pas des manques à corriger.
+        articlesHref={ROUTES.dashboardArticles}
+        articles={nextArticles.map((article) => ({
+          title: article.title,
+          dateLabel: article.scheduledFor
+            ? formatPublishDate(nextPublishPass(article.scheduledFor))
+            : t("solve.modal.undated"),
+        }))}
       />
     </>
   );
