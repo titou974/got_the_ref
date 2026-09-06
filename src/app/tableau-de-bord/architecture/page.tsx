@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { businessHint, getDashboardContext } from "@/features/dashboard/queries";
 import { buildDiagnostic } from "@/lib/geo/diagnostic";
-import { buildSiteTree } from "@/lib/geo/site-tree";
+import { buildSiteTree, veilSiteTree } from "@/lib/geo/site-tree";
 import { CATEGORY_META } from "@/lib/geo/types";
 import { Card, CardTitle, PageHeader } from "@/components/tableau-de-bord/Card";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
@@ -13,6 +13,7 @@ import { DiagnosticGrid } from "@/components/geo/DiagnosticGrid";
 import { CrawlerGrid } from "@/components/geo/SiteProfile";
 import { SiteSkeleton } from "@/components/geo/SiteSkeleton";
 import { SectionGate } from "@/components/tableau-de-bord/SectionGate";
+import { TierGate } from "@/components/tableau-de-bord/TierGate";
 import { canOpen } from "@/constants/access";
 
 export const maxDuration = 300;
@@ -55,10 +56,18 @@ export default async function ArchitecturePage() {
   const crawl = analysis.signals.crawl;
   const tree = buildSiteTree(analysis);
 
-  // La page entière passe sous voile quand l'offre ne l'ouvre pas : le client
-  // voit la forme d'un diagnostic — l'anneau, les axes, la grille de contrôles
-  // — sans qu'aucune de ses valeurs ne soit rendue, et l'appel le mène aux
-  // tarifs (cf. `SectionGate`).
+  // Le diagnostic passe sous voile quand l'offre ne l'ouvre pas : le client
+  // voit la forme d'un rapport — l'anneau, les axes, la grille de contrôles —
+  // sans qu'aucune de ses valeurs ne soit rendue, et l'appel le mène aux tarifs
+  // (cf. `SectionGate`).
+  //
+  // Le squelette, lui, reste au-dessus du voile, et c'est le seul écart. Il ne
+  // coûte aucun appel — l'arbre se déduit de l'analyse déjà en base — et c'est
+  // la pièce qui se comprend sans explication : sept adresses, celles qui
+  // répondent en vert, celles qui manquent masquées à leur place exacte. Le
+  // client voit la forme de son site et l'endroit du trou ; ce qu'il achète,
+  // c'est le nom du fichier absent et le contenu prêt à déposer (cf.
+  // `veilSiteTree`).
   const locked = !canOpen(context.tier, "architecture");
 
   // Le dépôt demande un rattachement vivant ET un connecteur qui sait écrire :
@@ -80,99 +89,118 @@ export default async function ArchitecturePage() {
     <>
       <PageHeader title={t("pageTitle")} subtitle={ta("architecture.subtitle")} />
 
-      <SectionGate section="architecture" locked={locked}>
-        <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
+        {locked ? (
+          <TierGate
+            offer="boost"
+            item="architectureFiles"
+            reveal
+            values={{ count: openFixes }}
+          >
+            <SiteSkeleton
+              tree={veilSiteTree(tree)}
+              stack={analysis.signals.stack ?? null}
+              pagesCrawled={crawl.pagesCrawled}
+              canApply={false}
+              locked
+            />
+          </TierGate>
+        ) : (
           <SiteSkeleton
             tree={tree}
             stack={analysis.signals.stack ?? null}
             pagesCrawled={crawl.pagesCrawled}
             canApply={canApply}
           />
+        )}
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <AnimatedCard className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left lg:col-span-2">
-              <AnimatedScoreRing
-                score={diagnostic.architecture.score}
-                size={140}
-                stroke={12}
-                label={ta("architecture.scoreLabel")}
-              />
-              <div className="flex-1">
-                <h2 className="text-lg font-bold">{ta("architecture.title")}</h2>
-                <p className="mt-2 text-pretty text-sm text-muted">{t("scoreHint")}</p>
-                <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
-                  <span className="inline-flex items-center gap-1.5 rounded-pill bg-mist px-3 py-1.5 text-xs text-slate">
-                    <span
-                      aria-hidden
-                      className={`size-1.5 rounded-full ${openFixes ? "bg-danger" : "bg-success"}`}
-                    />
-                    {openFixes ? t("openFixes", { count: openFixes }) : t("noFixes")}
-                  </span>
-                  <span className="inline-flex items-center rounded-pill bg-mist px-3 py-1.5 text-xs text-slate">
-                    {t("crawledPages", { count: crawl.pagesCrawled })}
-                  </span>
+        <SectionGate section="architecture" locked={locked}>
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <AnimatedCard className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left lg:col-span-2">
+                <AnimatedScoreRing
+                  score={diagnostic.architecture.score}
+                  size={140}
+                  stroke={12}
+                  label={ta("architecture.scoreLabel")}
+                />
+                <div className="flex-1">
+                  <h2 className="text-lg font-bold">{ta("architecture.title")}</h2>
+                  <p className="mt-2 text-pretty text-sm text-muted">{t("scoreHint")}</p>
+                  <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+                    <span className="inline-flex items-center gap-1.5 rounded-pill bg-mist px-3 py-1.5 text-xs text-slate">
+                      <span
+                        aria-hidden
+                        className={`size-1.5 rounded-full ${openFixes ? "bg-danger" : "bg-success"}`}
+                      />
+                      {openFixes ? t("openFixes", { count: openFixes }) : t("noFixes")}
+                    </span>
+                    <span className="inline-flex items-center rounded-pill bg-mist px-3 py-1.5 text-xs text-slate">
+                      {t("crawledPages", { count: crawl.pagesCrawled })}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </AnimatedCard>
+
+              <AnimatedCard delay={0.05}>
+                <h3 className="font-semibold">{t("axes")}</h3>
+                <p className="mt-0.5 text-xs text-muted">{t("axesHint")}</p>
+                <div className="mt-4">
+                  <AxisBars axes={axes} />
+                </div>
+              </AnimatedCard>
+            </div>
+
+            <AnimatedCard delay={0.1}>
+              <CardTitle
+                title={t("checks")}
+                hint={t("checksHint")}
+                action={
+                  <span className="rounded-pill bg-mist px-3 py-1 text-[11px] font-semibold text-slate">
+                    {t("checksSummary", { passing, pending })}
+                  </span>
+                }
+              />
+              <DiagnosticGrid section={diagnostic.architecture} labelNs="architecture" issuesFirst />
             </AnimatedCard>
 
-            <AnimatedCard delay={0.05}>
-              <h3 className="font-semibold">{t("axes")}</h3>
-              <p className="mt-0.5 text-xs text-muted">{t("axesHint")}</p>
-              <div className="mt-4">
-                <AxisBars axes={axes} />
-              </div>
-            </AnimatedCard>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <CrawlerGrid
+                crawlers={analysis.signals.crawlers}
+                className=""
+                hint={t("crawlersHint")}
+                compact
+              />
+
+              <Card>
+                <CardTitle title={t("crawl")} hint={t("crawlHint")} />
+                <dl className="grid grid-cols-2 gap-5 sm:grid-cols-4 lg:grid-cols-2">
+                  <Metric
+                    label={t("pages")}
+                    value={String(crawl.pagesCrawled)}
+                    hint={t("pagesHint")}
+                  />
+                  <Metric
+                    label={t("words")}
+                    value={crawl.totalWordCount.toLocaleString("fr-FR")}
+                    hint={t("wordsHint")}
+                  />
+                  <Metric
+                    label={t("internalLinks")}
+                    value={String(crawl.internalLinks)}
+                    hint={t("internalLinksHint")}
+                  />
+                  <Metric
+                    label={t("schemas")}
+                    value={crawl.schemaTypes.length ? crawl.schemaTypes.join(", ") : t("noSchema")}
+                    hint={t("schemasHint")}
+                  />
+                </dl>
+              </Card>
+            </div>
           </div>
-
-          <AnimatedCard delay={0.1}>
-            <CardTitle
-              title={t("checks")}
-              hint={t("checksHint")}
-              action={
-                <span className="rounded-pill bg-mist px-3 py-1 text-[11px] font-semibold text-slate">
-                  {t("checksSummary", { passing, pending })}
-                </span>
-              }
-            />
-            <DiagnosticGrid section={diagnostic.architecture} labelNs="architecture" issuesFirst />
-          </AnimatedCard>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <CrawlerGrid
-              crawlers={analysis.signals.crawlers}
-              className=""
-              hint={t("crawlersHint")}
-              compact
-            />
-
-            <Card>
-              <CardTitle title={t("crawl")} hint={t("crawlHint")} />
-              <dl className="grid grid-cols-2 gap-5 sm:grid-cols-4 lg:grid-cols-2">
-                <Metric
-                  label={t("pages")}
-                  value={String(crawl.pagesCrawled)}
-                  hint={t("pagesHint")}
-                />
-                <Metric
-                  label={t("words")}
-                  value={crawl.totalWordCount.toLocaleString("fr-FR")}
-                  hint={t("wordsHint")}
-                />
-                <Metric
-                  label={t("internalLinks")}
-                  value={String(crawl.internalLinks)}
-                  hint={t("internalLinksHint")}
-                />
-                <Metric
-                  label={t("schemas")}
-                  value={crawl.schemaTypes.length ? crawl.schemaTypes.join(", ") : t("noSchema")}
-                  hint={t("schemasHint")}
-                />
-              </dl>
-            </Card>
-          </div>
-        </div>
-      </SectionGate>
+        </SectionGate>
+      </div>
     </>
   );
 }

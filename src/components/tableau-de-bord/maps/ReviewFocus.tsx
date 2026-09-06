@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
@@ -9,7 +10,9 @@ import {
   approveReviewReplyAction,
   draftReviewRepliesAction,
 } from "@/features/dashboard/actions";
+import { ROUTES } from "@/constants/routes";
 import type { GooglePlace, PlaceReview } from "@/lib/apify/place-types";
+import { GatePanel } from "../TierGate";
 import { PlaceStars } from "./PlaceStars";
 import { avatarAt } from "./place-format";
 import { Card, CardTitle } from "../Card";
@@ -25,6 +28,12 @@ import { Card, CardTitle } from "../Card";
  *
  * Rien n'est publié d'ici : l'API Business Profile réclame une validation du
  * compte marchand que nous n'avons pas. On écrit, le client copie, il colle.
+ *
+ * Sous voile — un compte gratuit —, l'avis reste entier : c'est le sien, il l'a
+ * déjà lu chez Google, et le lui flouter serait lui cacher sa propre boutique.
+ * C'est la réponse qui manque, à sa place exacte sous le chevron, et l'appel
+ * est posé dessus. Aucune réponse n'est écrite dans ce cas : le bouton mène aux
+ * tarifs avant qu'un appel au modèle ne parte.
  */
 
 const GM = {
@@ -59,7 +68,16 @@ type Entry = {
   reply: ReviewReplyRow | null;
 };
 
-export function ReviewFocus({ place, rows }: { place: GooglePlace; rows: ReviewReplyRow[] }) {
+export function ReviewFocus({
+  place,
+  rows,
+  /** L'offre n'ouvre pas la rédaction : on montre l'avis, jamais la réponse. */
+  locked = false,
+}: {
+  place: GooglePlace;
+  rows: ReviewReplyRow[];
+  locked?: boolean;
+}) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
@@ -97,13 +115,24 @@ export function ReviewFocus({ place, rows }: { place: GooglePlace; rows: ReviewR
       <CardTitle
         title={title}
         hint={
-          drafted.length > 0
-            ? "Relisez, copiez, collez sous l'avis dans Google Business Profile."
-            : "Une réponse par avis sans réponse, dans le ton relevé sur votre site."
+          locked
+            ? "Une réponse par avis, dans le ton relevé sur votre site. Prête à coller sous l'avis."
+            : drafted.length > 0
+              ? "Relisez, copiez, collez sous l'avis dans Google Business Profile."
+              : "Une réponse par avis sans réponse, dans le ton relevé sur votre site."
         }
         action={
           <div className="flex flex-col items-end gap-1">
-            {unanswered > 0 ? (
+            {locked ? (
+              <Link
+                href={ROUTES.pricing}
+                className="rounded-pill bg-cta px-4 py-2 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
+              >
+                {unanswered > 0
+                  ? `Écrire ${unanswered} réponse${unanswered > 1 ? "s" : ""}`
+                  : "Écrire mes réponses"}
+              </Link>
+            ) : unanswered > 0 ? (
               <button
                 type="button"
                 onClick={() => draft.execute({ reviewIds: [] })}
@@ -235,6 +264,8 @@ export function ReviewFocus({ place, rows }: { place: GooglePlace; rows: ReviewR
                   </>
                 ) : draft.isPending ? (
                   <span className="block h-[72px] w-full rounded-2xl shimmer" />
+                ) : locked ? (
+                  <VeiledReply />
                 ) : (
                   <p className="rounded-2xl border border-dashed border-pebble px-4 py-3 text-sm text-muted">
                     Pas encore de réponse écrite pour cet avis.
@@ -262,6 +293,34 @@ export function ReviewFocus({ place, rows }: { place: GooglePlace; rows: ReviewR
         </>
       )}
     </Card>
+  );
+}
+
+/**
+ * La place de la réponse, sous voile.
+ *
+ * Elle est posée exactement où la réponse paraîtra sur la fiche — sous le
+ * chevron, décalée, à la largeur de l'avis. Les barres ne cachent aucun texte :
+ * rien n'a été écrit, et rien ne le sera avant l'abonnement.
+ */
+function VeiledReply() {
+  return (
+    <div className="relative isolate grid min-h-[180px] overflow-hidden rounded-2xl border border-border bg-surface">
+      <div
+        aria-hidden
+        inert
+        className="pointer-events-none select-none space-y-2 p-4 blur-[6px] [grid-area:1/1]"
+      >
+        <span className="block h-3 w-full rounded-full bg-mist" />
+        <span className="block h-3 w-11/12 rounded-full bg-mist" />
+        <span className="block h-3 w-4/5 rounded-full bg-mist" />
+        <span className="block h-3 w-2/3 rounded-full bg-mist" />
+      </div>
+
+      <div className="[grid-area:1/1]">
+        <GatePanel offer="allin" item="mapsReviews" />
+      </div>
+    </div>
   );
 }
 

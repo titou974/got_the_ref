@@ -52,6 +52,7 @@ import {
   FREE_CONTENT_REWRITES,
   analysisNeedsUpgrade,
   articleTopicsFor,
+  canFetchPlace,
   draftsSeedArticles,
   runsEngine,
   tierAtLeast,
@@ -1631,7 +1632,7 @@ export const refreshMapsPlaceAction = authActionClient
   .inputSchema(refreshMapsPlaceSchema)
   .action(async ({ parsedInput, ctx }) => {
     const userId = ctx.auth.user.id;
-    await requireSection(userId, "maps");
+    const access = await getAccess(userId);
 
     if (!isApifyConfigured()) {
       throw new AppError(
@@ -1655,6 +1656,17 @@ export const refreshMapsPlaceAction = authActionClient
     }
 
     const existing = await prisma.mapsPlace.findUnique({ where: { userId } });
+
+    // Le premier relevé est ouvert à tous, l'actualisation non : c'est elle qui
+    // se répète, donc elle qui se paie (cf. `canFetchPlace`).
+    if (!canFetchPlace(access.tier, existing !== null)) {
+      throw new AppError(
+        "Votre fiche a déjà été relevée. Son suivi semaine après semaine est réservé à l'abonnement Tout-en-un.",
+        "TIER_LOCKED",
+        403,
+      );
+    }
+
     const sameLink = existing?.mapsUrl === mapsUrl;
     const age = existing ? Date.now() - existing.fetchedAt.getTime() : Infinity;
     if (existing && sameLink && !parsedInput.force && age < MAPS_PLACE_COOLDOWN_MS) {

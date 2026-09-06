@@ -240,6 +240,37 @@ export function seesRecommendation(tier: AccessTier, category: string): boolean 
 }
 
 /**
+ * Le relevé de la fiche Google Maps, ouvert au compte gratuit — une fois.
+ *
+ * La fiche est le seul objet du produit que le client reconnaît immédiatement :
+ * sa photo, sa note, ses avis, tels que Google les montre. La lui cacher
+ * derrière un voile revenait à vendre un travail sur une fiche qu'on ne lui
+ * avait jamais prouvé savoir lire. Le relevé part donc dès qu'il colle son
+ * lien, et l'écran se remplit de sa propre fiche.
+ *
+ * Une fois, et pas deux : chaque relevé est un run Apify facturé. Le compte
+ * gratuit obtient son premier passage, jamais l'actualisation — c'est elle qui
+ * se paie, puisque c'est elle qui se répète semaine après semaine.
+ *
+ * Ce qui reste fermé, c'est tout ce qui s'écrit : les textes de la fiche, les
+ * réponses aux avis, les posts. Aucun appel au modèle ne part pour un compte
+ * gratuit sur cette page — les corrections y sont annoncées et voilées, pas
+ * rédigées (cf. `MapsVeil`).
+ */
+export const FREE_MAPS_FETCHES = 1;
+
+/**
+ * Le relevé de la fiche peut-il partir ?
+ *
+ * `alreadyFetched` est la seule mémoire nécessaire : une ligne `MapsPlace`
+ * existe, donc le passage gratuit a eu lieu.
+ */
+export function canFetchPlace(tier: AccessTier, alreadyFetched: boolean): boolean {
+  if (tierAtLeast(tier, SECTION_TIER.maps)) return true;
+  return !alreadyFetched;
+}
+
+/**
  * La fenêtre de rédaction ouverte par le Coup de Boost, en jours.
  *
  * L'offre est une passe, pas un abonnement : les agents écrivent pendant une

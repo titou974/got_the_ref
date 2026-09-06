@@ -16,7 +16,13 @@ import { AttributeRows } from "@/components/tableau-de-bord/maps/AttributeRows";
 import { GooglePlacePanel } from "@/components/tableau-de-bord/maps/GooglePlacePanel";
 import { ListingCompare } from "@/components/tableau-de-bord/maps/ListingCompare";
 import { MapsGate } from "@/components/tableau-de-bord/maps/MapsGate";
-import { boxCount, buildMapsTasks, type MapsTaskId } from "@/components/tableau-de-bord/maps/maps-priorities";
+import {
+  boxCount,
+  buildMapsPreviewTasks,
+  buildMapsTasks,
+  type MapsTaskId,
+} from "@/components/tableau-de-bord/maps/maps-priorities";
+import { MapsVeil } from "@/components/tableau-de-bord/maps/MapsVeil";
 import {
   PlaceCompleteness,
   PlacePopularTimes,
@@ -28,8 +34,7 @@ import { CoherenceNote, TextsNote } from "@/components/tableau-de-bord/maps/Side
 import { SyncPlaceButton } from "@/components/tableau-de-bord/maps/SyncPlaceButton";
 import { WeekPlan } from "@/components/tableau-de-bord/maps/WeekPlan";
 import { PreparingAnalysis } from "@/components/tableau-de-bord/PreparingAnalysis";
-import { SectionGate } from "@/components/tableau-de-bord/SectionGate";
-import { canOpen } from "@/constants/access";
+import { canFetchPlace, canOpen } from "@/constants/access";
 
 export const maxDuration = 300;
 
@@ -52,6 +57,21 @@ export const maxDuration = 300;
  *
  * Section réservée aux commerces qui ont une adresse : un site sans
  * établissement n'a pas de fiche à tenir.
+ *
+ * La page ne se ferme plus en bloc pour un compte gratuit, et c'est le seul
+ * écart avec les autres onglets vendus. La raison tient à ce qu'elle montre :
+ * une fiche Google appartient au commerçant, il l'a sous les yeux tous les
+ * jours, et lui en cacher la maquette derrière un voile revenait à lui vendre
+ * un travail sur un objet qu'on ne lui avait jamais prouvé savoir lire. Son
+ * lien suffit donc à lancer le relevé — une fois, cf. `canFetchPlace` — et la
+ * fiche s'affiche entière.
+ *
+ * Ce qui reste fermé est ce qui s'écrit. Les huit chantiers sont annoncés, avec
+ * leurs comptes réels ; leur tiroir montre l'état d'aujourd'hui et la place de
+ * la correction, floutée, sous l'appel (cf. `MapsVeil`). Les avis gardent leur
+ * carte, sans la réponse ; les posts gardent leur cadre, sans le texte. Aucun
+ * appel au modèle ne part de cette page pour un compte gratuit : rien n'est
+ * rédigé, donc rien n'est caché — seule la place du travail est montrée.
  */
 export default async function GoogleMapsPage() {
   const user = await requireUser();
@@ -71,10 +91,14 @@ export default async function GoogleMapsPage() {
   const analysis = context.analysis;
   const coherence = analysis.mapsCoherence ?? null;
   const place = snapshot?.place ?? null;
-  const advice = place ? await getMapsAdvice(user.id, place.placeId) : null;
 
-  // La fiche se tient semaine après semaine : réservée à l'abonnement.
+  // La fiche se tient semaine après semaine : le travail est réservé à
+  // l'abonnement. Le relevé, lui, ne l'est plus.
   const locked = !canOpen(context.tier, "maps");
+
+  // Un compte gratuit n'a jamais fait écrire de textes : la ligne n'existe pas
+  // en base, et la relire coûterait une requête pour un `null` connu d'avance.
+  const advice = place && !locked ? await getMapsAdvice(user.id, place.placeId) : null;
 
   // Tant qu'aucune proposition n'a été demandée, l'audit déterministe suffit à
   // montrer les cases vides : il ne dit pas encore lesquelles cocher, mais il
@@ -100,24 +124,57 @@ export default async function GoogleMapsPage() {
     imageUrl: post.imageUrl,
   }));
 
-  const tasks = place
-    ? buildMapsTasks({
-        place,
-        advice,
-        attributes,
-        pendingReviews,
-        draftedReplies,
-        posts: postRows,
-        coherenceMismatches: (coherence?.matches ?? []).filter((match) => !match.consistent).length,
-      })
-    : [];
+  const mismatches = (coherence?.matches ?? []).filter((match) => !match.consistent).length;
+
+  const tasks = !place
+    ? []
+    : locked
+      ? buildMapsPreviewTasks({
+          place,
+          attributes,
+          pendingReviews,
+          coherenceMismatches: mismatches,
+        })
+      : buildMapsTasks({
+          place,
+          advice,
+          attributes,
+          pendingReviews,
+          draftedReplies,
+          posts: postRows,
+          coherenceMismatches: mismatches,
+        });
 
   const boxes = boxCount(attributes);
 
   // La correction de chaque chantier, rendue ici et remise à la liste : elle
   // s'affiche dans le tiroir, sans son cadre — elle est déjà dans une carte.
-  const panels: Partial<Record<MapsTaskId, React.ReactNode>> = place
-    ? {
+  //
+  // Sous voile, le tiroir garde la même grammaire — l'état d'aujourd'hui à
+  // gauche, la place de la correction à droite — et c'est tout ce qu'il porte :
+  // aucun texte n'a été demandé à un modèle pour un compte gratuit.
+  const veiledPanels: Partial<Record<MapsTaskId, React.ReactNode>> = place
+    ? Object.fromEntries(
+        (["name", "description", "about", "attributes", "fields", "coherence"] as const).map(
+          (kind) => [
+            kind,
+            <MapsVeil
+              key={kind}
+              kind={kind}
+              place={place}
+              attributes={attributes}
+              coherenceMismatches={mismatches}
+            />,
+          ],
+        ),
+      )
+    : {};
+
+  const panels: Partial<Record<MapsTaskId, React.ReactNode>> = !place
+    ? {}
+    : locked
+      ? veiledPanels
+      : {
         name: <ListingCompare place={place} advice={advice} only="title" bare />,
         description: <ListingCompare place={place} advice={advice} only="description" bare />,
         about: <ListingCompare place={place} advice={advice} only="about" bare />,
@@ -139,8 +196,7 @@ export default async function GoogleMapsPage() {
             </ul>
           </>
         ) : null,
-      }
-    : {};
+      };
 
   const fetchedLabel = snapshot
     ? new Intl.DateTimeFormat("fr-FR", {
@@ -162,14 +218,17 @@ export default async function GoogleMapsPage() {
     <>
       <PageHeader title={t("pageTitle")} subtitle={place?.address ?? context.mapsUrl} />
 
-      <SectionGate section="maps" locked={locked}>
-        {snapshot?.lastError ? (
-          <p className="rounded-2xl bg-danger/5 px-4 py-3 text-sm text-danger">
-            {t("syncFailed", { error: snapshot.lastError })}
-          </p>
-        ) : null}
+      {snapshot?.lastError ? (
+        <p className="rounded-2xl bg-danger/5 px-4 py-3 text-sm text-danger">
+          {t("syncFailed", { error: snapshot.lastError })}
+        </p>
+      ) : null}
 
-        <MapsGate hasUrl={Boolean(context.mapsUrl)} hasPlace={place !== null} locked={locked}>
+        <MapsGate
+          hasUrl={Boolean(context.mapsUrl)}
+          hasPlace={place !== null}
+          canFetch={canFetchPlace(context.tier, place !== null)}
+        >
           {place ? (
             <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
               <div className="space-y-4">
@@ -178,6 +237,7 @@ export default async function GoogleMapsPage() {
                   checked={boxes.checked}
                   total={boxes.total}
                   panels={panels}
+                  locked={locked}
                 />
 
                 <ReviewFocus
@@ -191,9 +251,14 @@ export default async function GoogleMapsPage() {
                     reply: row.reply,
                     status: row.status,
                   }))}
+                  locked={locked}
                 />
 
-                <GooglePostPlanner posts={postRows} businessName={place.title} />
+                <GooglePostPlanner
+                  posts={postRows}
+                  businessName={place.title}
+                  locked={locked}
+                />
 
                 {/* Ce qui se regarde sans se corriger : la fiche entière telle
                     que Google la montre, les mots que les clients répètent, le
@@ -229,14 +294,13 @@ export default async function GoogleMapsPage() {
 
               <div className="space-y-4 lg:sticky lg:top-4">
                 <PlaceMiniCard place={place} fetchedLabel={fetchedLabel} />
-                <SyncPlaceButton hasPlace stale={snapshot?.stale} block />
+                <SyncPlaceButton hasPlace stale={snapshot?.stale} block locked={locked} />
                 <CoherenceNote matches={coherence?.matches ?? []} />
                 <TextsNote place={place} advice={advice} />
               </div>
             </div>
           ) : null}
-        </MapsGate>
-      </SectionGate>
+      </MapsGate>
     </>
   );
 }
