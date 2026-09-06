@@ -52,6 +52,7 @@ import {
   FREE_CONTENT_REWRITES,
   analysisNeedsUpgrade,
   articleTopicsFor,
+  PAID_ARTICLE_TOPICS,
   draftsSeedArticles,
   runsEngine,
   tierAtLeast,
@@ -561,10 +562,11 @@ const SEED_DRAFTS = 3;
  * planning qui tombe le mardi puis le jeudi puis le samedi ne se lit pas comme
  * un calendrier éditorial, et le client ne sait plus quel jour il publie.
  *
- * Les dates sont produites au compte demandé, pas à un nombre de semaines fixe :
- * le volume du planning est une décision d'offre (`articleTopicsFor`), et cette
- * fonction n'a qu'à poser autant de jours ouvrés qu'il y a de sujets. Vingt-deux
- * sujets couvrent ainsi quatre semaines pleines plus deux jours.
+ * Elle pose toujours la grille complète du mois — `PAID_ARTICLE_TOPICS` jours
+ * ouvrés, quatre semaines pleines plus deux jours. Quel niveau occupe quelles
+ * cases de cette grille est une décision d'offre, tranchée par `seedSlots` :
+ * la grille, elle, ne change pas d'un niveau à l'autre, sans quoi les sujets
+ * ajoutés à l'achat retomberaient sur des jours déjà pris.
  */
 function seedSchedule(from: Date, count: number): Date[] {
   // Tout le calcul de jours se fait en UTC. Les variantes locales de `Date`
@@ -594,6 +596,26 @@ function seedSchedule(from: Date, count: number): Date[] {
 }
 
 /**
+ * Quelles cases du mois occupe un calendrier de `count` sujets.
+ *
+ * Un compte gratuit en a quinze pour vingt-deux jours ouvrés : les poser à la
+ * suite laisserait la dernière semaine entièrement blanche, et un calendrier
+ * qui s'arrête avant la fin du mois se lit comme un essai qui a expiré. Ils
+ * sont donc étalés à pas régulier sur toute la grille — un jour sur deux vers
+ * la fin —, ce qui montre le mois complet tout en laissant voir les trous que
+ * l'achat vient combler.
+ *
+ * Les index sont croissants et distincts tant que `count` ne dépasse pas la
+ * grille : c'est ce qui permet au second passage — celui de l'achat — de
+ * reprendre exactement les cases que le premier n'a pas prises.
+ */
+function seedSlots(count: number): number[] {
+  const span = PAID_ARTICLE_TOPICS;
+  if (count >= span) return Array.from({ length: span }, (_, index) => index);
+  return Array.from({ length: count }, (_, index) => Math.round((index * span) / count));
+}
+
+/**
  * Les sujets d'articles posés avant la première ouverture du tableau de bord,
  * et complétés le jour de l'achat.
  *
@@ -601,12 +623,13 @@ function seedSchedule(from: Date, count: number): Date[] {
  * c'est exactement le travail qu'il vient de déléguer. On en pose donc d'entrée,
  * mais pas la même quantité selon ce que le compte a payé.
  *
- *   — gratuit : quatre sujets, la semaine qui vient. Ils sont datés, ils
- *     portent le mot-clé et l'angle, et ils s'affichent en clair sur l'accueil.
- *     Aucun n'est rédigé : écrire est le travail vendu, et trois appels au
- *     grand modèle pour un onglet resté sous voile ne servent personne. Cette
- *     planification-là tient en UN appel — le même qu'il rende quatre sujets ou
- *     vingt-deux —, c'est ce qui la rend tenable sur un compte qui ne paie rien.
+ *   — gratuit : quinze sujets, étalés sur le mois entier plutôt que serrés sur
+ *     la semaine qui vient. Ils sont datés, ils portent le mot-clé et l'angle,
+ *     et ils s'affichent en clair sur l'accueil. Aucun n'est rédigé : écrire
+ *     est le travail vendu, et trois appels au grand modèle pour un onglet
+ *     resté sous voile ne servent personne. Cette planification-là tient en UN
+ *     appel — le même qu'il rende quatre sujets ou vingt-deux —, c'est ce qui
+ *     la rend tenable sur un compte qui ne paie rien.
  *   — Coup de Boost et abonnement : le mois entier, vingt-deux sujets à raison
  *     d'un par jour ouvré, dont les trois premiers rédigés dans la foulée.
  *
@@ -638,7 +661,15 @@ export const seedEditorialMonthAction = authActionClient
     // dates encore libres : les quatre sujets du compte gratuit gardent leur
     // place, et les suivants s'ajoutent derrière eux au lieu de tomber le même
     // jour.
-    const dates = seedSchedule(new Date(), target).slice(existing);
+    // La grille du mois est toujours la même ; seules changent les cases qu'on
+    // y occupe. Les quinze sujets du compte gratuit gardent donc leur place, et
+    // le complément de l'achat vient remplir les sept jours restés vides au
+    // lieu de s'empiler derrière eux.
+    const grid = seedSchedule(new Date(), PAID_ARTICLE_TOPICS);
+    const taken = new Set(seedSlots(existing));
+    const dates = seedSlots(target)
+      .filter((slot) => !taken.has(slot))
+      .map((slot) => grid[slot]);
 
     await prisma.article.createMany({
       data: topics.slice(0, missing).map((topic, index) => ({

@@ -27,8 +27,9 @@ import {
  *
  * Deux passes, une seule attente : l'audit GEO, puis les sujets planifiés. Le
  * client n'arrive donc jamais sur un calendrier vide — c'est le travail qu'il
- * vient de déléguer. Le volume dépend de son offre : quatre sujets sur un compte
- * gratuit, le mois entier dès le Coup de Boost, avec la première semaine rédigée.
+ * vient de déléguer. Le volume dépend de son offre : quinze sujets étalés sur le
+ * mois sur un compte gratuit, le mois entier — vingt-deux — dès le Coup de
+ * Boost, avec la première semaine rédigée.
  *
  * Le même écran sert deux fois. À la mise en route, il fait l'analyse d'entrée.
  * Le jour où le compte achète, il la refait — le gratuit n'avait fait mesurer

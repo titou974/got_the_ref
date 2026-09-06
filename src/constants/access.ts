@@ -132,9 +132,9 @@ export const HOME_BLOCK_TIER: Record<HomeBlock, AccessTier> = {
    *
    * C'est la seule pièce du produit qui se montre bien mieux qu'elle ne se
    * raconte : des sujets datés, écrits pour la niche du client, posés sur les
-   * jours qui viennent. Un compte gratuit en reçoit les premiers
-   * (`FREE_ARTICLE_TOPICS`) ; la rédaction et la publication, elles, restent
-   * derrière l'onglet Articles, qui s'achète.
+   * jours qui viennent. Un compte gratuit en reçoit quinze
+   * (`FREE_ARTICLE_TOPICS`), répartis sur tout le mois ; la rédaction et la
+   * publication, elles, restent derrière l'onglet Articles, qui s'achète.
    */
   agenda: "free",
 };
@@ -252,18 +252,23 @@ export const BOOST_ARTICLE_WINDOW_DAYS = 7;
 /**
  * Combien de sujets d'articles sont planifiés à la mise en route, par niveau.
  *
- * Un compte gratuit en reçoit quatre : la semaine qui vient, datée, visible sur
- * son accueil. C'est une seule demande au modèle — le même appel qu'il en
- * rende quatre ou vingt-deux — et c'est ce qui rend le calendrier crédible sans
- * rien offrir de ce qui se vend : aucun de ces quatre sujets n'est rédigé, et le
- * bouton de publication mène aux tarifs.
+ * Un compte gratuit en reçoit quinze, étalés sur le mois entier plutôt que
+ * groupés sur la semaine qui vient. Un calendrier qui s'arrête au vendredi
+ * suivant se lit comme un essai qui expire ; quinze sujets tenus de bout en
+ * bout montrent le rythme qu'on lui vend, et les sept jours ouvrés laissés
+ * vides sont précisément ceux que le Coup de Boost vient combler — la grille
+ * est visiblement incomplète, c'est ce qu'on veut qu'il voie.
+ *
+ * Le coût ne bouge pas : c'est une seule demande au modèle, la même qu'il en
+ * rende quatre, quinze ou vingt-deux, et aucun de ces sujets n'est rédigé — la
+ * rédaction est le travail vendu, et le bouton de publication mène aux tarifs.
  *
  * Dès le Coup de Boost, le mois entier est posé — vingt-deux sujets, un par jour
  * ouvré — et la première semaine est rédigée dans la foulée. C'est ce complément
  * qui part au moment de l'achat, sans que le client ait à redemander quoi que ce
  * soit.
  */
-export const FREE_ARTICLE_TOPICS = 4;
+export const FREE_ARTICLE_TOPICS = 15;
 
 /**
  * Le mois éditorial complet, posé dès le Coup de Boost.
