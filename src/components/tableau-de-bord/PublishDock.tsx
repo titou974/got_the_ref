@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { RiArrowRightUpLine } from "@remixicon/react";
 import { ROUTES } from "@/constants/routes";
 import { Card } from "./Card";
+import { ConnectSiteCta } from "./ConnectSiteCta";
 import { SiteFavicon } from "./SiteFavicon";
 
 /**
@@ -237,13 +238,10 @@ async function NoDoor({
             : t("unconnectedBody")}
       </p>
 
+      {/* Le rattachement s'ouvre là où on le demande : dans la modale que porte
+          la barre du bas de cette page, avec le formulaire dedans. */}
       {linked ? null : (
-        <Link
-          href={ROUTES.dashboardSettings}
-          className="mt-4 inline-flex cursor-pointer items-center rounded-pill bg-cta px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-pill)] transition-colors duration-200 hover:bg-cta-hover"
-        >
-          {domain ? t("connectDomain", { domain }) : t("connect")}
-        </Link>
+        <ConnectSiteCta label={domain ? t("connectDomain", { domain }) : t("connect")} />
       )}
     </div>
   );
